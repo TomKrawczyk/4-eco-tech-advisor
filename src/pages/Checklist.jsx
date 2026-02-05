@@ -35,7 +35,7 @@ const initialState = {
 };
 
 const checklistItems = [
-  { key: "autoconsumption_rating", label: "Ocena autokonsumpcji i bilansu z siecią", placeholder: "np. Autokonsumpcja ok. 35%, eksport 65%" },
+  { key: "autoconsumption_rating", label: "Ocena autokonsumpcji i bilansu z siecią", placeholder: "Wylicza się automatycznie", readOnly: true },
   { key: "panels_condition", label: "Wizualna kontrola paneli/modułów (pęknięcia, zabrudzenia)", placeholder: "np. Panele czyste, brak pęknięć" },
   { key: "mounting_condition", label: "Kontrola mocowań i konstrukcji nośnej", placeholder: "np. Mocowania stabilne, brak korozji" },
   { key: "cables_condition", label: "Wizualne sprawdzenie przewodów DC/AC, połączeń MC4", placeholder: "np. Wszystkie MC4 szczelne" },
@@ -56,7 +56,23 @@ export default function Checklist() {
   const [saved, setSaved] = useState(false);
   const [completedItems, setCompletedItems] = useState({});
 
-  const update = (key, value) => setForm({ ...form, [key]: value });
+  const update = (key, value) => {
+    const newForm = { ...form, [key]: value };
+    
+    // Automatyczne wyliczanie autokonsumpcji
+    if (key === 'annual_production_kwh' || key === 'energy_exported_kwh') {
+      const production = parseFloat(key === 'annual_production_kwh' ? value : newForm.annual_production_kwh) || 0;
+      const exported = parseFloat(key === 'energy_exported_kwh' ? value : newForm.energy_exported_kwh) || 0;
+      
+      if (production > 0) {
+        const autoconsumption = ((production - exported) / production) * 100;
+        const exportPercent = (exported / production) * 100;
+        newForm.autoconsumption_rating = `Autokonsumpcja: ${autoconsumption.toFixed(1)}%, Eksport: ${exportPercent.toFixed(1)}%`;
+      }
+    }
+    
+    setForm(newForm);
+  };
 
   const toggleInstallation = (type) => {
     const types = form.installation_types.includes(type)
@@ -177,7 +193,7 @@ export default function Checklist() {
             <Input value={form.contractor} onChange={(e) => update("contractor", e.target.value)} placeholder="Nazwa firmy" />
           </div>
           <div>
-            <Label className="text-gray-700 text-xs mb-1">Roczna produkcja [kWh]</Label>
+            <Label className="text-gray-700 text-xs mb-1">TOTAL z falownika [kWh]</Label>
             <Input type="number" value={form.annual_production_kwh} onChange={(e) => update("annual_production_kwh", e.target.value)} placeholder="8500" />
           </div>
           <div>
@@ -221,6 +237,8 @@ export default function Checklist() {
                   onChange={(e) => update(ci.key, e.target.value)}
                   placeholder={ci.placeholder}
                   className="mt-2 text-sm"
+                  readOnly={ci.readOnly}
+                  disabled={ci.readOnly}
                 />
               </div>
             </div>
