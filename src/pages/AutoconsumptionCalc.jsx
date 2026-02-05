@@ -64,10 +64,8 @@ export default function AutoconsumptionCalc() {
   return (
     <div className="space-y-6">
       <PageHeader
-        icon={Calculator}
         title="Kalkulator Autokonsumpcji"
         subtitle="Oblicz opłacalność zużycia własnego"
-        color="amber"
       />
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
