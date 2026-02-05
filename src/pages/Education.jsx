@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import StorageComparisonChart from "../components/charts/StorageComparisonChart";
 
 const content = {
   magazyn: {
@@ -164,6 +165,47 @@ export default function Education() {
           Magazyn energii i autokonsumpcja – praktyczny przewodnik dla właścicieli instalacji PV
         </p>
       </div>
+
+      {/* Visual comparison first */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="bg-white rounded-2xl border border-gray-200 overflow-hidden"
+      >
+        <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 md:p-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            Porównanie: Z magazynem vs Bez magazynu
+          </h2>
+          <p className="text-green-50 leading-relaxed">
+            Zobacz rzeczywistą różnicę w poborze energii z sieci
+          </p>
+        </div>
+        <div className="p-6 md:p-8">
+          <StorageComparisonChart />
+          
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-red-50 rounded-xl border border-red-200 p-4">
+              <h4 className="font-bold text-gray-900 mb-2">❌ Bez magazynu energii</h4>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li>• Autokonsumpcja: 30-40%</li>
+                <li>• Wysoki import z sieci wieczorem</li>
+                <li>• Nadwyżki tracone w sieci</li>
+                <li>• Koszt energii: ~5000 zł/rok</li>
+              </ul>
+            </div>
+            <div className="bg-green-50 rounded-xl border border-green-200 p-4">
+              <h4 className="font-bold text-gray-900 mb-2">✅ Z magazynem energii</h4>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li>• Autokonsumpcja: 70-90%</li>
+                <li>• Minimalne zapotrzebowanie z sieci</li>
+                <li>• Energia dostępna 24/7</li>
+                <li>• Koszt energii: ~1500 zł/rok</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       {Object.entries(content).map(([key, topic]) => (
         <motion.div

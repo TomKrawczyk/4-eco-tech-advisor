@@ -17,13 +17,13 @@ export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 text-gray-900">
       <style>{`
         * { -webkit-tap-highlight-color: transparent; }
-        body { background: white; }
+        body { background: linear-gradient(to bottom right, #f0fdf4, #ffffff, #ecfdf5); }
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: #f0fdf4; }
+        ::-webkit-scrollbar-thumb { background: #86efac; border-radius: 3px; }
       `}</style>
 
       {/* Top Navigation */}

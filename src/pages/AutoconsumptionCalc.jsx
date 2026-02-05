@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { Calculator, Zap, ArrowDown, TrendingUp, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/shared/PageHeader";
+import AutoconsumptionPieChart from "../components/charts/AutoconsumptionPieChart";
 
 export default function AutoconsumptionCalc() {
   const [produkcja, setProdukcja] = useState("");
@@ -153,22 +153,26 @@ export default function AutoconsumptionCalc() {
             </div>
 
             {result.pctOwn && (
-              <div className="bg-white/[0.03] rounded-2xl border border-white/[0.06] p-5 space-y-3">
-                <h4 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                  <ArrowDown className="w-4 h-4 text-blue-400" /> Analiza zużycia
-                </h4>
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+                <h4 className="text-sm font-semibold text-gray-900">Analiza zużycia</h4>
                 {[
                   { label: "Całkowite zużycie domu", value: `${parseFloat(zuzycie).toFixed(1)} kWh` },
                   { label: "Import z sieci", value: `${result.importFromGrid.toFixed(1)} kWh (${result.pctGrid}%)` },
                   { label: "Pokrycie własną energią", value: `${result.pctOwn}%`, highlight: true },
                 ].map((row) => (
-                  <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-                    <span className="text-sm text-gray-400">{row.label}</span>
-                    <span className={`text-sm font-semibold ${row.highlight ? "text-green-400" : "text-white"}`}>{row.value}</span>
+                  <div key={row.label} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <span className="text-sm text-gray-600">{row.label}</span>
+                    <span className={`text-sm font-semibold ${row.highlight ? "text-green-600" : "text-gray-900"}`}>{row.value}</span>
                   </div>
                 ))}
               </div>
             )}
+
+            {/* Visualization */}
+            <AutoconsumptionPieChart
+              production={parseFloat(produkcja)}
+              exported={parseFloat(eksport)}
+            />
           </motion.div>
         )}
       </AnimatePresence>

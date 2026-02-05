@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { Sun, Zap, TrendingUp, DollarSign, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/shared/PageHeader";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 export default function PVCalculator() {
   const [zuzycie, setZuzycie] = useState("");
@@ -169,8 +169,8 @@ export default function PVCalculator() {
             )}
 
             {/* Details table */}
-            <div className="bg-white/[0.03] rounded-2xl border border-white/[0.06] p-5 space-y-3">
-              <h4 className="text-sm font-semibold text-gray-300">Szczegóły kalkulacji</h4>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+              <h4 className="text-sm font-semibold text-gray-900">Szczegóły kalkulacji</h4>
               {[
                 { label: "Moc instalacji", value: `${result.mocInstalacji} kWp` },
                 { label: "Liczba paneli", value: `${result.liczbaPaneli} szt. (${result.mocPanela}Wp)` },
@@ -179,11 +179,35 @@ export default function PVCalculator() {
                 ...(result.kosztInstalacji ? [{ label: "Koszt instalacji", value: `${result.kosztInstalacji.toLocaleString()} zł` }] : []),
                 ...(result.rokZwrotu ? [{ label: "Zwrot inwestycji", value: `${result.rokZwrotu} lat` }] : []),
               ].map((row) => (
-                <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-                  <span className="text-sm text-gray-400">{row.label}</span>
-                  <span className="text-sm font-semibold text-white">{row.value}</span>
+                <div key={row.label} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                  <span className="text-sm text-gray-600">{row.label}</span>
+                  <span className="text-sm font-semibold text-gray-900">{row.value}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Savings chart */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h4 className="text-base font-semibold text-gray-900 mb-4">Oszczędności w czasie</h4>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={[
+                  { rok: "Rok 1", oszczednosci: result.oszczednosciRoczne },
+                  { rok: "Rok 5", oszczednosci: result.oszczednosciRoczne * 5 },
+                  { rok: "Rok 10", oszczednosci: result.oszczednosciRoczne * 10 },
+                  { rok: "Rok 15", oszczednosci: result.oszczednosciRoczne * 15 },
+                  { rok: "Rok 20", oszczednosci: result.oszczednosciRoczne * 20 },
+                  { rok: "Rok 25", oszczednosci: result.oszczednosciRoczne * 25 }
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="rok" tick={{ fill: '#6b7280', fontSize: 12 }} />
+                  <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
+                  <Tooltip 
+                    contentStyle={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                    formatter={(value) => `${Math.round(value).toLocaleString()} zł`}
+                  />
+                  <Bar dataKey="oszczednosci" fill="#22c55e" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </motion.div>
         )}

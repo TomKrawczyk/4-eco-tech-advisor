@@ -3,6 +3,8 @@ import { ArrowLeft, Trash2, Clock, CheckCircle2, Send, User, MapPin, Phone, Cale
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import ProductionChart from "../charts/ProductionChart";
+import AutoconsumptionPieChart from "../charts/AutoconsumptionPieChart";
 
 const statusConfig = {
   draft: { label: "Szkic", icon: Clock, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
@@ -121,6 +123,21 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
         <InfoRow icon={Zap} label="Energia pobrana (1.8.0)" value={report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : null} />
         <InfoRow icon={Zap} label="Energia oddana (2.8.0)" value={report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : null} />
       </Section>
+
+      {/* Charts */}
+      {report.annual_production_kwh && report.energy_exported_kwh && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ProductionChart
+            production={report.annual_production_kwh}
+            exported={report.energy_exported_kwh}
+            imported={report.energy_imported_kwh}
+          />
+          <AutoconsumptionPieChart
+            production={report.annual_production_kwh}
+            exported={report.energy_exported_kwh}
+          />
+        </div>
+      )}
 
       {/* Technical check */}
       <Section title="Kontrola techniczna">
