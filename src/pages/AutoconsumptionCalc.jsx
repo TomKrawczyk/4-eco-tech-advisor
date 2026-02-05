@@ -70,38 +70,38 @@ export default function AutoconsumptionCalc() {
         color="amber"
       />
 
-      <div className="bg-white/[0.03] rounded-2xl border border-white/[0.06] p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Wprowadź dane</h3>
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Wprowadź dane</h3>
         
         <div className="space-y-3">
           <div>
-            <Label className="text-gray-400 text-xs mb-1">Produkcja prądu [kWh] *</Label>
+            <Label className="text-gray-700 text-xs mb-1">Produkcja prądu [kWh] *</Label>
             <Input
               type="number"
               value={produkcja}
               onChange={(e) => setProdukcja(e.target.value)}
               placeholder="np. 8500"
-              className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-amber-500/50 text-lg h-12"
+              className="text-lg h-12"
             />
           </div>
           <div>
-            <Label className="text-gray-400 text-xs mb-1">Eksport do sieci [kWh] *</Label>
+            <Label className="text-gray-700 text-xs mb-1">Eksport do sieci [kWh] *</Label>
             <Input
               type="number"
               value={eksport}
               onChange={(e) => setEksport(e.target.value)}
               placeholder="np. 5200"
-              className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-amber-500/50 text-lg h-12"
+              className="text-lg h-12"
             />
           </div>
           <div>
-            <Label className="text-gray-400 text-xs mb-1">Całkowite zużycie domu [kWh] <span className="text-green-400">(opcjonalne)</span></Label>
+            <Label className="text-gray-700 text-xs mb-1">Całkowite zużycie domu [kWh] <span className="text-green-600">(opcjonalne)</span></Label>
             <Input
               type="number"
               value={zuzycie}
               onChange={(e) => setZuzycie(e.target.value)}
               placeholder="np. 6800"
-              className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-amber-500/50 text-lg h-12"
+              className="text-lg h-12"
             />
           </div>
         </div>
@@ -109,9 +109,9 @@ export default function AutoconsumptionCalc() {
         <Button
           onClick={calculate}
           disabled={!produkcja || !eksport}
-          className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-xl text-base"
+          className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-base"
         >
-          <Zap className="w-5 h-5 mr-2" /> OBLICZ AUTOKONSUMPCJĘ
+          OBLICZ AUTOKONSUMPCJĘ
         </Button>
       </div>
 
@@ -124,30 +124,31 @@ export default function AutoconsumptionCalc() {
             className="space-y-4"
           >
             {/* Main result card */}
-            <div className={`rounded-2xl border ${colorMap[result.color].border} ${colorMap[result.color].bg} p-6 text-center`}>
-              <div className="text-3xl mb-2">{result.icon}</div>
-              <div className={`text-lg font-bold ${colorMap[result.color].text}`}>{result.level}</div>
-              <div className="text-5xl md:text-6xl font-black text-white my-4">{result.pctAuto}%</div>
-              <div className="text-sm text-gray-400 uppercase tracking-wider mb-3">AUTOKONSUMPCJI</div>
-              <p className="text-sm text-gray-300">{result.message}</p>
-              <div className={`mt-3 inline-block px-4 py-2 rounded-full ${colorMap[result.color].bg} border ${colorMap[result.color].border}`}>
-                <span className={`text-xs font-semibold ${colorMap[result.color].text}`}>{result.recommendation}</span>
+            <div className={`rounded-2xl border p-6 text-center ${
+              result.color === 'green' ? 'bg-green-500 border-green-600' :
+              result.color === 'yellow' ? 'bg-amber-500 border-amber-600' :
+              'bg-red-500 border-red-600'
+            }`}>
+              <div className="text-lg font-bold text-white mb-2">{result.level}</div>
+              <div className="text-6xl md:text-7xl font-black text-white my-4">{result.pctAuto}%</div>
+              <div className="text-sm text-white/90 uppercase tracking-wider mb-3">AUTOKONSUMPCJI</div>
+              <p className="text-sm text-white/95 mb-3">{result.message}</p>
+              <div className="inline-block px-4 py-2 rounded-full bg-white/20 backdrop-blur">
+                <span className="text-xs font-semibold text-white">{result.recommendation}</span>
               </div>
             </div>
 
             {/* Details */}
-            <div className="bg-white/[0.03] rounded-2xl border border-white/[0.06] p-5 space-y-3">
-              <h4 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-green-400" /> Szczegóły energetyczne
-              </h4>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+              <h4 className="text-sm font-semibold text-gray-900">Szczegóły energetyczne</h4>
               {[
                 { label: "Produkcja prądu", value: `${parseFloat(produkcja).toFixed(1)} kWh` },
                 { label: "Autokonsumpcja", value: `${result.auto.toFixed(1)} kWh` },
                 { label: "Eksport do sieci", value: `${parseFloat(eksport).toFixed(1)} kWh (${result.pctExport}%)` },
               ].map((row) => (
-                <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-                  <span className="text-sm text-gray-400">{row.label}</span>
-                  <span className="text-sm font-semibold text-white">{row.value}</span>
+                <div key={row.label} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                  <span className="text-sm text-gray-600">{row.label}</span>
+                  <span className="text-sm font-semibold text-gray-900">{row.value}</span>
                 </div>
               ))}
             </div>

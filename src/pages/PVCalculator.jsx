@@ -72,23 +72,23 @@ export default function PVCalculator() {
         color="yellow"
       />
 
-      <div className="bg-white/[0.03] rounded-2xl border border-white/[0.06] p-5 space-y-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
         <div className="space-y-3">
           <div>
-            <Label className="text-gray-400 text-xs mb-1">Roczne zużycie energii [kWh] *</Label>
+            <Label className="text-gray-700 text-xs mb-1">Roczne zużycie energii [kWh] *</Label>
             <Input
               type="number"
               value={zuzycie}
               onChange={(e) => setZuzycie(e.target.value)}
               placeholder="np. 5000"
-              className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-yellow-500/50 text-lg h-12"
+              className="text-lg h-12"
             />
           </div>
 
           <div>
-            <Label className="text-gray-400 text-xs mb-1">Orientacja dachu</Label>
+            <Label className="text-gray-700 text-xs mb-1">Orientacja dachu</Label>
             <Select value={orientacja} onValueChange={setOrientacja}>
-              <SelectTrigger className="bg-white/5 border-white/10 text-white h-12">
+              <SelectTrigger className="h-12">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -100,27 +100,27 @@ export default function PVCalculator() {
           </div>
 
           <div>
-            <Label className="text-gray-400 text-xs mb-1">Cena prądu [zł/kWh] *</Label>
+            <Label className="text-gray-700 text-xs mb-1">Cena prądu [zł/kWh] *</Label>
             <Input
               type="number"
               step="0.01"
               value={cenaPradu}
               onChange={(e) => setCenaPradu(e.target.value)}
               placeholder="0.90"
-              className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-yellow-500/50 text-lg h-12"
+              className="text-lg h-12"
             />
           </div>
 
           <div>
-            <Label className="text-gray-400 text-xs mb-1">
-              Cena instalacji [zł] <span className="text-green-400">(opcjonalne)</span>
+            <Label className="text-gray-700 text-xs mb-1">
+              Cena instalacji [zł] <span className="text-green-600">(opcjonalne)</span>
             </Label>
             <Input
               type="number"
               value={cenaHandlowca}
               onChange={(e) => setCenaHandlowca(e.target.value)}
               placeholder="np. 25000"
-              className="bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-yellow-500/50 text-lg h-12"
+              className="text-lg h-12"
             />
           </div>
         </div>
@@ -128,9 +128,9 @@ export default function PVCalculator() {
         <Button
           onClick={calculate}
           disabled={!zuzycie || !cenaPradu}
-          className="w-full h-12 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-white font-semibold rounded-xl text-base"
+          className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-base"
         >
-          <Sun className="w-5 h-5 mr-2" /> OBLICZ INSTALACJĘ
+          OBLICZ INSTALACJĘ
         </Button>
       </div>
 
@@ -144,26 +144,24 @@ export default function PVCalculator() {
             {/* Key stats */}
             <div className="grid grid-cols-2 gap-3">
               {[
-                { icon: Sun, label: "Moc instalacji", value: `${result.mocInstalacji} kWp`, color: "yellow" },
-                { icon: Zap, label: "Produkcja roczna", value: `${result.rocznaProdukcja} kWh`, color: "green" },
-                { icon: DollarSign, label: "Oszczędności /rok", value: `${result.oszczednosciRoczne.toFixed(0)} zł`, color: "emerald" },
-                { icon: Calendar, label: "Panele", value: `${result.liczbaPaneli}× ${result.mocPanela}Wp`, color: "blue" },
+                { label: "Moc instalacji", value: `${result.mocInstalacji} kWp` },
+                { label: "Produkcja roczna", value: `${result.rocznaProdukcja} kWh` },
+                { label: "Oszczędności /rok", value: `${result.oszczednosciRoczne.toFixed(0)} zł` },
+                { label: "Panele", value: `${result.liczbaPaneli}× ${result.mocPanela}Wp` },
               ].map((stat) => (
-                <div key={stat.label} className="bg-white/[0.03] rounded-2xl border border-white/[0.06] p-4">
-                  <stat.icon className={`w-5 h-5 text-${stat.color}-400 mb-2`} />
-                  <div className="text-lg md:text-xl font-bold text-white">{stat.value}</div>
-                  <div className="text-xs text-gray-500 mt-1">{stat.label}</div>
+                <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-4">
+                  <div className="text-lg md:text-xl font-bold text-gray-900">{stat.value}</div>
+                  <div className="text-xs text-gray-600 mt-1">{stat.label}</div>
                 </div>
               ))}
             </div>
 
             {result.rokZwrotu && (
-              <div className="bg-green-500/10 rounded-2xl border border-green-500/20 p-5 text-center">
-                <TrendingUp className="w-6 h-6 text-green-400 mx-auto mb-2" />
-                <div className="text-sm text-gray-400">Zwrot inwestycji w</div>
-                <div className="text-3xl font-black text-green-400 my-1">{result.rokZwrotu} lat</div>
+              <div className="bg-green-500 rounded-2xl border border-green-600 p-5 text-center">
+                <div className="text-sm text-white/90">Zwrot inwestycji w</div>
+                <div className="text-4xl font-black text-white my-2">{result.rokZwrotu} lat</div>
                 {result.kosztInstalacji && (
-                  <div className="text-xs text-gray-500">Koszt instalacji: {result.kosztInstalacji.toLocaleString()} zł</div>
+                  <div className="text-xs text-white/80">Koszt instalacji: {result.kosztInstalacji.toLocaleString()} zł</div>
                 )}
               </div>
             )}
