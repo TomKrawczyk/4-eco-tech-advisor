@@ -10,9 +10,9 @@ import PageHeader from "../components/shared/PageHeader";
 import ReportDetail from "../components/reports/ReportDetail";
 
 const statusConfig = {
-  draft: { label: "Szkic", icon: Clock, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
-  completed: { label: "Ukończony", icon: CheckCircle2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
-  sent: { label: "Wysłany", icon: Send, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  draft: { label: "Szkic", icon: Clock, color: "bg-gray-100 text-gray-700 border-gray-300" },
+  completed: { label: "Ukończony", icon: CheckCircle2, color: "bg-green-100 text-green-700 border-green-300" },
+  sent: { label: "Wysłany", icon: Send, color: "bg-blue-100 text-blue-700 border-blue-300" },
 };
 
 export default function VisitReports() {
@@ -60,10 +60,8 @@ export default function VisitReports() {
   return (
     <div className="space-y-6">
       <PageHeader
-        icon={FileText}
         title="Raporty wizyt"
         subtitle="Dokumentacja wizyt u klientów"
-        color="rose"
       />
 
       {/* Search */}
@@ -73,20 +71,20 @@ export default function VisitReports() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Szukaj po nazwisku lub adresie..."
-          className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-green-500/50 h-11"
+          className="pl-10 h-11"
         />
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Wszystkie", count: reports.length, color: "text-white" },
-          { label: "Szkice", count: reports.filter((r) => r.status === "draft" || !r.status).length, color: "text-gray-400" },
-          { label: "Ukończone", count: reports.filter((r) => r.status === "completed" || r.status === "sent").length, color: "text-green-400" },
+          { label: "Wszystkie", count: reports.length, color: "text-gray-900" },
+          { label: "Szkice", count: reports.filter((r) => r.status === "draft" || !r.status).length, color: "text-gray-600" },
+          { label: "Ukończone", count: reports.filter((r) => r.status === "completed" || r.status === "sent").length, color: "text-green-600" },
         ].map((stat) => (
-          <div key={stat.label} className="bg-white/[0.03] rounded-xl border border-white/[0.06] p-3 text-center">
+          <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-3 text-center">
             <div className={`text-xl font-bold ${stat.color}`}>{stat.count}</div>
-            <div className="text-xs text-gray-500">{stat.label}</div>
+            <div className="text-xs text-gray-600">{stat.label}</div>
           </div>
         ))}
       </div>
@@ -95,16 +93,16 @@ export default function VisitReports() {
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white/[0.03] rounded-2xl border border-white/[0.06] p-5 animate-pulse">
-              <div className="h-4 bg-white/10 rounded w-1/3 mb-2" />
-              <div className="h-3 bg-white/5 rounded w-2/3" />
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
+              <div className="h-3 bg-gray-100 rounded w-2/3" />
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
-          <FileText className="w-12 h-12 text-gray-700 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">
+          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-600 text-sm">
             {search ? "Brak wyników wyszukiwania" : "Brak raportów. Wypełnij checklistę lub wywiad, aby utworzyć raport."}
           </p>
         </div>
@@ -119,25 +117,25 @@ export default function VisitReports() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
                 onClick={() => setSelectedReport(report)}
-                className="w-full text-left bg-white/[0.03] rounded-2xl border border-white/[0.06] p-4 hover:bg-white/[0.05] hover:border-white/10 transition-all active:scale-[0.99]"
+                className="w-full text-left bg-white rounded-xl border border-gray-200 p-4 hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-semibold text-white truncate">{report.client_name || "Bez nazwy"}</h3>
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">{report.client_name || "Bez nazwy"}</h3>
                       <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 border ${st.color}`}>
                         {st.label}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <div className="flex items-center gap-3 text-xs text-gray-600">
                       {report.visit_date && <span>{new Date(report.visit_date).toLocaleDateString("pl-PL")}</span>}
                       {report.client_address && <span className="truncate">{report.client_address}</span>}
                       {report.installation_types?.length > 0 && (
-                        <span className="text-green-500">{report.installation_types.join(", ")}</span>
+                        <span className="text-green-600">{report.installation_types.join(", ")}</span>
                       )}
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                 </div>
               </motion.button>
             );
