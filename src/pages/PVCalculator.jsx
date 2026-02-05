@@ -1,11 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/shared/PageHeader";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { base44 } from "@/api/base44Client";
+import { Cloud, TrendingUp } from "lucide-react";
 
 export default function PVCalculator() {
   const [zuzycie, setZuzycie] = useState("");
@@ -73,6 +76,19 @@ export default function PVCalculator() {
       />
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        {/* Energy price info */}
+        {energyPrice && (
+          <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600">Aktualna cena energii:</span>
+              <Badge className="bg-green-600">{energyPrice.current_price} zł/kWh</Badge>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Źródło: {energyPrice.source} • {new Date(energyPrice.timestamp).toLocaleString('pl-PL')}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3">
           <div>
             <Label className="text-gray-700 text-xs mb-1">Roczne zużycie energii [kWh] *</Label>
@@ -125,13 +141,43 @@ export default function PVCalculator() {
           </div>
         </div>
 
-        <Button
-          onClick={calculate}
-          disabled={!zuzycie || !cenaPradu}
-          className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-base"
-        >
-          OBLICZ INSTALACJĘ
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={calculate}
+            disabled={!zuzycie || !cenaPradu}
+            className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-base"
+          >
+            OBLICZ INSTALACJĘ
+          </Button>
+          <Button
+            onClick={fetchWeatherForecast}
+            disabled={loadingWeather}
+            variant="outline"
+            className="h-12 px-4"
+          >
+            <Cloud className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Weather forecast */}
+        {weatherData && (
+          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Cloud className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-semibold text-gray-900">Prognoza pogody (7 dni)</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-gray-600">Śr. godziny słoneczne:</span>
+                <div className="font-semibold text-gray-900">{weatherData.summary.avg_sun_hours}h/dzień</div>
+              </div>
+              <div>
+                <span className="text-gray-600">Potencjał produkcji:</span>
+                <div className="font-semibold text-blue-600">{weatherData.summary.avg_production_factor}%</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <AnimatePresence>
