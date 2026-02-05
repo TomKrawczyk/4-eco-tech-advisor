@@ -80,6 +80,15 @@ Deno.serve(async (req) => {
       }
     );
 
+    if (!sheetsResponse.ok) {
+      const errorText = await sheetsResponse.text();
+      return Response.json({ 
+        error: 'Błąd dostępu do Google Sheets', 
+        details: errorText,
+        spreadsheetId: SPREADSHEET_ID
+      }, { status: 500 });
+    }
+    
     const spreadsheetData = await sheetsResponse.json();
     const sheetExists = spreadsheetData.sheets?.some(s => s.properties.title === 'Raporty');
 
