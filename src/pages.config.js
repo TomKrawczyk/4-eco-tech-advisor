@@ -52,6 +52,8 @@ import Checklist from './pages/Checklist';
 import Interview from './pages/Interview';
 import AutoconsumptionCalc from './pages/AutoconsumptionCalc';
 import PVCalculator from './pages/PVCalculator';
+import Education from './pages/Education';
+import VisitReports from './pages/VisitReports';
 import __Layout from './Layout.jsx';
 
 
@@ -61,6 +63,8 @@ export const PAGES = {
     "Interview": Interview,
     "AutoconsumptionCalc": AutoconsumptionCalc,
     "PVCalculator": PVCalculator,
+    "Education": Education,
+    "VisitReports": VisitReports,
 }
 
 export const pagesConfig = {
