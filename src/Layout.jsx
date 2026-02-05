@@ -11,6 +11,7 @@ const navItems = [
   { name: "PVCalculator", label: "Kalkulator PV" },
   { name: "Education", label: "Edukacja" },
   { name: "VisitReports", label: "Raporty" },
+  { name: "Analytics", label: "Analityka" },
 ];
 
 export default function Layout({ children, currentPageName }) {

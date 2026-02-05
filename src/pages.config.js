@@ -54,6 +54,7 @@ import Education from './pages/Education';
 import Interview from './pages/Interview';
 import PVCalculator from './pages/PVCalculator';
 import VisitReports from './pages/VisitReports';
+import Analytics from './pages/Analytics';
 import __Layout from './Layout.jsx';
 
 
@@ -65,6 +66,7 @@ export const PAGES = {
     "Interview": Interview,
     "PVCalculator": PVCalculator,
     "VisitReports": VisitReports,
+    "Analytics": Analytics,
 }
 
 export const pagesConfig = {
