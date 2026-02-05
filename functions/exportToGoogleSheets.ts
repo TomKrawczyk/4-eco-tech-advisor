@@ -26,12 +26,18 @@ Deno.serve(async (req) => {
     const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
 
     // ID arkusza głównego (możesz go zmienić lub pobrać z zmiennej środowiskowej)
-    const SPREADSHEET_ID = Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID');
+    let SPREADSHEET_ID = Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID');
 
     if (!SPREADSHEET_ID) {
       return Response.json({ 
         error: 'Brak ID arkusza Google Sheets. Ustaw GOOGLE_SHEETS_SPREADSHEET_ID w ustawieniach.' 
       }, { status: 500 });
+    }
+
+    // Wyekstrahuj ID z pełnego URL jeśli użytkownik podał URL
+    const match = SPREADSHEET_ID.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (match) {
+      SPREADSHEET_ID = match[1];
     }
 
     // Przygotuj dane do eksportu
