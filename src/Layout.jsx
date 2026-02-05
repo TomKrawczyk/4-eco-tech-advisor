@@ -9,7 +9,6 @@ const navItems = [
   { name: "Interview", label: "Wywiad" },
   { name: "AutoconsumptionCalc", label: "Autokonsumpcja" },
   { name: "PVCalculator", label: "Kalkulator PV" },
-  { name: "Components", label: "Komponenty" },
   { name: "Education", label: "Edukacja" },
   { name: "VisitReports", label: "Raporty" },
 ];

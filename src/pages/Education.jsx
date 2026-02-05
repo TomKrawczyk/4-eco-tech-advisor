@@ -3,151 +3,171 @@ import { motion } from "framer-motion";
 import StorageComparisonChart from "../components/charts/StorageComparisonChart";
 
 const content = {
-  magazyn: {
-    title: "Magazyn Energii – Zwiększ Autokonsumpcję",
-    intro: "Magazyn energii pozwala przechowywać nadwyżki wyprodukowanej energii z instalacji fotowoltaicznej i wykorzystywać ją wieczorem oraz w nocy, gdy panele nie pracują. To klucz do maksymalizacji oszczędności.",
+  bezMagazynu: {
+    title: "Używanie instalacji PV bez magazynu energii",
+    intro: "Instalacja fotowoltaiczna bez magazynu energii działa dobrze, ale wymaga świadomego zarządzania zużyciem. Energia jest produkowana głównie w ciągu dnia, więc kluczem jest dostosowanie nawyków do momentu produkcji.",
     sections: [
       {
-        title: "Dlaczego magazyn energii?",
+        title: "Jak działa instalacja bez magazynu?",
         points: [
-          "Zwiększasz autokonsumpcję z 30-40% do nawet 80-90%",
-          "Wykorzystujesz własną energię wieczorem i w nocy",
-          "Minimalizujesz zakup drogiego prądu z sieci",
-          "Uniezależniasz się od rosnących cen energii",
-          "Zabezpieczenie awaryjne podczas blackoutów",
-          "Optymalizacja kosztów w systemie net-billing"
+          "Energia produkowana przez panele jest od razu wykorzystywana w domu",
+          "Nadwyżki energii są automatycznie oddawane do sieci",
+          "Wieczorem i nocą pobierasz energię z sieci, za którą płacisz standardową cenę",
+          "Autokonsumpcja typowo wynosi 30-40% (zależy od stylu życia)",
+          "W systemie net-billing sprzedajesz energię po cenie rynkowej (~0.20-0.30 zł/kWh), kupujesz po taryfie (~0.90 zł/kWh)"
         ]
       },
       {
-        title: "Jak to działa?",
+        title: "Praktyczne zasady użytkowania",
         points: [
-          "Dzień: Nadwyżka energii z paneli ładuje magazyn zamiast trafiać do sieci",
-          "Wieczór/Noc: Dom pobiera energię z magazynu zamiast z sieci",
-          "Rano: Cykl się powtarza – pełna kontrola nad własną energią",
-          "Inteligentny system zarządzania optymalizuje przepływ energii"
+          "Wykorzystuj urządzenia energochłonne między 10:00 a 15:00",
+          "Pralka, zmywarka: włączaj w godzinach produkcji PV",
+          "Bojler: ogrzewaj wodę w ciągu dnia, nie wieczorem",
+          "Ładowanie urządzeń: telefony, laptopy – zawsze w dzień",
+          "Gotowanie: jeśli masz kuchenkę elektryczną, planuj posiłki na środek dnia",
+          "Klimatyzacja/ogrzewanie: maksymalnie wykorzystuj godziny słoneczne"
         ]
       },
       {
-        title: "Pojemność i dobór",
+        title: "Monitorowanie produkcji i zużycia",
         points: [
+          "Sprawdzaj aplikację falownika, aby wiedzieć, kiedy produkujesz najwięcej energii",
+          "Obserwuj bilans: produkcja vs zużycie w czasie rzeczywistym",
+          "Unikaj dużego poboru energii wieczorem i w nocy",
+          "Analizuj dane z licznika: porównuj odczyty 1.8.0 (pobór) i 2.8.0 (oddanie)",
+          "Oblicz swoją autokonsumpcję: (Produkcja − Eksport) / Produkcja × 100%"
+        ]
+      },
+      {
+        title: "Ograniczenia i wyzwania",
+        points: [
+          "Wieczorem i w nocy musisz korzystać z energii sieciowej",
+          "W pochmurne dni produkcja jest niska, więcej energii z sieci",
+          "W zimie produkcja spada – wyższe rachunki za energię",
+          "Trudno wykorzystać całą energię w dzień, jeśli jesteś w pracy",
+          "Oddawanie energii do sieci jest nieopłacalne (niska cena sprzedaży)"
+        ]
+      },
+      {
+        title: "Kiedy warto rozważyć magazyn?",
+        points: [
+          "Duża część energii jest oddawana do sieci (eksport >60%)",
+          "Nie ma możliwości korzystania z urządzeń w ciągu dnia",
+          "Zużycie koncentruje się wieczorem i w nocy (dom jest pusty w dzień)",
+          "Chcesz zwiększyć niezależność od sieci",
+          "Rosnące ceny energii – magazyn staje się bardziej opłacalny"
+        ]
+      }
+    ]
+  },
+  zMagazynem: {
+    title: "Używanie instalacji PV z magazynem energii",
+    intro: "Magazyn energii zmienia sposób korzystania z instalacji fotowoltaicznej. Nadwyżki energii z dnia są przechowywane i wykorzystywane wieczorem oraz nocą, co znacząco zwiększa niezależność energetyczną.",
+    sections: [
+      {
+        title: "Jak działa instalacja z magazynem?",
+        points: [
+          "W ciągu dnia energia z paneli zasila dom, a nadwyżki trafiają do magazynu",
+          "Magazyn ładuje się automatycznie, gdy produkcja przewyższa zużycie",
+          "Wieczorem i w nocy dom korzysta z energii zgromadzonej w magazynie",
+          "Dopiero gdy magazyn jest pusty, energia pobierana jest z sieci",
+          "Autokonsumpcja wzrasta do 70-90%, w zależności od pojemności magazynu"
+        ]
+      },
+      {
+        title: "Zmiana nawyków użytkowania",
+        points: [
+          "Nie musisz już koncentrować całego zużycia na dzień",
+          "Możesz korzystać z urządzeń wieczorem – energia pochodzi z magazynu",
+          "Rano energia z magazynu – zamiast z sieci",
+          "Mniej stresu o optymalizację każdej czynności",
+          "Większa elastyczność w codziennym życiu"
+        ]
+      },
+      {
+        title: "Automatyczne zarządzanie",
+        points: [
+          "System sam decyduje, kiedy ładować magazyn, a kiedy go rozładowywać",
+          "Priorytet: najpierw dom, potem magazyn, na końcu oddanie do sieci",
+          "Możliwość ustawienia 'trybu rezerwowego' – część energii zawsze w magazynie",
+          "Niektóre systemy pozwalają ręcznie zarządzać ładowaniem",
+          "Monitorowanie stanu naładowania w aplikacji"
+        ]
+      },
+      {
+        title: "Dobór pojemności magazynu",
+        points: [
+          "Przeanalizuj swoje wieczorne i nocne zużycie energii (np. 8-10 kWh)",
+          "Magazyn powinien pokryć większość zużycia, gdy panele nie pracują",
           "Typowa rodzina 4-osobowa: magazyn 5-10 kWh",
-          "Z pompą ciepła: rozważ 10-15 kWh",
-          "Z samochodem elektrycznym: minimum 10 kWh",
-          "Zasada: pojemność ≈ wieczorne/nocne zużycie energii",
-          "Koszt: około 2500-4000 zł za 1 kWh pojemności",
-          "Żywotność: 6000-8000 cykli ładowania (10-15 lat)"
+          "Dom z pompą ciepła: 10-15 kWh",
+          "Większa pojemność = wyższa autokonsumpcja, ale dłuższy zwrot inwestycji"
         ]
       },
       {
-        title: "Technologia i bezpieczeństwo",
+        title: "Eksploatacja i utrzymanie",
         points: [
-          "LFP (litowo-żelazowo-fosforanowa) – najbezpieczniejsza technologia",
-          "Sprawność ładowania/rozładowania około 95%",
-          "Kompaktowa konstrukcja – montaż wewnątrz lub na zewnątrz",
-          "Cicha praca – brak hałasu",
-          "Popularne marki: Huawei LUNA, BYD, Pylontech, Deye"
+          "Magazyn nie wymaga konserwacji – technologia LFP jest trwała",
+          "Sprawność ładowania/rozładowania: około 95%",
+          "Żywotność: 6000-8000 cykli (10-15 lat użytkowania)",
+          "System automatycznie dba o kondycję baterii",
+          "Monitoruj stan magazynu przez aplikację – sprawdzaj, czy działa optymalnie"
+        ]
+      },
+      {
+        title: "Korzyści długoterminowe",
+        points: [
+          "Znacznie niższe rachunki za energię – oszczędność 50-70%",
+          "Niezależność od rosnących cen energii elektrycznej",
+          "Zwiększona wartość nieruchomości",
+          "Komfort użytkowania – brak konieczności planowania zużycia",
+          "Bezpieczeństwo energetyczne – rezerwa na wypadek awarii sieci"
         ]
       }
     ]
   },
-  autokonsumpcja: {
-    title: "Autokonsumpcja – Jak Maksymalnie Oszczędzać",
-    intro: "Autokonsumpcja to bezpośrednie wykorzystanie energii wyprodukowanej przez Twoją instalację PV. Im więcej własnej energii zużywasz od razu, tym większe oszczędności. Nauczmy się, jak to robić mądrze.",
+  porownanie: {
+    title: "Porównanie: Co wybrać?",
+    intro: "Wybór pomiędzy instalacją z magazynem a bez magazynu zależy od wielu czynników. Oto szczegółowe porównanie, które pomoże podjąć decyzję.",
     sections: [
       {
-        title: "Czym jest autokonsumpcja?",
+        title: "Aspekty finansowe",
         points: [
-          "Autokonsumpcja = Wyprodukowana energia − Oddana do sieci",
-          "Im wyższy % autokonsumpcji, tym większe oszczędności",
-          "Cel: minimum 60%, optymalnie powyżej 70-80%",
-          "W net-billingu autokonsumpcja jest KLUCZOWA dla opłacalności"
+          "Bez magazynu: niski koszt początkowy, oszczędność ~2500-3500 zł/rok",
+          "Z magazynem: wyższy koszt początkowy (+20000-30000 zł), oszczędność ~5000-7000 zł/rok",
+          "Zwrot inwestycji z magazynu: 7-10 lat (bez dotacji), 3-5 lat (z dotacją Mój Prąd)",
+          "Bez magazynu: szybszy zwrot z samej instalacji PV",
+          "Z magazynem: wyższe długoterminowe oszczędności"
         ]
       },
       {
-        title: "Urządzenia energochłonne – kiedy włączać?",
+        title: "Styl życia i elastyczność",
         points: [
-          "Pralka, zmywarka, suszarka: programuj na godziny 10:00-15:00",
-          "Podgrzewanie wody: steruj bojlerem tak, by pracował w dzień",
-          "Pompa ciepła: włącz tryb dzienny, grzej dom w godzinach produkcji PV",
-          "Ładowanie samochodu elektrycznego: zawsze w ciągu dnia (11:00-16:00)",
-          "Odkurzacz, żelazko, robot sprzątający: używaj w godzinach słonecznych",
-          "Klimatyzacja latem: chłodź dom gdy świeci słońce"
+          "Bez magazynu: wymaga dostosowania nawyków do produkcji PV",
+          "Z magazynem: elastyczność w korzystaniu z energii o każdej porze",
+          "Bez magazynu: lepsze dla osób będących w domu w ciągu dnia",
+          "Z magazynem: idealne dla pracujących osób, które są w domu wieczorem",
+          "Bez magazynu: wymaga świadomego planowania użycia urządzeń"
         ]
       },
       {
-        title: "Inteligentne sterowanie zużyciem",
+        title: "Technologia i utrzymanie",
         points: [
-          "Inteligentne gniazdka z harmonogramem czasowym",
-          "Sterowniki z czujnikiem nadwyżki PV – automatyczne włączanie grzałki w bojlerze",
-          "System HEMS (Home Energy Management System) – kompleksowe zarządzanie",
-          "Monitoruj produkcję PV na bieżąco i reaguj"
+          "Bez magazynu: prostsza instalacja, mniej elementów do nadzoru",
+          "Z magazynem: bardziej zaawansowany system, automatyczne zarządzanie",
+          "Bez magazynu: brak dodatkowych kosztów utrzymania",
+          "Z magazynem: żywotność baterii 10-15 lat, później wymiana",
+          "Oba rozwiązania: monitoring przez aplikacje falownika"
         ]
       },
       {
-        title: "Net-billing – dlaczego autokonsumpcja jest ważniejsza niż kiedyś?",
+        title: "Dla kogo które rozwiązanie?",
         points: [
-          "Do 2022: Net-metering – bilansowanie 1:1 lub 1:0.8 (prosumer)",
-          "Od 2022: Net-billing – sprzedajesz po cenie rynkowej (~0.20-0.30 zł/kWh), kupujesz po taryfie (~0.90 zł/kWh)",
-          "Oddanie energii do sieci nie opłaca się tak jak wcześniej",
-          "Musisz zużywać jak najwięcej energii na miejscu, gdy jest produkowana",
-          "Magazyn energii pomaga wykorzystać nadwyżki wieczorem/nocą"
-        ]
-      },
-      {
-        title: "Przykład optymalizacji dnia",
-        points: [
-          "6:00-8:00 – Przygotowanie śniadania, kawa (PV zaczyna pracować)",
-          "9:00-11:00 – Uruchom pralkę, zmywarkę",
-          "11:00-15:00 – Szczyt produkcji: ładuj samochód, grzej wodę, pracuj w domu",
-          "15:00-17:00 – Schładzaj/ogrzewaj dom pompą ciepła, używaj AGD",
-          "17:00-22:00 – Energia z magazynu (jeśli masz) lub minimum poboru z sieci",
-          "Noc – Energia z magazynu lub niskoenergetyczne urządzenia"
-        ]
-      }
-    ]
-  },
-  ekonomia: {
-    title: "Ekonomia i Zwrot Inwestycji",
-    intro: "Poznaj rzeczywiste koszty, oszczędności i czas zwrotu inwestycji w magazyn energii i optymalizację autokonsumpcji.",
-    sections: [
-      {
-        title: "Koszty magazynu energii",
-        points: [
-          "Magazyn 5 kWh: około 12 000 - 15 000 zł",
-          "Magazyn 10 kWh: około 22 000 - 30 000 zł",
-          "Magazyn 15 kWh: około 35 000 - 45 000 zł",
-          "Instalacja: 2 000 - 4 000 zł",
-          "Razem z montażem i konfiguracją"
-        ]
-      },
-      {
-        title: "Oszczędności roczne",
-        points: [
-          "Bez magazynu: autokonsumpcja 30-40% → oszczędność ~2 000 - 3 000 zł/rok",
-          "Z magazynem: autokonsumpcja 70-85% → oszczędność ~5 000 - 7 000 zł/rok",
-          "Różnica: około 3 000 - 4 000 zł/rok dodatkowych oszczędności",
-          "Zwrot z magazynu: 7-10 lat (w zależności od cen energii)"
-        ]
-      },
-      {
-        title: "Dofinansowanie – Mój Prąd 6.0",
-        points: [
-          "Magazyn energii: do 16 000 zł dofinansowania",
-          "System zarządzania energią (HEMS): do 3 000 zł",
-          "Pompa ciepła powietrze-woda: do 19 400 zł",
-          "Łącznie można otrzymać nawet 38 400 zł dotacji",
-          "Warunek: system musi być podłączony do sieci (net-billing)"
-        ]
-      },
-      {
-        title: "Kalkulator zwrotu inwestycji (przykład)",
-        points: [
-          "Koszt magazynu 10 kWh z montażem: 28 000 zł",
-          "Dotacja Mój Prąd: -16 000 zł",
-          "Koszt po dotacji: 12 000 zł",
-          "Dodatkowa oszczędność rocznie: 3 500 zł",
-          "Zwrot inwestycji: 12 000 / 3 500 = ~3,5 roku",
-          "Korzyść po 10 latach: 35 000 zł − 12 000 zł = 23 000 zł zysku"
+          "Bez magazynu: dom z osobami w ciągu dnia, świadome zarządzanie energią, ograniczony budżet",
+          "Z magazynem: pracujące osoby, wieczorne zużycie energii, pompa ciepła/samochód elektryczny",
+          "Bez magazynu: niski budżet, chęć szybkiego zwrotu inwestycji",
+          "Z magazynem: wyższy budżet, priorytet = niezależność i komfort",
+          "Oba: mogą być optymalne w zależności od indywidualnej sytuacji"
         ]
       }
     ]
@@ -162,7 +182,7 @@ export default function Education() {
           Edukacja
         </h1>
         <p className="text-gray-600 text-lg">
-          Magazyn energii i autokonsumpcja – praktyczny przewodnik dla właścicieli instalacji PV
+          Praktyczny przewodnik użytkowania instalacji fotowoltaicznych
         </p>
       </div>
 
@@ -175,10 +195,10 @@ export default function Education() {
       >
         <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 md:p-8">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-            Porównanie: Z magazynem vs Bez magazynu
+            Wizualizacja: Z magazynem vs Bez magazynu
           </h2>
           <p className="text-green-50 leading-relaxed">
-            Zobacz rzeczywistą różnicę w poborze energii z sieci
+            Zobacz różnicę w poborze energii z sieci w ciągu doby
           </p>
         </div>
         <div className="p-6 md:p-8">
@@ -186,21 +206,21 @@ export default function Education() {
           
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-red-50 rounded-xl border border-red-200 p-4">
-              <h4 className="font-bold text-gray-900 mb-2">❌ Bez magazynu energii</h4>
+              <h4 className="font-bold text-gray-900 mb-2">Bez magazynu energii</h4>
               <ul className="space-y-2 text-sm text-gray-700">
                 <li>• Autokonsumpcja: 30-40%</li>
-                <li>• Wysoki import z sieci wieczorem</li>
-                <li>• Nadwyżki tracone w sieci</li>
-                <li>• Koszt energii: ~5000 zł/rok</li>
+                <li>• Wysoki import z sieci wieczorem/nocą</li>
+                <li>• Nadwyżki dzienne oddawane do sieci</li>
+                <li>• Import: ~15 kWh/dzień</li>
               </ul>
             </div>
             <div className="bg-green-50 rounded-xl border border-green-200 p-4">
-              <h4 className="font-bold text-gray-900 mb-2">✅ Z magazynem energii</h4>
+              <h4 className="font-bold text-gray-900 mb-2">Z magazynem energii</h4>
               <ul className="space-y-2 text-sm text-gray-700">
                 <li>• Autokonsumpcja: 70-90%</li>
                 <li>• Minimalne zapotrzebowanie z sieci</li>
-                <li>• Energia dostępna 24/7</li>
-                <li>• Koszt energii: ~1500 zł/rok</li>
+                <li>• Energia dostępna 24/7 z magazynu</li>
+                <li>• Import: ~4 kWh/dzień</li>
               </ul>
             </div>
           </div>
@@ -249,14 +269,14 @@ export default function Education() {
 
       <div className="bg-green-50 rounded-2xl border border-green-200 p-6 md:p-8 text-center">
         <h3 className="text-xl font-bold text-gray-900 mb-3">
-          Potrzebujesz pomocy w doborze magazynu energii?
+          Potrzebujesz pomocy w optymalizacji instalacji?
         </h3>
         <p className="text-gray-700 mb-4">
-          Skontaktuj się z naszym doradcą technicznym. Pomożemy dobrać optymalne rozwiązanie dla Twojego domu.
+          Skontaktuj się z naszym doradcą technicznym. Pomożemy przeanalizować Twoje zużycie i dobrać optymalne rozwiązanie.
         </p>
         <div className="text-sm text-gray-600">
           <div className="font-semibold text-green-600 text-base">4-ECO Green Energy</div>
-          <div>Profesjonalne doradztwo techniczne i sprzedaż</div>
+          <div>Profesjonalne doradztwo techniczne</div>
         </div>
       </div>
     </div>

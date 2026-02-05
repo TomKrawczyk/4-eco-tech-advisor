@@ -1,15 +1,18 @@
-import React from "react";
-import { ArrowLeft, Trash2, Clock, CheckCircle2, Send, User, MapPin, Phone, Calendar, Zap, Wrench } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowLeft, Trash2, Clock, CheckCircle2, Send, User, MapPin, Phone, Calendar, Zap, Wrench, Download, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
+import { base44 } from "@/api/base44Client";
 import ProductionChart from "../charts/ProductionChart";
 import AutoconsumptionPieChart from "../charts/AutoconsumptionPieChart";
 
 const statusConfig = {
-  draft: { label: "Szkic", icon: Clock, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
-  completed: { label: "Ukończony", icon: CheckCircle2, color: "bg-green-500/20 text-green-400 border-green-500/30" },
-  sent: { label: "Wysłany", icon: Send, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  draft: { label: "Szkic", icon: Clock, color: "bg-gray-100 text-gray-700 border-gray-300" },
+  completed: { label: "Ukończony", icon: CheckCircle2, color: "bg-green-100 text-green-700 border-green-300" },
+  sent: { label: "Wysłany", icon: Send, color: "bg-blue-100 text-blue-700 border-blue-300" },
 };
 
 const statuses = ["draft", "completed", "sent"];
@@ -21,7 +24,7 @@ function InfoRow({ icon: Icon, label, value }) {
       <Icon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
       <div className="min-w-0">
         <div className="text-xs text-gray-500">{label}</div>
-        <div className="text-sm text-gray-200">{typeof value === "object" ? value.join(", ") : value}</div>
+        <div className="text-sm text-gray-900">{typeof value === "object" ? value.join(", ") : value}</div>
       </div>
     </div>
   );
@@ -31,8 +34,8 @@ function Section({ title, children }) {
   const hasContent = React.Children.toArray(children).some(Boolean);
   if (!hasContent) return null;
   return (
-    <div className="bg-white/[0.03] rounded-2xl border border-white/[0.06] p-5 space-y-1">
-      <h3 className="text-sm font-semibold text-gray-300 mb-3">{title}</h3>
+    <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-1">
+      <h3 className="text-sm font-semibold text-gray-900 mb-3">{title}</h3>
       {children}
     </div>
   );
@@ -41,11 +44,11 @@ function Section({ title, children }) {
 function CheckItem({ label, value }) {
   if (!value) return null;
   return (
-    <div className="flex items-start gap-3 py-2 border-b border-white/5 last:border-0">
+    <div className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
       <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 shrink-0" />
       <div className="min-w-0">
         <div className="text-xs text-gray-500">{label}</div>
-        <div className="text-sm text-gray-200">{value}</div>
+        <div className="text-sm text-gray-900">{value}</div>
       </div>
     </div>
   );
@@ -53,6 +56,55 @@ function CheckItem({ label, value }) {
 
 export default function ReportDetail({ report, onBack, onDelete, onStatusChange }) {
   const st = statusConfig[report.status || "draft"];
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState('');
+  const [emailType, setEmailType] = useState('client');
+  const [sending, setSending] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    setDownloading(true);
+    try {
+      const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `raport_${report.client_name?.replace(/\s/g, '_') || 'wizyta'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Błąd podczas pobierania PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailRecipient.trim()) {
+      alert('Podaj adres email');
+      return;
+    }
+    setSending(true);
+    try {
+      await base44.functions.invoke('sendReportEmail', {
+        reportId: report.id,
+        recipientEmail: emailRecipient,
+        recipientType: emailType
+      });
+      alert('Raport został wysłany!');
+      setShowEmailForm(false);
+      setEmailRecipient('');
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert('Błąd podczas wysyłania emaila');
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <motion.div
@@ -61,28 +113,118 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
       className="space-y-4"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-medium">Wróć</span>
         </button>
-        <Button
-          onClick={onDelete}
-          variant="ghost"
-          size="sm"
-          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-        >
-          <Trash2 className="w-4 h-4 mr-1" /> Usuń
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleDownloadPDF}
+            disabled={downloading}
+            variant="outline"
+            size="sm"
+            className="text-green-600 border-green-600 hover:bg-green-50"
+          >
+            {downloading ? (
+              <div className="w-4 h-4 border-2 border-green-600/30 border-t-green-600 rounded-full animate-spin" />
+            ) : (
+              <><Download className="w-4 h-4 mr-1" /> PDF</>
+            )}
+          </Button>
+          <Button
+            onClick={() => setShowEmailForm(!showEmailForm)}
+            variant="outline"
+            size="sm"
+            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+          >
+            <Mail className="w-4 h-4 mr-1" /> Wyślij
+          </Button>
+          <Button
+            onClick={onDelete}
+            variant="ghost"
+            size="sm"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="w-4 h-4 mr-1" /> Usuń
+          </Button>
+        </div>
       </div>
 
+      {/* Email form */}
+      {showEmailForm && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="bg-white rounded-xl border border-gray-200 p-5 space-y-4"
+        >
+          <h3 className="text-base font-semibold text-gray-900">Wyślij raport mailem</h3>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-gray-700 text-xs mb-1">Adres email</Label>
+              <Input
+                type="email"
+                value={emailRecipient}
+                onChange={(e) => setEmailRecipient(e.target.value)}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-700 text-xs mb-2 block">Odbiorca</Label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEmailType('client')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+                    emailType === 'client'
+                      ? 'bg-green-50 text-green-600 border-green-500'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  Klient
+                </button>
+                <button
+                  onClick={() => setEmailType('manager')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+                    emailType === 'manager'
+                      ? 'bg-green-50 text-green-600 border-green-500'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  Manager
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSendEmail}
+              disabled={sending || !emailRecipient.trim()}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+            >
+              {sending ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <><Mail className="w-4 h-4 mr-2" /> Wyślij</>
+              )}
+            </Button>
+            <Button
+              onClick={() => setShowEmailForm(false)}
+              variant="outline"
+            >
+              Anuluj
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Title card */}
-      <div className="bg-white/[0.03] rounded-2xl border border-white/[0.06] p-5">
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-white">{report.client_name || "Raport"}</h2>
+          <h2 className="text-lg font-bold text-gray-900">{report.client_name || "Raport"}</h2>
           <Badge variant="outline" className={`border ${st.color}`}>{st.label}</Badge>
         </div>
 
@@ -96,7 +238,7 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
                 key={s}
                 onClick={() => onStatusChange(s)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                  isActive ? cfg.color : "border-white/10 text-gray-500 hover:border-white/20"
+                  isActive ? cfg.color : "border-gray-300 text-gray-600 hover:border-gray-400"
                 }`}
               >
                 {cfg.label}
@@ -166,7 +308,7 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
 
       {report.client_signature && (
         <Section title="Podpis">
-          <div className="text-sm text-gray-200 italic">{report.client_signature}</div>
+          <div className="text-sm text-gray-900 italic">{report.client_signature}</div>
         </Section>
       )}
     </motion.div>

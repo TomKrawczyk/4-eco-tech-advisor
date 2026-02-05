@@ -54,7 +54,6 @@ import AutoconsumptionCalc from './pages/AutoconsumptionCalc';
 import PVCalculator from './pages/PVCalculator';
 import Education from './pages/Education';
 import VisitReports from './pages/VisitReports';
-import Components from './pages/Components';
 import __Layout from './Layout.jsx';
 
 
@@ -66,7 +65,6 @@ export const PAGES = {
     "PVCalculator": PVCalculator,
     "Education": Education,
     "VisitReports": VisitReports,
-    "Components": Components,
 }
 
 export const pagesConfig = {
