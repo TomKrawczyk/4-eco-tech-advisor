@@ -1,129 +1,87 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
-import {
-  Home,
-  ClipboardCheck,
-  MessageSquare,
-  Calculator,
-  GraduationCap,
-  FileText,
-  Menu,
-  X,
-  Sun,
-  Zap,
-  Leaf
-} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const navItems = [
-  { name: "Dashboard", icon: Home, label: "Start" },
-  { name: "Checklist", icon: ClipboardCheck, label: "Checklista" },
-  { name: "Interview", icon: MessageSquare, label: "Wywiad" },
-  { name: "AutoconsumptionCalc", icon: Calculator, label: "Autokons." },
-  { name: "PVCalculator", icon: Sun, label: "Kalk. PV" },
-  { name: "Education", icon: GraduationCap, label: "Edukacja" },
-  { name: "VisitReports", icon: FileText, label: "Raporty" },
+  { name: "Dashboard", label: "Start" },
+  { name: "Checklist", label: "Checklista" },
+  { name: "Interview", label: "Wywiad" },
+  { name: "AutoconsumptionCalc", label: "Autokonsumpcja" },
+  { name: "PVCalculator", label: "Kalkulator PV" },
+  { name: "Education", label: "Edukacja" },
+  { name: "VisitReports", label: "Raporty" },
 ];
 
 export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-white">
+    <div className="min-h-screen bg-white text-gray-900">
       <style>{`
-        :root {
-          --eco-green: #22c55e;
-          --eco-green-light: #4ade80;
-          --eco-dark: #0a0f1a;
-          --eco-card: rgba(255,255,255,0.04);
-          --eco-border: rgba(74,222,128,0.15);
-        }
         * { -webkit-tap-highlight-color: transparent; }
-        body { background: #0a0f1a; }
+        body { background: white; }
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0a0f1a; }
-        ::-webkit-scrollbar-thumb { background: #22c55e33; border-radius: 3px; }
-        @media (max-width: 768px) {
-          .desktop-sidebar { display: none !important; }
-          .mobile-bottom-nav { display: flex !important; }
-        }
-        @media (min-width: 769px) {
-          .mobile-bottom-nav { display: none !important; }
-          .mobile-header-bar { display: none !important; }
-        }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
       `}</style>
 
-      {/* Desktop Sidebar */}
-      <aside className="desktop-sidebar fixed left-0 top-0 bottom-0 w-[220px] bg-[#0d1322] border-r border-[rgba(74,222,128,0.1)] z-40 flex flex-col">
-        <div className="p-5 border-b border-[rgba(74,222,128,0.1)]">
+      {/* Top Navigation */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50">
+        <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-              <Leaf className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center font-bold text-white text-sm">
+              4E
             </div>
             <div>
-              <div className="text-sm font-bold text-green-400 tracking-wide">4-ECO</div>
-              <div className="text-[10px] text-gray-500 uppercase tracking-widest">Green Energy</div>
+              <div className="text-base font-bold text-gray-900">4-ECO</div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Green Energy</div>
             </div>
           </div>
-        </div>
 
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive = currentPageName === item.name;
-            return (
-              <Link
-                key={item.name}
-                to={createPageUrl(item.name)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? "bg-green-500/15 text-green-400"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <item.icon className={`w-[18px] h-[18px] ${isActive ? "text-green-400" : ""}`} />
-                <span>{item.label}</span>
-                {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400" />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => {
+              const isActive = currentPageName === item.name;
+              return (
+                <Link
+                  key={item.name}
+                  to={createPageUrl(item.name)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-green-50 text-green-600"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
 
-        <div className="p-4 border-t border-[rgba(74,222,128,0.1)]">
-          <div className="text-[10px] text-gray-600 text-center">
-            Doradca Techniczny v2.0
-          </div>
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100"
+          >
+            <div className="w-5 h-0.5 bg-gray-900 relative">
+              <div className={`absolute w-5 h-0.5 bg-gray-900 transition-all ${mobileMenuOpen ? 'rotate-45 top-0' : '-top-1.5'}`}></div>
+              <div className={`absolute w-5 h-0.5 bg-gray-900 transition-all ${mobileMenuOpen ? '-rotate-45 top-0' : 'top-1.5'}`}></div>
+            </div>
+          </button>
         </div>
-      </aside>
-
-      {/* Mobile Header */}
-      <header className="mobile-header-bar fixed top-0 left-0 right-0 h-14 bg-[#0d1322]/95 backdrop-blur-xl border-b border-[rgba(74,222,128,0.1)] z-50 flex items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-            <Leaf className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-sm font-bold text-green-400">4-ECO</span>
-        </div>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/5"
-        >
-          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
       </header>
 
-      {/* Mobile Full Menu Overlay */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 top-14 bg-[#0d1322]/98 backdrop-blur-xl z-40 p-4"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="fixed top-16 left-0 right-0 bg-white border-b border-gray-200 z-40 overflow-hidden md:hidden"
           >
-            <nav className="space-y-2">
+            <nav className="p-4 space-y-1">
               {navItems.map((item) => {
                 const isActive = currentPageName === item.name;
                 return (
@@ -131,14 +89,13 @@ export default function Layout({ children, currentPageName }) {
                     key={item.name}
                     to={createPageUrl(item.name)}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-4 px-5 py-4 rounded-2xl text-base font-medium transition-all ${
+                    className={`block px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                       isActive
-                        ? "bg-green-500/15 text-green-400"
-                        : "text-gray-300 hover:bg-white/5"
+                        ? "bg-green-50 text-green-600"
+                        : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
-                    <item.icon className="w-5 h-5" />
-                    <span>{item.label}</span>
+                    {item.label}
                   </Link>
                 );
               })}
@@ -147,37 +104,9 @@ export default function Layout({ children, currentPageName }) {
         )}
       </AnimatePresence>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 h-16 bg-[#0d1322]/95 backdrop-blur-xl border-t border-[rgba(74,222,128,0.1)] z-50 items-center justify-around px-1 pb-[env(safe-area-inset-bottom)]">
-        {navItems.slice(0, 5).map((item) => {
-          const isActive = currentPageName === item.name;
-          return (
-            <Link
-              key={item.name}
-              to={createPageUrl(item.name)}
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 rounded-xl transition-all ${
-                isActive ? "text-green-400" : "text-gray-500"
-              }`}
-            >
-              <item.icon className={`w-5 h-5 ${isActive ? "text-green-400" : ""}`} />
-              <span className="text-[10px] font-medium leading-tight">{item.label}</span>
-            </Link>
-          );
-        })}
-        <Link
-          to={createPageUrl("VisitReports")}
-          className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 rounded-xl transition-all ${
-            currentPageName === "VisitReports" ? "text-green-400" : "text-gray-500"
-          }`}
-        >
-          <FileText className={`w-5 h-5 ${currentPageName === "VisitReports" ? "text-green-400" : ""}`} />
-          <span className="text-[10px] font-medium leading-tight">Raporty</span>
-        </Link>
-      </nav>
-
       {/* Main Content */}
-      <main className="md:ml-[220px] pt-14 md:pt-0 pb-20 md:pb-6">
-        <div className="max-w-5xl mx-auto px-4 md:px-8 py-6">
+      <main className="pt-16">
+        <div className="max-w-5xl mx-auto px-4 py-8">
           {children}
         </div>
       </main>

@@ -1,325 +1,221 @@
-import React, { useState } from "react";
-import { GraduationCap, Sun, Thermometer, Battery, Zap, Lightbulb, ChevronRight, ChevronDown } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import PageHeader from "../components/shared/PageHeader";
+import React from "react";
+import { motion } from "framer-motion";
 
-const topics = [
-  {
-    id: "pv",
-    icon: Sun,
-    title: "Fotowoltaika – jak działa?",
-    color: "yellow",
+const content = {
+  magazyn: {
+    title: "Magazyn Energii – Zwiększ Autokonsumpcję",
+    intro: "Magazyn energii pozwala przechowywać nadwyżki wyprodukowanej energii z instalacji fotowoltaicznej i wykorzystywać ją wieczorem oraz w nocy, gdy panele nie pracują. To klucz do maksymalizacji oszczędności.",
     sections: [
       {
-        title: "Zasada działania instalacji PV",
-        content: "Instalacja fotowoltaiczna przekształca energię słoneczną w energię elektryczną za pomocą paneli słonecznych (ogniw krzemowych). Proces ten nazywamy efektem fotowoltaicznym.",
-        bullets: [
-          "Panele fotowoltaiczne wychwytują promieniowanie słoneczne",
-          "Energia słoneczna jest przekształcana w prąd stały (DC)",
-          "Falownik konwertuje prąd stały na prąd przemienny (AC) 230V",
-          "Energia jest wykorzystywana w domu lub oddawana do sieci",
-          "Nadwyżka energii może być magazynowana w bateriach"
+        title: "Dlaczego magazyn energii?",
+        points: [
+          "Zwiększasz autokonsumpcję z 30-40% do nawet 80-90%",
+          "Wykorzystujesz własną energię wieczorem i w nocy",
+          "Minimalizujesz zakup drogiego prądu z sieci",
+          "Uniezależniasz się od rosnących cen energii",
+          "Zabezpieczenie awaryjne podczas blackoutów",
+          "Optymalizacja kosztów w systemie net-billing"
         ]
       },
       {
-        title: "Kluczowe elementy instalacji",
-        content: "Każda instalacja PV składa się z kilku istotnych komponentów:",
-        bullets: [
-          "Panele fotowoltaiczne (mono- lub polikrystaliczne)",
-          "Falownik (stringowy lub mikrofalowniki)",
-          "Konstrukcja montażowa (dachowa lub gruntowa)",
-          "Zabezpieczenia elektryczne (SPD, RCD, wyłączniki)",
-          "System monitoringu i komunikacji (Wi-Fi, LAN)",
-          "Okablowanie DC i AC z odpowiednim przekrojem"
+        title: "Jak to działa?",
+        points: [
+          "Dzień: Nadwyżka energii z paneli ładuje magazyn zamiast trafiać do sieci",
+          "Wieczór/Noc: Dom pobiera energię z magazynu zamiast z sieci",
+          "Rano: Cykl się powtarza – pełna kontrola nad własną energią",
+          "Inteligentny system zarządzania optymalizuje przepływ energii"
         ]
       },
       {
-        title: "Orientacja i nachylenie",
-        content: "Optymalna wydajność instalacji zależy od orientacji i kąta nachylenia paneli:",
-        bullets: [
-          "Południe – 100% wydajności (optymalnie)",
-          "Płd-Wschód / Płd-Zachód – ok. 90% wydajności",
-          "Wschód / Zachód – ok. 80% wydajności",
-          "Optymalny kąt nachylenia w Polsce: 30-35°",
-          "Unikać zacienienia – każdy cień zmniejsza produkcję"
+        title: "Pojemność i dobór",
+        points: [
+          "Typowa rodzina 4-osobowa: magazyn 5-10 kWh",
+          "Z pompą ciepła: rozważ 10-15 kWh",
+          "Z samochodem elektrycznym: minimum 10 kWh",
+          "Zasada: pojemność ≈ wieczorne/nocne zużycie energii",
+          "Koszt: około 2500-4000 zł za 1 kWh pojemności",
+          "Żywotność: 6000-8000 cykli ładowania (10-15 lat)"
+        ]
+      },
+      {
+        title: "Technologia i bezpieczeństwo",
+        points: [
+          "LFP (litowo-żelazowo-fosforanowa) – najbezpieczniejsza technologia",
+          "Sprawność ładowania/rozładowania około 95%",
+          "Kompaktowa konstrukcja – montaż wewnątrz lub na zewnątrz",
+          "Cicha praca – brak hałasu",
+          "Popularne marki: Huawei LUNA, BYD, Pylontech, Deye"
         ]
       }
     ]
   },
-  {
-    id: "autokonsumpcja",
-    icon: Zap,
-    title: "Autokonsumpcja – klucz do oszczędności",
-    color: "green",
+  autokonsumpcja: {
+    title: "Autokonsumpcja – Jak Maksymalnie Oszczędzać",
+    intro: "Autokonsumpcja to bezpośrednie wykorzystanie energii wyprodukowanej przez Twoją instalację PV. Im więcej własnej energii zużywasz od razu, tym większe oszczędności. Nauczmy się, jak to robić mądrze.",
     sections: [
       {
         title: "Czym jest autokonsumpcja?",
-        content: "Autokonsumpcja to bezpośrednie wykorzystanie wyprodukowanej przez instalację PV energii w gospodarstwie domowym. Im wyższy procent autokonsumpcji, tym większe oszczędności.",
-        bullets: [
-          "Autokonsumpcja = Produkcja PV − Eksport do sieci",
-          "Idealny cel: autokonsumpcja powyżej 60%",
-          "Kluczowe: dostosowanie zużycia do godzin produkcji",
-          "Uruchamiaj urządzenia energochłonne w godzinach szczytu słonecznego (10:00-15:00)"
+        points: [
+          "Autokonsumpcja = Wyprodukowana energia − Oddana do sieci",
+          "Im wyższy % autokonsumpcji, tym większe oszczędności",
+          "Cel: minimum 60%, optymalnie powyżej 70-80%",
+          "W net-billingu autokonsumpcja jest KLUCZOWA dla opłacalności"
         ]
       },
       {
-        title: "Jak zwiększyć autokonsumpcję?",
-        content: "Praktyczne sposoby na podniesienie wskaźnika autokonsumpcji:",
-        bullets: [
-          "Programuj pralkę, zmywarkę i suszarkę na godziny dzienne",
-          "Rozważ montaż magazynu energii (baterii)",
-          "Podgrzewaj wodę za pomocą nadwyżki z PV (grzałka + sterownik)",
-          "Zainstaluj inteligentne gniazdka z harmonogramem",
-          "Ładuj samochód elektryczny w ciągu dnia",
-          "Używaj pompy ciepła w trybie dziennym"
+        title: "Urządzenia energochłonne – kiedy włączać?",
+        points: [
+          "Pralka, zmywarka, suszarka: programuj na godziny 10:00-15:00",
+          "Podgrzewanie wody: steruj bojlerem tak, by pracował w dzień",
+          "Pompa ciepła: włącz tryb dzienny, grzej dom w godzinach produkcji PV",
+          "Ładowanie samochodu elektrycznego: zawsze w ciągu dnia (11:00-16:00)",
+          "Odkurzacz, żelazko, robot sprzątający: używaj w godzinach słonecznych",
+          "Klimatyzacja latem: chłodź dom gdy świeci słońce"
         ]
       },
       {
-        title: "Net-billing vs Net-metering",
-        content: "Od 2022 r. w Polsce obowiązuje system net-billingu dla nowych instalacji:",
-        bullets: [
-          "Net-metering (do 2022): bilansowanie 1:1 lub 1:0.8 – korzystniejsze",
-          "Net-billing: sprzedajesz nadwyżkę po cenie rynkowej, kupujesz po taryfie",
-          "W net-billingu autokonsumpcja jest KLUCZOWA dla opłacalności",
-          "Magazyn energii pomaga maksymalizować korzyści w net-billingu"
+        title: "Inteligentne sterowanie zużyciem",
+        points: [
+          "Inteligentne gniazdka z harmonogramem czasowym",
+          "Sterowniki z czujnikiem nadwyżki PV – automatyczne włączanie grzałki w bojlerze",
+          "System HEMS (Home Energy Management System) – kompleksowe zarządzanie",
+          "Monitoruj produkcję PV na bieżąco i reaguj"
+        ]
+      },
+      {
+        title: "Net-billing – dlaczego autokonsumpcja jest ważniejsza niż kiedyś?",
+        points: [
+          "Do 2022: Net-metering – bilansowanie 1:1 lub 1:0.8 (prosumer)",
+          "Od 2022: Net-billing – sprzedajesz po cenie rynkowej (~0.20-0.30 zł/kWh), kupujesz po taryfie (~0.90 zł/kWh)",
+          "Oddanie energii do sieci nie opłaca się tak jak wcześniej",
+          "Musisz zużywać jak najwięcej energii na miejscu, gdy jest produkowana",
+          "Magazyn energii pomaga wykorzystać nadwyżki wieczorem/nocą"
+        ]
+      },
+      {
+        title: "Przykład optymalizacji dnia",
+        points: [
+          "6:00-8:00 – Przygotowanie śniadania, kawa (PV zaczyna pracować)",
+          "9:00-11:00 – Uruchom pralkę, zmywarkę",
+          "11:00-15:00 – Szczyt produkcji: ładuj samochód, grzej wodę, pracuj w domu",
+          "15:00-17:00 – Schładzaj/ogrzewaj dom pompą ciepła, używaj AGD",
+          "17:00-22:00 – Energia z magazynu (jeśli masz) lub minimum poboru z sieci",
+          "Noc – Energia z magazynu lub niskoenergetyczne urządzenia"
         ]
       }
     ]
   },
-  {
-    id: "pompy",
-    icon: Thermometer,
-    title: "Pompy ciepła",
-    color: "blue",
+  ekonomia: {
+    title: "Ekonomia i Zwrot Inwestycji",
+    intro: "Poznaj rzeczywiste koszty, oszczędności i czas zwrotu inwestycji w magazyn energii i optymalizację autokonsumpcji.",
     sections: [
       {
-        title: "Zasada działania pompy ciepła",
-        content: "Pompa ciepła pobiera energię cieplną z otoczenia (powietrze, grunt, woda) i przenosi ją do wnętrza budynku. Działa jak odwrócona lodówka.",
-        bullets: [
-          "COP (współczynnik efektywności) = 3-5 → za 1 kWh prądu dostajesz 3-5 kWh ciepła",
-          "Typy: powietrze-woda, grunt-woda, powietrze-powietrze",
-          "Najczęściej stosowane: pompy powietrze-woda (split lub monoblok)",
-          "Mogą pracować jako ogrzewanie + chłodzenie (w trybie rewersyjnym)",
-          "Idealne w połączeniu z ogrzewaniem podłogowym"
+        title: "Koszty magazynu energii",
+        points: [
+          "Magazyn 5 kWh: około 12 000 - 15 000 zł",
+          "Magazyn 10 kWh: około 22 000 - 30 000 zł",
+          "Magazyn 15 kWh: około 35 000 - 45 000 zł",
+          "Instalacja: 2 000 - 4 000 zł",
+          "Razem z montażem i konfiguracją"
         ]
       },
       {
-        title: "Pompa ciepła + fotowoltaika",
-        content: "Połączenie pompy ciepła z instalacją PV to idealna kombinacja dla domu niezależnego energetycznie:",
-        bullets: [
-          "Pompa ciepła zużywa ok. 3000-5000 kWh/rok prądu",
-          "Instalacja PV może pokryć to zapotrzebowanie",
-          "W lecie nadwyżka PV → klimatyzacja lub podgrzewanie wody",
-          "W zimie pompa ciepła pracuje intensywniej, ale PV nadal wspiera",
-          "Optymalne: magazyn energii + pompa ciepła + PV = dom bez rachunków"
+        title: "Oszczędności roczne",
+        points: [
+          "Bez magazynu: autokonsumpcja 30-40% → oszczędność ~2 000 - 3 000 zł/rok",
+          "Z magazynem: autokonsumpcja 70-85% → oszczędność ~5 000 - 7 000 zł/rok",
+          "Różnica: około 3 000 - 4 000 zł/rok dodatkowych oszczędności",
+          "Zwrot z magazynu: 7-10 lat (w zależności od cen energii)"
         ]
       },
       {
-        title: "Na co zwrócić uwagę?",
-        content: "Kluczowe aspekty przy doborze pompy ciepła:",
-        bullets: [
-          "Prawidłowy dobór mocy do zapotrzebowania cieplnego budynku",
-          "Izolacja budynku – im lepsza, tym mniejsza potrzebna moc",
-          "Temperatura zasilania – optymalna: 35-45°C (podłogówka)",
-          "Poziom hałasu jednostki zewnętrznej",
-          "Klasa energetyczna – A+++ to standard",
-          "Gwarancja i serwis – ważne przy wieloletniej eksploatacji"
-        ]
-      }
-    ]
-  },
-  {
-    id: "magazyn",
-    icon: Battery,
-    title: "Magazyny energii",
-    color: "purple",
-    sections: [
-      {
-        title: "Po co magazyn energii?",
-        content: "Magazyn energii pozwala przechowywać nadwyżkę energii z instalacji PV i wykorzystywać ją, gdy słońce nie świeci.",
-        bullets: [
-          "Zwiększa autokonsumpcję nawet do 80-90%",
-          "Zapewnia zasilanie awaryjne (UPS) podczas blackoutów",
-          "Optymalizuje koszty w systemie net-billing",
-          "Pozwala uniezależnić się od sieci energetycznej",
-          "Idealne dla domów z pompą ciepła i samochodem elektrycznym"
-        ]
-      },
-      {
-        title: "Technologie i pojemności",
-        content: "Najpopularniejsze rozwiązania na rynku:",
-        bullets: [
-          "Technologia LFP (litowo-żelazowo-fosforanowa) – najbezpieczniejsza",
-          "Typowe pojemności: 5 kWh, 10 kWh, 15 kWh",
-          "Żywotność: 6000-8000 cykli ładowania",
-          "Sprawność ładowania/rozładowania: ~95%",
-          "Popularne marki: Huawei LUNA, BYD, Pylontech, Deye"
-        ]
-      },
-      {
-        title: "Dobór pojemności",
-        content: "Jak dobrać odpowiedni magazyn energii:",
-        bullets: [
-          "Zasada: pojemność ≈ dzienne zużycie wieczorne/nocne (5-15 kWh)",
-          "Dla 4-osobowej rodziny typowo: 5-10 kWh",
-          "Z pompą ciepła: rozważ 10-15 kWh",
-          "Z samochodem elektrycznym: minimum 10 kWh",
-          "Koszt: ok. 2500-4000 zł za 1 kWh pojemności"
-        ]
-      }
-    ]
-  },
-  {
-    id: "dotacje",
-    icon: Lightbulb,
-    title: "Dotacje i finansowanie",
-    color: "rose",
-    sections: [
-      {
-        title: "Programy dofinansowania",
-        content: "Aktualne programy wspierające OZE w Polsce:",
-        bullets: [
-          "Mój Prąd 6.0 – dofinansowanie PV, magazynów energii, pomp ciepła",
-          "Czyste Powietrze – wymiana ogrzewania + termomodernizacja",
-          "Moje Ciepło – dofinansowanie do pomp ciepła",
-          "Ulga termomodernizacyjna – odliczenie od podatku do 53 000 zł",
-          "Agroenergia – dla rolników i gospodarstw rolnych"
-        ]
-      },
-      {
-        title: "Mój Prąd 6.0 – szczegóły",
-        content: "Najważniejsze informacje o programie Mój Prąd:",
-        bullets: [
-          "Dofinansowanie do instalacji PV: do 7 000 zł",
-          "Magazyn energii: do 16 000 zł",
+        title: "Dofinansowanie – Mój Prąd 6.0",
+        points: [
+          "Magazyn energii: do 16 000 zł dofinansowania",
           "System zarządzania energią (HEMS): do 3 000 zł",
-          "Pompa ciepła: do 19 400 zł (powietrze-woda)",
-          "Kolektory słoneczne: do 3 500 zł",
-          "Warunek: podłączenie do sieci i net-billing"
+          "Pompa ciepła powietrze-woda: do 19 400 zł",
+          "Łącznie można otrzymać nawet 38 400 zł dotacji",
+          "Warunek: system musi być podłączony do sieci (net-billing)"
+        ]
+      },
+      {
+        title: "Kalkulator zwrotu inwestycji (przykład)",
+        points: [
+          "Koszt magazynu 10 kWh z montażem: 28 000 zł",
+          "Dotacja Mój Prąd: -16 000 zł",
+          "Koszt po dotacji: 12 000 zł",
+          "Dodatkowa oszczędność rocznie: 3 500 zł",
+          "Zwrot inwestycji: 12 000 / 3 500 = ~3,5 roku",
+          "Korzyść po 10 latach: 35 000 zł − 12 000 zł = 23 000 zł zysku"
         ]
       }
     ]
   }
-];
-
-const colorClasses = {
-  yellow: { bg: "bg-yellow-500/10", border: "border-yellow-500/20", text: "text-yellow-400", gradient: "from-yellow-500 to-amber-600" },
-  green: { bg: "bg-green-500/10", border: "border-green-500/20", text: "text-green-400", gradient: "from-green-500 to-emerald-600" },
-  blue: { bg: "bg-blue-500/10", border: "border-blue-500/20", text: "text-blue-400", gradient: "from-blue-500 to-cyan-600" },
-  purple: { bg: "bg-purple-500/10", border: "border-purple-500/20", text: "text-purple-400", gradient: "from-purple-500 to-violet-600" },
-  rose: { bg: "bg-rose-500/10", border: "border-rose-500/20", text: "text-rose-400", gradient: "from-rose-500 to-pink-600" },
 };
 
 export default function Education() {
-  const [openTopic, setOpenTopic] = useState(null);
-  const [openSections, setOpenSections] = useState({});
-
-  const toggleTopic = (id) => setOpenTopic(openTopic === id ? null : id);
-  const toggleSection = (key) => setOpenSections((s) => ({ ...s, [key]: !s[key] }));
-
   return (
-    <div className="space-y-6">
-      <PageHeader
-        icon={GraduationCap}
-        title="Edukacja"
-        subtitle="Fotowoltaika, pompy ciepła, magazyny energii, dotacje"
-        color="purple"
-      />
+    <div className="space-y-12 max-w-4xl mx-auto">
+      <div className="text-center space-y-3 py-8">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+          Edukacja
+        </h1>
+        <p className="text-gray-600 text-lg">
+          Magazyn energii i autokonsumpcja – praktyczny przewodnik dla właścicieli instalacji PV
+        </p>
+      </div>
 
-      <div className="space-y-3">
-        {topics.map((topic) => {
-          const c = colorClasses[topic.color];
-          const isOpen = openTopic === topic.id;
+      {Object.entries(content).map(([key, topic]) => (
+        <motion.div
+          key={key}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="bg-white rounded-2xl border border-gray-200 overflow-hidden"
+        >
+          <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 md:p-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              {topic.title}
+            </h2>
+            <p className="text-green-50 leading-relaxed">
+              {topic.intro}
+            </p>
+          </div>
 
-          return (
-            <div key={topic.id} className="rounded-2xl border border-white/[0.06] overflow-hidden">
-              <button
-                onClick={() => toggleTopic(topic.id)}
-                className={`w-full flex items-center gap-4 p-5 transition-all text-left ${
-                  isOpen ? `${c.bg}` : "bg-white/[0.03] hover:bg-white/[0.05]"
-                }`}
-              >
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${c.gradient} flex items-center justify-center shrink-0`}>
-                  <topic.icon className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold text-white">{topic.title}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{topic.sections.length} rozdziałów</p>
-                </div>
-                <motion.div animate={{ rotate: isOpen ? 90 : 0 }} transition={{ duration: 0.2 }}>
-                  <ChevronRight className="w-5 h-5 text-gray-500" />
-                </motion.div>
-              </button>
+          <div className="p-6 md:p-8 space-y-8">
+            {topic.sections.map((section, i) => (
+              <div key={i} className="space-y-4">
+                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                  <span className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center text-sm font-bold shrink-0">
+                    {i + 1}
+                  </span>
+                  {section.title}
+                </h3>
+                <ul className="space-y-3">
+                  {section.points.map((point, j) => (
+                    <li key={j} className="flex items-start gap-3 text-gray-700 leading-relaxed">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      ))}
 
-              <AnimatePresence>
-                {isOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="p-4 space-y-2 border-t border-white/5">
-                      {topic.sections.map((section, i) => {
-                        const sKey = `${topic.id}-${i}`;
-                        const sOpen = openSections[sKey];
-
-                        return (
-                          <div key={i} className="rounded-xl border border-white/[0.06] overflow-hidden">
-                            <button
-                              onClick={() => toggleSection(sKey)}
-                              className="w-full flex items-center justify-between p-4 text-left hover:bg-white/[0.03] transition-all"
-                            >
-                              <div className="flex items-center gap-3">
-                                <span className={`w-6 h-6 rounded-lg ${c.bg} flex items-center justify-center text-xs font-bold ${c.text}`}>
-                                  {i + 1}
-                                </span>
-                                <span className="text-sm font-medium text-gray-200">{section.title}</span>
-                              </div>
-                              <motion.div animate={{ rotate: sOpen ? 180 : 0 }}>
-                                <ChevronDown className="w-4 h-4 text-gray-500" />
-                              </motion.div>
-                            </button>
-
-                            <AnimatePresence>
-                              {sOpen && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.2 }}
-                                  className="overflow-hidden"
-                                >
-                                  <div className="px-4 pb-4 pt-1">
-                                    <p className="text-sm text-gray-400 leading-relaxed mb-3">{section.content}</p>
-                                    <ul className="space-y-2">
-                                      {section.bullets.map((bullet, j) => (
-                                        <motion.li
-                                          key={j}
-                                          initial={{ opacity: 0, x: -10 }}
-                                          animate={{ opacity: 1, x: 0 }}
-                                          transition={{ delay: j * 0.05 }}
-                                          className={`flex items-start gap-2 text-sm text-gray-300 pl-3 border-l-2 ${c.border} py-1`}
-                                        >
-                                          <span>{bullet}</span>
-                                        </motion.li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
+      <div className="bg-green-50 rounded-2xl border border-green-200 p-6 md:p-8 text-center">
+        <h3 className="text-xl font-bold text-gray-900 mb-3">
+          Potrzebujesz pomocy w doborze magazynu energii?
+        </h3>
+        <p className="text-gray-700 mb-4">
+          Skontaktuj się z naszym doradcą technicznym. Pomożemy dobrać optymalne rozwiązanie dla Twojego domu.
+        </p>
+        <div className="text-sm text-gray-600">
+          <div className="font-semibold text-green-600 text-base">4-ECO Green Energy</div>
+          <div>Profesjonalne doradztwo techniczne i sprzedaż</div>
+        </div>
       </div>
     </div>
   );
