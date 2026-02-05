@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
 
     // Dodaj dane raportu
     const appendResponse = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Raporty!A:append?valueInputOption=RAW`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Raporty!A1:append?valueInputOption=RAW`,
       {
         method: 'POST',
         headers: {
