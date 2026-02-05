@@ -40,43 +40,112 @@ Deno.serve(async (req) => {
       SPREADSHEET_ID = match[1];
     }
 
-    // Przygotuj dane do eksportu
-    const rowData = [
-      report.visit_date || '',
-      report.client_name || '',
-      report.client_address || '',
-      report.client_phone || '',
-      report.installation_types?.join(', ') || '',
-      report.launch_date || '',
-      report.contractor || '',
-      report.annual_production_kwh || '',
-      report.energy_imported_kwh || '',
-      report.energy_exported_kwh || '',
-      report.autoconsumption_rating || '',
-      report.panels_condition || '',
-      report.mounting_condition || '',
-      report.cables_condition || '',
-      report.protection_condition || '',
-      report.inverter_reading || '',
-      report.grounding_condition || '',
-      report.expansion_possibilities || '',
-      report.modernization_potential || '',
-      report.recommendations || '',
-      report.interview_annual_cost || '',
-      report.interview_residents || '',
-      report.interview_work_schedule || '',
-      report.interview_return_time || '',
-      report.interview_home_during_day || '',
-      report.interview_peak_usage || '',
-      report.interview_appliance_usage || '',
-      report.interview_water_heating || '',
-      report.interview_equipment || '',
-      report.interview_purchase_plans || '',
-      report.status || '',
-      new Date().toISOString()
-    ];
+    // Określ typ raportu (Checklista vs Wywiad)
+    const hasChecklistData = report.panels_condition || report.mounting_condition || 
+                             report.cables_condition || report.annual_production_kwh;
+    const hasInterviewData = report.interview_annual_cost || report.interview_residents || 
+                             report.interview_work_schedule;
+    
+    let sheetName = 'Checklista';
+    let rowData = [];
+    let headers = [];
+    
+    // Pobierz aktualny czas w strefie Europe/Warsaw
+    const now = new Date();
+    const warsawTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Warsaw' }));
+    const timestamp = warsawTime.toLocaleString('pl-PL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
 
-    // Sprawdź czy arkusz "Raporty" istnieje, jeśli nie - utwórz
+    if (hasChecklistData && !hasInterviewData) {
+      // Raport z checklisty
+      sheetName = 'Checklista';
+      headers = [
+        'Data wizyty', 'Klient', 'Adres', 'Telefon', 'Typ instalacji',
+        'Data uruchomienia', 'Wykonawca', 'Produkcja roczna (kWh)',
+        'Energia pobrana (kWh)', 'Energia oddana (kWh)', 'Ocena autokonsumpcji',
+        'Stan paneli', 'Stan mocowań', 'Stan przewodów', 'Stan zabezpieczeń',
+        'Odczyt falownika', 'Stan uziemienia', 'Możliwości rozbudowy',
+        'Potencjał modernizacji', 'Rekomendacje', 'Uwagi dodatkowe', 'Status', 'Data eksportu'
+      ];
+      rowData = [
+        report.visit_date || '',
+        report.client_name || '',
+        report.client_address || '',
+        report.client_phone || '',
+        report.installation_types?.join(', ') || '',
+        report.launch_date || '',
+        report.contractor || '',
+        report.annual_production_kwh || '',
+        report.energy_imported_kwh || '',
+        report.energy_exported_kwh || '',
+        report.autoconsumption_rating || '',
+        report.panels_condition || '',
+        report.mounting_condition || '',
+        report.cables_condition || '',
+        report.protection_condition || '',
+        report.inverter_reading || '',
+        report.grounding_condition || '',
+        report.expansion_possibilities || '',
+        report.modernization_potential || '',
+        report.recommendations || '',
+        report.additional_notes || '',
+        report.status || '',
+        timestamp
+      ];
+    } else if (hasInterviewData) {
+      // Raport z wywiadu
+      sheetName = 'Wywiad';
+      headers = [
+        'Data wizyty', 'Klient', 'Adres', 'Telefon', 'Typ instalacji',
+        'Roczny koszt energii', 'Liczba mieszkańców', 'Wyjście do pracy',
+        'Powrót do domu', 'Obecność w domu (10-15)', 'Szczyt zużycia',
+        'Używanie urządzeń', 'Ogrzewanie wody', 'Sprzęt elektryczny',
+        'Plany zakupowe', 'Status', 'Data eksportu'
+      ];
+      rowData = [
+        report.visit_date || '',
+        report.client_name || '',
+        report.client_address || '',
+        report.client_phone || '',
+        report.installation_types?.join(', ') || '',
+        report.interview_annual_cost || '',
+        report.interview_residents || '',
+        report.interview_work_schedule || '',
+        report.interview_return_time || '',
+        report.interview_home_during_day || '',
+        report.interview_peak_usage || '',
+        report.interview_appliance_usage || '',
+        report.interview_water_heating || '',
+        report.interview_equipment || '',
+        report.interview_purchase_plans || '',
+        report.status || '',
+        timestamp
+      ];
+    } else {
+      // Raport ogólny (jeśli nie pasuje do żadnej kategorii)
+      sheetName = 'Checklista';
+      headers = [
+        'Data wizyty', 'Klient', 'Adres', 'Telefon', 'Typ instalacji',
+        'Status', 'Data eksportu'
+      ];
+      rowData = [
+        report.visit_date || '',
+        report.client_name || '',
+        report.client_address || '',
+        report.client_phone || '',
+        report.installation_types?.join(', ') || '',
+        report.status || '',
+        timestamp
+      ];
+    }
+
+    // Sprawdź czy arkusz istnieje
     const sheetsResponse = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`,
       {
@@ -96,10 +165,10 @@ Deno.serve(async (req) => {
     }
     
     const spreadsheetData = await sheetsResponse.json();
-    const sheetExists = spreadsheetData.sheets?.some(s => s.properties.title === 'Raporty');
+    const sheetExists = spreadsheetData.sheets?.some(s => s.properties.title === sheetName);
 
     if (!sheetExists) {
-      // Utwórz nowy arkusz "Raporty"
+      // Utwórz nowy arkusz
       await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`,
         {
@@ -112,7 +181,7 @@ Deno.serve(async (req) => {
             requests: [{
               addSheet: {
                 properties: {
-                  title: 'Raporty'
+                  title: sheetName
                 }
               }
             }]
@@ -122,7 +191,7 @@ Deno.serve(async (req) => {
 
       // Dodaj nagłówki
       await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Raporty!A1:append?valueInputOption=RAW`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!A1:append?valueInputOption=RAW`,
         {
           method: 'POST',
           headers: {
@@ -130,18 +199,7 @@ Deno.serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            values: [[
-              'Data wizyty', 'Klient', 'Adres', 'Telefon', 'Typ instalacji',
-              'Data uruchomienia', 'Wykonawca', 'Produkcja roczna (kWh)',
-              'Energia pobrana (kWh)', 'Energia oddana (kWh)', 'Ocena autokonsumpcji',
-              'Stan paneli', 'Stan mocowań', 'Stan przewodów', 'Stan zabezpieczeń',
-              'Odczyt falownika', 'Stan uziemienia', 'Możliwości rozbudowy',
-              'Potencjał modernizacji', 'Rekomendacje',
-              'Roczny koszt energii', 'Liczba mieszkańców', 'Wyjście do pracy',
-              'Powrót do domu', 'Obecność w domu (10-15)', 'Szczyt zużycia',
-              'Używanie urządzeń', 'Ogrzewanie wody', 'Sprzęt elektryczny',
-              'Plany zakupowe', 'Status', 'Data eksportu'
-            ]]
+            values: [headers]
           })
         }
       );
@@ -149,7 +207,7 @@ Deno.serve(async (req) => {
 
     // Dodaj dane raportu
     const appendResponse = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Raporty!A1:append?valueInputOption=RAW`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!A1:append?valueInputOption=RAW`,
       {
         method: 'POST',
         headers: {
