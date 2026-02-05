@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
         'Energia pobrana (kWh)', 'Energia oddana (kWh)', 'Ocena autokonsumpcji',
         'Stan paneli', 'Stan mocowań', 'Stan przewodów', 'Stan zabezpieczeń',
         'Odczyt falownika', 'Stan uziemienia', 'Możliwości rozbudowy',
-        'Potencjał modernizacji', 'Rekomendacje', 'Uwagi dodatkowe', 'Status', 'Data eksportu'
+        'Potencjał modernizacji', 'Rekomendacje', 'Uwagi dodatkowe', 'Status', 'Data eksportu', 'Utworzył'
       ];
       rowData = [
         report.visit_date || '',
@@ -96,7 +96,8 @@ Deno.serve(async (req) => {
         report.recommendations || '',
         report.additional_notes || '',
         report.status || '',
-        timestamp
+        timestamp,
+        user.email || user.full_name || ''
       ];
     } else if (hasInterviewData) {
       // Raport z wywiadu
@@ -106,7 +107,7 @@ Deno.serve(async (req) => {
         'Roczny koszt energii', 'Liczba mieszkańców', 'Wyjście do pracy',
         'Powrót do domu', 'Obecność w domu (10-15)', 'Szczyt zużycia',
         'Używanie urządzeń', 'Ogrzewanie wody', 'Sprzęt elektryczny',
-        'Plany zakupowe', 'Status', 'Data eksportu'
+        'Plany zakupowe', 'Status', 'Data eksportu', 'Utworzył'
       ];
       rowData = [
         report.visit_date || '',
@@ -125,14 +126,15 @@ Deno.serve(async (req) => {
         report.interview_equipment || '',
         report.interview_purchase_plans || '',
         report.status || '',
-        timestamp
+        timestamp,
+        user.email || user.full_name || ''
       ];
     } else {
       // Raport ogólny (jeśli nie pasuje do żadnej kategorii)
       sheetName = 'Checklista';
       headers = [
         'Data wizyty', 'Klient', 'Adres', 'Telefon', 'Typ instalacji',
-        'Status', 'Data eksportu'
+        'Status', 'Data eksportu', 'Utworzył'
       ];
       rowData = [
         report.visit_date || '',
@@ -141,7 +143,8 @@ Deno.serve(async (req) => {
         report.client_phone || '',
         report.installation_types?.join(', ') || '',
         report.status || '',
-        timestamp
+        timestamp,
+        user.email || user.full_name || ''
       ];
     }
 
