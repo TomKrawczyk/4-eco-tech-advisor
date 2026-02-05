@@ -65,17 +65,19 @@ export default function Checklist() {
       const exported = parseFloat(key === 'energy_exported_kwh' ? value : newForm.energy_exported_kwh) || 0;
       const imported = parseFloat(key === 'energy_imported_kwh' ? value : newForm.energy_imported_kwh) || 0;
       
-      if (production > 0 && (production + imported) > 0) {
+      if (production > 0) {
         // Energia zużyta z PV (nie wyeksportowana)
         const selfUsed = production - exported;
-        // Całkowite zużycie energii
+        // Całkowite zużycie energii (własne + z sieci)
         const totalConsumption = selfUsed + imported;
-        // Stopień samowystarczalności (pokrycie potrzeb z PV)
-        const autoconsumption = (selfUsed / totalConsumption) * 100;
-        // Procent energii wyeksportowanej
-        const exportPercent = (exported / production) * 100;
         
-        newForm.autoconsumption_rating = `Autokonsumpcja: ${autoconsumption.toFixed(1)}%, Eksport: ${exportPercent.toFixed(1)}%`;
+        // Autokonsumpcja - ile z wyprodukowanej energii zużyto lokalnie
+        const autoconsumptionRate = (selfUsed / production) * 100;
+        
+        // Samowystarczalność - ile potrzeb pokrywa PV (uwzględnia pobór z sieci)
+        const selfSufficiency = totalConsumption > 0 ? (selfUsed / totalConsumption) * 100 : 0;
+        
+        newForm.autoconsumption_rating = `Autokonsumpcja: ${autoconsumptionRate.toFixed(1)}%, Samowystarczalność: ${selfSufficiency.toFixed(1)}%, Pobór z sieci: ${imported} kWh`;
       }
     }
     
