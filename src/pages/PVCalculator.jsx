@@ -13,7 +13,7 @@ import { Cloud, TrendingUp } from "lucide-react";
 export default function PVCalculator() {
   const [zuzycie, setZuzycie] = useState("");
   const [orientacja, setOrientacja] = useState("1.0");
-  const [cenaPradu, setCenaPradu] = useState("0.90");
+  const [cenaPradu, setCenaPradu] = useState("1.50");
   const [cenaHandlowca, setCenaHandlowca] = useState("");
   const [result, setResult] = useState(null);
   const [weatherData, setWeatherData] = useState(null);
@@ -26,8 +26,8 @@ export default function PVCalculator() {
       try {
         const { data } = await base44.functions.invoke('getEnergyPrices', {});
         setEnergyPrice(data);
-        if (!cenaPradu) {
-          setCenaPradu(data.current_price.toString());
+        if (!cenaPradu || cenaPradu === "0.90") {
+          setCenaPradu(data.gross_price.toString());
         }
       } catch (error) {
         console.error('Failed to fetch energy prices:', error);
@@ -117,13 +117,35 @@ export default function PVCalculator() {
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
         {/* Energy price info */}
         {energyPrice && (
-          <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-gray-600">Aktualna cena energii:</span>
-              <Badge className="bg-green-600">{energyPrice.current_price} zł/kWh</Badge>
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200 space-y-2">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-xs text-gray-600 mb-1">Cena energii (taryfa dynamiczna):</div>
+                <div className="flex items-baseline gap-2">
+                  <div className="text-sm font-semibold text-gray-900">
+                    Netto: <span className="text-green-600">{energyPrice.net_price} zł/kWh</span>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    Brutto: <span className="text-gray-700">{energyPrice.gross_price} zł/kWh</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Źródło: {energyPrice.source} • {new Date(energyPrice.timestamp).toLocaleString('pl-PL')}
+            
+            <div className="bg-amber-50 rounded px-3 py-2 border border-amber-200">
+              <div className="text-xs text-amber-800">
+                <span className="font-semibold">⚠️ Uwaga:</span> Aż <span className="font-bold">{energyPrice.tax_percentage}% ceny energii</span> to podatki i opłaty (akcyza, VAT, opłaty sieciowe, OZE)
+              </div>
+            </div>
+            
+            <div className="text-xs text-gray-500">
+              Źródło: {energyPrice.source} • {new Date(energyPrice.timestamp).toLocaleString('pl-PL', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
             </div>
           </div>
         )}
@@ -155,15 +177,16 @@ export default function PVCalculator() {
           </div>
 
           <div>
-            <Label className="text-gray-700 text-xs mb-1">Cena prądu [zł/kWh] *</Label>
+            <Label className="text-gray-700 text-xs mb-1">Cena prądu brutto [zł/kWh] *</Label>
             <Input
               type="number"
               step="0.01"
               value={cenaPradu}
               onChange={(e) => setCenaPradu(e.target.value)}
-              placeholder="0.90"
+              placeholder="1.50"
               className="text-lg h-12"
             />
+            <p className="text-xs text-gray-500 mt-1">Aktualna średnia cena brutto w Polsce: ~1.50 zł/kWh</p>
           </div>
 
           <div>
