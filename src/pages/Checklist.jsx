@@ -76,7 +76,15 @@ export default function Checklist() {
     if (data.annual_production_kwh) data.annual_production_kwh = parseFloat(data.annual_production_kwh);
     if (data.energy_imported_kwh) data.energy_imported_kwh = parseFloat(data.energy_imported_kwh);
     if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
-    await base44.entities.VisitReport.create(data);
+    const report = await base44.entities.VisitReport.create(data);
+    
+    // Automatyczny eksport do Google Sheets
+    try {
+      await base44.functions.invoke('exportToGoogleSheets', { reportId: report.id });
+    } catch (error) {
+      console.error('Błąd eksportu do Google Sheets:', error);
+    }
+    
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);

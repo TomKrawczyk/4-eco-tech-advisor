@@ -46,10 +46,18 @@ export default function Interview() {
   const handleSave = async () => {
     if (!form.client_name.trim()) return;
     setSaving(true);
-    await base44.entities.VisitReport.create({
+    const report = await base44.entities.VisitReport.create({
       ...form,
       status: "draft",
     });
+    
+    // Automatyczny eksport do Google Sheets
+    try {
+      await base44.functions.invoke('exportToGoogleSheets', { reportId: report.id });
+    } catch (error) {
+      console.error('Błąd eksportu do Google Sheets:', error);
+    }
+    
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);

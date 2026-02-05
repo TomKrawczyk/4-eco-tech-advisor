@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, Trash2, Clock, CheckCircle2, Send, User, MapPin, Phone, Calendar, Zap, Wrench, Download, Mail } from "lucide-react";
+import { ArrowLeft, Trash2, Clock, CheckCircle2, Send, User, MapPin, Phone, Calendar, Zap, Wrench, Download, Mail, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,7 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
   const [emailType, setEmailType] = useState('client');
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const handleDownloadPDF = async () => {
     setDownloading(true);
@@ -106,6 +107,19 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
     }
   };
 
+  const handleExportToSheets = async () => {
+    setExporting(true);
+    try {
+      await base44.functions.invoke('exportToGoogleSheets', { reportId: report.id });
+      alert('Raport wyeksportowany do Google Sheets!');
+    } catch (error) {
+      console.error('Error exporting to Google Sheets:', error);
+      alert('Błąd podczas eksportu do Google Sheets');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -142,6 +156,19 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
             className="text-blue-600 border-blue-600 hover:bg-blue-50"
           >
             <Mail className="w-4 h-4 mr-1" /> Wyślij
+          </Button>
+          <Button
+            onClick={handleExportToSheets}
+            disabled={exporting}
+            variant="outline"
+            size="sm"
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+          >
+            {exporting ? (
+              <div className="w-4 h-4 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin" />
+            ) : (
+              <><Table className="w-4 h-4 mr-1" /> Sheets</>
+            )}
           </Button>
           <Button
             onClick={onDelete}
