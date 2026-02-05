@@ -47,23 +47,23 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import Dashboard from './pages/Dashboard';
-import Checklist from './pages/Checklist';
-import Interview from './pages/Interview';
 import AutoconsumptionCalc from './pages/AutoconsumptionCalc';
-import PVCalculator from './pages/PVCalculator';
+import Checklist from './pages/Checklist';
+import Dashboard from './pages/Dashboard';
 import Education from './pages/Education';
+import Interview from './pages/Interview';
+import PVCalculator from './pages/PVCalculator';
 import VisitReports from './pages/VisitReports';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Dashboard": Dashboard,
-    "Checklist": Checklist,
-    "Interview": Interview,
     "AutoconsumptionCalc": AutoconsumptionCalc,
-    "PVCalculator": PVCalculator,
+    "Checklist": Checklist,
+    "Dashboard": Dashboard,
     "Education": Education,
+    "Interview": Interview,
+    "PVCalculator": PVCalculator,
     "VisitReports": VisitReports,
 }
 

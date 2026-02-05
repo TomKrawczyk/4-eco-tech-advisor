@@ -300,7 +300,11 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
       <Section title="Wywiad z klientem">
         <CheckItem label="Roczny koszt energii" value={report.interview_annual_cost} />
         <CheckItem label="Liczba mieszkańców" value={report.interview_residents} />
+        <CheckItem label="Wyjście do pracy/szkoły" value={report.interview_work_schedule} />
+        <CheckItem label="Powrót do domu" value={report.interview_return_time} />
+        <CheckItem label="Obecność w domu w dzień (10-15)" value={report.interview_home_during_day} />
         <CheckItem label="Największe zużycie" value={report.interview_peak_usage} />
+        <CheckItem label="Używanie urządzeń" value={report.interview_appliance_usage} />
         <CheckItem label="Ogrzewanie wody" value={report.interview_water_heating} />
         <CheckItem label="Sprzęt elektryczny" value={report.interview_equipment} />
         <CheckItem label="Plany zakupowe" value={report.interview_purchase_plans} />

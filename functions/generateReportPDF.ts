@@ -139,7 +139,11 @@ Deno.serve(async (req) => {
     const interview = [
       { label: 'Roczny koszt', value: report.interview_annual_cost },
       { label: 'Mieszkańcy', value: report.interview_residents },
+      { label: 'Wyjście do pracy/szkoły', value: report.interview_work_schedule },
+      { label: 'Powrót do domu', value: report.interview_return_time },
+      { label: 'Obecność w domu (10-15)', value: report.interview_home_during_day },
       { label: 'Szczyt zużycia', value: report.interview_peak_usage },
+      { label: 'Używanie urządzeń', value: report.interview_appliance_usage },
       { label: 'Ogrzewanie wody', value: report.interview_water_heating },
       { label: 'Sprzęt', value: report.interview_equipment },
       { label: 'Plany', value: report.interview_purchase_plans }

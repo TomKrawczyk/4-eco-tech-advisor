@@ -8,12 +8,16 @@ import { base44 } from "@/api/base44Client";
 import PageHeader from "../components/shared/PageHeader";
 
 const questions = [
-  { key: "interview_annual_cost", label: "Jaki jest roczny koszt za energię elektryczną?", placeholder: "np. 4500 zł/rok", icon: "💰" },
-  { key: "interview_residents", label: "Ile osób zamieszkuje dom/mieszkanie?", placeholder: "np. 4 osoby", icon: "👥" },
-  { key: "interview_peak_usage", label: "O jakiej porze dnia zużycie prądu jest największe?", placeholder: "np. Wieczorem 17-22", icon: "⏰" },
-  { key: "interview_water_heating", label: "Czym ogrzewana jest ciepła woda?", placeholder: "np. Bojler elektryczny", icon: "🔥" },
-  { key: "interview_equipment", label: "Jaki sprzęt elektryczny jest w domu?", placeholder: "np. Zmywarka, pralka, suszarka, klimatyzacja", icon: "🏠" },
-  { key: "interview_purchase_plans", label: "Jakie plany zakupowe dotyczące urządzeń energochłonnych?", placeholder: "np. Samochód elektryczny, pompa ciepła", icon: "🛒" },
+  { key: "interview_annual_cost", label: "Jaki jest roczny koszt za energię elektryczną?", placeholder: "np. 4500 zł/rok" },
+  { key: "interview_residents", label: "Ile osób zamieszkuje dom/mieszkanie?", placeholder: "np. 4 osoby" },
+  { key: "interview_work_schedule", label: "O której godzinie domownicy wychodzą do pracy/szkoły?", placeholder: "np. 7:00-8:00" },
+  { key: "interview_return_time", label: "O której godzinie zwykle wszyscy wracają do domu?", placeholder: "np. 16:00-18:00" },
+  { key: "interview_home_during_day", label: "Czy ktoś jest w domu w godzinach 10:00-15:00?", placeholder: "np. Tak, pracuję zdalnie / Nie, dom jest pusty" },
+  { key: "interview_peak_usage", label: "O jakiej porze dnia zużycie prądu jest największe?", placeholder: "np. Wieczorem 17-22" },
+  { key: "interview_appliance_usage", label: "Kiedy najczęściej włączacie pralkę, zmywarkę i inne urządzenia?", placeholder: "np. Wieczorem po powrocie z pracy" },
+  { key: "interview_water_heating", label: "Czym ogrzewana jest ciepła woda i kiedy najczęściej z niej korzystacie?", placeholder: "np. Bojler elektryczny, rano i wieczorem" },
+  { key: "interview_equipment", label: "Jaki sprzęt elektryczny jest w domu?", placeholder: "np. Zmywarka, pralka, suszarka, klimatyzacja" },
+  { key: "interview_purchase_plans", label: "Jakie plany zakupowe dotyczące urządzeń energochłonnych?", placeholder: "np. Samochód elektryczny, pompa ciepła" },
 ];
 
 export default function Interview() {
@@ -22,7 +26,11 @@ export default function Interview() {
     visit_date: new Date().toISOString().split("T")[0],
     interview_annual_cost: "",
     interview_residents: "",
+    interview_work_schedule: "",
+    interview_return_time: "",
+    interview_home_during_day: "",
     interview_peak_usage: "",
+    interview_appliance_usage: "",
     interview_water_heating: "",
     interview_equipment: "",
     interview_purchase_plans: "",
@@ -53,7 +61,11 @@ export default function Interview() {
       visit_date: new Date().toISOString().split("T")[0],
       interview_annual_cost: "",
       interview_residents: "",
+      interview_work_schedule: "",
+      interview_return_time: "",
+      interview_home_during_day: "",
       interview_peak_usage: "",
+      interview_appliance_usage: "",
       interview_water_heating: "",
       interview_equipment: "",
       interview_purchase_plans: "",
@@ -127,7 +139,6 @@ export default function Interview() {
             }`}
           >
             <div className="flex items-start gap-3">
-              <span className="text-xl mt-0.5">{q.icon}</span>
               <div className="flex-1 min-w-0">
                 <Label className="text-gray-900 text-sm font-medium">{q.label}</Label>
                 <Input

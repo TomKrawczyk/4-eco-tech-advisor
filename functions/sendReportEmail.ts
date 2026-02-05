@@ -54,7 +54,11 @@ ${report.additional_notes ? `Dodatkowe uwagi: ${report.additional_notes}` : ''}
 === WYWIAD Z KLIENTEM ===
 ${report.interview_annual_cost ? `Roczny koszt energii: ${report.interview_annual_cost}` : ''}
 ${report.interview_residents ? `Liczba mieszkańców: ${report.interview_residents}` : ''}
+${report.interview_work_schedule ? `Wyjście do pracy/szkoły: ${report.interview_work_schedule}` : ''}
+${report.interview_return_time ? `Powrót do domu: ${report.interview_return_time}` : ''}
+${report.interview_home_during_day ? `Obecność w domu (10-15): ${report.interview_home_during_day}` : ''}
 ${report.interview_peak_usage ? `Szczyt zużycia: ${report.interview_peak_usage}` : ''}
+${report.interview_appliance_usage ? `Używanie urządzeń: ${report.interview_appliance_usage}` : ''}
 ${report.interview_water_heating ? `Ogrzewanie wody: ${report.interview_water_heating}` : ''}
 ${report.interview_equipment ? `Sprzęt elektryczny: ${report.interview_equipment}` : ''}
 ${report.interview_purchase_plans ? `Plany zakupowe: ${report.interview_purchase_plans}` : ''}
