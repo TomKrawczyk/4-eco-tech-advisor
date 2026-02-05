@@ -16,6 +16,41 @@ export default function PVCalculator() {
   const [cenaPradu, setCenaPradu] = useState("0.90");
   const [cenaHandlowca, setCenaHandlowca] = useState("");
   const [result, setResult] = useState(null);
+  const [weatherData, setWeatherData] = useState(null);
+  const [energyPrice, setEnergyPrice] = useState(null);
+  const [loadingWeather, setLoadingWeather] = useState(false);
+
+  // Pobierz cenę energii przy załadowaniu
+  useEffect(() => {
+    const fetchEnergyPrice = async () => {
+      try {
+        const { data } = await base44.functions.invoke('getEnergyPrices', {});
+        setEnergyPrice(data);
+        if (!cenaPradu) {
+          setCenaPradu(data.current_price.toString());
+        }
+      } catch (error) {
+        console.error('Failed to fetch energy prices:', error);
+      }
+    };
+    fetchEnergyPrice();
+  }, []);
+
+  // Pobierz prognozę pogody
+  const fetchWeatherForecast = async () => {
+    setLoadingWeather(true);
+    try {
+      const { data } = await base44.functions.invoke('getWeatherForecast', {
+        lat: 52.23,
+        lon: 21.01
+      });
+      setWeatherData(data);
+    } catch (error) {
+      console.error('Failed to fetch weather:', error);
+    } finally {
+      setLoadingWeather(false);
+    }
+  };
 
   const calculate = () => {
     const zuz = parseFloat(zuzycie);
@@ -25,7 +60,13 @@ export default function PVCalculator() {
 
     if (isNaN(zuz) || isNaN(cena)) return;
 
-    const produkcjaNaKwp = 1000 * orient;
+    // Uwzględnij prognozę pogody jeśli dostępna
+    let productionMultiplier = 1.0;
+    if (weatherData?.summary?.avg_production_factor) {
+      productionMultiplier = weatherData.summary.avg_production_factor / 100;
+    }
+
+    const produkcjaNaKwp = 1000 * orient * productionMultiplier;
     const wymaganaMocKw = (zuz * 1.2) / produkcjaNaKwp;
 
     let mocPanela, liczbaPaneli;
@@ -69,10 +110,8 @@ export default function PVCalculator() {
   return (
     <div className="space-y-6">
       <PageHeader
-        icon={Sun}
         title="Kalkulator Instalacji PV"
         subtitle="Dobierz moc instalacji i sprawdź zysk"
-        color="yellow"
       />
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
