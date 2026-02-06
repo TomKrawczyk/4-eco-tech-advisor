@@ -113,22 +113,23 @@ export default function UserManagement() {
         subtitle="Dodaj emaile użytkowników z dostępem do aplikacji"
       />
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <h3 className="text-lg font-semibold mb-4">Dodaj użytkownika</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 mb-6">
+        <h3 className="text-base md:text-lg font-semibold mb-4">Dodaj użytkownika</h3>
+        <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
           <div>
-            <Label>Email</Label>
+            <Label className="text-sm">Email *</Label>
             <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@przykład.pl"
+              className="h-11"
             />
           </div>
           <div>
-            <Label>Rola</Label>
+            <Label className="text-sm">Rola</Label>
             <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
+              <SelectTrigger className="h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -138,14 +139,15 @@ export default function UserManagement() {
             </Select>
           </div>
           <div>
-            <Label>Notatki (opcjonalnie)</Label>
+            <Label className="text-sm">Notatki (opcjonalnie)</Label>
             <Input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Dodatkowe informacje"
+              className="h-11"
             />
           </div>
-          <Button type="submit" disabled={addUserMutation.isPending}>
+          <Button type="submit" disabled={addUserMutation.isPending} className="w-full sm:w-auto h-11">
             <Plus className="w-4 h-4 mr-2" />
             Dodaj użytkownika
           </Button>
