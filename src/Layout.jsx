@@ -22,25 +22,16 @@ const navItems = [
 export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [hasAccess, setHasAccess] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
 
   React.useEffect(() => {
     const checkAccess = async () => {
       try {
         const user = await base44.auth.me();
-        console.log('Zalogowany użytkownik:', user);
         setCurrentUser(user);
 
-        // Sprawdź czy użytkownik jest na liście AllowedUser
         const allowedUsers = await base44.entities.AllowedUser.filter({ email: user.email });
-        
-        console.log('Sprawdzanie dostępu:', {
-          userEmail: user.email,
-          userRole: user.role,
-          allowedUsersFound: allowedUsers.length,
-          allowedUsers: allowedUsers
-        });
         
         if (allowedUsers.length > 0) {
           setHasAccess(true);
@@ -49,6 +40,7 @@ export default function Layout({ children, currentPageName }) {
         }
       } catch (error) {
         console.error('Błąd sprawdzania dostępu:', error);
+        setCurrentUser(null);
         setHasAccess(false);
       } finally {
         setCheckingAccess(false);
