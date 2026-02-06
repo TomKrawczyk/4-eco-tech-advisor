@@ -104,7 +104,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* User Menu */}
           <div className="flex items-center gap-2">
-            {currentUser && (
+            {!checkingAccess && currentUser && (
               <>
                 <NotificationPanel currentUser={currentUser} />
                 <DropdownMenu>
@@ -168,7 +168,7 @@ export default function Layout({ children, currentPageName }) {
           >
             <nav className="p-4 space-y-1">
               {/* User Profile in Mobile Menu */}
-              {currentUser && (
+              {!checkingAccess && currentUser && (
                 <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-100">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
