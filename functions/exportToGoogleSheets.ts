@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
         report.additional_notes || '',
         report.status || '',
         timestamp,
-        user.email || user.full_name || ''
+        user.full_name || user.email || ''
       ];
     } else if (hasInterviewData) {
       // Raport z wywiadu
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
         report.interview_purchase_plans || '',
         report.status || '',
         timestamp,
-        user.email || user.full_name || ''
+        user.full_name || user.email || ''
       ];
     } else {
       // Raport ogólny (jeśli nie pasuje do żadnej kategorii)
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
         report.installation_types?.join(', ') || '',
         report.status || '',
         timestamp,
-        user.email || user.full_name || ''
+        user.full_name || user.email || ''
       ];
     }
 
