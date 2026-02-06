@@ -29,16 +29,14 @@ export default function Layout({ children, currentPageName }) {
     const checkAccess = async () => {
       try {
         const user = await base44.auth.me();
-        setCurrentUser(user);
-
-        const allowedUsers = await base44.entities.AllowedUser.list();
-        const isAllowed = allowedUsers.some(allowed => allowed.email === user.email);
         
-        if (isAllowed) {
-          setHasAccess(true);
-        } else {
-          setHasAccess(false);
-        }
+        const allowedUsers = await base44.entities.AllowedUser.list();
+        const userAccess = allowedUsers.find(allowed => 
+          allowed.email === user.email || allowed.data?.email === user.email
+        );
+        
+        setCurrentUser(user);
+        setHasAccess(!!userAccess);
       } catch (error) {
         console.error('Błąd sprawdzania dostępu:', error);
         setCurrentUser(null);
