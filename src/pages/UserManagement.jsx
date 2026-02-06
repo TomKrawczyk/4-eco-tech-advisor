@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Trash2, Plus, Shield, Search, Filter } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 
@@ -71,6 +71,18 @@ export default function UserManagement() {
       setSelectedUsers([]);
       setShowBulkDeleteDialog(false);
       toast.success("Użytkownicy usunięci");
+    },
+  });
+
+  const resendInviteMutation = useMutation({
+    mutationFn: async (user) => {
+      await base44.users.inviteUser(user.email, user.role);
+    },
+    onSuccess: () => {
+      toast.success("Zaproszenie wysłane ponownie");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
     },
   });
 
@@ -251,14 +263,25 @@ export default function UserManagement() {
                     <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.notes}</p>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setUserToDelete(user)}
-                  className="shrink-0"
-                >
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => resendInviteMutation.mutate(user)}
+                    className="shrink-0"
+                    title="Wyślij zaproszenie ponownie"
+                  >
+                    <Mail className="w-4 h-4 text-blue-500" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setUserToDelete(user)}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
