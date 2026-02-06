@@ -18,12 +18,31 @@ const statusConfig = {
 export default function VisitReports() {
   const [search, setSearch] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: reports = [], isLoading } = useQuery({
+  React.useEffect(() => {
+    base44.auth.me().then(setCurrentUser);
+  }, []);
+
+  const { data: allReports = [], isLoading } = useQuery({
     queryKey: ["visitReports"],
-    queryFn: () => base44.entities.VisitReport.list("-created_date", 50),
+    queryFn: () => base44.entities.VisitReport.list("-created_date", 100),
+    enabled: !!currentUser,
   });
+
+  // Filtruj raporty według roli użytkownika
+  const reports = React.useMemo(() => {
+    if (!currentUser) return [];
+    
+    // Admin widzi wszystkie raporty
+    if (currentUser.role === "admin") {
+      return allReports;
+    }
+    
+    // Zwykły użytkownik widzi tylko swoje raporty
+    return allReports.filter(report => report.created_by === currentUser.email);
+  }, [allReports, currentUser]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.VisitReport.delete(id),

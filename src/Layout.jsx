@@ -31,11 +31,13 @@ export default function Layout({ children, currentPageName }) {
         const user = await base44.auth.me();
         setCurrentUser(user);
 
-        if (user.role === "admin") {
+        // Sprawdź czy użytkownik jest na liście AllowedUser
+        const allowedUsers = await base44.entities.AllowedUser.filter({ email: user.email });
+        
+        if (allowedUsers.length > 0) {
           setHasAccess(true);
         } else {
-          const allowedUsers = await base44.entities.AllowedUser.filter({ email: user.email });
-          setHasAccess(allowedUsers.length > 0);
+          setHasAccess(false);
         }
       } catch (error) {
         setHasAccess(false);

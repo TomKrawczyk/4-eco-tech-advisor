@@ -20,10 +20,24 @@ export default function Dashboard() {
     base44.auth.me().then(setCurrentUser);
   }, []);
 
-  const { data: visitReports = [] } = useQuery({
+  const { data: allVisitReports = [] } = useQuery({
     queryKey: ["visitReports"],
-    queryFn: () => base44.entities.VisitReport.list("-created_date", 5),
+    queryFn: () => base44.entities.VisitReport.list("-created_date", 20),
+    enabled: !!currentUser,
   });
+
+  // Filtruj raporty według roli użytkownika
+  const visitReports = React.useMemo(() => {
+    if (!currentUser) return [];
+    
+    // Admin widzi wszystkie raporty
+    if (currentUser.role === "admin") {
+      return allVisitReports;
+    }
+    
+    // Zwykły użytkownik widzi tylko swoje raporty
+    return allVisitReports.filter(report => report.created_by === currentUser.email);
+  }, [allVisitReports, currentUser]);
 
   const { data: allowedUsers = [] } = useQuery({
     queryKey: ["allowedUsers"],
