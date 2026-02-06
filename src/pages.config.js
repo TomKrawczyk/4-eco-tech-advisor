@@ -55,6 +55,7 @@ import Interview from './pages/Interview';
 import PVCalculator from './pages/PVCalculator';
 import UserManagement from './pages/UserManagement';
 import VisitReports from './pages/VisitReports';
+import NotificationSettings from './pages/NotificationSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -67,6 +68,7 @@ export const PAGES = {
     "PVCalculator": PVCalculator,
     "UserManagement": UserManagement,
     "VisitReports": VisitReports,
+    "NotificationSettings": NotificationSettings,
 }
 
 export const pagesConfig = {

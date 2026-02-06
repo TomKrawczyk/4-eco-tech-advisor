@@ -6,6 +6,7 @@ import { base44 } from "@/api/base44Client";
 import { ShieldAlert, User, LogOut, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import NotificationPanel from "@/components/notifications/NotificationPanel";
 
 const navItems = [
   { name: "Dashboard", label: "Start" },
@@ -16,6 +17,7 @@ const navItems = [
   { name: "Education", label: "Edukacja" },
   { name: "VisitReports", label: "Raporty" },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
+  { name: "NotificationSettings", label: "Powiadomienia" },
 ];
 
 export default function Layout({ children, currentPageName }) {
@@ -93,7 +95,9 @@ export default function Layout({ children, currentPageName }) {
           {/* User Menu */}
           <div className="flex items-center gap-2">
             {currentUser && (
-              <DropdownMenu>
+              <>
+                <NotificationPanel currentUser={currentUser} />
+                <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
                     <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
@@ -120,6 +124,7 @@ export default function Layout({ children, currentPageName }) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </>
             )}
 
             {/* Mobile Menu Button */}
