@@ -31,9 +31,10 @@ export default function Layout({ children, currentPageName }) {
         const user = await base44.auth.me();
         setCurrentUser(user);
 
-        const allowedUsers = await base44.entities.AllowedUser.filter({ email: user.email });
+        const allowedUsers = await base44.entities.AllowedUser.list();
+        const isAllowed = allowedUsers.some(allowed => allowed.email === user.email);
         
-        if (allowedUsers.length > 0) {
+        if (isAllowed) {
           setHasAccess(true);
         } else {
           setHasAccess(false);
