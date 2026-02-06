@@ -76,15 +76,15 @@ export default function VisitReports() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 md:gap-3">
         {[
           { label: "Wszystkie", count: reports.length, color: "text-gray-900" },
           { label: "Szkice", count: reports.filter((r) => r.status === "draft" || !r.status).length, color: "text-gray-600" },
           { label: "Ukończone", count: reports.filter((r) => r.status === "completed" || r.status === "sent").length, color: "text-green-600" },
         ].map((stat) => (
-          <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-            <div className={`text-xl font-bold ${stat.color}`}>{stat.count}</div>
-            <div className="text-xs text-gray-600">{stat.label}</div>
+          <div key={stat.label} className="bg-white rounded-lg md:rounded-xl border border-gray-200 p-2 md:p-3 text-center">
+            <div className={`text-lg md:text-xl font-bold ${stat.color}`}>{stat.count}</div>
+            <div className="text-[10px] md:text-xs text-gray-600">{stat.label}</div>
           </div>
         ))}
       </div>
@@ -119,15 +119,15 @@ export default function VisitReports() {
                 onClick={() => setSelectedReport(report)}
                 className="w-full text-left bg-white rounded-xl border border-gray-200 p-4 hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-[0.99]"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">{report.client_name || "Bez nazwy"}</h3>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h3 className="text-sm font-semibold text-gray-900">{report.client_name || "Bez nazwy"}</h3>
                       <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 border ${st.color}`}>
                         {st.label}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-600">
+                    <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 text-xs text-gray-600">
                       {report.visit_date && <span>{new Date(report.visit_date).toLocaleDateString("pl-PL")}</span>}
                       {report.client_address && <span className="truncate">{report.client_address}</span>}
                       {report.installation_types?.length > 0 && (

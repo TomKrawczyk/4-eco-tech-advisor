@@ -152,33 +152,34 @@ export default function UserManagement() {
         </form>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Lista użytkowników ({filteredUsers.length})</h3>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+          <h3 className="text-base md:text-lg font-semibold">Lista użytkowników ({filteredUsers.length})</h3>
           {selectedUsers.length > 0 && (
             <Button
               variant="destructive"
               size="sm"
               onClick={() => setShowBulkDeleteDialog(true)}
+              className="w-full sm:w-auto"
             >
               <Trash2 className="w-4 h-4 mr-2" />
-              Usuń zaznaczone ({selectedUsers.length})
+              Usuń ({selectedUsers.length})
             </Button>
           )}
         </div>
 
-        <div className="flex gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 md:gap-3 mb-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               placeholder="Szukaj po emailu..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-11"
             />
           </div>
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40 h-11">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
@@ -206,16 +207,17 @@ export default function UserManagement() {
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
-                className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300"
+                className="flex items-start sm:items-center gap-2 sm:gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300"
               >
                 <Checkbox
                   checked={selectedUsers.includes(user.id)}
                   onCheckedChange={() => toggleUserSelection(user.id)}
+                  className="mt-1 sm:mt-0"
                 />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{user.email}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span className="font-medium text-sm break-all">{user.email}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
                       user.role === "admin" 
                         ? "bg-purple-100 text-purple-700" 
                         : "bg-gray-100 text-gray-700"
@@ -224,13 +226,14 @@ export default function UserManagement() {
                     </span>
                   </div>
                   {user.notes && (
-                    <p className="text-sm text-gray-500 mt-1">{user.notes}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.notes}</p>
                   )}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setUserToDelete(user)}
+                  className="shrink-0"
                 >
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>

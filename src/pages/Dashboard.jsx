@@ -160,8 +160,8 @@ export default function Dashboard() {
       )}
 
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-4">Szybkie akcje</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <h2 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Szybkie akcje</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (
@@ -172,15 +172,15 @@ export default function Dashboard() {
                 transition={{ delay: 0.1 * index }}
               >
                 <Link to={createPageUrl(action.path)}>
-                  <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-gray-200 hover:border-gray-300">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                          <Icon className="w-6 h-6 text-white" />
+                  <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-gray-200 hover:border-gray-300 active:scale-[0.98]">
+                    <CardContent className="p-4 md:p-6">
+                      <div className="flex items-start gap-3 md:gap-4">
+                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform shrink-0`}>
+                          <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 mb-1">{action.title}</h3>
-                          <p className="text-sm text-gray-500">{action.description}</p>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-sm md:text-base text-gray-900 mb-1">{action.title}</h3>
+                          <p className="text-xs md:text-sm text-gray-500 line-clamp-2">{action.description}</p>
                         </div>
                       </div>
                     </CardContent>
