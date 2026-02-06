@@ -34,12 +34,19 @@ export default function Layout({ children, currentPageName }) {
         // Sprawdź czy użytkownik jest na liście AllowedUser
         const allowedUsers = await base44.entities.AllowedUser.filter({ email: user.email });
         
+        console.log('Sprawdzanie dostępu:', {
+          userEmail: user.email,
+          allowedUsersFound: allowedUsers.length,
+          allowedUsers: allowedUsers
+        });
+        
         if (allowedUsers.length > 0) {
           setHasAccess(true);
         } else {
           setHasAccess(false);
         }
       } catch (error) {
+        console.error('Błąd sprawdzania dostępu:', error);
         setHasAccess(false);
       } finally {
         setCheckingAccess(false);
@@ -229,13 +236,14 @@ export default function Layout({ children, currentPageName }) {
             </div>
           ) : !hasAccess ? (
             <div className="flex items-center justify-center min-h-[60vh]">
-              <div className="text-center">
+              <div className="text-center max-w-md mx-auto">
                 <ShieldAlert className="w-16 h-16 text-red-400 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Brak dostępu</h2>
-                <p className="text-gray-600 mb-6">Twoje konto nie ma uprawnień do tej aplikacji.</p>
+                <p className="text-gray-600 mb-2">Twoje konto ({currentUser?.email}) nie ma uprawnień do tej aplikacji.</p>
+                <p className="text-sm text-gray-500 mb-6">Skontaktuj się z administratorem, aby uzyskać dostęp.</p>
                 <button
                   onClick={() => base44.auth.logout()}
-                  className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   Wyloguj się
                 </button>
