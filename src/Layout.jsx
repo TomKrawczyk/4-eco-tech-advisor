@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { base44 } from "@/api/base44Client";
+import { ShieldAlert } from "lucide-react";
 
 const navItems = [
   { name: "Dashboard", label: "Start" },
@@ -11,10 +13,36 @@ const navItems = [
   { name: "PVCalculator", label: "Kalkulator PV" },
   { name: "Education", label: "Edukacja" },
   { name: "VisitReports", label: "Raporty" },
+  { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [hasAccess, setHasAccess] = useState(true);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
+  React.useEffect(() => {
+    const checkAccess = async () => {
+      try {
+        const user = await base44.auth.me();
+        setCurrentUser(user);
+
+        if (user.role === "admin") {
+          setHasAccess(true);
+        } else {
+          const allowedUsers = await base44.entities.AllowedUser.filter({ email: user.email });
+          setHasAccess(allowedUsers.length > 0);
+        }
+      } catch (error) {
+        setHasAccess(false);
+      } finally {
+        setCheckingAccess(false);
+      }
+    };
+
+    checkAccess();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-500/10 via-emerald-50 to-green-500/10 text-gray-900">
@@ -42,6 +70,7 @@ export default function Layout({ children, currentPageName }) {
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
+              if (item.adminOnly && currentUser?.role !== "admin") return null;
               const isActive = currentPageName === item.name;
               return (
                 <Link
@@ -83,6 +112,7 @@ export default function Layout({ children, currentPageName }) {
           >
             <nav className="p-4 space-y-1">
               {navItems.map((item) => {
+                if (item.adminOnly && currentUser?.role !== "admin") return null;
                 const isActive = currentPageName === item.name;
                 return (
                   <Link
@@ -107,7 +137,30 @@ export default function Layout({ children, currentPageName }) {
       {/* Main Content */}
       <main className="pt-16">
         <div className="max-w-5xl mx-auto px-4 py-8">
-          {children}
+          {checkingAccess ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-center">
+                <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p className="text-gray-600 mt-4">Sprawdzanie dostępu...</p>
+              </div>
+            </div>
+          ) : !hasAccess ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-center">
+                <ShieldAlert className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Brak dostępu</h2>
+                <p className="text-gray-600 mb-6">Twoje konto nie ma uprawnień do tej aplikacji.</p>
+                <button
+                  onClick={() => base44.auth.logout()}
+                  className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+                >
+                  Wyloguj się
+                </button>
+              </div>
+            </div>
+          ) : (
+            children
+          )}
         </div>
       </main>
     </div>
