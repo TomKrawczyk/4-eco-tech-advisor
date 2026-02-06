@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, User, LogOut, Shield } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { name: "Dashboard", label: "Start" },
@@ -88,16 +90,49 @@ export default function Layout({ children, currentPageName }) {
             })}
           </nav>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100"
-          >
-            <div className="w-5 h-0.5 bg-gray-900 relative">
-              <div className={`absolute w-5 h-0.5 bg-gray-900 transition-all ${mobileMenuOpen ? 'rotate-45 top-0' : '-top-1.5'}`}></div>
-              <div className={`absolute w-5 h-0.5 bg-gray-900 transition-all ${mobileMenuOpen ? '-rotate-45 top-0' : 'top-1.5'}`}></div>
-            </div>
-          </button>
+          {/* User Menu */}
+          <div className="flex items-center gap-2">
+            {currentUser && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                      <User className="w-4 h-4 text-green-600" />
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{currentUser.full_name}</span>
+                      <span className="text-xs text-gray-500">{currentUser.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem disabled>
+                    <Shield className="w-4 h-4 mr-2" />
+                    <span>{currentUser.role === "admin" ? "Administrator" : "Użytkownik"}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => base44.auth.logout()} className="text-red-600">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    <span>Wyloguj się</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100"
+            >
+              <div className="w-5 h-0.5 bg-gray-900 relative">
+                <div className={`absolute w-5 h-0.5 bg-gray-900 transition-all ${mobileMenuOpen ? 'rotate-45 top-0' : '-top-1.5'}`}></div>
+                <div className={`absolute w-5 h-0.5 bg-gray-900 transition-all ${mobileMenuOpen ? '-rotate-45 top-0' : 'top-1.5'}`}></div>
+              </div>
+            </button>
+          </div>
         </div>
       </header>
 
