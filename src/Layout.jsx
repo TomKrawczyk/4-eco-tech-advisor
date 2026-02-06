@@ -146,6 +146,34 @@ export default function Layout({ children, currentPageName }) {
             className="fixed top-16 left-0 right-0 bg-white border-b border-gray-200 z-40 overflow-hidden md:hidden"
           >
             <nav className="p-4 space-y-1">
+              {/* User Profile in Mobile Menu */}
+              {currentUser && (
+                <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 text-sm truncate">{currentUser.full_name}</div>
+                      <div className="text-xs text-gray-600 truncate">{currentUser.email}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>{currentUser.role === "admin" ? "Administrator" : "Użytkownik"}</span>
+                  </div>
+                  <Button
+                    onClick={() => base44.auth.logout()}
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Wyloguj się
+                  </Button>
+                </div>
+              )}
+              
               {navItems.map((item) => {
                 if (item.adminOnly && currentUser?.role !== "admin") return null;
                 const isActive = currentPageName === item.name;
