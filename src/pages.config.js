@@ -52,11 +52,11 @@ import Checklist from './pages/Checklist';
 import Dashboard from './pages/Dashboard';
 import Education from './pages/Education';
 import Interview from './pages/Interview';
+import NotificationSettings from './pages/NotificationSettings';
 import PVCalculator from './pages/PVCalculator';
 import UserManagement from './pages/UserManagement';
-import VisitReports from './pages/VisitReports';
-import NotificationSettings from './pages/NotificationSettings';
 import UserProfile from './pages/UserProfile';
+import VisitReports from './pages/VisitReports';
 import __Layout from './Layout.jsx';
 
 
@@ -66,11 +66,11 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "Education": Education,
     "Interview": Interview,
+    "NotificationSettings": NotificationSettings,
     "PVCalculator": PVCalculator,
     "UserManagement": UserManagement,
-    "VisitReports": VisitReports,
-    "NotificationSettings": NotificationSettings,
     "UserProfile": UserProfile,
+    "VisitReports": VisitReports,
 }
 
 export const pagesConfig = {

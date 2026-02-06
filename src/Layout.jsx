@@ -29,6 +29,7 @@ export default function Layout({ children, currentPageName }) {
     const checkAccess = async () => {
       try {
         const user = await base44.auth.me();
+        console.log('Zalogowany użytkownik:', user);
         setCurrentUser(user);
 
         // Sprawdź czy użytkownik jest na liście AllowedUser
@@ -36,6 +37,7 @@ export default function Layout({ children, currentPageName }) {
         
         console.log('Sprawdzanie dostępu:', {
           userEmail: user.email,
+          userRole: user.role,
           allowedUsersFound: allowedUsers.length,
           allowedUsers: allowedUsers
         });
