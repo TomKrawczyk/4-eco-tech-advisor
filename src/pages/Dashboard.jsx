@@ -97,7 +97,7 @@ export default function Dashboard() {
   return (
     <div>
       <PageHeader 
-        title={`Witaj, ${currentUser?.full_name || 'Użytkowniku'}!`}
+        title={`Witaj ${currentUser?.displayName || currentUser?.full_name || 'Użytkowniku'}!`}
         subtitle="Panel główny aplikacji 4-ECO Green Energy"
       />
 
