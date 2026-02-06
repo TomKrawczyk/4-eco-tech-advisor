@@ -13,6 +13,7 @@ import { toast } from "react-hot-toast";
 
 export default function UserManagement() {
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [role, setRole] = useState("user");
   const [notes, setNotes] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
@@ -38,6 +39,7 @@ export default function UserManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries(["allowedUsers"]);
       setEmail("");
+      setName("");
       setNotes("");
       toast.success("Użytkownik dodany");
     },
@@ -66,8 +68,8 @@ export default function UserManagement() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!email) return;
-    addUserMutation.mutate({ email, role, notes });
+    if (!email || !name) return;
+    addUserMutation.mutate({ email, name, role, notes });
   };
 
   const filteredUsers = useMemo(() => {
@@ -123,6 +125,15 @@ export default function UserManagement() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@przykład.pl"
+              className="h-11"
+            />
+          </div>
+          <div>
+            <Label className="text-sm">Imię *</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jan"
               className="h-11"
             />
           </div>
@@ -218,7 +229,8 @@ export default function UserManagement() {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <span className="font-medium text-sm break-all">{user.email}</span>
+                    <span className="font-semibold text-sm">{user.name}</span>
+                    <span className="text-xs text-gray-500 break-all">({user.email})</span>
                     <span className={`text-xs px-2 py-0.5 rounded w-fit ${
                       user.role === "admin" 
                         ? "bg-purple-100 text-purple-700" 
