@@ -31,12 +31,14 @@ export default function Layout({ children, currentPageName }) {
         const user = await base44.auth.me();
         
         const allowedUsers = await base44.entities.AllowedUser.list();
-        const userAccess = allowedUsers.find(allowed => allowed.email === user.email);
+        const userAccess = allowedUsers.find(allowed => 
+          (allowed.data?.email || allowed.email) === user.email
+        );
         
         if (userAccess) {
-          // Ustawiamy dane z AllowedUser
-          user.role = userAccess.role;
-          user.displayName = userAccess.name;
+          // Ustawiamy dane z AllowedUser (sprawdzamy data.* lub bezpośrednio)
+          user.role = userAccess.data?.role || userAccess.role;
+          user.displayName = userAccess.data?.name || userAccess.name;
           setCurrentUser(user);
           setHasAccess(true);
         } else {

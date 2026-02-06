@@ -94,8 +94,10 @@ export default function UserManagement() {
 
   const filteredUsers = useMemo(() => {
     return allowedUsers.filter(user => {
-      const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+      const email = user.data?.email || user.email;
+      const role = user.data?.role || user.role;
+      const matchesSearch = email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === "all" || role === roleFilter;
       return matchesSearch && matchesRole;
     });
   }, [allowedUsers, searchTerm, roleFilter]);
@@ -249,18 +251,18 @@ export default function UserManagement() {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <span className="font-semibold text-sm">{user.name}</span>
-                    <span className="text-xs text-gray-500 break-all">({user.email})</span>
+                    <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
+                    <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
                     <span className={`text-xs px-2 py-0.5 rounded w-fit ${
-                      user.role === "admin" 
+                      (user.data?.role || user.role) === "admin" 
                         ? "bg-purple-100 text-purple-700" 
                         : "bg-gray-100 text-gray-700"
                     }`}>
-                      {user.role}
+                      {user.data?.role || user.role}
                     </span>
                   </div>
-                  {user.notes && (
-                    <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.notes}</p>
+                  {(user.data?.notes || user.notes) && (
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.data?.notes || user.notes}</p>
                   )}
                 </div>
                 <div className="flex gap-1">
