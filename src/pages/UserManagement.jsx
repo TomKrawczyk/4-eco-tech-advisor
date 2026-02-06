@@ -35,13 +35,21 @@ export default function UserManagement() {
   }, []);
 
   const addUserMutation = useMutation({
-    mutationFn: (data) => base44.entities.AllowedUser.create(data),
+    mutationFn: async (data) => {
+      // Najpierw zapraszamy przez Base44
+      await base44.users.inviteUser(data.email, data.role);
+      // Następnie dodajemy do AllowedUser
+      return base44.entities.AllowedUser.create(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(["allowedUsers"]);
       setEmail("");
       setName("");
       setNotes("");
-      toast.success("Użytkownik dodany");
+      toast.success("Użytkownik zaproszony i dodany");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
     },
   });
 
