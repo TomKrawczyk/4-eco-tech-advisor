@@ -35,8 +35,15 @@ export default function Layout({ children, currentPageName }) {
           allowed.email === user.email || allowed.data?.email === user.email
         );
         
-        setCurrentUser(user);
-        setHasAccess(!!userAccess);
+        if (userAccess) {
+          // Ustawiamy rolę z AllowedUser
+          user.role = userAccess.role || userAccess.data?.role || user.role;
+          setCurrentUser(user);
+          setHasAccess(true);
+        } else {
+          setCurrentUser(user);
+          setHasAccess(false);
+        }
       } catch (error) {
         console.error('Błąd sprawdzania dostępu:', error);
         setCurrentUser(null);
