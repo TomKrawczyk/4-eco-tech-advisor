@@ -31,13 +31,12 @@ export default function Layout({ children, currentPageName }) {
         const user = await base44.auth.me();
         
         const allowedUsers = await base44.entities.AllowedUser.list();
-        const userAccess = allowedUsers.find(allowed => 
-          allowed.email === user.email || allowed.data?.email === user.email
-        );
+        const userAccess = allowedUsers.find(allowed => allowed.email === user.email);
         
         if (userAccess) {
-          // Ustawiamy rolę z AllowedUser
-          user.role = userAccess.role || userAccess.data?.role || user.role;
+          // Ustawiamy dane z AllowedUser
+          user.role = userAccess.role;
+          user.displayName = userAccess.name;
           setCurrentUser(user);
           setHasAccess(true);
         } else {
@@ -116,7 +115,7 @@ export default function Layout({ children, currentPageName }) {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
                     <div className="flex flex-col">
-                      <span className="font-medium">{currentUser.full_name}</span>
+                      <span className="font-medium">{currentUser.displayName}</span>
                       <span className="text-xs text-gray-500">{currentUser.email}</span>
                     </div>
                   </DropdownMenuLabel>
@@ -176,6 +175,9 @@ export default function Layout({ children, currentPageName }) {
                       <div className="font-semibold text-gray-900 text-sm truncate">{currentUser.full_name}</div>
                       <div className="text-xs text-gray-600 truncate">{currentUser.email}</div>
                     </div>
+                  </div>
+                  <div className="text-xs text-gray-600 mb-3">
+                    Witaj {currentUser.displayName}! 👋
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
                     <Shield className="w-3.5 h-3.5" />
