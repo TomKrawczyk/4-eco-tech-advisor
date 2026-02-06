@@ -17,7 +17,6 @@ const navItems = [
   { name: "Education", label: "Edukacja" },
   { name: "VisitReports", label: "Raporty" },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
-  { name: "NotificationSettings", label: "Powiadomienia" },
 ];
 
 export default function Layout({ children, currentPageName }) {
@@ -118,6 +117,12 @@ export default function Layout({ children, currentPageName }) {
                     <span>{currentUser.role === "admin" ? "Administrator" : "Użytkownik"}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <Link to={createPageUrl("UserProfile")}>
+                    <DropdownMenuItem>
+                      <User className="w-4 h-4 mr-2" />
+                      <span>Mój profil</span>
+                    </DropdownMenuItem>
+                  </Link>
                   <DropdownMenuItem onClick={() => base44.auth.logout()} className="text-red-600">
                     <LogOut className="w-4 h-4 mr-2" />
                     <span>Wyloguj się</span>
@@ -167,15 +172,23 @@ export default function Layout({ children, currentPageName }) {
                     <Shield className="w-3.5 h-3.5" />
                     <span>{currentUser.role === "admin" ? "Administrator" : "Użytkownik"}</span>
                   </div>
-                  <Button
-                    onClick={() => base44.auth.logout()}
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Wyloguj się
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Link to={createPageUrl("UserProfile")} onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <User className="w-4 h-4 mr-2" />
+                        Mój profil
+                      </Button>
+                    </Link>
+                    <Button
+                      onClick={() => base44.auth.logout()}
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Wyloguj się
+                    </Button>
+                  </div>
                 </div>
               )}
               
