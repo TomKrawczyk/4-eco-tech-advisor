@@ -181,7 +181,7 @@ export default function Interview() {
         <Button
           onClick={handleSave}
           disabled={saving || !form.client_name.trim()}
-          className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg"
+          className="w-full sm:flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-base"
         >
           {saving ? (
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -194,7 +194,7 @@ export default function Interview() {
         <Button
           onClick={handleReset}
           variant="outline"
-          className="h-12 rounded-lg"
+          className="w-full sm:w-auto h-12 rounded-lg"
         >
           <RotateCcw className="w-4 h-4 mr-2" /> Wyczyść
         </Button>
