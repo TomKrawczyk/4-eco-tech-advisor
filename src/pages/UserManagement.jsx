@@ -36,6 +36,7 @@ export default function UserManagement() {
 
   const addUserMutation = useMutation({
     mutationFn: async (data) => {
+      console.log("Dodawanie użytkownika:", data);
       // Najpierw zapraszamy przez Base44
       await base44.users.inviteUser(data.email, data.role);
       // Następnie dodajemy do AllowedUser
@@ -45,10 +46,12 @@ export default function UserManagement() {
       queryClient.invalidateQueries(["allowedUsers"]);
       setEmail("");
       setName("");
+      setRole("user");
       setNotes("");
       toast.success("Użytkownik zaproszony i dodany");
     },
     onError: (error) => {
+      console.error("Błąd dodawania użytkownika:", error);
       toast.error(`Błąd: ${error.message}`);
     },
   });
@@ -88,7 +91,11 @@ export default function UserManagement() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!email || !name) return;
+    console.log("Submit clicked", { email, name, role, notes });
+    if (!email || !name) {
+      toast.error("Email i imię są wymagane");
+      return;
+    }
     addUserMutation.mutate({ email, name, role, notes });
   };
 
@@ -181,8 +188,17 @@ export default function UserManagement() {
             />
           </div>
           <Button type="submit" disabled={addUserMutation.isPending} className="w-full sm:w-auto h-11">
-            <Plus className="w-4 h-4 mr-2" />
-            Dodaj użytkownika
+            {addUserMutation.isPending ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                Dodawanie...
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                Dodaj użytkownika
+              </>
+            )}
           </Button>
         </form>
       </div>
