@@ -17,7 +17,22 @@ export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    base44.auth.me().then(setCurrentUser);
+    const fetchUserData = async () => {
+      const user = await base44.auth.me();
+      const allowedUsers = await base44.entities.AllowedUser.list();
+      const userAccess = allowedUsers.find(allowed => 
+        (allowed.data?.email || allowed.email) === user.email
+      );
+      
+      if (userAccess) {
+        user.displayName = userAccess.data?.name || userAccess.name;
+        user.role = userAccess.data?.role || userAccess.role;
+      }
+      
+      setCurrentUser(user);
+    };
+    
+    fetchUserData();
   }, []);
 
   const { data: allVisitReports = [] } = useQuery({
