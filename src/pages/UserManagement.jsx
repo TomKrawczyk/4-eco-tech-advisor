@@ -37,10 +37,19 @@ export default function UserManagement() {
   const addUserMutation = useMutation({
     mutationFn: async (data) => {
       console.log("Dodawanie użytkownika:", data);
-      // Najpierw zapraszamy przez Base44
-      await base44.users.inviteUser(data.email, data.role);
-      // Następnie dodajemy do AllowedUser
-      return base44.entities.AllowedUser.create(data);
+      
+      // Najpierw dodajemy do AllowedUser
+      const allowedUser = await base44.entities.AllowedUser.create(data);
+      
+      // Następnie zapraszamy przez Base44 (jeśli się nie uda, AllowedUser już istnieje)
+      try {
+        await base44.users.inviteUser(data.email, data.role);
+      } catch (inviteError) {
+        console.warn("Zaproszenie nie powiodło się (użytkownik może już istnieć):", inviteError);
+        // Nie przerywamy - użytkownik został dodany do AllowedUser
+      }
+      
+      return allowedUser;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["allowedUsers"]);
@@ -48,7 +57,7 @@ export default function UserManagement() {
       setName("");
       setRole("user");
       setNotes("");
-      toast.success("Użytkownik zaproszony i dodany");
+      toast.success("Użytkownik dodany pomyślnie");
     },
     onError: (error) => {
       console.error("Błąd dodawania użytkownika:", error);
