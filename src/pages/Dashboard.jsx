@@ -124,11 +124,10 @@ export default function Dashboard() {
             transition={{ delay: 0.1 }}
           >
             <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">
                   Aktywni użytkownicy
                 </CardTitle>
-                <Users className="w-4 h-4 text-green-600" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-gray-900">{allowedUsers.length}</div>
@@ -145,11 +144,10 @@ export default function Dashboard() {
             transition={{ delay: 0.2 }}
           >
             <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">
                   Raporty wizyt
                 </CardTitle>
-                <FileText className="w-4 h-4 text-blue-600" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-gray-900">{visitReports.length}</div>
@@ -166,11 +164,10 @@ export default function Dashboard() {
             transition={{ delay: 0.3 }}
           >
             <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">
                   Aktywność
                 </CardTitle>
-                <Activity className="w-4 h-4 text-purple-600" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-gray-900">
@@ -203,14 +200,9 @@ export default function Dashboard() {
                 <Link to={createPageUrl(action.path)}>
                   <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-gray-200 hover:border-gray-300 active:scale-[0.98]">
                     <CardContent className="p-4 md:p-6">
-                      <div className="flex items-start gap-3 md:gap-4">
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform shrink-0`}>
-                          <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm md:text-base text-gray-900 mb-1">{action.title}</h3>
-                          <p className="text-xs md:text-sm text-gray-500 line-clamp-2">{action.description}</p>
-                        </div>
+                      <div>
+                        <h3 className="font-semibold text-sm md:text-base text-gray-900 mb-1">{action.title}</h3>
+                        <p className="text-xs md:text-sm text-gray-500 line-clamp-2">{action.description}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -273,7 +265,6 @@ export default function Dashboard() {
         <div className="mt-6">
           <Link to={createPageUrl("UserManagement")}>
             <Button variant="outline" className="w-full">
-              <Settings className="w-4 h-4 mr-2" />
               Zarządzanie użytkownikami
             </Button>
           </Link>
