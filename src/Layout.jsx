@@ -14,6 +14,7 @@ const navItems = [
   { name: "Interview", label: "Wywiad" },
   { name: "AutoconsumptionCalc", label: "Autokonsumpcja" },
   { name: "PVCalculator", label: "Kalkulator PV" },
+  { name: "ROICalculator", label: "Opłacalność" },
   { name: "Education", label: "Edukacja" },
   { name: "VisitReports", label: "Raporty" },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
