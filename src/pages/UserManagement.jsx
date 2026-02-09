@@ -6,10 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Trash2, Plus, Shield, Search, Filter, Mail } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
+import EditUserDialog from "@/components/user-management/EditUserDialog";
+import GroupManagement from "@/components/user-management/GroupManagement";
 
 export default function UserManagement() {
   const [email, setEmail] = useState("");
@@ -23,12 +26,18 @@ export default function UserManagement() {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [userToDelete, setUserToDelete] = useState(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
 
   const queryClient = useQueryClient();
 
   const { data: allowedUsers = [], isLoading } = useQuery({
     queryKey: ["allowedUsers"],
     queryFn: () => base44.entities.AllowedUser.list(),
+  });
+
+  const { data: groups = [] } = useQuery({
+    queryKey: ["groups"],
+    queryFn: () => base44.entities.Group.list(),
   });
 
   React.useEffect(() => {
@@ -108,6 +117,40 @@ export default function UserManagement() {
     },
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, updates, oldAssignedTo }) => {
+      await base44.entities.AllowedUser.update(userId, updates);
+      
+      // Usuń z poprzedniego leadera
+      if (oldAssignedTo) {
+        const oldLeader = allowedUsers.find(u => u.id === oldAssignedTo);
+        if (oldLeader) {
+          const managedUsers = (oldLeader.managed_users || []).filter(id => id !== userId);
+          await base44.entities.AllowedUser.update(oldAssignedTo, { managed_users: managedUsers });
+        }
+      }
+      
+      // Dodaj do nowego leadera
+      if (updates.assigned_to) {
+        const newLeader = allowedUsers.find(u => u.id === updates.assigned_to);
+        if (newLeader) {
+          const managedUsers = newLeader.managed_users || [];
+          await base44.entities.AllowedUser.update(updates.assigned_to, {
+            managed_users: [...managedUsers, userId]
+          });
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["allowedUsers"]);
+      setEditingUser(null);
+      toast.success("Użytkownik zaktualizowany");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
+    },
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Submit clicked", { email, name, role, notes, assignedTo });
@@ -169,12 +212,26 @@ export default function UserManagement() {
     );
   }
 
+  const handleEditUser = (userId, updates) => {
+    const user = allowedUsers.find(u => u.id === userId);
+    const oldAssignedTo = user.data?.assigned_to || user.assigned_to;
+    updateUserMutation.mutate({ userId, updates, oldAssignedTo });
+  };
+
   return (
     <div>
       <PageHeader 
         title="Zarządzanie użytkownikami" 
-        subtitle="Dodaj emaile użytkowników z dostępem do aplikacji"
+        subtitle="Zarządzaj użytkownikami, zespołami i grupami"
       />
+
+      <Tabs defaultValue="users" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="users">Użytkownicy</TabsTrigger>
+          <TabsTrigger value="groups">Grupy</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="space-y-6">
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 mb-6">
         <h3 className="text-base md:text-lg font-semibold mb-4">Dodaj użytkownika</h3>
@@ -364,12 +421,36 @@ export default function UserManagement() {
                   >
                     <Trash2 className="w-4 h-4 text-red-500" />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditingUser(user)}
+                    className="shrink-0"
+                    title="Edytuj użytkownika"
+                  >
+                    <Edit className="w-4 h-4 text-blue-500" />
+                  </Button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+      </TabsContent>
+
+      <TabsContent value="groups">
+        <GroupManagement allowedUsers={allowedUsers} />
+      </TabsContent>
+      </Tabs>
+
+      <EditUserDialog
+        user={editingUser}
+        open={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        onSave={handleEditUser}
+        allUsers={allowedUsers}
+        groups={groups}
+      />
 
       <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
         <AlertDialogContent>
