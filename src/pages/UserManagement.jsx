@@ -41,7 +41,18 @@ export default function UserManagement() {
   });
 
   React.useEffect(() => {
-    base44.auth.me().then(setCurrentUser);
+    const loadUser = async () => {
+      const user = await base44.auth.me();
+      const allowedUsersList = await base44.entities.AllowedUser.list();
+      const userAccess = allowedUsersList.find(allowed => 
+        (allowed.data?.email || allowed.email) === user.email
+      );
+      if (userAccess) {
+        user.role = userAccess.data?.role || userAccess.role;
+      }
+      setCurrentUser(user);
+    };
+    loadUser();
   }, []);
 
   const addUserMutation = useMutation({
