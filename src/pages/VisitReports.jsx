@@ -22,7 +22,21 @@ export default function VisitReports() {
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
-    base44.auth.me().then(setCurrentUser);
+    const fetchUserData = async () => {
+      const user = await base44.auth.me();
+      const allowedUsers = await base44.entities.AllowedUser.list();
+      const userAccess = allowedUsers.find(allowed => 
+        (allowed.data?.email || allowed.email) === user.email
+      );
+      
+      if (userAccess) {
+        user.role = userAccess.data?.role || userAccess.role;
+      }
+      
+      setCurrentUser(user);
+    };
+    
+    fetchUserData();
   }, []);
 
   const { data: allReports = [], isLoading } = useQuery({
@@ -31,18 +45,19 @@ export default function VisitReports() {
     enabled: !!currentUser,
   });
 
-  // Filtruj raporty według roli użytkownika
+  const { data: hierarchyData } = useQuery({
+    queryKey: ["userHierarchy", currentUser?.email],
+    queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
+    enabled: !!currentUser,
+  });
+
+  // Filtruj raporty według hierarchii
   const reports = React.useMemo(() => {
-    if (!currentUser) return [];
+    if (!currentUser || !hierarchyData?.data) return [];
     
-    // Admin widzi wszystkie raporty
-    if (currentUser.role === "admin") {
-      return allReports;
-    }
-    
-    // Zwykły użytkownik widzi tylko swoje raporty
-    return allReports.filter(report => report.created_by === currentUser.email);
-  }, [allReports, currentUser]);
+    const allowedEmails = hierarchyData.data.userEmails || [];
+    return allReports.filter(report => allowedEmails.includes(report.created_by));
+  }, [allReports, hierarchyData, currentUser]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.VisitReport.delete(id),

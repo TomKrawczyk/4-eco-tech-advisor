@@ -124,7 +124,12 @@ export default function Layout({ children, currentPageName }) {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem disabled>
                     <Shield className="w-4 h-4 mr-2" />
-                    <span>{currentUser.role === "admin" ? "Administrator" : "Użytkownik"}</span>
+                    <span>
+                      {currentUser.role === "admin" ? "Administrator" :
+                       currentUser.role === "group_leader" ? "Group Leader" :
+                       currentUser.role === "team_leader" ? "Team Leader" :
+                       "Użytkownik"}
+                    </span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <Link to={createPageUrl("UserProfile")}>
@@ -183,7 +188,12 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
                     <Shield className="w-3.5 h-3.5" />
-                    <span>{currentUser.role === "admin" ? "Administrator" : "Użytkownik"}</span>
+                    <span>
+                      {currentUser.role === "admin" ? "Administrator" :
+                       currentUser.role === "group_leader" ? "Group Leader" :
+                       currentUser.role === "team_leader" ? "Team Leader" :
+                       "Użytkownik"}
+                    </span>
                   </div>
                   <div className="flex flex-col gap-2">
                     <Link to={createPageUrl("UserProfile")} onClick={() => setMobileMenuOpen(false)}>

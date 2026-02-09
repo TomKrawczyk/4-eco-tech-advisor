@@ -16,6 +16,7 @@ export default function UserManagement() {
   const [name, setName] = useState("");
   const [role, setRole] = useState("user");
   const [notes, setNotes] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -41,12 +42,20 @@ export default function UserManagement() {
       // Najpierw dodajemy do AllowedUser
       const allowedUser = await base44.entities.AllowedUser.create(data);
       
-      // Następnie zapraszamy przez Base44 (jeśli się nie uda, AllowedUser już istnieje)
+      // Jeśli użytkownik jest przypisany do kogoś, aktualizuj managed_users
+      if (data.assigned_to) {
+        const leader = allowedUsers.find(u => u.id === data.assigned_to);
+        const managedUsers = leader.managed_users || [];
+        await base44.entities.AllowedUser.update(data.assigned_to, {
+          managed_users: [...managedUsers, allowedUser.id]
+        });
+      }
+      
+      // Następnie zapraszamy przez Base44
       try {
-        await base44.users.inviteUser(data.email, data.role);
+        await base44.users.inviteUser(data.email, "user");
       } catch (inviteError) {
-        console.warn("Zaproszenie nie powiodło się (użytkownik może już istnieć):", inviteError);
-        // Nie przerywamy - użytkownik został dodany do AllowedUser
+        console.warn("Zaproszenie nie powiodło się:", inviteError);
       }
       
       return allowedUser;
@@ -57,6 +66,7 @@ export default function UserManagement() {
       setName("");
       setRole("user");
       setNotes("");
+      setAssignedTo("");
       toast.success("Użytkownik dodany pomyślnie");
     },
     onError: (error) => {
@@ -100,13 +110,26 @@ export default function UserManagement() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Submit clicked", { email, name, role, notes });
+    console.log("Submit clicked", { email, name, role, notes, assignedTo });
     if (!email || !name) {
       toast.error("Email i imię są wymagane");
       return;
     }
-    addUserMutation.mutate({ email, name, role, notes });
+    addUserMutation.mutate({ 
+      email, 
+      name, 
+      role, 
+      notes,
+      assigned_to: assignedTo || undefined 
+    });
   };
+
+  const availableLeaders = allowedUsers.filter(u => {
+    const userRole = u.data?.role || u.role;
+    if (role === "user") return userRole === "team_leader" || userRole === "group_leader";
+    if (role === "team_leader") return userRole === "group_leader";
+    return false;
+  });
 
   const filteredUsers = useMemo(() => {
     return allowedUsers.filter(user => {
@@ -177,16 +200,41 @@ export default function UserManagement() {
           </div>
           <div>
             <Label className="text-sm">Rola</Label>
-            <Select value={role} onValueChange={setRole}>
+            <Select value={role} onValueChange={(val) => {
+              setRole(val);
+              if (val === "admin" || val === "group_leader") setAssignedTo("");
+            }}>
               <SelectTrigger className="h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">Użytkownik</SelectItem>
+                <SelectItem value="team_leader">Team Leader</SelectItem>
+                <SelectItem value="group_leader">Group Leader</SelectItem>
                 <SelectItem value="admin">Administrator</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {(role === "user" || role === "team_leader") && availableLeaders.length > 0 && (
+            <div>
+              <Label className="text-sm">
+                Przypisz do {role === "user" ? "Team/Group Leadera" : "Group Leadera"}
+              </Label>
+              <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Wybierz..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={null}>Brak przypisania</SelectItem>
+                  {availableLeaders.map(leader => (
+                    <SelectItem key={leader.id} value={leader.id}>
+                      {leader.data?.name || leader.name} ({leader.data?.role || leader.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label className="text-sm">Notatki (opcjonalnie)</Label>
             <Input
@@ -246,6 +294,8 @@ export default function UserManagement() {
             <SelectContent>
               <SelectItem value="all">Wszystkie role</SelectItem>
               <SelectItem value="user">Użytkownik</SelectItem>
+              <SelectItem value="team_leader">Team Leader</SelectItem>
+              <SelectItem value="group_leader">Group Leader</SelectItem>
               <SelectItem value="admin">Administrator</SelectItem>
             </SelectContent>
           </Select>
@@ -279,11 +329,17 @@ export default function UserManagement() {
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
                     <span className={`text-xs px-2 py-0.5 rounded w-fit ${
-                      (user.data?.role || user.role) === "admin" 
-                        ? "bg-purple-100 text-purple-700" 
-                        : "bg-gray-100 text-gray-700"
+                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
+                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
+                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
+                      "bg-gray-100 text-gray-700"
                     }`}>
-                      {user.data?.role || user.role}
+                      {
+                        (user.data?.role || user.role) === "admin" ? "Admin" :
+                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
+                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
+                        "Użytkownik"
+                      }
                     </span>
                   </div>
                   {(user.data?.notes || user.notes) && (

@@ -27,6 +27,7 @@ export default function Dashboard() {
       if (userAccess) {
         user.displayName = userAccess.data?.name || userAccess.name;
         user.role = userAccess.data?.role || userAccess.role;
+        user.allowedUserId = userAccess.id;
       }
       
       setCurrentUser(user);
@@ -41,18 +42,19 @@ export default function Dashboard() {
     enabled: !!currentUser,
   });
 
-  // Filtruj raporty według roli użytkownika
+  const { data: hierarchyData } = useQuery({
+    queryKey: ["userHierarchy", currentUser?.email],
+    queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
+    enabled: !!currentUser,
+  });
+
+  // Filtruj raporty według hierarchii
   const visitReports = React.useMemo(() => {
-    if (!currentUser) return [];
+    if (!currentUser || !hierarchyData?.data) return [];
     
-    // Admin widzi wszystkie raporty
-    if (currentUser.role === "admin") {
-      return allVisitReports;
-    }
-    
-    // Zwykły użytkownik widzi tylko swoje raporty
-    return allVisitReports.filter(report => report.created_by === currentUser.email);
-  }, [allVisitReports, currentUser]);
+    const allowedEmails = hierarchyData.data.userEmails || [];
+    return allVisitReports.filter(report => allowedEmails.includes(report.created_by));
+  }, [allVisitReports, hierarchyData, currentUser]);
 
   const { data: allowedUsers = [] } = useQuery({
     queryKey: ["allowedUsers"],
