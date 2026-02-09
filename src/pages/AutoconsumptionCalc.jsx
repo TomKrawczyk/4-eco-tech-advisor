@@ -3,14 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
+import { Download } from "lucide-react";
 import PageHeader from "../components/shared/PageHeader";
 import AutoconsumptionPieChart from "../components/charts/AutoconsumptionPieChart";
+import { base44 } from "@/api/base44Client";
+import { toast } from "react-hot-toast";
 
 export default function AutoconsumptionCalc() {
   const [produkcja, setProdukcja] = useState("");
   const [eksport, setEksport] = useState("");
   const [zuzycie, setZuzycie] = useState("");
   const [result, setResult] = useState(null);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   const calculate = () => {
     const prod = parseFloat(produkcja);
@@ -61,6 +65,36 @@ export default function AutoconsumptionCalc() {
     green: { bg: "bg-green-500/10", border: "border-green-500/30", text: "text-green-400", bar: "bg-green-500" },
   };
 
+  const handleDownloadPDF = async () => {
+    if (!result) return;
+    
+    setGeneratingPDF(true);
+    try {
+      const { data } = await base44.functions.invoke('generateAutoconsumptionPDF', {
+        produkcja,
+        eksport,
+        zuzycie,
+        result
+      });
+
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `autokonsumpcja-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast.success('PDF wygenerowany');
+    } catch (error) {
+      console.error('Błąd generowania PDF:', error);
+      toast.error('Nie udało się wygenerować PDF');
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -104,13 +138,26 @@ export default function AutoconsumptionCalc() {
           </div>
         </div>
 
-        <Button
-          onClick={calculate}
-          disabled={!produkcja || !eksport}
-          className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-base"
-        >
-          OBLICZ AUTOKONSUMPCJĘ
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={calculate}
+            disabled={!produkcja || !eksport}
+            className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-base"
+          >
+            OBLICZ AUTOKONSUMPCJĘ
+          </Button>
+          {result && (
+            <Button
+              onClick={handleDownloadPDF}
+              disabled={generatingPDF}
+              variant="outline"
+              className="h-12 px-4"
+              title="Pobierz PDF"
+            >
+              <Download className="w-5 h-5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>

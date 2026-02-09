@@ -8,7 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/shared/PageHeader";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { base44 } from "@/api/base44Client";
-import { Cloud, TrendingUp } from "lucide-react";
+import { Cloud, TrendingUp, Download } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function PVCalculator() {
   const [zuzycie, setZuzycie] = useState("");
@@ -19,6 +20,7 @@ export default function PVCalculator() {
   const [weatherData, setWeatherData] = useState(null);
   const [energyPrice, setEnergyPrice] = useState(null);
   const [loadingWeather, setLoadingWeather] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   // Pobierz cenę energii przy załadowaniu
   useEffect(() => {
@@ -105,6 +107,37 @@ export default function PVCalculator() {
       kosztInstalacji: !isNaN(cenaH) ? cenaH : null,
       rokZwrotu,
     });
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!result) return;
+    
+    setGeneratingPDF(true);
+    try {
+      const { data } = await base44.functions.invoke('generatePVCalculatorPDF', {
+        zuzycie,
+        orientacja,
+        cenaPradu,
+        result,
+        weatherData
+      });
+
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kalkulator-pv-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast.success('PDF wygenerowany');
+    } catch (error) {
+      console.error('Błąd generowania PDF:', error);
+      toast.error('Nie udało się wygenerować PDF');
+    } finally {
+      setGeneratingPDF(false);
+    }
   };
 
   return (
@@ -216,9 +249,21 @@ export default function PVCalculator() {
             disabled={loadingWeather}
             variant="outline"
             className="h-12 px-4"
+            title="Pobierz prognozę pogody"
           >
             <Cloud className="w-5 h-5" />
           </Button>
+          {result && (
+            <Button
+              onClick={handleDownloadPDF}
+              disabled={generatingPDF}
+              variant="outline"
+              className="h-12 px-4"
+              title="Pobierz PDF"
+            >
+              <Download className="w-5 h-5" />
+            </Button>
+          )}
         </div>
 
         {/* Weather forecast */}
