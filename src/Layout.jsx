@@ -249,7 +249,7 @@ export default function Layout({ children, currentPageName }) {
                 <p className="text-gray-600 mt-4">Sprawdzanie dostępu...</p>
               </div>
             </div>
-          ) : !hasAccess ? (
+          ) : !hasAccess && currentUser ? (
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center max-w-md mx-auto">
                 <ShieldAlert className="w-16 h-16 text-red-400 mx-auto mb-4" />
