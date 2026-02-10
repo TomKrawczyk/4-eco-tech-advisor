@@ -42,6 +42,13 @@ export default function Layout({ children, currentPageName }) {
           user.displayName = userAccess.data?.name || userAccess.name;
           setCurrentUser(user);
           setHasAccess(true);
+
+          // Śledź aktywność użytkownika
+          try {
+            await base44.functions.invoke('trackUserActivity', {});
+          } catch (activityError) {
+            console.warn('Nie udało się zapisać aktywności:', activityError);
+          }
         } else {
           setCurrentUser(user);
           setHasAccess(false);
@@ -56,6 +63,17 @@ export default function Layout({ children, currentPageName }) {
     };
 
     checkAccess();
+
+    // Aktualizuj aktywność co 5 minut
+    const activityInterval = setInterval(async () => {
+      try {
+        await base44.functions.invoke('trackUserActivity', {});
+      } catch (error) {
+        console.warn('Nie udało się zaktualizować aktywności:', error);
+      }
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(activityInterval);
   }, []);
 
   return (

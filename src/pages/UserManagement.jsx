@@ -8,11 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
+import { format } from "date-fns";
 
 export default function UserManagement() {
   const [email, setEmail] = useState("");
@@ -38,6 +40,11 @@ export default function UserManagement() {
   const { data: groups = [] } = useQuery({
     queryKey: ["groups"],
     queryFn: () => base44.entities.Group.list(),
+  });
+
+  const { data: registrationRequests = [] } = useQuery({
+    queryKey: ["registrationRequests"],
+    queryFn: () => base44.entities.RegistrationRequest.filter({ status: "pending" }),
   });
 
   React.useEffect(() => {
@@ -229,6 +236,83 @@ export default function UserManagement() {
     updateUserMutation.mutate({ userId, updates, oldAssignedTo });
   };
 
+  const approveRequestMutation = useMutation({
+    mutationFn: async (request) => {
+      // Dodaj użytkownika
+      await base44.entities.AllowedUser.create({
+        email: request.email || request.data?.email,
+        name: request.full_name || request.data?.full_name,
+        role: "user"
+      });
+      
+      // Zaktualizuj status prośby
+      await base44.entities.RegistrationRequest.update(request.id, {
+        status: "approved",
+        reviewed_by: currentUser.email,
+        reviewed_at: new Date().toISOString()
+      });
+
+      // Wyślij zaproszenie
+      try {
+        await base44.users.inviteUser(request.email || request.data?.email, "user");
+      } catch (error) {
+        console.warn("Zaproszenie nie powiodło się:", error);
+      }
+
+      // Usuń powiadomienie
+      const notifications = await base44.entities.Notification.filter({ 
+        type: "user_activity",
+        "metadata.request_id": request.id 
+      });
+      for (const notif of notifications) {
+        await base44.entities.Notification.delete(notif.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["registrationRequests"]);
+      queryClient.invalidateQueries(["allowedUsers"]);
+      toast.success("Użytkownik zaakceptowany i zaproszony");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
+    }
+  });
+
+  const rejectRequestMutation = useMutation({
+    mutationFn: async (request) => {
+      await base44.entities.RegistrationRequest.update(request.id, {
+        status: "rejected",
+        reviewed_by: currentUser.email,
+        reviewed_at: new Date().toISOString()
+      });
+
+      // Usuń powiadomienie
+      const notifications = await base44.entities.Notification.filter({ 
+        type: "user_activity",
+        "metadata.request_id": request.id 
+      });
+      for (const notif of notifications) {
+        await base44.entities.Notification.delete(notif.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["registrationRequests"]);
+      toast.success("Prośba odrzucona");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
+    }
+  });
+
+  const formatLastActivity = (lastActivity) => {
+    if (!lastActivity) return "Nigdy";
+    try {
+      return format(new Date(lastActivity), "dd.MM.yyyy HH:mm");
+    } catch {
+      return "Błędna data";
+    }
+  };
+
   return (
     <div>
       <PageHeader 
@@ -237,10 +321,82 @@ export default function UserManagement() {
       />
 
       <Tabs defaultValue="users" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="requests">
+            Prośby o dostęp
+            {registrationRequests.length > 0 && (
+              <Badge variant="destructive" className="ml-2">{registrationRequests.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="users">Użytkownicy</TabsTrigger>
           <TabsTrigger value="groups">Grupy</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="requests" className="space-y-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+            <h3 className="text-base md:text-lg font-semibold mb-4 flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-green-600" />
+              Prośby o dostęp ({registrationRequests.length})
+            </h3>
+            
+            {registrationRequests.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">Brak nowych próśb o dostęp</p>
+            ) : (
+              <div className="space-y-3">
+                {registrationRequests.map((request) => (
+                  <div key={request.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-gray-900">{request.data?.full_name || request.full_name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {format(new Date(request.created_date), "dd.MM.yyyy HH:mm")}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <div><strong>Email:</strong> {request.data?.email || request.email}</div>
+                          {(request.data?.company || request.company) && (
+                            <div><strong>Firma:</strong> {request.data?.company || request.company}</div>
+                          )}
+                          {(request.data?.phone || request.phone) && (
+                            <div><strong>Telefon:</strong> {request.data?.phone || request.phone}</div>
+                          )}
+                          {(request.data?.message || request.message) && (
+                            <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                              <strong>Wiadomość:</strong> {request.data?.message || request.message}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => approveRequestMutation.mutate(request)}
+                          disabled={approveRequestMutation.isPending}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Akceptuj
+                        </Button>
+                        <Button
+                          onClick={() => rejectRequestMutation.mutate(request)}
+                          disabled={rejectRequestMutation.isPending}
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Odrzuć
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
 
         <TabsContent value="users" className="space-y-6">
 
@@ -409,6 +565,10 @@ export default function UserManagement() {
                         "Użytkownik"
                       }
                     </span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    <Clock className="w-3 h-3 inline mr-1" />
+                    Ostatnia aktywność: {formatLastActivity(user.data?.last_activity || user.last_activity)}
                   </div>
                   {(user.data?.notes || user.notes) && (
                     <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.data?.notes || user.notes}</p>
