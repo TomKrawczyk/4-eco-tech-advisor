@@ -42,18 +42,22 @@ Deno.serve(async (req) => {
 
     // Wyślij powiadomienia do wszystkich adminów
     for (const admin of admins) {
-      await base44.asServiceRole.entities.Notification.create({
-        user_email: admin.data?.email || admin.email,
-        type: 'user_activity',
-        title: 'Nowa prośba o dostęp',
-        message: `${full_name} (${email}) prosi o dostęp do aplikacji`,
-        link: '/UserManagement',
-        metadata: {
-          request_id: request.id,
-          email: email,
-          full_name: full_name
-        }
-      });
+      try {
+        await base44.asServiceRole.entities.Notification.create({
+          user_email: admin.data?.email || admin.email,
+          type: 'user_activity',
+          title: 'Nowa prośba o dostęp',
+          message: `${full_name} (${email}) prosi o dostęp do aplikacji`,
+          link: '/UserManagement',
+          metadata: {
+            request_id: request.id,
+            email: email,
+            full_name: full_name
+          }
+        });
+      } catch (notifError) {
+        console.warn('Nie udało się wysłać powiadomienia do admina:', notifError);
+      }
     }
 
     return Response.json({ 

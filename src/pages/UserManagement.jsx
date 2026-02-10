@@ -238,10 +238,13 @@ export default function UserManagement() {
 
   const approveRequestMutation = useMutation({
     mutationFn: async (request) => {
+      const email = request.data?.email || request.email;
+      const fullName = request.data?.full_name || request.full_name;
+      
       // Dodaj użytkownika
       await base44.entities.AllowedUser.create({
-        email: request.email || request.data?.email,
-        name: request.full_name || request.data?.full_name,
+        email: email,
+        name: fullName,
         role: "user"
       });
       
@@ -254,18 +257,23 @@ export default function UserManagement() {
 
       // Wyślij zaproszenie
       try {
-        await base44.users.inviteUser(request.email || request.data?.email, "user");
+        await base44.users.inviteUser(email, "user");
       } catch (error) {
         console.warn("Zaproszenie nie powiodło się:", error);
       }
 
       // Usuń powiadomienie
-      const notifications = await base44.entities.Notification.filter({ 
-        type: "user_activity",
-        "metadata.request_id": request.id 
-      });
-      for (const notif of notifications) {
-        await base44.entities.Notification.delete(notif.id);
+      try {
+        const notifications = await base44.entities.Notification.list();
+        const relatedNotifs = notifications.filter(n => {
+          const metadata = n.data?.metadata || n.metadata;
+          return metadata?.request_id === request.id;
+        });
+        for (const notif of relatedNotifs) {
+          await base44.entities.Notification.delete(notif.id);
+        }
+      } catch (error) {
+        console.warn("Nie udało się usunąć powiadomień:", error);
       }
     },
     onSuccess: () => {
@@ -287,12 +295,17 @@ export default function UserManagement() {
       });
 
       // Usuń powiadomienie
-      const notifications = await base44.entities.Notification.filter({ 
-        type: "user_activity",
-        "metadata.request_id": request.id 
-      });
-      for (const notif of notifications) {
-        await base44.entities.Notification.delete(notif.id);
+      try {
+        const notifications = await base44.entities.Notification.list();
+        const relatedNotifs = notifications.filter(n => {
+          const metadata = n.data?.metadata || n.metadata;
+          return metadata?.request_id === request.id;
+        });
+        for (const notif of relatedNotifs) {
+          await base44.entities.Notification.delete(notif.id);
+        }
+      } catch (error) {
+        console.warn("Nie udało się usunąć powiadomień:", error);
       }
     },
     onSuccess: () => {
