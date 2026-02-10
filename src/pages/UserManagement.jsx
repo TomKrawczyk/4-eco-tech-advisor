@@ -218,18 +218,6 @@ export default function UserManagement() {
     }
   };
 
-  if (currentUser?.role !== "admin") {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Brak dostępu</h2>
-          <p className="text-gray-600">Tylko administratorzy mogą zarządzać użytkownikami</p>
-        </div>
-      </div>
-    );
-  }
-
   const handleEditUser = (userId, updates) => {
     const user = allowedUsers.find(u => u.id === userId);
     const oldAssignedTo = user.data?.assigned_to || user.assigned_to;
@@ -325,6 +313,18 @@ export default function UserManagement() {
       return "Błędna data";
     }
   };
+
+  if (currentUser?.role !== "admin") {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Brak dostępu</h2>
+          <p className="text-gray-600">Tylko administratorzy mogą zarządzać użytkownikami</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
