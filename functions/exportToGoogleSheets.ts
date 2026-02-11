@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
 
     if (!sheetExists) {
       // Utwórz nowy arkusz
-      await fetch(
+      const createSheetResponse = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`,
         {
           method: 'POST',
@@ -191,6 +191,9 @@ Deno.serve(async (req) => {
           })
         }
       );
+      
+      const newSheetData = await createSheetResponse.json();
+      const sheetId = newSheetData.replies[0].addSheet.properties.sheetId;
 
       // Dodaj nagłówki
       await fetch(
@@ -203,6 +206,50 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             values: [headers]
+          })
+        }
+      );
+      
+      // Formatuj nagłówki i dostosuj szerokość kolumn
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requests: [
+              // Pogrubienie nagłówków
+              {
+                repeatCell: {
+                  range: {
+                    sheetId: sheetId,
+                    startRowIndex: 0,
+                    endRowIndex: 1
+                  },
+                  cell: {
+                    userEnteredFormat: {
+                      textFormat: { bold: true },
+                      backgroundColor: { red: 0.85, green: 0.85, blue: 0.85 }
+                    }
+                  },
+                  fields: 'userEnteredFormat(textFormat,backgroundColor)'
+                }
+              },
+              // Auto-resize kolumn
+              {
+                autoResizeDimensions: {
+                  dimensions: {
+                    sheetId: sheetId,
+                    dimension: 'COLUMNS',
+                    startIndex: 0,
+                    endIndex: headers.length
+                  }
+                }
+              }
+            ]
           })
         }
       );
@@ -226,6 +273,38 @@ Deno.serve(async (req) => {
     if (!appendResponse.ok) {
       const error = await appendResponse.json();
       return Response.json({ error: 'Błąd eksportu do Google Sheets', details: error }, { status: 500 });
+    }
+    
+    // Po dodaniu danych, dostosuj szerokość kolumn jeśli arkusz już istniał
+    if (sheetExists) {
+      const updatedSpreadsheet = await sheetsResponse.json();
+      const sheet = updatedSpreadsheet.sheets.find(s => s.properties.title === sheetName);
+      const sheetId = sheet?.properties?.sheetId;
+      
+      if (sheetId !== undefined) {
+        await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              requests: [{
+                autoResizeDimensions: {
+                  dimensions: {
+                    sheetId: sheetId,
+                    dimension: 'COLUMNS',
+                    startIndex: 0,
+                    endIndex: headers.length
+                  }
+                }
+              }]
+            })
+          }
+        );
+      }
     }
 
     return Response.json({
