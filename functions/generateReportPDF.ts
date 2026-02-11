@@ -1,17 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import jsPDF from 'npm:jspdf@2.5.2';
-
-// Funkcja do pobrania czcionki z Google Fonts i konwersji na Base64
-async function fetchFontAsBase64(url: string): Promise<string> {
-  const response = await fetch(url);
-  const arrayBuffer = await response.arrayBuffer();
-  const uint8Array = new Uint8Array(arrayBuffer);
-  let binary = '';
-  for (let i = 0; i < uint8Array.length; i++) {
-    binary += String.fromCharCode(uint8Array[i]);
-  }
-  return btoa(binary);
-}
+import PDFDocument from 'npm:pdfkit@0.15.0';
 
 Deno.serve(async (req) => {
   try {
@@ -30,215 +18,133 @@ Deno.serve(async (req) => {
 
     const report = await base44.entities.VisitReport.get(reportId);
     
-    const doc = new jsPDF();
+    // Create PDF document
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const chunks = [];
     
-    // Pobierz czcionkę Roboto z obsługą polskich znaków
-    // Używamy wersji Latin Extended która zawiera polskie znaki
-    try {
-      const fontUrl = 'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-ext-400-normal.ttf';
-      const fontBase64 = await fetchFontAsBase64(fontUrl);
-      
-      doc.addFileToVFS('Roboto-Regular.ttf', fontBase64);
-      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-      doc.setFont('Roboto', 'normal');
-    } catch (fontError) {
-      console.error('Font loading failed, using fallback:', fontError);
-      // Fallback - użyj helvetica ale z normalizacją polskich znaków
-    }
+    doc.on('data', chunk => chunks.push(chunk));
     
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 15;
-    const contentWidth = pageWidth - (2 * margin);
-    let y = 20;
+    const pdfPromise = new Promise((resolve) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+    });
 
-    // Sprawdź czy potrzebna nowa strona
-    const checkNewPage = (requiredSpace = 15) => {
-      if (y + requiredSpace > pageHeight - 20) {
-        doc.addPage();
-        y = 20;
-      }
+    // Helper functions
+    const addSectionHeader = (title) => {
+      if (doc.y > 700) doc.addPage();
+      doc.rect(40, doc.y, 515, 25).fill('#22c55e');
+      doc.fillColor('#ffffff').fontSize(12).font('Helvetica-Bold').text(title, 45, doc.y - 18);
+      doc.moveDown(0.5);
+      doc.fillColor('#000000');
     };
 
-    // Dodaj nagłówek sekcji
-    const addSectionHeader = (title: string) => {
-      checkNewPage(20);
-      y += 5;
-      doc.setFontSize(14);
-      doc.setTextColor(34, 197, 94);
-      doc.text(title, margin, y);
-      y += 2;
-      // Linia pod nagłówkiem
-      doc.setDrawColor(34, 197, 94);
-      doc.setLineWidth(0.5);
-      doc.line(margin, y, margin + contentWidth, y);
-      y += 8;
-      doc.setTextColor(0, 0, 0);
+    const addField = (label, value) => {
+      if (!value) return;
+      if (doc.y > 720) doc.addPage();
+      
+      doc.fontSize(10).font('Helvetica-Bold').text(label, 40, doc.y, { continued: true, width: 150 });
+      doc.font('Helvetica').text(String(value), { width: 365 });
+      doc.moveDown(0.3);
     };
 
-    // Dodaj pole z etykietą i wartością w jednej linii
-    const addField = (label: string, value: any) => {
-      if (!value && value !== 0) return;
-      
-      const valueStr = String(value);
-      doc.setFontSize(10);
-      
-      // Oblicz potrzebną wysokość
-      const valueLines = doc.splitTextToSize(valueStr, contentWidth - 5);
-      const lineHeight = 5;
-      const fieldHeight = Math.max(lineHeight, valueLines.length * lineHeight);
-      
-      checkNewPage(fieldHeight + 3);
-      
-      // Etykieta (pogrubiona)
-      doc.setTextColor(80, 80, 80);
-      doc.text(label, margin, y);
-      
-      // Wartość - pod etykietą z wcięciem
-      doc.setTextColor(0, 0, 0);
-      y += lineHeight;
-      doc.text(valueLines, margin + 5, y);
-      
-      y += (valueLines.length - 1) * lineHeight + 5;
-    };
+    // Header
+    doc.fontSize(20).font('Helvetica-Bold').text('RAPORT WIZYTY TECHNICZNEJ', 40, 40);
+    doc.moveDown(0.5);
+    doc.fontSize(11).font('Helvetica').fillColor('#666666').text('4-ECO Green Energy');
+    doc.text(`Data wygenerowania: ${new Date().toLocaleDateString('pl-PL')}`);
+    doc.fillColor('#000000');
+    doc.moveDown(1.5);
 
-    // Dodaj pole inline (etykieta: wartość w jednej linii)
-    const addFieldInline = (label: string, value: any) => {
-      if (!value && value !== 0) return;
-      
-      checkNewPage(8);
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.text(label + ' ' + String(value), margin, y);
-      y += 6;
-    };
+    // Client section
+    addSectionHeader('DANE KLIENTA');
+    addField('Klient:', report.client_name);
+    addField('Adres:', report.client_address);
+    addField('Telefon:', report.client_phone);
+    addField('Data wizyty:', report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : '');
+    addField('Rodzaj instalacji:', report.installation_types?.join(', '));
+    doc.moveDown(1);
 
-    // === NAGŁÓWEK GŁÓWNY ===
-    doc.setFontSize(20);
-    doc.setTextColor(34, 197, 94);
-    doc.text('Raport wizyty technicznej', margin, y);
-    y += 8;
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text('4-ECO Green Energy', margin, y);
-    y += 12;
-
-    // === DANE KLIENTA ===
-    addSectionHeader('Dane klienta');
-    addFieldInline('Klient:', report.client_name);
-    if (report.client_address) addFieldInline('Adres:', report.client_address);
-    if (report.client_phone) addFieldInline('Telefon:', report.client_phone);
-    if (report.visit_date) {
-      addFieldInline('Data wizyty:', new Date(report.visit_date).toLocaleDateString('pl-PL'));
-    }
-    if (report.installation_types?.length) {
-      addFieldInline('Rodzaj instalacji:', report.installation_types.join(', '));
-    }
-
-    // === DANE INSTALACJI ===
+    // Installation section
     if (report.launch_date || report.contractor || report.annual_production_kwh || 
         report.energy_imported_kwh || report.energy_exported_kwh) {
-      addSectionHeader('Dane instalacji');
-      if (report.launch_date) addFieldInline('Data uruchomienia:', report.launch_date);
-      if (report.contractor) addFieldInline('Wykonawca:', report.contractor);
-      if (report.annual_production_kwh) addFieldInline('Roczna produkcja:', report.annual_production_kwh + ' kWh');
-      if (report.energy_imported_kwh) addFieldInline('Energia pobrana (1.8.0):', report.energy_imported_kwh + ' kWh');
-      if (report.energy_exported_kwh) addFieldInline('Energia oddana (2.8.0):', report.energy_exported_kwh + ' kWh');
+      addSectionHeader('DANE INSTALACJI');
+      addField('Data uruchomienia:', report.launch_date);
+      addField('Wykonawca:', report.contractor);
+      addField('Roczna produkcja:', report.annual_production_kwh ? `${report.annual_production_kwh} kWh` : '');
+      addField('Energia pobrana (1.8.0):', report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : '');
+      addField('Energia oddana (2.8.0):', report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : '');
+      doc.moveDown(1);
     }
 
-    // === KONTROLA TECHNICZNA ===
-    const technicalFields = [
-      ['Autokonsumpcja:', report.autoconsumption_rating],
-      ['Stan paneli:', report.panels_condition],
-      ['Mocowania:', report.mounting_condition],
-      ['Przewody:', report.cables_condition],
-      ['Zabezpieczenia:', report.protection_condition],
-      ['Falownik:', report.inverter_reading],
-      ['Uziemienie:', report.grounding_condition],
-      ['Rozbudowa:', report.expansion_possibilities],
-      ['Modernizacja:', report.modernization_potential],
-      ['Rekomendacje:', report.recommendations],
-      ['Uwagi:', report.additional_notes]
-    ].filter(([_, val]) => val);
+    // Technical checks
+    const checks = [
+      { label: 'Autokonsumpcja:', value: report.autoconsumption_rating },
+      { label: 'Stan paneli:', value: report.panels_condition },
+      { label: 'Mocowania:', value: report.mounting_condition },
+      { label: 'Przewody DC/AC:', value: report.cables_condition },
+      { label: 'Zabezpieczenia SPD, RCD:', value: report.protection_condition },
+      { label: 'Odczyt falownika:', value: report.inverter_reading },
+      { label: 'Uziemienie:', value: report.grounding_condition },
+      { label: 'Możliwości rozbudowy:', value: report.expansion_possibilities },
+      { label: 'Potencjał modernizacji:', value: report.modernization_potential },
+      { label: 'Rekomendacje:', value: report.recommendations },
+      { label: 'Dodatkowe uwagi:', value: report.additional_notes }
+    ].filter(item => item.value);
 
-    if (technicalFields.length > 0) {
-      addSectionHeader('Kontrola techniczna');
-      technicalFields.forEach(([label, value]) => addField(label as string, value));
+    if (checks.length > 0) {
+      addSectionHeader('KONTROLA TECHNICZNA');
+      checks.forEach(item => addField(item.label, item.value));
+      doc.moveDown(1);
     }
 
-    // === WYWIAD Z KLIENTEM ===
-    const interviewFields = [
-      ['Roczny koszt:', report.interview_annual_cost],
-      ['Mieszkańcy:', report.interview_residents],
-      ['Wyjście do pracy/szkoły:', report.interview_work_schedule],
-      ['Powrót do domu:', report.interview_return_time],
-      ['Obecność w domu (10-15):', report.interview_home_during_day],
-      ['Szczyt zużycia:', report.interview_peak_usage],
-      ['Używanie urządzeń:', report.interview_appliance_usage],
-      ['Ogrzewanie wody:', report.interview_water_heating],
-      ['Sprzęt:', report.interview_equipment],
-      ['Plany:', report.interview_purchase_plans]
-    ].filter(([_, val]) => val);
+    // Interview
+    const interview = [
+      { label: 'Roczny koszt energii:', value: report.interview_annual_cost },
+      { label: 'Liczba mieszkańców:', value: report.interview_residents },
+      { label: 'Wyjście do pracy/szkoły:', value: report.interview_work_schedule },
+      { label: 'Powrót do domu:', value: report.interview_return_time },
+      { label: 'Obecność w domu (10-15):', value: report.interview_home_during_day },
+      { label: 'Szczyt zużycia:', value: report.interview_peak_usage },
+      { label: 'Używanie urządzeń:', value: report.interview_appliance_usage },
+      { label: 'Ogrzewanie wody:', value: report.interview_water_heating },
+      { label: 'Sprzęt:', value: report.interview_equipment },
+      { label: 'Plany zakupowe:', value: report.interview_purchase_plans }
+    ].filter(item => item.value);
 
-    if (interviewFields.length > 0) {
-      addSectionHeader('Wywiad z klientem');
-      interviewFields.forEach(([label, value]) => addField(label as string, value));
+    if (interview.length > 0) {
+      addSectionHeader('WYWIAD ENERGETYCZNY');
+      interview.forEach(item => addField(item.label, item.value));
+      doc.moveDown(1);
     }
 
-    // === PODPIS KLIENTA ===
+    // Signature
     if (report.client_signature) {
-      checkNewPage(30);
-      y += 10;
-      doc.setFontSize(10);
-      doc.setTextColor(80, 80, 80);
-      doc.text('Podpis klienta:', margin, y);
-      y += 8;
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('Roboto', 'normal');
-      const sigLines = doc.splitTextToSize(report.client_signature, contentWidth);
-      doc.text(sigLines, margin, y);
-    }
-    
-    // === STOPKA NA WSZYSTKICH STRONACH ===
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(
-        'Strona ' + i + ' z ' + pageCount + ' | 4-ECO Green Energy | Wygenerowano: ' + new Date().toLocaleDateString('pl-PL'),
-        pageWidth / 2,
-        pageHeight - 10,
-        { align: 'center' }
-      );
+      if (doc.y > 700) doc.addPage();
+      doc.moveDown(1);
+      doc.fontSize(10).font('Helvetica-Bold').text('PODPIS KLIENTA:');
+      doc.moveDown(0.3);
+      doc.fontSize(11).font('Helvetica-Oblique').text(report.client_signature);
     }
 
-    // Generuj PDF
-    const pdfBytes = doc.output('arraybuffer');
-    
-    // Bezpieczna nazwa pliku (bez polskich znaków w nazwie pliku)
-    const safeFilename = (report.client_name || 'wizyta')
-      .replace(/ą/g, 'a').replace(/ć/g, 'c').replace(/ę/g, 'e')
-      .replace(/ł/g, 'l').replace(/ń/g, 'n').replace(/ó/g, 'o')
-      .replace(/ś/g, 's').replace(/ź/g, 'z').replace(/ż/g, 'z')
-      .replace(/Ą/g, 'A').replace(/Ć/g, 'C').replace(/Ę/g, 'E')
-      .replace(/Ł/g, 'L').replace(/Ń/g, 'N').replace(/Ó/g, 'O')
-      .replace(/Ś/g, 'S').replace(/Ź/g, 'Z').replace(/Ż/g, 'Z')
-      .replace(/[^a-zA-Z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
-      .substring(0, 50);
+    // Footer
+    const pages = doc.bufferedPageRange();
+    for (let i = 0; i < pages.count; i++) {
+      doc.switchToPage(i);
+      doc.fontSize(8).font('Helvetica').fillColor('#999999');
+      doc.text(`Strona ${i + 1} z ${pages.count}`, 40, 780, { align: 'center', width: 515 });
+      doc.text('4-ECO Green Energy', 40, 790, { align: 'center', width: 515 });
+    }
 
-    return new Response(pdfBytes, {
+    doc.end();
+    const pdfBuffer = await pdfPromise;
+
+    return new Response(pdfBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename=raport_' + safeFilename + '.pdf'
+        'Content-Disposition': `attachment; filename=raport_${report.client_name?.replace(/\s/g, '_') || 'wizyta'}.pdf`
       }
     });
   } catch (error) {
-    console.error('PDF generation error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
