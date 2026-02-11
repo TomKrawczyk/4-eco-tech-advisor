@@ -119,17 +119,17 @@ Deno.serve(async (req) => {
 
     // Technical checks
     const checks = [
-      { label: 'Autokonsumpcja:', value: report.autoconsumption_rating },
-      { label: 'Stan paneli:', value: report.panels_condition },
-      { label: 'Mocowania:', value: report.mounting_condition },
-      { label: 'Przewody DC/AC:', value: report.cables_condition },
-      { label: 'Zabezpieczenia SPD, RCD:', value: report.protection_condition },
-      { label: 'Odczyt falownika:', value: report.inverter_reading },
-      { label: 'Uziemienie:', value: report.grounding_condition },
-      { label: 'Mozliwosci rozbudowy:', value: report.expansion_possibilities },
-      { label: 'Potencjal modernizacji:', value: report.modernization_potential },
-      { label: 'Rekomendacje:', value: report.recommendations },
-      { label: 'Dodatkowe uwagi:', value: report.additional_notes }
+      { label: 'Ocena autokonsumpcji i bilansu z siecia:', value: report.autoconsumption_rating },
+      { label: 'Wizualna kontrola paneli/modulow (pekniecia, zabrudzenia):', value: report.panels_condition },
+      { label: 'Kontrola mocowan i konstrukcji nosnej:', value: report.mounting_condition },
+      { label: 'Wizualne sprawdzenie przewodow DC/AC, polaczen MC4:', value: report.cables_condition },
+      { label: 'Wizualny stan zabezpieczen: SPD, RCD, wylaczniki:', value: report.protection_condition },
+      { label: 'Odczyt falownika: bledy, produkcja, komunikacja:', value: report.inverter_reading },
+      { label: 'Wizualna kontrola uziemienia i ciaglosci przewodow ochronnych:', value: report.grounding_condition },
+      { label: 'Ocena mozliwosci rozbudowy: miejsce, przylacze, ograniczenia:', value: report.expansion_possibilities },
+      { label: 'Wstepna kalkulacja potencjalu modernizacji (kWh/rok):', value: report.modernization_potential },
+      { label: 'Rekomendacje: serwis, czyszczenie, wymiana elementow krytycznych:', value: report.recommendations },
+      { label: 'Dodatkowa rekomendacja:', value: report.additional_notes }
     ].filter(item => item.value);
 
     if (checks.length > 0) {
@@ -140,16 +140,16 @@ Deno.serve(async (req) => {
 
     // Interview
     const interview = [
-      { label: 'Roczny koszt energii:', value: report.interview_annual_cost },
-      { label: 'Liczba mieszkancow:', value: report.interview_residents },
-      { label: 'Wyjscie do pracy/szkoly:', value: report.interview_work_schedule },
-      { label: 'Powrot do domu:', value: report.interview_return_time },
-      { label: 'Obecnosc w domu (10-15):', value: report.interview_home_during_day },
-      { label: 'Szczyt zuzycia:', value: report.interview_peak_usage },
-      { label: 'Uzywanie urzadzen:', value: report.interview_appliance_usage },
-      { label: 'Ogrzewanie wody:', value: report.interview_water_heating },
-      { label: 'Sprzet:', value: report.interview_equipment },
-      { label: 'Plany zakupowe:', value: report.interview_purchase_plans }
+      { label: 'Jaki jest roczny koszt za energie elektryczna?', value: report.interview_annual_cost },
+      { label: 'Ile osob zamieszkuje dom/mieszkanie?', value: report.interview_residents },
+      { label: 'O ktorej godzinie domownicy wychodza do pracy/szkoly?', value: report.interview_work_schedule },
+      { label: 'O ktorej godzinie zwykle wszyscy wracaja do domu?', value: report.interview_return_time },
+      { label: 'Czy ktos jest w domu w godzinach 10:00-15:00?', value: report.interview_home_during_day },
+      { label: 'O jakiej porze dnia zuzycie pradu jest najwieksze?', value: report.interview_peak_usage },
+      { label: 'Kiedy najczesciej wlaczacie pralke, zmywarke i inne urzadzenia?', value: report.interview_appliance_usage },
+      { label: 'Czym ogrzewana jest ciepla woda i kiedy najczesciej z niej korzystacie?', value: report.interview_water_heating },
+      { label: 'Jaki sprzet elektryczny jest w domu?', value: report.interview_equipment },
+      { label: 'Jakie plany zakupowe dotyczace urzadzen energochlonnych?', value: report.interview_purchase_plans }
     ].filter(item => item.value);
 
     if (interview.length > 0) {
