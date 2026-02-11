@@ -61,7 +61,18 @@ export default function Layout({ children, currentPageName }) {
     };
 
     checkAccess();
-  }, []);
+    
+    // Okresowe odświeżanie aktywności co 5 minut
+    const activityInterval = setInterval(() => {
+      if (hasAccess) {
+        base44.functions.invoke('trackUserActivity').catch(err => 
+          console.error('Błąd śledzenia aktywności:', err)
+        );
+      }
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(activityInterval);
+  }, [hasAccess]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-500/10 via-emerald-50 to-green-500/10 text-gray-900">
