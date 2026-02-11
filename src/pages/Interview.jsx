@@ -207,6 +207,21 @@ export default function Interview() {
         />
       </div>
 
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button
+          onClick={handleExport}
+          disabled={saving}
+          className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg"
+        >
+          {saving ? (
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <>Zapisz wywiad</>
+          )}
+        </Button>
+      </div>
+      
       <div className="text-center text-sm text-gray-500">
         Zmiany zapisują się automatycznie
       </div>
