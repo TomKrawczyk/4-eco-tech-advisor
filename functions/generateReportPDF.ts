@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import PDFDocument from 'npm:pdfkit@0.15.0';
+import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
 
 Deno.serve(async (req) => {
   try {
@@ -18,41 +18,71 @@ Deno.serve(async (req) => {
 
     const report = await base44.entities.VisitReport.get(reportId);
     
-    // Create PDF document
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
-    const chunks = [];
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
-    doc.on('data', chunk => chunks.push(chunk));
-    
-    const pdfPromise = new Promise((resolve) => {
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-    });
+    let page = pdfDoc.addPage([595, 842]); // A4
+    const margin = 40;
+    const pageWidth = 595;
+    const pageHeight = 842;
+    let y = pageHeight - margin;
 
-    // Helper functions
+    const checkNewPage = () => {
+      if (y < 60) {
+        page = pdfDoc.addPage([595, 842]);
+        y = pageHeight - margin;
+      }
+    };
+
+    const addText = (text, x, yPos, size, fontType, color = rgb(0, 0, 0)) => {
+      page.drawText(text, { x, y: yPos, size, font: fontType, color });
+    };
+
     const addSectionHeader = (title) => {
-      if (doc.y > 700) doc.addPage();
-      doc.rect(40, doc.y, 515, 25).fill('#22c55e');
-      doc.fillColor('#ffffff').fontSize(12).font('Helvetica-Bold').text(title, 45, doc.y - 18);
-      doc.moveDown(0.5);
-      doc.fillColor('#000000');
+      checkNewPage();
+      page.drawRectangle({ x: margin, y: y - 20, width: pageWidth - 2 * margin, height: 20, color: rgb(0.133, 0.773, 0.369) });
+      addText(title, margin + 5, y - 15, 12, fontBold, rgb(1, 1, 1));
+      y -= 30;
     };
 
     const addField = (label, value) => {
       if (!value) return;
-      if (doc.y > 720) doc.addPage();
+      checkNewPage();
+      addText(label, margin, y, 10, fontBold);
       
-      doc.fontSize(10).font('Helvetica-Bold').text(label, 40, doc.y, { continued: true, width: 150 });
-      doc.font('Helvetica').text(String(value), { width: 365 });
-      doc.moveDown(0.3);
+      const valueStr = String(value);
+      const maxWidth = 400;
+      const words = valueStr.split(' ');
+      let line = '';
+      let lines = [];
+      
+      for (const word of words) {
+        const testLine = line + (line ? ' ' : '') + word;
+        const width = font.widthOfTextAtSize(testLine, 10);
+        if (width > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = testLine;
+        }
+      }
+      if (line) lines.push(line);
+      
+      lines.forEach((l, i) => {
+        addText(l, margin + 150, y - (i * 15), 10, font);
+      });
+      
+      y -= Math.max(15, lines.length * 15);
     };
 
     // Header
-    doc.fontSize(20).font('Helvetica-Bold').text('RAPORT WIZYTY TECHNICZNEJ', 40, 40);
-    doc.moveDown(0.5);
-    doc.fontSize(11).font('Helvetica').fillColor('#666666').text('4-ECO Green Energy');
-    doc.text(`Data wygenerowania: ${new Date().toLocaleDateString('pl-PL')}`);
-    doc.fillColor('#000000');
-    doc.moveDown(1.5);
+    addText('RAPORT WIZYTY TECHNICZNEJ', margin, y, 20, fontBold);
+    y -= 25;
+    addText('4-ECO Green Energy', margin, y, 11, font, rgb(0.4, 0.4, 0.4));
+    y -= 15;
+    addText(`Data wygenerowania: ${new Date().toLocaleDateString('pl-PL')}`, margin, y, 10, font, rgb(0.4, 0.4, 0.4));
+    y -= 30;
 
     // Client section
     addSectionHeader('DANE KLIENTA');
@@ -61,7 +91,7 @@ Deno.serve(async (req) => {
     addField('Telefon:', report.client_phone);
     addField('Data wizyty:', report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : '');
     addField('Rodzaj instalacji:', report.installation_types?.join(', '));
-    doc.moveDown(1);
+    y -= 20;
 
     // Installation section
     if (report.launch_date || report.contractor || report.annual_production_kwh || 
@@ -72,7 +102,7 @@ Deno.serve(async (req) => {
       addField('Roczna produkcja:', report.annual_production_kwh ? `${report.annual_production_kwh} kWh` : '');
       addField('Energia pobrana (1.8.0):', report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : '');
       addField('Energia oddana (2.8.0):', report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : '');
-      doc.moveDown(1);
+      y -= 20;
     }
 
     // Technical checks
@@ -93,7 +123,7 @@ Deno.serve(async (req) => {
     if (checks.length > 0) {
       addSectionHeader('KONTROLA TECHNICZNA');
       checks.forEach(item => addField(item.label, item.value));
-      doc.moveDown(1);
+      y -= 20;
     }
 
     // Interview
@@ -113,31 +143,40 @@ Deno.serve(async (req) => {
     if (interview.length > 0) {
       addSectionHeader('WYWIAD ENERGETYCZNY');
       interview.forEach(item => addField(item.label, item.value));
-      doc.moveDown(1);
+      y -= 20;
     }
 
     // Signature
     if (report.client_signature) {
-      if (doc.y > 700) doc.addPage();
-      doc.moveDown(1);
-      doc.fontSize(10).font('Helvetica-Bold').text('PODPIS KLIENTA:');
-      doc.moveDown(0.3);
-      doc.fontSize(11).font('Helvetica-Oblique').text(report.client_signature);
+      checkNewPage();
+      y -= 10;
+      addText('PODPIS KLIENTA:', margin, y, 10, fontBold);
+      y -= 15;
+      addText(report.client_signature, margin, y, 11, font);
     }
 
-    // Footer
-    const pages = doc.bufferedPageRange();
-    for (let i = 0; i < pages.count; i++) {
-      doc.switchToPage(i);
-      doc.fontSize(8).font('Helvetica').fillColor('#999999');
-      doc.text(`Strona ${i + 1} z ${pages.count}`, 40, 780, { align: 'center', width: 515 });
-      doc.text('4-ECO Green Energy', 40, 790, { align: 'center', width: 515 });
-    }
+    // Add page numbers
+    const pages = pdfDoc.getPages();
+    pages.forEach((p, i) => {
+      p.drawText(`Strona ${i + 1} z ${pages.length}`, {
+        x: pageWidth / 2 - 40,
+        y: 30,
+        size: 8,
+        font,
+        color: rgb(0.5, 0.5, 0.5)
+      });
+      p.drawText('4-ECO Green Energy', {
+        x: pageWidth / 2 - 50,
+        y: 20,
+        size: 8,
+        font,
+        color: rgb(0.5, 0.5, 0.5)
+      });
+    });
 
-    doc.end();
-    const pdfBuffer = await pdfPromise;
+    const pdfBytes = await pdfDoc.save();
 
-    return new Response(pdfBuffer, {
+    return new Response(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
