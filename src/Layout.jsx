@@ -42,6 +42,11 @@ export default function Layout({ children, currentPageName }) {
           user.displayName = userAccess.data?.name || userAccess.name;
           setCurrentUser(user);
           setHasAccess(true);
+          
+          // Aktualizuj aktywność użytkownika
+          base44.functions.invoke('trackUserActivity').catch(err => 
+            console.error('Błąd śledzenia aktywności:', err)
+          );
         } else {
           setCurrentUser(user);
           setHasAccess(false);
