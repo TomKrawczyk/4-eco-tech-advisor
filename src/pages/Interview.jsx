@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MessageSquare, Save, RotateCcw, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import PageHeader from "../components/shared/PageHeader";
+import ReportSelector from "../components/reports/ReportSelector";
 
 const questions = [
   { key: "interview_annual_cost", label: "Jaki jest roczny koszt za energię elektryczną?", placeholder: "np. 4500 zł/rok" },
@@ -21,6 +22,7 @@ const questions = [
 ];
 
 export default function Interview() {
+  const [currentReport, setCurrentReport] = useState(null);
   const [form, setForm] = useState({
     client_name: "",
     visit_date: new Date().toISOString().split("T")[0],
@@ -37,50 +39,70 @@ export default function Interview() {
     client_signature: "",
   });
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [activeQ, setActiveQ] = useState(null);
+  const [saveTimeout, setSaveTimeout] = useState(null);
 
-  const update = (key, value) => setForm({ ...form, [key]: value });
+  useEffect(() => {
+    if (currentReport) {
+      setForm({
+        client_name: currentReport.client_name || "",
+        visit_date: currentReport.visit_date || new Date().toISOString().split("T")[0],
+        interview_annual_cost: currentReport.interview_annual_cost || "",
+        interview_residents: currentReport.interview_residents || "",
+        interview_work_schedule: currentReport.interview_work_schedule || "",
+        interview_return_time: currentReport.interview_return_time || "",
+        interview_home_during_day: currentReport.interview_home_during_day || "",
+        interview_peak_usage: currentReport.interview_peak_usage || "",
+        interview_appliance_usage: currentReport.interview_appliance_usage || "",
+        interview_water_heating: currentReport.interview_water_heating || "",
+        interview_equipment: currentReport.interview_equipment || "",
+        interview_purchase_plans: currentReport.interview_purchase_plans || "",
+        client_signature: currentReport.client_signature || "",
+      });
+    }
+  }, [currentReport]);
+
+  const autoSave = async (updatedForm) => {
+    if (!currentReport) return;
+    await base44.entities.VisitReport.update(currentReport.id, updatedForm);
+  };
+
+  const update = (key, value) => {
+    const newForm = { ...form, [key]: value };
+    setForm(newForm);
+    
+    // Auto-save z debounce
+    if (saveTimeout) clearTimeout(saveTimeout);
+    const timeout = setTimeout(() => autoSave(newForm), 1000);
+    setSaveTimeout(timeout);
+  };
+  
   const filledCount = questions.filter((q) => form[q.key]?.trim()).length;
 
-  const handleSave = async () => {
-    if (!form.client_name.trim()) return;
+  const handleExport = async () => {
+    if (!currentReport) return;
     setSaving(true);
-    const report = await base44.entities.VisitReport.create({
-      ...form,
-      status: "draft",
-    });
-    
-    // Automatyczny eksport do Google Sheets
     try {
-      await base44.functions.invoke('exportToGoogleSheets', { reportId: report.id });
+      await base44.functions.invoke('exportToGoogleSheets', { reportId: currentReport.id });
+      alert('Raport wyeksportowany do Google Sheets!');
     } catch (error) {
       console.error('Błąd eksportu do Google Sheets:', error);
+      alert('Błąd eksportu');
     }
-    
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
   };
 
-  const handleReset = () => {
-    setForm({
-      client_name: "",
-      visit_date: new Date().toISOString().split("T")[0],
-      interview_annual_cost: "",
-      interview_residents: "",
-      interview_work_schedule: "",
-      interview_return_time: "",
-      interview_home_during_day: "",
-      interview_peak_usage: "",
-      interview_appliance_usage: "",
-      interview_water_heating: "",
-      interview_equipment: "",
-      interview_purchase_plans: "",
-      client_signature: "",
-    });
-    setActiveQ(null);
-  };
+  if (!currentReport) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Wywiad z klientem"
+          subtitle="Analiza potrzeb energetycznych"
+        />
+        <ReportSelector onSelectReport={setCurrentReport} currentReport={null} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -88,6 +110,8 @@ export default function Interview() {
         title="Wywiad z klientem"
         subtitle="Analiza potrzeb energetycznych"
       />
+      
+      <ReportSelector onSelectReport={setCurrentReport} currentReport={currentReport} />
 
       {/* Progress indicator */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -177,27 +201,22 @@ export default function Interview() {
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex gap-3">
         <Button
-          onClick={handleSave}
-          disabled={saving || !form.client_name.trim()}
-          className="w-full sm:flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-base"
+          onClick={handleExport}
+          disabled={saving}
+          className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg"
         >
           {saving ? (
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : saved ? (
-            <><Check className="w-5 h-5 mr-2" /> Zapisano!</>
           ) : (
-            <><Save className="w-5 h-5 mr-2" /> Zapisz wywiad</>
+            <>Eksportuj do Google Sheets</>
           )}
         </Button>
-        <Button
-          onClick={handleReset}
-          variant="outline"
-          className="w-full sm:w-auto h-12 rounded-lg"
-        >
-          <RotateCcw className="w-4 h-4 mr-2" /> Wyczyść
-        </Button>
+      </div>
+      
+      <div className="text-center text-sm text-gray-500">
+        Zmiany zapisują się automatycznie
       </div>
     </div>
   );

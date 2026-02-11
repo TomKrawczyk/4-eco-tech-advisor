@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import PageHeader from "../components/shared/PageHeader";
+import ReportSelector from "../components/reports/ReportSelector";
 
 const Check = () => <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>;
 
@@ -51,10 +52,51 @@ const checklistItems = [
 const installationOptions = ["PV", "Pompa ciepła", "Magazyn energii"];
 
 export default function Checklist() {
+  const [currentReport, setCurrentReport] = useState(null);
   const [form, setForm] = useState(initialState);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [completedItems, setCompletedItems] = useState({});
+  const [saveTimeout, setSaveTimeout] = useState(null);
+
+  useEffect(() => {
+    if (currentReport) {
+      setForm({
+        client_name: currentReport.client_name || "",
+        client_address: currentReport.client_address || "",
+        client_phone: currentReport.client_phone || "",
+        visit_date: currentReport.visit_date || new Date().toISOString().split("T")[0],
+        installation_types: currentReport.installation_types || [],
+        launch_date: currentReport.launch_date || "",
+        contractor: currentReport.contractor || "",
+        annual_production_kwh: currentReport.annual_production_kwh || "",
+        energy_imported_kwh: currentReport.energy_imported_kwh || "",
+        energy_exported_kwh: currentReport.energy_exported_kwh || "",
+        autoconsumption_rating: currentReport.autoconsumption_rating || "",
+        panels_condition: currentReport.panels_condition || "",
+        mounting_condition: currentReport.mounting_condition || "",
+        cables_condition: currentReport.cables_condition || "",
+        protection_condition: currentReport.protection_condition || "",
+        inverter_reading: currentReport.inverter_reading || "",
+        grounding_condition: currentReport.grounding_condition || "",
+        expansion_possibilities: currentReport.expansion_possibilities || "",
+        modernization_potential: currentReport.modernization_potential || "",
+        recommendations: currentReport.recommendations || "",
+        additional_notes: currentReport.additional_notes || "",
+        client_signature: currentReport.client_signature || "",
+      });
+    }
+  }, [currentReport]);
+
+  const autoSave = async (updatedForm) => {
+    if (!currentReport) return;
+    
+    const data = { ...updatedForm };
+    if (data.annual_production_kwh) data.annual_production_kwh = parseFloat(data.annual_production_kwh);
+    if (data.energy_imported_kwh) data.energy_imported_kwh = parseFloat(data.energy_imported_kwh);
+    if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
+    
+    await base44.entities.VisitReport.update(currentReport.id, data);
+  };
 
   const update = (key, value) => {
     const newForm = { ...form, [key]: value };
@@ -66,15 +108,9 @@ export default function Checklist() {
       const imported = parseFloat(key === 'energy_imported_kwh' ? value : newForm.energy_imported_kwh) || 0;
       
       if (production > 0) {
-        // Energia zużyta z PV (nie wyeksportowana)
         const selfUsed = production - exported;
-        // Całkowite zużycie energii (własne + z sieci)
         const totalConsumption = selfUsed + imported;
-        
-        // Autokonsumpcja - ile z wyprodukowanej energii zużyto lokalnie
         const autoconsumptionRate = (selfUsed / production) * 100;
-        
-        // Samowystarczalność - ile potrzeb pokrywa PV (uwzględnia pobór z sieci)
         const selfSufficiency = totalConsumption > 0 ? (selfUsed / totalConsumption) * 100 : 0;
         
         newForm.autoconsumption_rating = `Autokonsumpcja: ${autoconsumptionRate.toFixed(1)}%, Samowystarczalność: ${selfSufficiency.toFixed(1)}%, Pobór z sieci: ${imported} kWh`;
@@ -82,6 +118,11 @@ export default function Checklist() {
     }
     
     setForm(newForm);
+    
+    // Auto-save z debounce
+    if (saveTimeout) clearTimeout(saveTimeout);
+    const timeout = setTimeout(() => autoSave(newForm), 1000);
+    setSaveTimeout(timeout);
   };
 
   const toggleInstallation = (type) => {
@@ -95,35 +136,34 @@ export default function Checklist() {
     setCompletedItems({ ...completedItems, [key]: !completedItems[key] });
   };
 
-  const handleSave = async () => {
-    if (!form.client_name.trim()) return;
+  const handleExport = async () => {
+    if (!currentReport) return;
     setSaving(true);
-    const data = { ...form };
-    if (data.annual_production_kwh) data.annual_production_kwh = parseFloat(data.annual_production_kwh);
-    if (data.energy_imported_kwh) data.energy_imported_kwh = parseFloat(data.energy_imported_kwh);
-    if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
-    const report = await base44.entities.VisitReport.create(data);
-    
-    // Automatyczny eksport do Google Sheets
     try {
-      await base44.functions.invoke('exportToGoogleSheets', { reportId: report.id });
+      await base44.functions.invoke('exportToGoogleSheets', { reportId: currentReport.id });
+      alert('Raport wyeksportowany do Google Sheets!');
     } catch (error) {
       console.error('Błąd eksportu do Google Sheets:', error);
+      alert('Błąd eksportu');
     }
-    
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
-
-  const handleReset = () => {
-    setForm(initialState);
-    setCompletedItems({});
   };
 
   const completedCount = Object.values(completedItems).filter(Boolean).length;
   const totalItems = checklistItems.length;
   const progress = totalItems > 0 ? (completedCount / totalItems) * 100 : 0;
+
+  if (!currentReport) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Checklista Doradcy Technicznego"
+          subtitle="Analiza i modernizacja instalacji"
+        />
+        <ReportSelector onSelectReport={setCurrentReport} currentReport={null} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -131,6 +171,8 @@ export default function Checklist() {
         title="Checklista Doradcy Technicznego"
         subtitle="Analiza i modernizacja instalacji"
       />
+      
+      <ReportSelector onSelectReport={setCurrentReport} currentReport={currentReport} />
 
       {/* Progress */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -267,27 +309,22 @@ export default function Checklist() {
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex gap-3">
         <Button
-          onClick={handleSave}
-          disabled={saving || !form.client_name.trim()}
+          onClick={handleExport}
+          disabled={saving}
           className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg"
         >
           {saving ? (
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : saved ? (
-            <><Check /> Zapisano raport!</>
           ) : (
-            <>Zapisz jako raport</>
+            <>Eksportuj do Google Sheets</>
           )}
         </Button>
-        <Button
-          onClick={handleReset}
-          variant="outline"
-          className="h-12 rounded-lg"
-        >
-          Wyczyść
-        </Button>
+      </div>
+      
+      <div className="text-center text-sm text-gray-500">
+        Zmiany zapisują się automatycznie
       </div>
     </div>
   );
