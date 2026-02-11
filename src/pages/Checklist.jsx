@@ -96,6 +96,13 @@ export default function Checklist() {
     if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
     
     await base44.entities.VisitReport.update(currentReport.id, data);
+    
+    // Automatyczny eksport do Google Sheets w tle
+    try {
+      await base44.functions.invoke('exportToGoogleSheets', { reportId: currentReport.id });
+    } catch (error) {
+      console.error('Błąd eksportu do Google Sheets:', error);
+    }
   };
 
   const update = (key, value) => {
@@ -308,21 +315,6 @@ export default function Checklist() {
         />
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-3">
-        <Button
-          onClick={handleExport}
-          disabled={saving}
-          className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg"
-        >
-          {saving ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            <>Eksportuj do Google Sheets</>
-          )}
-        </Button>
-      </div>
-      
       <div className="text-center text-sm text-gray-500">
         Zmiany zapisują się automatycznie
       </div>
