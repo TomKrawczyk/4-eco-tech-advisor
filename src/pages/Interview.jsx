@@ -91,10 +91,8 @@ export default function Interview() {
     setSaving(true);
     try {
       await base44.functions.invoke('exportToGoogleSheets', { reportId: currentReport.id });
-      alert('Raport wyeksportowany do Google Sheets!');
     } catch (error) {
       console.error('Błąd eksportu do Google Sheets:', error);
-      alert('Błąd eksportu');
     }
     setSaving(false);
   };
