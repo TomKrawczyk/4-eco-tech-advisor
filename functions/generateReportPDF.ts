@@ -20,22 +20,20 @@ Deno.serve(async (req) => {
     
     const doc = new jsPDF();
     
-    // Dodaj wsparcie dla polskich znaków
-    doc.addFileToVFS('DejaVuSans.ttf', '');
-    
     const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
     const margin = 20;
     const contentWidth = pageWidth - (2 * margin);
     let y = 20;
 
     // Header
     doc.setFontSize(20);
-    doc.setFont('times', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('RAPORT WIZYTY TECHNICZNEJ', margin, y);
     y += 8;
     
     doc.setFontSize(11);
-    doc.setFont('times', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 100, 100);
     doc.text('4-ECO Green Energy', margin, y);
     y += 4;
@@ -48,48 +46,50 @@ Deno.serve(async (req) => {
     doc.rect(margin, y, contentWidth, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(12);
-    doc.setFont('times', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('DANE KLIENTA', margin + 2, y + 5.5);
     y += 12;
     doc.setTextColor(0, 0, 0);
     
     doc.setFontSize(10);
-    doc.setFont('times', 'normal');
+    doc.setFont('helvetica', 'normal');
     if (report.client_name) {
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('Klient:', margin, y);
-      doc.setFont('times', 'normal');
-      doc.text(report.client_name, margin + 25, y);
-      y += 6;
+      doc.setFont('helvetica', 'normal');
+      const nameLines = doc.splitTextToSize(report.client_name, contentWidth - 30);
+      doc.text(nameLines, margin + 30, y);
+      y += 6 * nameLines.length;
     }
     if (report.client_address) {
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('Adres:', margin, y);
-      doc.setFont('times', 'normal');
-      const addressLines = doc.splitTextToSize(report.client_address, contentWidth - 25);
-      doc.text(addressLines, margin + 25, y);
+      doc.setFont('helvetica', 'normal');
+      const addressLines = doc.splitTextToSize(report.client_address, contentWidth - 30);
+      doc.text(addressLines, margin + 30, y);
       y += 6 * addressLines.length;
     }
     if (report.client_phone) {
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('Telefon:', margin, y);
-      doc.setFont('times', 'normal');
-      doc.text(report.client_phone, margin + 25, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(report.client_phone, margin + 30, y);
       y += 6;
     }
     if (report.visit_date) {
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('Data wizyty:', margin, y);
-      doc.setFont('times', 'normal');
-      doc.text(new Date(report.visit_date).toLocaleDateString('pl-PL'), margin + 25, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(new Date(report.visit_date).toLocaleDateString('pl-PL'), margin + 30, y);
       y += 6;
     }
     if (report.installation_types?.length) {
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('Rodzaj instalacji:', margin, y);
-      doc.setFont('times', 'normal');
-      doc.text(report.installation_types.join(', '), margin + 35, y);
-      y += 6;
+      doc.setFont('helvetica', 'normal');
+      const typeLines = doc.splitTextToSize(report.installation_types.join(', '), contentWidth - 40);
+      doc.text(typeLines, margin + 40, y);
+      y += 6 * typeLines.length;
     }
     y += 6;
 
@@ -104,46 +104,47 @@ Deno.serve(async (req) => {
       doc.rect(margin, y, contentWidth, 8, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(12);
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('DANE INSTALACJI', margin + 2, y + 5.5);
       y += 12;
       doc.setTextColor(0, 0, 0);
       
       doc.setFontSize(10);
-      doc.setFont('times', 'normal');
+      doc.setFont('helvetica', 'normal');
       if (report.launch_date) {
-        doc.setFont('times', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text('Data uruchomienia:', margin, y);
-        doc.setFont('times', 'normal');
-        doc.text(report.launch_date, margin + 40, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(report.launch_date, margin + 45, y);
         y += 6;
       }
       if (report.contractor) {
-        doc.setFont('times', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text('Wykonawca:', margin, y);
-        doc.setFont('times', 'normal');
-        doc.text(report.contractor, margin + 40, y);
-        y += 6;
+        doc.setFont('helvetica', 'normal');
+        const contractorLines = doc.splitTextToSize(report.contractor, contentWidth - 45);
+        doc.text(contractorLines, margin + 45, y);
+        y += 6 * contractorLines.length;
       }
       if (report.annual_production_kwh) {
-        doc.setFont('times', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text('Roczna produkcja:', margin, y);
-        doc.setFont('times', 'normal');
-        doc.text(`${report.annual_production_kwh} kWh`, margin + 40, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${report.annual_production_kwh} kWh`, margin + 45, y);
         y += 6;
       }
       if (report.energy_imported_kwh) {
-        doc.setFont('times', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text('Energia pobrana (1.8.0):', margin, y);
-        doc.setFont('times', 'normal');
-        doc.text(`${report.energy_imported_kwh} kWh`, margin + 50, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${report.energy_imported_kwh} kWh`, margin + 60, y);
         y += 6;
       }
       if (report.energy_exported_kwh) {
-        doc.setFont('times', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text('Energia oddana (2.8.0):', margin, y);
-        doc.setFont('times', 'normal');
-        doc.text(`${report.energy_exported_kwh} kWh`, margin + 50, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${report.energy_exported_kwh} kWh`, margin + 60, y);
         y += 6;
       }
       y += 6;
@@ -174,24 +175,24 @@ Deno.serve(async (req) => {
       doc.rect(margin, y, contentWidth, 8, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(12);
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('KONTROLA TECHNICZNA', margin + 2, y + 5.5);
       y += 12;
       doc.setTextColor(0, 0, 0);
       
       doc.setFontSize(10);
-      doc.setFont('times', 'normal');
+      doc.setFont('helvetica', 'normal');
       checks.forEach(item => {
-        if (y > 270) {
+        if (y > pageHeight - 30) {
           doc.addPage();
           y = 20;
         }
-        doc.setFont('times', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text(`${item.label}:`, margin, y);
         y += 5;
-        doc.setFont('times', 'normal');
+        doc.setFont('helvetica', 'normal');
         const splitText = doc.splitTextToSize(item.value, contentWidth - 5);
-        doc.text(splitText, margin + 3, y);
+        doc.text(splitText, margin + 5, y);
         y += (splitText.length * 5) + 3;
       });
       y += 6;
@@ -221,24 +222,24 @@ Deno.serve(async (req) => {
       doc.rect(margin, y, contentWidth, 8, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(12);
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('WYWIAD ENERGETYCZNY', margin + 2, y + 5.5);
       y += 12;
       doc.setTextColor(0, 0, 0);
       
       doc.setFontSize(10);
-      doc.setFont('times', 'normal');
+      doc.setFont('helvetica', 'normal');
       interview.forEach(item => {
-        if (y > 270) {
+        if (y > pageHeight - 30) {
           doc.addPage();
           y = 20;
         }
-        doc.setFont('times', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text(`${item.label}:`, margin, y);
         y += 5;
-        doc.setFont('times', 'normal');
+        doc.setFont('helvetica', 'normal');
         const splitText = doc.splitTextToSize(item.value, contentWidth - 5);
-        doc.text(splitText, margin + 3, y);
+        doc.text(splitText, margin + 5, y);
         y += (splitText.length * 5) + 3;
       });
       y += 6;
@@ -246,29 +247,30 @@ Deno.serve(async (req) => {
 
     // Section: Signature
     if (report.client_signature) {
-      if (y > 260) {
+      if (y > pageHeight - 30) {
         doc.addPage();
         y = 20;
       }
       y += 10;
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.text('PODPIS KLIENTA:', margin, y);
       y += 8;
-      doc.setFont('times', 'italic');
+      doc.setFont('helvetica', 'italic');
       doc.setFontSize(12);
-      doc.text(report.client_signature, margin, y);
+      const signatureLines = doc.splitTextToSize(report.client_signature, contentWidth);
+      doc.text(signatureLines, margin, y);
     }
     
-    // Footer on last page
+    // Footer on all pages
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
-      doc.setFont('times', 'normal');
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(150, 150, 150);
-      doc.text(`Strona ${i} z ${pageCount}`, pageWidth / 2, 287, { align: 'center' });
-      doc.text('4-ECO Green Energy | Raport wygenerowany automatycznie', pageWidth / 2, 292, { align: 'center' });
+      doc.text(`Strona ${i} z ${pageCount}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
+      doc.text('4-ECO Green Energy | Raport wygenerowany automatycznie', pageWidth / 2, pageHeight - 10, { align: 'center' });
     }
 
     const pdfBytes = doc.output('arraybuffer');
