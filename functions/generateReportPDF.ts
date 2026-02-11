@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
+import pdfMake from 'npm:pdfmake@0.2.10';
 
 Deno.serve(async (req) => {
   try {
@@ -18,91 +18,54 @@ Deno.serve(async (req) => {
 
     const report = await base44.entities.VisitReport.get(reportId);
     
-    const pdfDoc = await PDFDocument.create();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    
-    let page = pdfDoc.addPage([595, 842]); // A4
-    const margin = 40;
-    const pageWidth = 595;
-    const pageHeight = 842;
-    let y = pageHeight - margin;
-
-    const checkNewPage = () => {
-      if (y < 60) {
-        page = pdfDoc.addPage([595, 842]);
-        y = pageHeight - margin;
+    // Define fonts
+    const fonts = {
+      Roboto: {
+        normal: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf',
+        bold: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Medium.ttf',
+        italics: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Italic.ttf',
+        bolditalics: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-MediumItalic.ttf'
       }
-    };
-
-    const addText = (text, x, yPos, size, fontType, color = rgb(0, 0, 0)) => {
-      page.drawText(text, { x, y: yPos, size, font: fontType, color });
-    };
-
-    const addSectionHeader = (title) => {
-      checkNewPage();
-      page.drawRectangle({ x: margin, y: y - 20, width: pageWidth - 2 * margin, height: 20, color: rgb(0.133, 0.773, 0.369) });
-      addText(title, margin + 5, y - 15, 12, fontBold, rgb(1, 1, 1));
-      y -= 30;
     };
 
     const addField = (label, value) => {
-      if (!value) return;
-      checkNewPage();
-      addText(label, margin, y, 10, fontBold);
-      
-      const valueStr = String(value);
-      const maxWidth = 400;
-      const words = valueStr.split(' ');
-      let line = '';
-      let lines = [];
-      
-      for (const word of words) {
-        const testLine = line + (line ? ' ' : '') + word;
-        const width = font.widthOfTextAtSize(testLine, 10);
-        if (width > maxWidth && line) {
-          lines.push(line);
-          line = word;
-        } else {
-          line = testLine;
-        }
-      }
-      if (line) lines.push(line);
-      
-      lines.forEach((l, i) => {
-        addText(l, margin + 150, y - (i * 15), 10, font);
-      });
-      
-      y -= Math.max(15, lines.length * 15);
+      if (!value) return null;
+      return {
+        columns: [
+          { width: 150, text: label, bold: true, fontSize: 10 },
+          { width: '*', text: String(value), fontSize: 10 }
+        ],
+        margin: [0, 2, 0, 2]
+      };
     };
 
-    // Header
-    addText('RAPORT WIZYTY TECHNICZNEJ', margin, y, 20, fontBold);
-    y -= 25;
-    addText('4-ECO Green Energy', margin, y, 11, font, rgb(0.4, 0.4, 0.4));
-    y -= 15;
-    addText(`Data wygenerowania: ${new Date().toLocaleDateString('pl-PL')}`, margin, y, 10, font, rgb(0.4, 0.4, 0.4));
-    y -= 30;
-
-    // Client section
-    addSectionHeader('DANE KLIENTA');
-    addField('Klient:', report.client_name);
-    addField('Adres:', report.client_address);
-    addField('Telefon:', report.client_phone);
-    addField('Data wizyty:', report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : '');
-    addField('Rodzaj instalacji:', report.installation_types?.join(', '));
-    y -= 20;
+    const content = [
+      { text: 'RAPORT WIZYTY TECHNICZNEJ', fontSize: 20, bold: true, margin: [0, 0, 0, 10] },
+      { text: '4-ECO Green Energy', fontSize: 11, color: '#666666', margin: [0, 0, 0, 5] },
+      { text: `Data wygenerowania: ${new Date().toLocaleDateString('pl-PL')}`, fontSize: 10, color: '#666666', margin: [0, 0, 0, 20] },
+      
+      // Client section
+      { text: 'DANE KLIENTA', fontSize: 12, bold: true, fillColor: '#22c55e', color: 'white', margin: [0, 0, 0, 10], padding: 5 },
+      addField('Klient:', report.client_name),
+      addField('Adres:', report.client_address),
+      addField('Telefon:', report.client_phone),
+      addField('Data wizyty:', report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : ''),
+      addField('Rodzaj instalacji:', report.installation_types?.join(', ')),
+      { text: '', margin: [0, 10] }
+    ].filter(Boolean);
 
     // Installation section
     if (report.launch_date || report.contractor || report.annual_production_kwh || 
         report.energy_imported_kwh || report.energy_exported_kwh) {
-      addSectionHeader('DANE INSTALACJI');
-      addField('Data uruchomienia:', report.launch_date);
-      addField('Wykonawca:', report.contractor);
-      addField('Roczna produkcja:', report.annual_production_kwh ? `${report.annual_production_kwh} kWh` : '');
-      addField('Energia pobrana (1.8.0):', report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : '');
-      addField('Energia oddana (2.8.0):', report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : '');
-      y -= 20;
+      content.push(
+        { text: 'DANE INSTALACJI', fontSize: 12, bold: true, fillColor: '#22c55e', color: 'white', margin: [0, 0, 0, 10], padding: 5 },
+        addField('Data uruchomienia:', report.launch_date),
+        addField('Wykonawca:', report.contractor),
+        addField('Roczna produkcja:', report.annual_production_kwh ? `${report.annual_production_kwh} kWh` : ''),
+        addField('Energia pobrana (1.8.0):', report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : ''),
+        addField('Energia oddana (2.8.0):', report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : ''),
+        { text: '', margin: [0, 10] }
+      );
     }
 
     // Technical checks
@@ -121,9 +84,11 @@ Deno.serve(async (req) => {
     ].filter(item => item.value);
 
     if (checks.length > 0) {
-      addSectionHeader('KONTROLA TECHNICZNA');
-      checks.forEach(item => addField(item.label, item.value));
-      y -= 20;
+      content.push(
+        { text: 'KONTROLA TECHNICZNA', fontSize: 12, bold: true, fillColor: '#22c55e', color: 'white', margin: [0, 0, 0, 10], padding: 5 },
+        ...checks.map(item => addField(item.label, item.value)).filter(Boolean),
+        { text: '', margin: [0, 10] }
+      );
     }
 
     // Interview
@@ -141,42 +106,50 @@ Deno.serve(async (req) => {
     ].filter(item => item.value);
 
     if (interview.length > 0) {
-      addSectionHeader('WYWIAD ENERGETYCZNY');
-      interview.forEach(item => addField(item.label, item.value));
-      y -= 20;
+      content.push(
+        { text: 'WYWIAD ENERGETYCZNY', fontSize: 12, bold: true, fillColor: '#22c55e', color: 'white', margin: [0, 0, 0, 10], padding: 5 },
+        ...interview.map(item => addField(item.label, item.value)).filter(Boolean),
+        { text: '', margin: [0, 10] }
+      );
     }
 
     // Signature
     if (report.client_signature) {
-      checkNewPage();
-      y -= 10;
-      addText('PODPIS KLIENTA:', margin, y, 10, fontBold);
-      y -= 15;
-      addText(report.client_signature, margin, y, 11, font);
+      content.push(
+        { text: '', margin: [0, 10] },
+        { text: 'PODPIS KLIENTA:', fontSize: 10, bold: true, margin: [0, 5] },
+        { text: report.client_signature, fontSize: 11, italics: true }
+      );
     }
 
-    // Add page numbers
-    const pages = pdfDoc.getPages();
-    pages.forEach((p, i) => {
-      p.drawText(`Strona ${i + 1} z ${pages.length}`, {
-        x: pageWidth / 2 - 40,
-        y: 30,
-        size: 8,
-        font,
-        color: rgb(0.5, 0.5, 0.5)
-      });
-      p.drawText('4-ECO Green Energy', {
-        x: pageWidth / 2 - 50,
-        y: 20,
-        size: 8,
-        font,
-        color: rgb(0.5, 0.5, 0.5)
-      });
+    const docDefinition = {
+      content,
+      defaultStyle: {
+        font: 'Roboto'
+      },
+      pageMargins: [40, 40, 40, 60],
+      footer: (currentPage, pageCount) => ({
+        columns: [
+          { text: `Strona ${currentPage} z ${pageCount}`, alignment: 'center', fontSize: 8, color: '#999999' },
+        ],
+        margin: [40, 10]
+      })
+    };
+
+    const printer = new pdfMake(fonts);
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    
+    const chunks = [];
+    pdfDoc.on('data', chunk => chunks.push(chunk));
+    
+    await new Promise((resolve) => {
+      pdfDoc.on('end', resolve);
+      pdfDoc.end();
     });
 
-    const pdfBytes = await pdfDoc.save();
+    const pdfBuffer = Buffer.concat(chunks);
 
-    return new Response(pdfBytes, {
+    return new Response(pdfBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
