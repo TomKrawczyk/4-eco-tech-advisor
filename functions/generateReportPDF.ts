@@ -18,6 +18,23 @@ Deno.serve(async (req) => {
 
     const report = await base44.entities.VisitReport.get(reportId);
     
+    // Funkcja normalizująca polskie znaki
+    const normalize = (text) => {
+      if (!text) return text;
+      const map = {
+        'ą': 'a', 'Ą': 'A',
+        'ć': 'c', 'Ć': 'C',
+        'ę': 'e', 'Ę': 'E',
+        'ł': 'l', 'Ł': 'L',
+        'ń': 'n', 'Ń': 'N',
+        'ó': 'o', 'Ó': 'O',
+        'ś': 's', 'Ś': 'S',
+        'ź': 'z', 'Ź': 'Z',
+        'ż': 'z', 'Ż': 'Z'
+      };
+      return String(text).replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, char => map[char] || char);
+    };
+    
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -42,7 +59,7 @@ Deno.serve(async (req) => {
       doc.rect(margin, y, contentWidth, 8, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(12);
-      doc.text(title, margin + 2, y + 5.5);
+      doc.text(normalize(title), margin + 2, y + 5.5);
       doc.setTextColor(0, 0, 0);
       y += 12;
     };
@@ -53,10 +70,10 @@ Deno.serve(async (req) => {
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text(label, margin, y);
+      doc.text(normalize(label), margin, y);
       
       doc.setFont('helvetica', 'normal');
-      const lines = doc.splitTextToSize(String(value), contentWidth - 50);
+      const lines = doc.splitTextToSize(normalize(String(value)), contentWidth - 50);
       doc.text(lines, margin + 50, y);
       
       y += Math.max(6, lines.length * 5);
@@ -65,7 +82,7 @@ Deno.serve(async (req) => {
     // Header
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text('RAPORT WIZYTY TECHNICZNEJ', margin, y);
+    doc.text(normalize('RAPORT WIZYTY TECHNICZNEJ'), margin, y);
     y += 8;
 
     doc.setFontSize(11);
@@ -146,10 +163,10 @@ Deno.serve(async (req) => {
       checkNewPage();
       y += 5;
       doc.setFont('helvetica', 'bold');
-      doc.text('PODPIS KLIENTA:', margin, y);
+      doc.text(normalize('PODPIS KLIENTA:'), margin, y);
       y += 6;
       doc.setFont('helvetica', 'italic');
-      doc.text(report.client_signature, margin, y);
+      doc.text(normalize(report.client_signature), margin, y);
     }
 
     // Add page numbers
