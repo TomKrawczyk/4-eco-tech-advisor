@@ -96,13 +96,6 @@ export default function Checklist() {
     if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
     
     await base44.entities.VisitReport.update(currentReport.id, data);
-    
-    // Automatyczny eksport do Google Sheets w tle
-    try {
-      await base44.functions.invoke('exportToGoogleSheets', { reportId: currentReport.id });
-    } catch (error) {
-      console.error('Błąd eksportu do Google Sheets:', error);
-    }
   };
 
   const update = (key, value) => {
