@@ -41,6 +41,14 @@ export default function Interview() {
   const [saving, setSaving] = useState(false);
   const [activeQ, setActiveQ] = useState(null);
   const [saveTimeout, setSaveTimeout] = useState(null);
+  
+  // Log page view
+  useEffect(() => {
+    base44.functions.invoke('logActivity', {
+      action_type: 'page_view',
+      page_name: 'Interview'
+    }).catch(err => console.error('Log error:', err));
+  }, []);
 
   useEffect(() => {
     if (currentReport) {
@@ -65,6 +73,17 @@ export default function Interview() {
   const autoSave = async (updatedForm) => {
     if (!currentReport) return;
     await base44.entities.VisitReport.update(currentReport.id, updatedForm);
+    
+    // Log activity
+    base44.functions.invoke('logActivity', {
+      action_type: 'interview_save',
+      page_name: 'Interview',
+      report_id: currentReport.id,
+      details: {
+        client_name: updatedForm.client_name,
+        fields_filled: questions.filter(q => updatedForm[q.key]?.trim()).length
+      }
+    }).catch(err => console.error('Log error:', err));
   };
 
   const update = (key, value) => {

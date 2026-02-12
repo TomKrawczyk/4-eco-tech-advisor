@@ -15,6 +15,16 @@ import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState(null);
+  
+  // Log page view
+  useEffect(() => {
+    if (currentUser) {
+      base44.functions.invoke('logActivity', {
+        action_type: 'page_view',
+        page_name: 'Dashboard'
+      }).catch(err => console.error('Log error:', err));
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     const fetchUserData = async () => {

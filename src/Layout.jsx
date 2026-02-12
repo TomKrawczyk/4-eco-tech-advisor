@@ -18,6 +18,7 @@ const navItems = [
   { name: "Education", label: "Edukacja" },
   { name: "VisitReports", label: "Raporty" },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
+  { name: "UserActivityLog", label: "Historia aktywności", adminOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {

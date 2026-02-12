@@ -58,6 +58,7 @@ import ROICalculator from './pages/ROICalculator';
 import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
 import VisitReports from './pages/VisitReports';
+import UserActivityLog from './pages/UserActivityLog';
 import __Layout from './Layout.jsx';
 
 
@@ -73,6 +74,7 @@ export const PAGES = {
     "UserManagement": UserManagement,
     "UserProfile": UserProfile,
     "VisitReports": VisitReports,
+    "UserActivityLog": UserActivityLog,
 }
 
 export const pagesConfig = {

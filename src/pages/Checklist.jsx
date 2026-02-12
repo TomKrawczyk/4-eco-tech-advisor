@@ -57,6 +57,14 @@ export default function Checklist() {
   const [saving, setSaving] = useState(false);
   const [completedItems, setCompletedItems] = useState({});
   const [saveTimeout, setSaveTimeout] = useState(null);
+  
+  // Log page view
+  useEffect(() => {
+    base44.functions.invoke('logActivity', {
+      action_type: 'page_view',
+      page_name: 'Checklist'
+    }).catch(err => console.error('Log error:', err));
+  }, []);
 
   useEffect(() => {
     if (currentReport) {
@@ -96,6 +104,17 @@ export default function Checklist() {
     if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
     
     await base44.entities.VisitReport.update(currentReport.id, data);
+    
+    // Log activity
+    base44.functions.invoke('logActivity', {
+      action_type: 'checklist_save',
+      page_name: 'Checklist',
+      report_id: currentReport.id,
+      details: {
+        client_name: data.client_name,
+        fields_filled: Object.keys(data).filter(k => data[k]).length
+      }
+    }).catch(err => console.error('Log error:', err));
   };
 
   const update = (key, value) => {
