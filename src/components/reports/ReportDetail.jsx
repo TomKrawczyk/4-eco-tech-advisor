@@ -76,6 +76,14 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
+      
+      // Log activity
+      base44.functions.invoke('logActivity', {
+        action_type: 'report_export',
+        page_name: 'VisitReports',
+        report_id: report.id,
+        details: { client_name: report.client_name, export_type: 'PDF' }
+      }).catch(err => console.error('Log error:', err));
     } catch (error) {
       console.error('Error downloading PDF:', error);
       alert('Błąd podczas pobierania PDF');
@@ -99,6 +107,14 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
       alert('Raport został wysłany!');
       setShowEmailForm(false);
       setEmailRecipient('');
+      
+      // Log activity
+      base44.functions.invoke('logActivity', {
+        action_type: 'report_send_email',
+        page_name: 'VisitReports',
+        report_id: report.id,
+        details: { client_name: report.client_name, recipient: emailRecipient }
+      }).catch(err => console.error('Log error:', err));
     } catch (error) {
       console.error('Error sending email:', error);
       alert('Błąd podczas wysyłania emaila');
@@ -112,6 +128,14 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
     try {
       await base44.functions.invoke('exportToGoogleSheets', { reportId: report.id });
       alert('Raport wyeksportowany do Google Sheets!');
+      
+      // Log activity
+      base44.functions.invoke('logActivity', {
+        action_type: 'report_export',
+        page_name: 'VisitReports',
+        report_id: report.id,
+        details: { client_name: report.client_name, export_type: 'Google Sheets' }
+      }).catch(err => console.error('Log error:', err));
     } catch (error) {
       console.error('Error exporting to Google Sheets:', error);
       alert('Błąd podczas eksportu do Google Sheets');
