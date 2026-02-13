@@ -11,6 +11,12 @@ Deno.serve(async (req) => {
 
     // Get all admin users
     const adminUsers = await base44.asServiceRole.entities.AllowedUser.filter({ role: 'admin' });
+    
+    // Get creator info
+    const creatorEmail = data.created_by;
+    const allUsers = await base44.asServiceRole.entities.AllowedUser.list();
+    const creator = allUsers.find(u => (u.data?.email || u.email) === creatorEmail);
+    const creatorName = creator?.data?.name || creator?.name || creatorEmail || 'Nieznany';
 
     // Send notifications to all admins
     for (const admin of adminUsers) {
@@ -28,7 +34,7 @@ Deno.serve(async (req) => {
           user_email: admin.email,
           type: 'new_report',
           title: 'Nowy raport utworzony',
-          message: `Raport dla klienta ${data.client_name || 'Bez nazwy'} został dodany do systemu.`,
+          message: `Raport dla klienta ${data.client_name || 'Bez nazwy'} został dodany przez ${creatorName}.`,
           link: `/VisitReports?id=${data.id}`,
           is_read: false,
         });
@@ -49,6 +55,10 @@ Deno.serve(async (req) => {
                   Raport dla klienta <strong>${data.client_name || 'Bez nazwy'}</strong> został dodany do systemu.
                 </p>
                 <p style="color: #6b7280; font-size: 14px;">Data wizyty: ${data.visit_date || 'Nie podano'}</p>
+                <div style="background: #e0f2fe; border-left: 4px solid #0284c7; padding: 12px; margin: 16px 0; border-radius: 4px;">
+                  <p style="margin: 0; color: #0c4a6e; font-weight: 600;">👤 Utworzony przez: ${creatorName}</p>
+                  <p style="margin: 4px 0 0 0; color: #075985; font-size: 13px;">${creatorEmail}</p>
+                </div>
               </div>
               <div style="padding: 20px; text-align: center; color: #9ca3af; font-size: 12px;">
                 <p>To powiadomienie zostało wysłane z aplikacji 4-ECO</p>
