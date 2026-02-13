@@ -55,10 +55,10 @@ import Interview from './pages/Interview';
 import NotificationSettings from './pages/NotificationSettings';
 import PVCalculator from './pages/PVCalculator';
 import ROICalculator from './pages/ROICalculator';
+import UserActivityLog from './pages/UserActivityLog';
 import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
 import VisitReports from './pages/VisitReports';
-import UserActivityLog from './pages/UserActivityLog';
 import __Layout from './Layout.jsx';
 
 
@@ -71,10 +71,10 @@ export const PAGES = {
     "NotificationSettings": NotificationSettings,
     "PVCalculator": PVCalculator,
     "ROICalculator": ROICalculator,
+    "UserActivityLog": UserActivityLog,
     "UserManagement": UserManagement,
     "UserProfile": UserProfile,
     "VisitReports": VisitReports,
-    "UserActivityLog": UserActivityLog,
 }
 
 export const pagesConfig = {

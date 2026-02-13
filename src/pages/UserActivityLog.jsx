@@ -85,8 +85,25 @@ export default function UserActivityLog() {
       const logs = await base44.entities.ActivityLog.filter({ user_email: selectedUser }, '-created_date');
       return logs;
     },
+    enabled: !!selectedUser,
+    refetchInterval: 30000 // Odświeżaj co 30 sekund
+  });
+
+  const { data: userReports = [] } = useQuery({
+    queryKey: ['userReports', selectedUser],
+    queryFn: async () => {
+      if (!selectedUser) return [];
+      const reports = await base44.entities.VisitReport.filter({ created_by: selectedUser }, '-created_date', 10);
+      return reports;
+    },
     enabled: !!selectedUser
   });
+
+  const selectedUserData = users.find(u => (u.data?.email || u.email) === selectedUser);
+  const lastActivity = selectedUserData?.data?.last_activity || selectedUserData?.last_activity;
+  const isOnline = lastActivity && (new Date() - new Date(lastActivity)) < 5 * 60 * 1000; // 5 minut
+  const latestActivity = activities[0];
+  const latestReport = userReports[0];
 
   if (!currentUser) {
     return (
@@ -174,6 +191,56 @@ export default function UserActivityLog() {
         </div>
       </Card>
 
+      {/* Status użytkownika */}
+      {selectedUser && (
+        <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <div className="flex items-start gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full bg-green-600 flex items-center justify-center text-white text-2xl font-bold">
+                {selectedUserData?.data?.name?.charAt(0) || selectedUserData?.name?.charAt(0) || '?'}
+              </div>
+              <div className={`absolute bottom-0 right-0 w-5 h-5 rounded-full border-3 border-white ${
+                isOnline ? 'bg-green-500' : 'bg-gray-400'
+              }`}></div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {selectedUserData?.data?.name || selectedUserData?.name}
+                </h3>
+                <Badge className={isOnline ? 'bg-green-600' : 'bg-gray-400'}>
+                  {isOnline ? '🟢 Online' : '⚫ Offline'}
+                </Badge>
+              </div>
+              <div className="text-sm text-gray-600 space-y-1">
+                <div>📧 {selectedUser}</div>
+                <div>🕐 Ostatnie logowanie: {lastActivity ? new Date(lastActivity).toLocaleString('pl-PL') : 'Brak danych'}</div>
+                {latestActivity && (
+                  <div className="mt-2 pt-2 border-t border-green-200">
+                    <span className="font-semibold text-green-700">Aktualnie: </span>
+                    <span className="text-gray-700">
+                      {latestActivity.page_name || actionLabels[latestActivity.action_type]}
+                    </span>
+                    <span className="text-gray-500 text-xs ml-2">
+                      ({new Date(latestActivity.created_date).toLocaleTimeString('pl-PL')})
+                    </span>
+                  </div>
+                )}
+                {latestReport && (
+                  <div className="mt-1">
+                    <span className="font-semibold text-green-700">Ostatni raport: </span>
+                    <span className="text-gray-700">{latestReport.client_name || 'Bez nazwy'}</span>
+                    <span className="text-gray-500 text-xs ml-2">
+                      ({new Date(latestReport.created_date).toLocaleDateString('pl-PL')})
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Statystyki */}
       {selectedUser && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -182,21 +249,21 @@ export default function UserActivityLog() {
             <div className="text-2xl font-bold text-gray-900">{activities.length}</div>
           </Card>
           <Card className="p-4">
-            <div className="text-sm text-gray-600">Wyświetlenia stron</div>
-            <div className="text-2xl font-bold text-blue-600">
-              {activities.filter(a => a.action_type === "page_view").length}
+            <div className="text-sm text-gray-600">Utworzone raporty</div>
+            <div className="text-2xl font-bold text-green-600">
+              {userReports.length}
             </div>
           </Card>
           <Card className="p-4">
             <div className="text-sm text-gray-600">Edycje raportów</div>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-blue-600">
               {activities.filter(a => a.action_type === "report_update").length}
             </div>
           </Card>
           <Card className="p-4">
-            <div className="text-sm text-gray-600">Ostatnia aktywność</div>
-            <div className="text-sm font-semibold text-gray-900">
-              {activities[0] ? new Date(activities[0].created_date).toLocaleString('pl-PL') : '-'}
+            <div className="text-sm text-gray-600">Wyświetlenia stron</div>
+            <div className="text-2xl font-bold text-purple-600">
+              {activities.filter(a => a.action_type === "page_view").length}
             </div>
           </Card>
         </div>
