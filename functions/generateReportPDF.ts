@@ -20,6 +20,21 @@ Deno.serve(async (req) => {
 
     const doc = new jsPDF();
     let yPos = 40;
+    
+    // Helper to remove Polish chars
+    const cleanText = (text) => {
+      if (!text) return '';
+      return String(text)
+        .replace(/ą/g, 'a').replace(/Ą/g, 'A')
+        .replace(/ć/g, 'c').replace(/Ć/g, 'C')
+        .replace(/ę/g, 'e').replace(/Ę/g, 'E')
+        .replace(/ł/g, 'l').replace(/Ł/g, 'L')
+        .replace(/ń/g, 'n').replace(/Ń/g, 'N')
+        .replace(/ó/g, 'o').replace(/Ó/g, 'O')
+        .replace(/ś/g, 's').replace(/Ś/g, 'S')
+        .replace(/ź/g, 'z').replace(/Ź/g, 'Z')
+        .replace(/ż/g, 'z').replace(/Ż/g, 'Z');
+    };
 
     // Header
     doc.setFontSize(20);
@@ -51,19 +66,19 @@ Deno.serve(async (req) => {
     doc.setTextColor(0);
     doc.text('Klient:', 42, yPos);
     doc.setFont(undefined, 'normal');
-    doc.text(report.client_name || 'Brak danych', 184, yPos);
+    doc.text(cleanText(report.client_name) || 'Brak danych', 184, yPos);
     yPos += 12;
 
     doc.setFont(undefined, 'bold');
     doc.text('Adres:', 42, yPos);
     doc.setFont(undefined, 'normal');
-    doc.text(report.client_address || 'Brak danych', 184, yPos);
+    doc.text(cleanText(report.client_address) || 'Brak danych', 184, yPos);
     yPos += 12;
 
     doc.setFont(undefined, 'bold');
     doc.text('Telefon:', 42, yPos);
     doc.setFont(undefined, 'normal');
-    doc.text(report.client_phone || 'Brak danych', 184, yPos);
+    doc.text(cleanText(report.client_phone) || 'Brak danych', 184, yPos);
     yPos += 12;
 
     doc.setFont(undefined, 'bold');
@@ -86,19 +101,19 @@ Deno.serve(async (req) => {
     doc.setTextColor(0);
     doc.text('Typy instalacji:', 42, yPos);
     doc.setFont(undefined, 'normal');
-    doc.text(report.installation_types?.join(', ') || 'Brak danych', 184, yPos);
+    doc.text(cleanText(report.installation_types?.join(', ')) || 'Brak danych', 184, yPos);
     yPos += 12;
 
     doc.setFont(undefined, 'bold');
     doc.text('Data uruchomienia:', 42, yPos);
     doc.setFont(undefined, 'normal');
-    doc.text(report.launch_date || 'Brak danych', 184, yPos);
+    doc.text(cleanText(report.launch_date) || 'Brak danych', 184, yPos);
     yPos += 12;
 
     doc.setFont(undefined, 'bold');
     doc.text('Wykonawca:', 42, yPos);
     doc.setFont(undefined, 'normal');
-    doc.text(report.contractor || 'Brak danych', 184, yPos);
+    doc.text(cleanText(report.contractor) || 'Brak danych', 184, yPos);
     yPos += 20;
 
     // Dane energetyczne
@@ -136,7 +151,7 @@ Deno.serve(async (req) => {
       doc.setFont(undefined, 'bold');
       doc.text('Autokonsumpcja:', 42, yPos + 8);
       doc.setFont(undefined, 'normal');
-      doc.text(report.autoconsumption_rating, 184, yPos + 8);
+      doc.text(cleanText(report.autoconsumption_rating), 184, yPos + 8);
       yPos += 24;
     } else {
       yPos += 12;
@@ -170,32 +185,32 @@ Deno.serve(async (req) => {
       doc.setFont(undefined, 'bold');
       doc.text(`${check.label}:`, 42, yPos);
       doc.setFont(undefined, 'normal');
-      doc.text(check.value || 'Brak danych', 184, yPos);
+      doc.text(cleanText(check.value) || 'Brak danych', 184, yPos);
       yPos += 12;
     });
 
     yPos += 10;
 
     doc.setFont(undefined, 'bold');
-    doc.text('Możliwości rozbudowy:', 42, yPos);
+    doc.text('Mozliwosci rozbudowy:', 42, yPos);
     yPos += 12;
     doc.setFont(undefined, 'normal');
-    const expansion = doc.splitTextToSize(report.expansion_possibilities || 'Brak danych', 450);
+    const expansion = doc.splitTextToSize(cleanText(report.expansion_possibilities) || 'Brak danych', 450);
     doc.text(expansion, 42, yPos);
     yPos += expansion.length * 6 + 10;
 
     doc.setFont(undefined, 'bold');
-    doc.text('Potencjał modernizacji:', 42, yPos);
+    doc.text('Potencjal modernizacji:', 42, yPos);
     yPos += 12;
     doc.setFont(undefined, 'normal');
-    doc.text(report.modernization_potential || 'Brak danych', 42, yPos);
+    doc.text(cleanText(report.modernization_potential) || 'Brak danych', 42, yPos);
     yPos += 15;
 
     doc.setFont(undefined, 'bold');
     doc.text('Rekomendacje:', 42, yPos);
     yPos += 12;
     doc.setFont(undefined, 'normal');
-    const recommendations = doc.splitTextToSize(report.recommendations || 'Brak danych', 450);
+    const recommendations = doc.splitTextToSize(cleanText(report.recommendations) || 'Brak danych', 450);
     doc.text(recommendations, 42, yPos);
 
     // Footer
@@ -207,7 +222,7 @@ Deno.serve(async (req) => {
     const pdfOutput = doc.output('datauristring');
     const base64String = pdfOutput.split(',')[1];
 
-    const filename = `raport_${report.client_name?.replace(/\s+/g, '_') || 'wizyta'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const filename = `raport_${cleanText(report.client_name)?.replace(/\s+/g, '_') || 'wizyta'}_${new Date().toISOString().split('T')[0]}.pdf`;
 
     return Response.json({ 
       pdf: base64String,
