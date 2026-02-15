@@ -68,16 +68,24 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
     try {
       const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id });
       
-      // Response is binary PDF data
+      // Create blob from ArrayBuffer response
       const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `raport_${report.client_name?.replace(/\s/g, '_') || 'wizyta'}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `raport_${report.client_name?.replace(/\s+/g, '_') || 'wizyta'}.pdf`;
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+      }, 100);
       
       // Log activity
       base44.functions.invoke('logActivity', {
