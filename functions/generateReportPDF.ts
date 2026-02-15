@@ -35,17 +35,6 @@ Deno.serve(async (req) => {
         .replace(/ż/g, 'z').replace(/Ż/g, 'Z');
     };
 
-    // Fetch logo
-    let logoData = null;
-    try {
-      const logoResponse = await fetch('https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6985025012ef2a10cfdedf68/cfe2d3285_4-eco-logo.png');
-      const logoBlob = await logoResponse.arrayBuffer();
-      const base64Logo = btoa(String.fromCharCode(...new Uint8Array(logoBlob)));
-      logoData = `data:image/png;base64,${base64Logo}`;
-    } catch (error) {
-      console.error('Failed to load logo:', error);
-    }
-
     const doc = new jsPDF();
     let y = 20;
     
@@ -102,25 +91,16 @@ Deno.serve(async (req) => {
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, 210, 35, 'F');
     
-    // Add logo if loaded
-    if (logoData) {
-      try {
-        doc.addImage(logoData, 'PNG', 15, 5, 35, 25);
-      } catch (e) {
-        console.error('Error adding logo to PDF:', e);
-      }
-    }
-    
     // Title and subtitle
     doc.setTextColor(...black);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text(c('RAPORT WIZYTY'), 55, 15);
+    doc.text(c('RAPORT WIZYTY'), 20, 15);
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...gray);
-    doc.text('4-ECO Green Energy • Doradztwo energetyczne', 55, 22);
+    doc.text('4-ECO Green Energy • Doradztwo energetyczne', 20, 22);
     
     // Date in corner
     doc.setFontSize(8);
