@@ -35,12 +35,23 @@ Deno.serve(async (req) => {
         .replace(/ż/g, 'z').replace(/Ż/g, 'Z');
     };
 
+    // Fetch logo
+    let logoData = null;
+    try {
+      const logoResponse = await fetch('https://4-eco.pl/wp-content/uploads/2020/09/Zrzut-ekranu-2020-11-11-o-10.05.01.png');
+      const logoBlob = await logoResponse.arrayBuffer();
+      const base64Logo = btoa(String.fromCharCode(...new Uint8Array(logoBlob)));
+      logoData = `data:image/png;base64,${base64Logo}`;
+    } catch (error) {
+      console.error('Failed to load logo:', error);
+    }
+
     const doc = new jsPDF();
     let y = 20;
     
     // Color palette
-    const greenPrimary = [34, 197, 94]; // #22C55E
-    const greenLight = [220, 252, 231]; // #DCFCE7
+    const greenPrimary = [149, 193, 31]; // #95C11F - brand color from website
+    const greenLight = [220, 252, 231];
     const gray = [100, 100, 100];
     const black = [0, 0, 0];
     
@@ -87,33 +98,49 @@ Deno.serve(async (req) => {
       y += lines.length * 5 + 3;
     };
     
-    // HEADER - Logo area
+    // HEADER - Logo area with brand color
     doc.setFillColor(...greenPrimary);
-    doc.rect(0, 0, 210, 35, 'F');
+    doc.rect(0, 0, 210, 40, 'F');
     
-    // Logo box
-    doc.setFillColor(255, 255, 255);
-    doc.rect(15, 10, 15, 15, 'F');
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...greenPrimary);
-    doc.text('4E', 22.5, 20, { align: 'center' });
+    // Add logo if loaded
+    if (logoData) {
+      try {
+        doc.addImage(logoData, 'PNG', 15, 8, 40, 24);
+      } catch (e) {
+        console.error('Error adding logo to PDF:', e);
+        // Fallback to text
+        doc.setFillColor(255, 255, 255);
+        doc.rect(15, 10, 15, 15, 'F');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...greenPrimary);
+        doc.text('4E', 22.5, 20, { align: 'center' });
+      }
+    } else {
+      // Fallback
+      doc.setFillColor(255, 255, 255);
+      doc.rect(15, 10, 15, 15, 'F');
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...greenPrimary);
+      doc.text('4E', 22.5, 20, { align: 'center' });
+    }
     
     // Title
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text(c('RAPORT WIZYTY'), 35, 18);
+    doc.text(c('RAPORT WIZYTY'), 60, 20);
     
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('4-ECO Green Energy', 35, 24);
+    doc.text('4-ECO Green Energy', 60, 28);
     
     // Date in corner
     doc.setFontSize(8);
-    doc.text(new Date().toLocaleDateString('pl-PL'), 180, 20, { align: 'right' });
+    doc.text(new Date().toLocaleDateString('pl-PL'), 180, 22, { align: 'right' });
     
-    y = 45;
+    y = 50;
     doc.setTextColor(...black);
     
     // CLIENT SECTION
