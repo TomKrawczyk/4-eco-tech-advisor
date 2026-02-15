@@ -16,8 +16,7 @@ Deno.serve(async (req) => {
     }
 
     // Pobierz raport
-    const reports = await base44.entities.VisitReport.list();
-    const report = reports.find(r => r.id === reportId);
+    const report = await base44.entities.VisitReport.get(reportId);
 
     if (!report) {
       return Response.json({ error: 'Raport nie znaleziony' }, { status: 404 });

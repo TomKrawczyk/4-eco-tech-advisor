@@ -16,12 +16,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'reportId is required' }, { status: 400 });
     }
 
-    const reports = await base44.entities.VisitReport.list();
-    const report = reports.find(r => r.id === reportId);
-    
-    if (!report) {
-      return Response.json({ error: 'Raport nie znaleziony' }, { status: 404 });
-    }
+    const report = await base44.entities.VisitReport.get(reportId);
     
     // Funkcja normalizująca polskie znaki
     const normalize = (text) => {
