@@ -16,8 +16,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing reportId' }, { status: 400 });
     }
 
-    const reportRaw = await base44.entities.VisitReport.get(reportId);
-    const report = reportRaw.data || reportRaw;
+    const reportResponse = await base44.entities.VisitReport.get(reportId);
+    const report = reportResponse.data || reportResponse;
+    
+    console.log('Report data:', JSON.stringify(report, null, 2));
 
     const c = (t) => {
       if (!t) return '';
@@ -36,124 +38,147 @@ Deno.serve(async (req) => {
     const doc = new jsPDF({ compress: true });
     let y = 20;
     
-    doc.setFontSize(14);
+    // Header
+    doc.setFontSize(16);
     doc.setFont(undefined, 'bold');
     doc.text('RAPORT WIZYTY', 20, y);
     y += 10;
     
-    doc.setFontSize(8);
+    doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
-    doc.text(`4-ECO | ${new Date().toLocaleDateString('pl-PL')}`, 20, y);
+    doc.text(`4-ECO Green Energy | ${new Date().toLocaleDateString('pl-PL')}`, 20, y);
     y += 15;
     
-    doc.setFontSize(9);
+    // Client section
+    doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
-    doc.text('KLIENT', 20, y);
-    y += 6;
+    doc.text('DANE KLIENTA', 20, y);
+    y += 8;
     
-    doc.setFont(undefined, 'normal');
-    doc.text('Klient:', 20, y);
-    y += 5;
-    doc.setFont(undefined, 'bold');
-    doc.text(c(report.client_name) || '-', 20, y);
-    y += 6;
+    doc.setFontSize(10);
+    if (report.client_name) {
+      doc.setFont(undefined, 'normal');
+      doc.text('Klient:', 20, y);
+      y += 6;
+      doc.setFont(undefined, 'bold');
+      doc.text(c(report.client_name), 20, y);
+      y += 8;
+    }
+    
     if (report.client_address) {
       doc.setFont(undefined, 'normal');
       doc.text('Adres:', 20, y);
-      y += 5;
+      y += 6;
       doc.setFont(undefined, 'bold');
       doc.text(c(report.client_address), 20, y);
-      y += 6;
+      y += 8;
     }
+    
     if (report.client_phone) {
       doc.setFont(undefined, 'normal');
       doc.text('Telefon:', 20, y);
-      y += 5;
+      y += 6;
       doc.setFont(undefined, 'bold');
       doc.text(c(report.client_phone), 20, y);
-      y += 6;
+      y += 8;
     }
+    
     if (report.visit_date) {
       doc.setFont(undefined, 'normal');
       doc.text('Data wizyty:', 20, y);
-      y += 5;
+      y += 6;
       doc.setFont(undefined, 'bold');
       doc.text(new Date(report.visit_date).toLocaleDateString('pl-PL'), 20, y);
-      y += 10;
+      y += 12;
     }
     
+    // Installation section
     if (report.installation_types?.length || report.contractor || report.launch_date) {
+      doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
       doc.text('INSTALACJA', 20, y);
-      y += 6;
+      y += 8;
       
+      doc.setFontSize(10);
       if (report.installation_types?.length) {
         doc.setFont(undefined, 'normal');
         doc.text('Typ instalacji:', 20, y);
-        y += 5;
+        y += 6;
         doc.setFont(undefined, 'bold');
         doc.text(c(report.installation_types.join(', ')), 20, y);
-        y += 6;
+        y += 8;
       }
+      
       if (report.contractor) {
         doc.setFont(undefined, 'normal');
         doc.text('Wykonawca:', 20, y);
-        y += 5;
+        y += 6;
         doc.setFont(undefined, 'bold');
         doc.text(c(report.contractor), 20, y);
-        y += 6;
+        y += 8;
       }
+      
       if (report.launch_date) {
         doc.setFont(undefined, 'normal');
         doc.text('Data uruchomienia:', 20, y);
-        y += 5;
+        y += 6;
         doc.setFont(undefined, 'bold');
         doc.text(c(report.launch_date), 20, y);
-        y += 10;
+        y += 12;
       }
     }
     
+    // Energy section
     if (report.annual_production_kwh || report.energy_imported_kwh || report.energy_exported_kwh) {
+      doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text('ENERGIA', 20, y);
-      y += 6;
+      doc.text('DANE ENERGETYCZNE', 20, y);
+      y += 8;
       
+      doc.setFontSize(10);
       if (report.annual_production_kwh) {
         doc.setFont(undefined, 'normal');
         doc.text('Roczna produkcja:', 20, y);
-        y += 5;
+        y += 6;
         doc.setFont(undefined, 'bold');
         doc.text(`${report.annual_production_kwh} kWh`, 20, y);
-        y += 6;
+        y += 8;
       }
+      
       if (report.energy_imported_kwh) {
         doc.setFont(undefined, 'normal');
-        doc.text('Energia pobrana (1.8.0):', 20, y);
-        y += 5;
+        doc.text('Energia pobrana z sieci (1.8.0):', 20, y);
+        y += 6;
         doc.setFont(undefined, 'bold');
         doc.text(`${report.energy_imported_kwh} kWh`, 20, y);
-        y += 6;
+        y += 8;
       }
+      
       if (report.energy_exported_kwh) {
         doc.setFont(undefined, 'normal');
-        doc.text('Energia oddana (2.8.0):', 20, y);
-        y += 5;
+        doc.text('Energia oddana do sieci (2.8.0):', 20, y);
+        y += 6;
         doc.setFont(undefined, 'bold');
         doc.text(`${report.energy_exported_kwh} kWh`, 20, y);
-        y += 10;
+        y += 12;
       }
     }
     
+    // Autoconsumption
     if (report.autoconsumption_rating) {
+      doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text('AUTOKONSUMPCJA', 20, y);
-      y += 6;
+      doc.text('OCENA AUTOKONSUMPCJI', 20, y);
+      y += 8;
+      
+      doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
       const lines = doc.splitTextToSize(c(report.autoconsumption_rating), 170);
       doc.text(lines, 20, y);
-      y += (lines.length * 5) + 10;
+      y += (lines.length * 6) + 12;
     }
     
+    // Technical inspection
     const checks = [
       ['Wizualna kontrola paneli/modulow (pekniecia, zabrudzenia):', report.panels_condition],
       ['Kontrola mocowan i konstrukcji nosnej:', report.mounting_condition],
@@ -165,88 +190,110 @@ Deno.serve(async (req) => {
     ].filter(([_, v]) => v);
     
     if (checks.length > 0) {
+      if (y > 260) {
+        doc.addPage();
+        y = 20;
+      }
+      
+      doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
       doc.text('KONTROLA TECHNICZNA', 20, y);
       y += 8;
       
+      doc.setFontSize(10);
       checks.forEach(([question, answer]) => {
-        if (y > 265) {
+        if (y > 260) {
           doc.addPage();
           y = 20;
         }
+        
         doc.setFont(undefined, 'normal');
-        const lines = doc.splitTextToSize(c(question), 170);
-        doc.text(lines, 20, y);
-        y += lines.length * 5;
+        const qLines = doc.splitTextToSize(c(question), 170);
+        doc.text(qLines, 20, y);
+        y += qLines.length * 6;
+        
         doc.setFont(undefined, 'bold');
-        doc.text(c(answer), 20, y);
-        y += 8;
+        const aLines = doc.splitTextToSize(c(answer), 170);
+        doc.text(aLines, 20, y);
+        y += aLines.length * 6 + 6;
       });
-      y += 2;
+      y += 6;
     }
     
+    // Recommendations
     if (report.recommendations) {
-      if (y > 255) {
+      if (y > 250) {
         doc.addPage();
         y = 20;
       }
+      
+      doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
-      doc.text('Rekomendacje: serwis, czyszczenie, wymiana elementow krytycznych:', 20, y);
-      y += 5;
+      doc.text('Rekomendacje (serwis, czyszczenie, wymiana elementow):', 20, y);
+      y += 6;
+      
       doc.setFont(undefined, 'bold');
-      const lines = doc.splitTextToSize(c(report.recommendations), 170);
-      doc.text(lines, 20, y);
+      const recLines = doc.splitTextToSize(c(report.recommendations), 170);
+      doc.text(recLines, 20, y);
     }
     
-    doc.setFontSize(7);
-    doc.setTextColor(150);
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(120);
     doc.text(`Doradca: ${c(user.full_name || user.email)}`, 20, 285);
     
-    if (report.interview_residents || report.interview_annual_cost) {
+    // Interview section
+    const interviewQuestions = [
+      ['Jaki jest roczny koszt za energie elektryczna?', report.interview_annual_cost],
+      ['Ile osob zamieszkuje dom/mieszkanie?', report.interview_residents],
+      ['O ktorej godzinie domownicy wychodza do pracy/szkoly?', report.interview_work_schedule],
+      ['O ktorej godzinie zwykle wszyscy wracaja do domu?', report.interview_return_time],
+      ['Czy ktos jest w domu w godzinach 10:00-15:00?', report.interview_home_during_day],
+      ['O jakiej porze dnia zuzycie pradu jest najwieksze?', report.interview_peak_usage],
+      ['Kiedy najczesciej wlaczacie pralke, zmywarke i inne urzadzenia?', report.interview_appliance_usage],
+      ['Czym ogrzewana jest ciepla woda i kiedy z niej korzystacie?', report.interview_water_heating],
+      ['Jaki sprzet elektryczny jest w domu?', report.interview_equipment],
+      ['Jakie plany zakupowe dotyczace urzadzen energochlonnych?', report.interview_purchase_plans]
+    ].filter(([_, v]) => v);
+    
+    if (interviewQuestions.length > 0) {
       doc.addPage();
       y = 20;
       doc.setTextColor(0);
-      doc.setFontSize(9);
+      
+      doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text('WYWIAD', 20, y);
-      y += 8;
+      doc.text('WYWIAD Z KLIENTEM', 20, y);
+      y += 10;
       
-      const questions = [
-        ['Jaki jest roczny koszt za energie elektryczna?', report.interview_annual_cost],
-        ['Ile osob zamieszkuje dom/mieszkanie?', report.interview_residents],
-        ['O ktorej godzinie domownicy wychodza do pracy/szkoly?', report.interview_work_schedule],
-        ['O ktorej godzinie zwykle wszyscy wracaja do domu?', report.interview_return_time],
-        ['Czy ktos jest w domu w godzinach 10:00-15:00?', report.interview_home_during_day],
-        ['O jakiej porze dnia zuzycie pradu jest najwieksze?', report.interview_peak_usage],
-        ['Kiedy najczesciej wlaczacie pralke, zmywarke i inne urzadzenia?', report.interview_appliance_usage],
-        ['Czym ogrzewana jest ciepla woda i kiedy najczesciej z niej korzystacie?', report.interview_water_heating],
-        ['Jaki sprzet elektryczny jest w domu?', report.interview_equipment],
-        ['Jakie plany zakupowe dotyczace urzadzen energochlonnych?', report.interview_purchase_plans]
-      ];
-      
-      questions.forEach(([question, answer]) => {
-        if (answer) {
-          if (y > 270) {
-            doc.addPage();
-            y = 20;
-          }
-          doc.setFont(undefined, 'normal');
-          doc.text(c(question), 20, y);
-          y += 5;
-          doc.setFont(undefined, 'bold');
-          doc.text(c(answer), 20, y);
-          y += 8;
-        }
-      });
-      
-      if (report.client_signature) {
-        if (y > 270) {
+      doc.setFontSize(10);
+      interviewQuestions.forEach(([question, answer]) => {
+        if (y > 260) {
           doc.addPage();
           y = 20;
         }
+        
         doc.setFont(undefined, 'normal');
-        doc.text('PODPIS KLIENTA:', 20, y);
-        y += 5;
+        const qLines = doc.splitTextToSize(c(question), 170);
+        doc.text(qLines, 20, y);
+        y += qLines.length * 6;
+        
+        doc.setFont(undefined, 'bold');
+        const aLines = doc.splitTextToSize(c(answer), 170);
+        doc.text(aLines, 20, y);
+        y += aLines.length * 6 + 6;
+      });
+      
+      if (report.client_signature) {
+        if (y > 260) {
+          doc.addPage();
+          y = 20;
+        }
+        
+        y += 6;
+        doc.setFont(undefined, 'normal');
+        doc.text('Podpis klienta:', 20, y);
+        y += 6;
         doc.setFont(undefined, 'bold');
         doc.text(c(report.client_signature), 20, y);
       }
@@ -266,6 +313,6 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('PDF generation error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: error.message, stack: error.stack }, { status: 500 });
   }
 });
