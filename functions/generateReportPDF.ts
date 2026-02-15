@@ -251,16 +251,7 @@ Deno.serve(async (req) => {
       doc.text('4-ECO Green Energy', pageWidth / 2, 292, { align: 'center' });
     }
 
-    const pdfBuffer = doc.output('arraybuffer');
-
-    const pdfBytes = new Uint8Array(pdfBuffer);
-    let pdfBinary = '';
-    const chunkSize = 8192;
-    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
-      const chunk = pdfBytes.subarray(i, i + chunkSize);
-      pdfBinary += String.fromCharCode.apply(null, chunk);
-    }
-    const pdfBase64 = btoa(pdfBinary);
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
     const safeFilename = normalize(report.client_name || 'wizyta').replace(/[^a-zA-Z0-9_-]/g, '_');
 
     return Response.json({ 
