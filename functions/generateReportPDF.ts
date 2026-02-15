@@ -255,11 +255,13 @@ Deno.serve(async (req) => {
 
     const pdfBuffer = doc.output('arraybuffer');
 
+    const safeFilename = normalize(report.client_name || 'wizyta').replace(/[^a-zA-Z0-9_-]/g, '_');
+    
     return new Response(pdfBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=raport_${report.client_name?.replace(/\s/g, '_') || 'wizyta'}.pdf`
+        'Content-Disposition': `attachment; filename=raport_${safeFilename}.pdf`
       }
     });
   } catch (error) {
