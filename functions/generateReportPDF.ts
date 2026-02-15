@@ -255,14 +255,19 @@ Deno.serve(async (req) => {
 
     const pdfBuffer = doc.output('arraybuffer');
 
+    const pdfBytes = new Uint8Array(pdfBuffer);
+    let pdfBinary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+      const chunk = pdfBytes.subarray(i, i + chunkSize);
+      pdfBinary += String.fromCharCode.apply(null, chunk);
+    }
+    const pdfBase64 = btoa(pdfBinary);
     const safeFilename = normalize(report.client_name || 'wizyta').replace(/[^a-zA-Z0-9_-]/g, '_');
-    
-    return new Response(pdfBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=raport_${safeFilename}.pdf`
-      }
+
+    return Response.json({ 
+      pdf: pdfBase64, 
+      filename: `raport_${safeFilename}.pdf` 
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
