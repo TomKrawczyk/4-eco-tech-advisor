@@ -90,13 +90,11 @@ export default function Layout({ children, currentPageName }) {
       <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50">
         <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center font-bold text-white text-sm">
-              4E
-            </div>
-            <div>
-              <div className="text-base font-bold text-gray-900">4-ECO</div>
-              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Green Energy</div>
-            </div>
+            <img 
+              src="https://4-eco.pl/wp-content/uploads/2020/09/Zrzut-ekranu-2020-11-11-o-10.05.01.png" 
+              alt="4-ECO Green Energy" 
+              className="h-10 w-auto"
+            />
           </div>
 
           {/* Desktop Nav */}

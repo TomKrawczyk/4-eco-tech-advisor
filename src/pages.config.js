@@ -55,11 +55,11 @@ import Interview from './pages/Interview';
 import NotificationSettings from './pages/NotificationSettings';
 import PVCalculator from './pages/PVCalculator';
 import ROICalculator from './pages/ROICalculator';
+import Referrals from './pages/Referrals';
 import UserActivityLog from './pages/UserActivityLog';
 import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
 import VisitReports from './pages/VisitReports';
-import Referrals from './pages/Referrals';
 import __Layout from './Layout.jsx';
 
 
@@ -72,11 +72,11 @@ export const PAGES = {
     "NotificationSettings": NotificationSettings,
     "PVCalculator": PVCalculator,
     "ROICalculator": ROICalculator,
+    "Referrals": Referrals,
     "UserActivityLog": UserActivityLog,
     "UserManagement": UserManagement,
     "UserProfile": UserProfile,
     "VisitReports": VisitReports,
-    "Referrals": Referrals,
 }
 
 export const pagesConfig = {
