@@ -69,22 +69,13 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
       const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id });
       const { pdf, filename } = response.data;
       
-      // Decode base64 in chunks to avoid call stack issues
-      const raw = atob(pdf);
-      const rawLength = raw.length;
-      const bytes = new Uint8Array(rawLength);
-      for (let i = 0; i < rawLength; i++) {
-        bytes[i] = raw.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      
-      const url = window.URL.createObjectURL(blob);
+      // Use data URI directly without atob
+      const dataUrl = `data:application/pdf;base64,${pdf}`;
       const a = document.createElement('a');
-      a.href = url;
+      a.href = dataUrl;
       a.download = filename || `raport_${report.client_name?.replace(/\s/g, '_') || 'wizyta'}.pdf`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       a.remove();
       
       // Log activity
