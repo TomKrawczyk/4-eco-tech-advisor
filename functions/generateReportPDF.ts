@@ -165,10 +165,16 @@ Deno.serve(async (req) => {
     doc.text(`Doradca: ${cleanText(user.full_name || user.email, 40)}`, 20, y);
 
     const pdfBytes = doc.output('arraybuffer');
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
     const filename = `raport_${cleanText(report.client_name, 30)?.replace(/\s+/g, '_') || 'wizyta'}.pdf`;
 
-    return Response.json({ pdf: base64, filename });
+    return new Response(pdfBytes, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': pdfBytes.byteLength.toString()
+      }
+    });
 
   } catch (error) {
     console.error('PDF error:', error);

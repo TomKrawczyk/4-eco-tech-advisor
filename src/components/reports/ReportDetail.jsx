@@ -67,15 +67,16 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
     setDownloading(true);
     try {
       const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id });
-      const { pdf, filename } = response.data;
       
-      // Use data URI directly without atob
-      const dataUrl = `data:application/pdf;base64,${pdf}`;
+      // Response is binary PDF data
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = filename || `raport_${report.client_name?.replace(/\s/g, '_') || 'wizyta'}.pdf`;
+      a.href = url;
+      a.download = `raport_${report.client_name?.replace(/\s/g, '_') || 'wizyta'}.pdf`;
       document.body.appendChild(a);
       a.click();
+      window.URL.revokeObjectURL(url);
       a.remove();
       
       // Log activity
