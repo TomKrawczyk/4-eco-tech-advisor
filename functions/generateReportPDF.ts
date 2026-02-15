@@ -36,161 +36,129 @@ Deno.serve(async (req) => {
     };
 
     const doc = new jsPDF();
-    
-    // CRITICAL: Set text color to black at the very start
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    
     let y = 20;
     
-    // Header
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text(c('RAPORT WIZYTY'), 105, y, { align: 'center' });
-    y += 10;
+    // Color palette
+    const greenPrimary = [34, 197, 94]; // #22C55E
+    const greenLight = [220, 252, 231]; // #DCFCE7
+    const gray = [100, 100, 100];
+    const black = [0, 0, 0];
     
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`4-ECO Green Energy | ${new Date().toLocaleDateString('pl-PL')}`, 105, y, { align: 'center' });
-    y += 15;
-    
-    // Client section
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text(c('DANE KLIENTA'), 20, y);
-    y += 8;
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    
-    if (report.client_name) {
-      doc.text(c('Klient:'), 20, y);
-      y += 6;
+    // Helper function for section headers
+    const addSectionHeader = (title) => {
+      if (y > 250) {
+        doc.addPage();
+        y = 20;
+      }
+      
+      // Background bar
+      doc.setFillColor(...greenPrimary);
+      doc.rect(15, y - 5, 180, 10, 'F');
+      
+      // Title
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(c(report.client_name), 20, y);
-      doc.setFont('helvetica', 'normal');
-      y += 8;
-    }
-    
-    if (report.client_address) {
-      doc.text(c('Adres:'), 20, y);
-      y += 6;
-      doc.setFont('helvetica', 'bold');
-      doc.text(c(report.client_address), 20, y);
-      doc.setFont('helvetica', 'normal');
-      y += 8;
-    }
-    
-    if (report.client_phone) {
-      doc.text(c('Telefon:'), 20, y);
-      y += 6;
-      doc.setFont('helvetica', 'bold');
-      doc.text(c(report.client_phone), 20, y);
-      doc.setFont('helvetica', 'normal');
-      y += 8;
-    }
-    
-    if (report.visit_date) {
-      doc.text(c('Data wizyty:'), 20, y);
-      y += 6;
-      doc.setFont('helvetica', 'bold');
-      doc.text(new Date(report.visit_date).toLocaleDateString('pl-PL'), 20, y);
-      doc.setFont('helvetica', 'normal');
+      doc.text(c(title), 20, y + 1);
+      
+      doc.setTextColor(...black);
       y += 12;
-    }
+    };
     
-    // Installation section
+    // Helper for field display
+    const addField = (label, value) => {
+      if (!value) return;
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...gray);
+      doc.text(c(label), 20, y);
+      y += 5;
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...black);
+      const lines = doc.splitTextToSize(c(String(value)), 170);
+      doc.text(lines, 20, y);
+      y += lines.length * 5 + 3;
+    };
+    
+    // HEADER - Logo area
+    doc.setFillColor(...greenPrimary);
+    doc.rect(0, 0, 210, 35, 'F');
+    
+    // Logo box
+    doc.setFillColor(255, 255, 255);
+    doc.rect(15, 10, 15, 15, 'F');
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...greenPrimary);
+    doc.text('4E', 22.5, 20, { align: 'center' });
+    
+    // Title
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text(c('RAPORT WIZYTY'), 35, 18);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('4-ECO Green Energy', 35, 24);
+    
+    // Date in corner
+    doc.setFontSize(8);
+    doc.text(new Date().toLocaleDateString('pl-PL'), 180, 20, { align: 'right' });
+    
+    y = 45;
+    doc.setTextColor(...black);
+    
+    // CLIENT SECTION
+    addSectionHeader('DANE KLIENTA');
+    addField('Klient', report.client_name);
+    addField('Adres', report.client_address);
+    addField('Telefon', report.client_phone);
+    addField('Data wizyty', report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : null);
+    
+    y += 5;
+    
+    // INSTALLATION SECTION
     if (report.installation_types?.length || report.contractor || report.launch_date) {
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(c('INSTALACJA'), 20, y);
-      y += 8;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      
-      if (report.installation_types?.length) {
-        doc.text(c('Typ instalacji:'), 20, y);
-        y += 6;
-        doc.setFont('helvetica', 'bold');
-        doc.text(c(report.installation_types.join(', ')), 20, y);
-        doc.setFont('helvetica', 'normal');
-        y += 8;
-      }
-      
-      if (report.contractor) {
-        doc.text(c('Wykonawca:'), 20, y);
-        y += 6;
-        doc.setFont('helvetica', 'bold');
-        doc.text(c(report.contractor), 20, y);
-        doc.setFont('helvetica', 'normal');
-        y += 8;
-      }
-      
-      if (report.launch_date) {
-        doc.text(c('Data uruchomienia:'), 20, y);
-        y += 6;
-        doc.setFont('helvetica', 'bold');
-        doc.text(c(report.launch_date), 20, y);
-        doc.setFont('helvetica', 'normal');
-        y += 12;
-      }
+      addSectionHeader('INSTALACJA');
+      addField('Typ instalacji', report.installation_types?.join(', '));
+      addField('Wykonawca', report.contractor);
+      addField('Data uruchomienia', report.launch_date);
+      y += 5;
     }
     
-    // Energy section
+    // ENERGY SECTION
     if (report.annual_production_kwh || report.energy_imported_kwh || report.energy_exported_kwh) {
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(c('DANE ENERGETYCZNE'), 20, y);
-      y += 8;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      
-      if (report.annual_production_kwh) {
-        doc.text(c('Roczna produkcja:'), 20, y);
-        y += 6;
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${report.annual_production_kwh} kWh`, 20, y);
-        doc.setFont('helvetica', 'normal');
-        y += 8;
-      }
-      
-      if (report.energy_imported_kwh) {
-        doc.text(c('Energia pobrana z sieci (1.8.0):'), 20, y);
-        y += 6;
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${report.energy_imported_kwh} kWh`, 20, y);
-        doc.setFont('helvetica', 'normal');
-        y += 8;
-      }
-      
-      if (report.energy_exported_kwh) {
-        doc.text(c('Energia oddana do sieci (2.8.0):'), 20, y);
-        y += 6;
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${report.energy_exported_kwh} kWh`, 20, y);
-        doc.setFont('helvetica', 'normal');
-        y += 12;
-      }
+      addSectionHeader('DANE ENERGETYCZNE');
+      addField('Roczna produkcja', report.annual_production_kwh ? `${report.annual_production_kwh} kWh` : null);
+      addField('Energia pobrana z sieci (1.8.0)', report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : null);
+      addField('Energia oddana do sieci (2.8.0)', report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : null);
+      y += 5;
     }
     
-    // Autoconsumption
+    // AUTOCONSUMPTION
     if (report.autoconsumption_rating) {
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(c('OCENA AUTOKONSUMPCJI'), 20, y);
-      y += 8;
+      addSectionHeader('OCENA AUTOKONSUMPCJI');
+      doc.setFillColor(...greenLight);
+      doc.rect(15, y, 180, 2, 'F');
+      y += 5;
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...black);
       const lines = doc.splitTextToSize(c(report.autoconsumption_rating), 170);
       doc.text(lines, 20, y);
-      y += (lines.length * 6) + 12;
+      y += lines.length * 5 + 8;
     }
     
-    // Technical inspection
+    // TECHNICAL CHECKS
     const checks = [
       ['Wizualna kontrola paneli/modulow (pekniecia, zabrudzenia):', report.panels_condition],
       ['Kontrola mocowan i konstrukcji nosnej:', report.mounting_condition],
@@ -202,61 +170,57 @@ Deno.serve(async (req) => {
     ].filter(([_, v]) => v);
     
     if (checks.length > 0) {
-      if (y > 240) {
-        doc.addPage();
-        doc.setTextColor(0, 0, 0);
-        y = 20;
-      }
+      addSectionHeader('KONTROLA TECHNICZNA');
       
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(c('KONTROLA TECHNICZNA'), 20, y);
-      y += 8;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      
-      checks.forEach(([question, answer]) => {
+      checks.forEach(([question, answer], idx) => {
         if (y > 260) {
           doc.addPage();
-          doc.setTextColor(0, 0, 0);
           y = 20;
         }
         
-        const qLines = doc.splitTextToSize(c(question), 170);
-        doc.text(qLines, 20, y);
-        y += qLines.length * 6;
+        // Bullet point
+        doc.setFillColor(...greenPrimary);
+        doc.circle(17, y - 1, 1.5, 'F');
         
-        doc.setFont('helvetica', 'bold');
-        const aLines = doc.splitTextToSize(c(answer), 170);
-        doc.text(aLines, 20, y);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        y += aLines.length * 6 + 6;
+        doc.setTextColor(...gray);
+        const qLines = doc.splitTextToSize(c(question), 165);
+        doc.text(qLines, 22, y);
+        y += qLines.length * 4;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...black);
+        const aLines = doc.splitTextToSize(c(answer), 165);
+        doc.text(aLines, 22, y);
+        y += aLines.length * 5 + 4;
       });
-      y += 6;
+      y += 5;
     }
     
-    // Recommendations
+    // RECOMMENDATIONS
     if (report.recommendations) {
-      if (y > 240) {
+      if (y > 250) {
         doc.addPage();
-        doc.setTextColor(0, 0, 0);
         y = 20;
       }
       
+      addSectionHeader('REKOMENDACJE');
+      
+      doc.setFillColor(...greenLight);
+      doc.roundedRect(15, y, 180, 4, 2, 2, 'F');
+      y += 7;
+      
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(c('Rekomendacje (serwis, czyszczenie, wymiana elementow):'), 20, y);
-      y += 6;
-      
-      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...black);
       const recLines = doc.splitTextToSize(c(report.recommendations), 170);
       doc.text(recLines, 20, y);
-      doc.setFont('helvetica', 'normal');
-      y += recLines.length * 6 + 6;
+      y += recLines.length * 5 + 5;
     }
     
-    // Interview section
+    // INTERVIEW SECTION
     const interviewQuestions = [
       ['Jaki jest roczny koszt za energie elektryczna?', report.interview_annual_cost],
       ['Ile osob zamieszkuje dom/mieszkanie?', report.interview_residents],
@@ -272,57 +236,70 @@ Deno.serve(async (req) => {
     
     if (interviewQuestions.length > 0) {
       doc.addPage();
-      doc.setTextColor(0, 0, 0);
       y = 20;
       
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(c('WYWIAD Z KLIENTEM'), 20, y);
-      y += 10;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
+      addSectionHeader('WYWIAD Z KLIENTEM');
       
       interviewQuestions.forEach(([question, answer]) => {
         if (y > 260) {
           doc.addPage();
-          doc.setTextColor(0, 0, 0);
           y = 20;
         }
         
-        const qLines = doc.splitTextToSize(c(question), 170);
-        doc.text(qLines, 20, y);
-        y += qLines.length * 6;
+        // Bullet point
+        doc.setFillColor(...greenPrimary);
+        doc.circle(17, y - 1, 1.5, 'F');
         
-        doc.setFont('helvetica', 'bold');
-        const aLines = doc.splitTextToSize(c(answer), 170);
-        doc.text(aLines, 20, y);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        y += aLines.length * 6 + 6;
+        doc.setTextColor(...gray);
+        const qLines = doc.splitTextToSize(c(question), 165);
+        doc.text(qLines, 22, y);
+        y += qLines.length * 4;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...black);
+        const aLines = doc.splitTextToSize(c(answer), 165);
+        doc.text(aLines, 22, y);
+        y += aLines.length * 5 + 4;
       });
       
       if (report.client_signature) {
         if (y > 260) {
           doc.addPage();
-          doc.setTextColor(0, 0, 0);
           y = 20;
         }
         
-        y += 6;
-        doc.text(c('Podpis klienta:'), 20, y);
-        y += 6;
-        doc.setFont('helvetica', 'bold');
-        doc.text(c(report.client_signature), 20, y);
+        y += 10;
+        doc.setFillColor(...greenLight);
+        doc.rect(15, y - 3, 180, 15, 'F');
+        
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...gray);
+        doc.text(c('Podpis klienta:'), 20, y + 2);
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...black);
+        doc.text(c(report.client_signature), 20, y + 8);
       }
     }
     
-    // Footer on first page
+    // FOOTER on all pages
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
+      
+      // Footer line
+      doc.setDrawColor(...greenPrimary);
+      doc.setLineWidth(0.5);
+      doc.line(15, 280, 195, 280);
+      
       doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
+      doc.setTextColor(...gray);
+      doc.setFont('helvetica', 'normal');
       doc.text(c(`Doradca: ${user.full_name || user.email}`), 20, 285);
       doc.text(`Strona ${i} z ${pageCount}`, 190, 285, { align: 'right' });
     }
