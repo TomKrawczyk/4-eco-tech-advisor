@@ -91,9 +91,9 @@ export default function Layout({ children, currentPageName }) {
         <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img 
-              src="https://4-eco.pl/wp-content/uploads/2020/09/Zrzut-ekranu-2020-11-11-o-10.05.01.png" 
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6985025012ef2a10cfdedf68/cfe2d3285_4-eco-logo.png" 
               alt="4-ECO Green Energy" 
-              className="h-10 w-auto"
+              className="h-12 w-auto"
             />
           </div>
 
