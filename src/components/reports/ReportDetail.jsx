@@ -67,7 +67,16 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
     setDownloading(true);
     try {
       const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      
+      let blob;
+      if (response.data instanceof ArrayBuffer) {
+        blob = new Blob([response.data], { type: 'application/pdf' });
+      } else if (response.data instanceof Blob) {
+        blob = response.data;
+      } else {
+        blob = new Blob([new Uint8Array(response.data)], { type: 'application/pdf' });
+      }
+      
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -86,7 +95,7 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
       }).catch(err => console.error('Log error:', err));
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      alert('Błąd podczas pobierania PDF');
+      alert('Błąd podczas pobierania PDF: ' + error.message);
     } finally {
       setDownloading(false);
     }
