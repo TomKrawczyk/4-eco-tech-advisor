@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { jsPDF } from 'npm:jspdf@2.5.2';
 
 Deno.serve(async (req) => {
   try {
@@ -16,6 +17,25 @@ Deno.serve(async (req) => {
     }
 
     const report = await base44.entities.VisitReport.get(reportId);
+    
+    // Generuj PDF
+    const pdfResponse = await base44.functions.invoke('generateReportPDF', { reportId });
+    const pdfBase64 = pdfResponse.data.pdf;
+    const filename = pdfResponse.data.filename;
+    
+    // Konwertuj base64 na blob
+    const pdfBinary = atob(pdfBase64);
+    const pdfBytes = new Uint8Array(pdfBinary.length);
+    for (let i = 0; i < pdfBinary.length; i++) {
+      pdfBytes[i] = pdfBinary.charCodeAt(i);
+    }
+    const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+    
+    // Upload PDF
+    const uploadResponse = await base44.asServiceRole.integrations.Core.UploadFile({
+      file: pdfBlob
+    });
+    const pdfUrl = uploadResponse.file_url;
     
     const recipientName = recipientType === 'client' ? 'Szanowny Kliencie' : 'Szanowny Menadżerze';
     const subject = `Raport wizyty technicznej - ${report.client_name || 'Klient'}`;
@@ -74,14 +94,17 @@ Deno.serve(async (req) => {
     const emailBody = `${recipientName},
 
 Przesyłam raport z wizyty technicznej przeprowadzonej ${report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : 'w dniu wizyty'}.
-${clientSection}${installationSection}${technicalSection}${interviewSection}${signatureSection}
+
+Raport w formacie PDF jest dostępny pod linkiem:
+${pdfUrl}
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Raport wygenerowany przez 4-ECO Green Energy
+4-ECO Green Energy
 Doradca techniczny: ${user.full_name || user.email}
 Data wygenerowania: ${new Date().toLocaleDateString('pl-PL')}
 `;
 
-    await base44.integrations.Core.SendEmail({
+    await base44.asServiceRole.integrations.Core.SendEmail({
       to: recipientEmail,
       subject: subject,
       body: emailBody
