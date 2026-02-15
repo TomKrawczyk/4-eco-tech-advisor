@@ -117,6 +117,71 @@ Deno.serve(async (req) => {
       y += 5;
     }
 
+    // Autokonsumpcja calculations
+    if (report.annual_production_kwh && report.energy_exported_kwh) {
+      const production = parseFloat(report.annual_production_kwh) || 0;
+      const exported = parseFloat(report.energy_exported_kwh) || 0;
+      const consumed = production - exported;
+      const autoconsumptionRate = production > 0 ? ((consumed / production) * 100).toFixed(1) : 0;
+      const energyFromGrid = parseFloat(report.energy_imported_kwh) || 0;
+      const totalConsumption = consumed + energyFromGrid;
+      const selfSufficiency = totalConsumption > 0 ? ((consumed / totalConsumption) * 100).toFixed(1) : 0;
+
+      addSectionHeader('ANALIZA AUTOKONSUMPCJI');
+      addField('Energia wyprodukowana:', `${production.toFixed(0)} kWh`);
+      addField('Energia oddana do sieci:', `${exported.toFixed(0)} kWh`);
+      addField('Energia zuzyta z instalacji PV:', `${consumed.toFixed(0)} kWh`);
+      addField('Wspolczynnik autokonsumpcji:', `${autoconsumptionRate}%`);
+      
+      if (energyFromGrid > 0) {
+        addField('Energia pobrana z sieci:', `${energyFromGrid.toFixed(0)} kWh`);
+        addField('Calkowite zuzycie:', `${totalConsumption.toFixed(0)} kWh`);
+        addField('Wspolczynnik samowystarczalnosci:', `${selfSufficiency}%`);
+      }
+      y += 5;
+
+      // Wykres kolowy
+      try {
+        const chartUrl = `https://quickchart.io/chart?width=400&height=300&c=${encodeURIComponent(JSON.stringify({
+          type: 'pie',
+          data: {
+            labels: ['Autokonsumpcja', 'Oddane do sieci'],
+            datasets: [{
+              data: [consumed.toFixed(0), exported.toFixed(0)],
+              backgroundColor: ['rgb(34, 197, 94)', 'rgb(59, 130, 246)']
+            }]
+          },
+          options: {
+            plugins: {
+              title: {
+                display: true,
+                text: 'Rozklad produkcji energii',
+                font: { size: 16 }
+              },
+              legend: {
+                position: 'bottom',
+                labels: { font: { size: 12 } }
+              }
+            }
+          }
+        }))}`;
+
+        const chartResponse = await fetch(chartUrl);
+        if (chartResponse.ok) {
+          const chartBuffer = await chartResponse.arrayBuffer();
+          const chartBase64 = btoa(String.fromCharCode(...new Uint8Array(chartBuffer)));
+          
+          checkNewPage();
+          const chartWidth = 120;
+          const chartHeight = 90;
+          doc.addImage(`data:image/png;base64,${chartBase64}`, 'PNG', margin, y, chartWidth, chartHeight);
+          y += chartHeight + 10;
+        }
+      } catch (error) {
+        console.error('Error adding chart:', error);
+      }
+    }
+
     // Technical checks
     const checks = [
       { label: 'Ocena autokonsumpcji i bilansu z siecia:', value: report.autoconsumption_rating },
