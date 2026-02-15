@@ -18,13 +18,10 @@ Deno.serve(async (req) => {
 
     const report = await base44.entities.VisitReport.get(reportId);
 
-    const doc = new jsPDF();
-    let yPos = 40;
-    
-    // Helper to remove Polish chars
-    const cleanText = (text) => {
+    // Helper to clean and truncate text
+    const cleanText = (text, maxLength = 100) => {
       if (!text) return '';
-      return String(text)
+      const cleaned = String(text)
         .replace(/ą/g, 'a').replace(/Ą/g, 'A')
         .replace(/ć/g, 'c').replace(/Ć/g, 'C')
         .replace(/ę/g, 'e').replace(/Ę/g, 'E')
@@ -34,203 +31,147 @@ Deno.serve(async (req) => {
         .replace(/ś/g, 's').replace(/Ś/g, 'S')
         .replace(/ź/g, 'z').replace(/Ź/g, 'Z')
         .replace(/ż/g, 'z').replace(/Ż/g, 'Z');
+      return cleaned.length > maxLength ? cleaned.substring(0, maxLength) + '...' : cleaned;
     };
 
-    // Header
-    doc.setFontSize(20);
+    const doc = new jsPDF({ compress: true });
+    let y = 30;
+    
+    // Header - simplified
+    doc.setFontSize(18);
     doc.setFont(undefined, 'bold');
-    doc.text('RAPORT WIZYTY TECHNICZNEJ', 42, yPos);
-    yPos += 15;
+    doc.text('RAPORT WIZYTY', 20, y);
+    y += 8;
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.setFont(undefined, 'normal');
+    doc.text('4-ECO Green Energy', 20, y);
+    y += 15;
 
+    // Client data
     doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text('4-ECO Green Energy', 42, yPos);
-    yPos += 10;
-
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Data: ${new Date().toLocaleDateString('pl-PL')}`, 42, yPos);
-    yPos += 20;
-
-    // Sekcja: Dane klienta
-    doc.setFillColor(34, 197, 94);
-    doc.rect(42, yPos, 510, 23, 'F');
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(255);
-    doc.text('DANE KLIENTA', 48, yPos + 15);
-    yPos += 30;
-
-    doc.setFontSize(10);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(0);
-    doc.text('Klient:', 42, yPos);
+    doc.text('KLIENT', 20, y);
+    y += 8;
+    doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
-    doc.text(cleanText(report.client_name) || 'Brak danych', 184, yPos);
-    yPos += 12;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Adres:', 42, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(cleanText(report.client_address) || 'Brak danych', 184, yPos);
-    yPos += 12;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Telefon:', 42, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(cleanText(report.client_phone) || 'Brak danych', 184, yPos);
-    yPos += 12;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Data wizyty:', 42, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : 'Brak danych', 184, yPos);
-    yPos += 20;
-
-    // Sekcja: Instalacja
-    doc.setFillColor(34, 197, 94);
-    doc.rect(42, yPos, 510, 23, 'F');
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(255);
-    doc.text('DANE INSTALACJI', 48, yPos + 15);
-    yPos += 30;
-
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(0);
-    doc.text('Typy instalacji:', 42, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(cleanText(report.installation_types?.join(', ')) || 'Brak danych', 184, yPos);
-    yPos += 12;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Data uruchomienia:', 42, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(cleanText(report.launch_date) || 'Brak danych', 184, yPos);
-    yPos += 12;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Wykonawca:', 42, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(cleanText(report.contractor) || 'Brak danych', 184, yPos);
-    yPos += 20;
-
-    // Dane energetyczne
-    doc.setFillColor(34, 197, 94);
-    doc.rect(42, yPos, 510, 23, 'F');
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(255);
-    doc.text('DANE ENERGETYCZNE', 48, yPos + 15);
-    yPos += 30;
-
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(0);
-    doc.text('Roczna produkcja:', 42, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(report.annual_production_kwh ? `${report.annual_production_kwh} kWh` : 'Brak danych', 184, yPos);
-    yPos += 12;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Energia pobrana (1.8.0):', 42, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : 'Brak danych', 184, yPos);
-    yPos += 12;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Energia oddana (2.8.0):', 42, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : 'Brak danych', 184, yPos);
-    yPos += 12;
-
-    if (report.autoconsumption_rating) {
-      doc.setFillColor(255, 255, 153);
-      doc.rect(42, yPos - 2, 510, 14, 'F');
-      doc.setFont(undefined, 'bold');
-      doc.text('Autokonsumpcja:', 42, yPos + 8);
-      doc.setFont(undefined, 'normal');
-      doc.text(cleanText(report.autoconsumption_rating), 184, yPos + 8);
-      yPos += 24;
+    doc.text(`Klient: ${cleanText(report.client_name, 50)}`, 20, y);
+    y += 6;
+    if (report.client_address) {
+      doc.text(`Adres: ${cleanText(report.client_address, 50)}`, 20, y);
+      y += 6;
+    }
+    if (report.client_phone) {
+      doc.text(`Telefon: ${cleanText(report.client_phone, 30)}`, 20, y);
+      y += 6;
+    }
+    if (report.visit_date) {
+      doc.text(`Data: ${new Date(report.visit_date).toLocaleDateString('pl-PL')}`, 20, y);
+      y += 10;
     } else {
-      yPos += 12;
+      y += 10;
     }
 
-    // Nowa strona dla inspekcji
-    doc.addPage();
-    yPos = 40;
-
-    doc.setFillColor(34, 197, 94);
-    doc.rect(42, yPos, 510, 23, 'F');
-    doc.setFontSize(12);
+    // Installation
+    doc.setFontSize(11);
     doc.setFont(undefined, 'bold');
-    doc.setTextColor(255);
-    doc.text('INSPEKCJA TECHNICZNA', 48, yPos + 15);
-    yPos += 30;
+    doc.text('INSTALACJA', 20, y);
+    y += 8;
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    if (report.installation_types?.length) {
+      doc.text(`Typ: ${cleanText(report.installation_types.join(', '), 50)}`, 20, y);
+      y += 6;
+    }
+    if (report.contractor) {
+      doc.text(`Wykonawca: ${cleanText(report.contractor, 40)}`, 20, y);
+      y += 6;
+    }
+    if (report.launch_date) {
+      doc.text(`Uruchomienie: ${cleanText(report.launch_date, 30)}`, 20, y);
+      y += 10;
+    } else {
+      y += 10;
+    }
 
-    const technicalChecks = [
-      { label: 'Stan paneli', value: report.panels_condition },
-      { label: 'Stan mocowań', value: report.mounting_condition },
-      { label: 'Przewody DC/AC', value: report.cables_condition },
-      { label: 'Zabezpieczenia', value: report.protection_condition },
-      { label: 'Odczyt falownika', value: report.inverter_reading },
-      { label: 'Uziemienie', value: report.grounding_condition }
-    ];
-
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-
-    technicalChecks.forEach(check => {
+    // Energy data
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('DANE ENERGETYCZNE', 20, y);
+    y += 8;
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    if (report.annual_production_kwh) {
+      doc.text(`Produkcja roczna: ${report.annual_production_kwh} kWh`, 20, y);
+      y += 6;
+    }
+    if (report.energy_imported_kwh) {
+      doc.text(`Pobrana (1.8.0): ${report.energy_imported_kwh} kWh`, 20, y);
+      y += 6;
+    }
+    if (report.energy_exported_kwh) {
+      doc.text(`Oddana (2.8.0): ${report.energy_exported_kwh} kWh`, 20, y);
+      y += 6;
+    }
+    if (report.autoconsumption_rating) {
       doc.setFont(undefined, 'bold');
-      doc.text(`${check.label}:`, 42, yPos);
+      doc.text(`Autokonsumpcja: ${cleanText(report.autoconsumption_rating, 50)}`, 20, y);
       doc.setFont(undefined, 'normal');
-      doc.text(cleanText(check.value) || 'Brak danych', 184, yPos);
-      yPos += 12;
+      y += 10;
+    } else {
+      y += 10;
+    }
+
+    // Technical inspection - simplified
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('INSPEKCJA', 20, y);
+    y += 8;
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    
+    const checks = [
+      ['Panele', report.panels_condition],
+      ['Mocowania', report.mounting_condition],
+      ['Przewody', report.cables_condition],
+      ['Zabezpieczenia', report.protection_condition],
+      ['Falownik', report.inverter_reading],
+      ['Uziemienie', report.grounding_condition]
+    ];
+    
+    checks.forEach(([label, value]) => {
+      if (value) {
+        doc.text(`${label}: ${cleanText(value, 40)}`, 20, y);
+        y += 6;
+      }
     });
-
-    yPos += 10;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Mozliwosci rozbudowy:', 42, yPos);
-    yPos += 12;
-    doc.setFont(undefined, 'normal');
-    const expansion = doc.splitTextToSize(cleanText(report.expansion_possibilities) || 'Brak danych', 450);
-    doc.text(expansion, 42, yPos);
-    yPos += expansion.length * 6 + 10;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Potencjal modernizacji:', 42, yPos);
-    yPos += 12;
-    doc.setFont(undefined, 'normal');
-    doc.text(cleanText(report.modernization_potential) || 'Brak danych', 42, yPos);
-    yPos += 15;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Rekomendacje:', 42, yPos);
-    yPos += 12;
-    doc.setFont(undefined, 'normal');
-    const recommendations = doc.splitTextToSize(cleanText(report.recommendations) || 'Brak danych', 450);
-    doc.text(recommendations, 42, yPos);
+    
+    y += 5;
+    
+    // Recommendations - truncated
+    if (report.recommendations) {
+      doc.setFont(undefined, 'bold');
+      doc.text('Rekomendacje:', 20, y);
+      y += 6;
+      doc.setFont(undefined, 'normal');
+      doc.text(cleanText(report.recommendations, 200), 20, y, { maxWidth: 170 });
+    }
 
     // Footer
-    doc.setFontSize(8);
+    y = 280;
+    doc.setFontSize(7);
     doc.setTextColor(150);
-    doc.text(`Doradca: ${user.full_name || user.email}`, 42, 820);
-    doc.text(`Strona 1/2`, 520, 820);
+    doc.text(`Doradca: ${cleanText(user.full_name || user.email, 40)}`, 20, y);
 
-    const pdfOutput = doc.output('datauristring');
-    const base64String = pdfOutput.split(',')[1];
+    const pdfBytes = doc.output('arraybuffer');
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
+    const filename = `raport_${cleanText(report.client_name, 30)?.replace(/\s+/g, '_') || 'wizyta'}.pdf`;
 
-    const filename = `raport_${cleanText(report.client_name)?.replace(/\s+/g, '_') || 'wizyta'}_${new Date().toISOString().split('T')[0]}.pdf`;
-
-    return Response.json({ 
-      pdf: base64String,
-      filename: filename
-    });
+    return Response.json({ pdf: base64, filename });
 
   } catch (error) {
-    console.error('PDF generation error:', error);
+    console.error('PDF error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
