@@ -18,247 +18,202 @@ Deno.serve(async (req) => {
 
     const report = await base44.entities.VisitReport.get(reportId);
     
-    // Funkcja normalizująca polskie znaki
-    const normalize = (text) => {
-      if (!text) return text;
-      const map = {
-        'ą': 'a', 'Ą': 'A',
-        'ć': 'c', 'Ć': 'C',
-        'ę': 'e', 'Ę': 'E',
-        'ł': 'l', 'Ł': 'L',
-        'ń': 'n', 'Ń': 'N',
-        'ó': 'o', 'Ó': 'O',
-        'ś': 's', 'Ś': 'S',
-        'ź': 'z', 'Ź': 'Z',
-        'ż': 'z', 'Ż': 'Z'
-      };
-      return String(text).replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, char => map[char] || char);
+    const norm = (text) => {
+      if (!text) return '';
+      return String(text)
+        .replace(/ą/g, 'a').replace(/Ą/g, 'A')
+        .replace(/ć/g, 'c').replace(/Ć/g, 'C')
+        .replace(/ę/g, 'e').replace(/Ę/g, 'E')
+        .replace(/ł/g, 'l').replace(/Ł/g, 'L')
+        .replace(/ń/g, 'n').replace(/Ń/g, 'N')
+        .replace(/ó/g, 'o').replace(/Ó/g, 'O')
+        .replace(/ś/g, 's').replace(/Ś/g, 'S')
+        .replace(/ź/g, 'z').replace(/Ź/g, 'Z')
+        .replace(/ż/g, 'z').replace(/Ż/g, 'Z');
     };
     
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-
+    const doc = new jsPDF();
     let y = 20;
-    const margin = 15;
-    const pageWidth = 210;
-    const contentWidth = pageWidth - (2 * margin);
+    const m = 15;
+    const w = 180;
 
-    const checkNewPage = () => {
+    const check = () => {
       if (y > 270) {
         doc.addPage();
         y = 20;
       }
     };
 
-    const addSectionHeader = (title) => {
-      checkNewPage();
+    const header = (txt) => {
+      check();
       doc.setFillColor(34, 197, 94);
-      doc.rect(margin, y, contentWidth, 8, 'F');
+      doc.rect(m, y, w, 8, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(12);
-      doc.text(normalize(title), margin + 2, y + 5.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(norm(txt), m + 2, y + 5.5);
       doc.setTextColor(0, 0, 0);
       y += 12;
     };
 
-    const addField = (label, value) => {
+    const field = (label, value) => {
       if (!value) return;
-      checkNewPage();
-      
+      check();
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text(normalize(label), margin, y);
-      
+      doc.text(norm(label), m, y);
       doc.setFont('helvetica', 'normal');
-      const lines = doc.splitTextToSize(normalize(String(value)), contentWidth - 50);
-      doc.text(lines, margin + 50, y);
-      
+      const lines = doc.splitTextToSize(norm(String(value)), w - 50);
+      doc.text(lines, m + 50, y);
       y += Math.max(6, lines.length * 5);
     };
 
-    // Header
+    const highlight = (label, value) => {
+      if (!value) return;
+      check();
+      doc.setFillColor(255, 252, 204);
+      doc.rect(m - 2, y - 4, w + 4, 8, 'F');
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(norm(label), m, y);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(34, 197, 94);
+      doc.text(norm(String(value)), m + 50, y);
+      doc.setTextColor(0, 0, 0);
+      y += 10;
+    };
+
+    // Naglowek
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text(normalize('RAPORT WIZYTY TECHNICZNEJ'), margin, y);
+    doc.text('RAPORT WIZYTY TECHNICZNEJ', m, y);
     y += 8;
-
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(102, 102, 102);
-    doc.text('4-ECO Green Energy', margin, y);
+    doc.text('4-ECO Green Energy', m, y);
     y += 5;
-
     doc.setFontSize(10);
-    doc.text(`Data wygenerowania: ${new Date().toLocaleDateString('pl-PL')}`, margin, y);
+    doc.text(`Data: ${new Date().toLocaleDateString('pl-PL')}`, m, y);
     doc.setTextColor(0, 0, 0);
     y += 10;
 
-    // Client section
-    addSectionHeader('DANE KLIENTA');
-    addField('Klient:', report.client_name);
-    addField('Adres:', report.client_address);
-    addField('Telefon:', report.client_phone);
-    addField('Data wizyty:', report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : '');
-    addField('Rodzaj instalacji:', report.installation_types?.join(', '));
+    // Klient
+    header('DANE KLIENTA');
+    field('Klient:', report.client_name);
+    field('Adres:', report.client_address);
+    field('Telefon:', report.client_phone);
+    field('Data wizyty:', report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : '');
+    field('Instalacja:', report.installation_types?.join(', '));
     y += 5;
 
-    // Installation section
-    if (report.launch_date || report.contractor || report.annual_production_kwh || 
-        report.energy_imported_kwh || report.energy_exported_kwh) {
-      addSectionHeader('DANE INSTALACJI');
-      addField('Data uruchomienia:', report.launch_date);
-      addField('Wykonawca:', report.contractor);
-      addField('Roczna produkcja:', report.annual_production_kwh ? `${report.annual_production_kwh} kWh` : '');
-      addField('Energia pobrana (1.8.0):', report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : '');
-      addField('Energia oddana (2.8.0):', report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : '');
+    // Instalacja
+    if (report.launch_date || report.contractor || report.annual_production_kwh) {
+      header('DANE INSTALACJI');
+      field('Uruchomienie:', report.launch_date);
+      field('Wykonawca:', report.contractor);
+      field('Produkcja roczna:', report.annual_production_kwh ? `${report.annual_production_kwh} kWh` : '');
+      field('Pobrana (1.8.0):', report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : '');
+      field('Oddana (2.8.0):', report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : '');
       y += 5;
     }
 
-    // Autokonsumpcja calculations
+    // Autokonsumpcja - WYROZNIENIE
     if (report.annual_production_kwh && report.energy_exported_kwh) {
-      const production = parseFloat(report.annual_production_kwh) || 0;
-      const exported = parseFloat(report.energy_exported_kwh) || 0;
-      const consumed = production - exported;
-      const autoconsumptionRate = production > 0 ? ((consumed / production) * 100).toFixed(1) : 0;
-      const energyFromGrid = parseFloat(report.energy_imported_kwh) || 0;
-      const totalConsumption = consumed + energyFromGrid;
-      const selfSufficiency = totalConsumption > 0 ? ((consumed / totalConsumption) * 100).toFixed(1) : 0;
+      const prod = parseFloat(report.annual_production_kwh) || 0;
+      const exp = parseFloat(report.energy_exported_kwh) || 0;
+      const cons = prod - exp;
+      const rate = prod > 0 ? ((cons / prod) * 100).toFixed(1) : 0;
+      const imp = parseFloat(report.energy_imported_kwh) || 0;
+      const total = cons + imp;
+      const self = total > 0 ? ((cons / total) * 100).toFixed(1) : 0;
 
-      addSectionHeader('ANALIZA AUTOKONSUMPCJI');
-      addField('Energia wyprodukowana:', `${production.toFixed(0)} kWh`);
-      addField('Energia oddana do sieci:', `${exported.toFixed(0)} kWh`);
-      addField('Energia zuzyta z instalacji PV:', `${consumed.toFixed(0)} kWh`);
-      addField('Wspolczynnik autokonsumpcji:', `${autoconsumptionRate}%`);
+      header('AUTOKONSUMPCJA');
+      field('Wyprodukowano:', `${prod.toFixed(0)} kWh`);
+      field('Oddano do sieci:', `${exp.toFixed(0)} kWh`);
+      field('Zuzyte z PV:', `${cons.toFixed(0)} kWh`);
       
-      if (energyFromGrid > 0) {
-        addField('Energia pobrana z sieci:', `${energyFromGrid.toFixed(0)} kWh`);
-        addField('Calkowite zuzycie:', `${totalConsumption.toFixed(0)} kWh`);
-        addField('Wspolczynnik samowystarczalnosci:', `${selfSufficiency}%`);
+      highlight('Wspolczynnik autokonsumpcji:', `${rate}%`);
+      
+      if (imp > 0) {
+        field('Pobrano z sieci:', `${imp.toFixed(0)} kWh`);
+        field('Calkowite zuzycie:', `${total.toFixed(0)} kWh`);
+        highlight('Samowystarczalnosc:', `${self}%`);
       }
       y += 5;
-
-      // Wykres kolowy
-      try {
-        const chartConfig = {
-          type: 'pie',
-          data: {
-            labels: ['Autokonsumpcja', 'Oddane do sieci'],
-            datasets: [{
-              data: [consumed.toFixed(0), exported.toFixed(0)],
-              backgroundColor: ['rgb(34, 197, 94)', 'rgb(59, 130, 246)']
-            }]
-          },
-          options: {
-            plugins: {
-              title: {
-                display: true,
-                text: 'Rozklad produkcji energii',
-                font: { size: 16 }
-              },
-              legend: {
-                position: 'bottom',
-                labels: { font: { size: 12 } }
-              }
-            }
-          }
-        };
-        const chartUrl = `https://quickchart.io/chart?width=300&height=220&backgroundColor=white&format=png&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
-
-        const chartResponse = await fetch(chartUrl);
-        if (chartResponse.ok) {
-          const chartBuffer = await chartResponse.arrayBuffer();
-          const bytes = new Uint8Array(chartBuffer);
-          let binary = '';
-          for (let i = 0; i < bytes.length; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          const chartBase64 = btoa(binary);
-          
-          checkNewPage();
-          const chartWidth = 120;
-          const chartHeight = 90;
-          doc.addImage(`data:image/png;base64,${chartBase64}`, 'PNG', margin, y, chartWidth, chartHeight);
-          y += chartHeight + 10;
-        }
-      } catch (chartError) {
-        console.error('Error adding chart:', chartError.message);
-        // Kontynuuj generowanie PDF bez wykresu
-      }
     }
 
-    // Technical checks
+    // Kontrola
     const checks = [
-      { label: 'Ocena autokonsumpcji i bilansu z siecia:', value: report.autoconsumption_rating },
-      { label: 'Wizualna kontrola paneli/modulow (pekniecia, zabrudzenia):', value: report.panels_condition },
-      { label: 'Kontrola mocowan i konstrukcji nosnej:', value: report.mounting_condition },
-      { label: 'Wizualne sprawdzenie przewodow DC/AC, polaczen MC4:', value: report.cables_condition },
-      { label: 'Wizualny stan zabezpieczen: SPD, RCD, wylaczniki:', value: report.protection_condition },
-      { label: 'Odczyt falownika: bledy, produkcja, komunikacja:', value: report.inverter_reading },
-      { label: 'Wizualna kontrola uziemienia i ciaglosci przewodow ochronnych:', value: report.grounding_condition },
-      { label: 'Ocena mozliwosci rozbudowy: miejsce, przylacze, ograniczenia:', value: report.expansion_possibilities },
-      { label: 'Wstepna kalkulacja potencjalu modernizacji (kWh/rok):', value: report.modernization_potential },
-      { label: 'Rekomendacje: serwis, czyszczenie, wymiana elementow krytycznych:', value: report.recommendations },
-      { label: 'Dodatkowa rekomendacja:', value: report.additional_notes }
+      { label: 'Ocena autokonsumpcji:', value: report.autoconsumption_rating },
+      { label: 'Stan paneli:', value: report.panels_condition },
+      { label: 'Mocowania:', value: report.mounting_condition },
+      { label: 'Przewody DC/AC:', value: report.cables_condition },
+      { label: 'Zabezpieczenia:', value: report.protection_condition },
+      { label: 'Falownik:', value: report.inverter_reading },
+      { label: 'Uziemienie:', value: report.grounding_condition },
+      { label: 'Rozbudowa:', value: report.expansion_possibilities },
+      { label: 'Modernizacja:', value: report.modernization_potential },
+      { label: 'Rekomendacje:', value: report.recommendations },
+      { label: 'Uwagi:', value: report.additional_notes }
     ].filter(item => item.value);
 
     if (checks.length > 0) {
-      addSectionHeader('KONTROLA TECHNICZNA');
-      checks.forEach(item => addField(item.label, item.value));
+      header('KONTROLA TECHNICZNA');
+      checks.forEach(item => field(item.label, item.value));
       y += 5;
     }
 
-    // Interview
+    // Wywiad
     const interview = [
-      { label: 'Jaki jest roczny koszt za energie elektryczna?', value: report.interview_annual_cost },
-      { label: 'Ile osob zamieszkuje dom/mieszkanie?', value: report.interview_residents },
-      { label: 'O ktorej godzinie domownicy wychodza do pracy/szkoly?', value: report.interview_work_schedule },
-      { label: 'O ktorej godzinie zwykle wszyscy wracaja do domu?', value: report.interview_return_time },
-      { label: 'Czy ktos jest w domu w godzinach 10:00-15:00?', value: report.interview_home_during_day },
-      { label: 'O jakiej porze dnia zuzycie pradu jest najwieksze?', value: report.interview_peak_usage },
-      { label: 'Kiedy najczesciej wlaczacie pralke, zmywarke i inne urzadzenia?', value: report.interview_appliance_usage },
-      { label: 'Czym ogrzewana jest ciepla woda i kiedy najczesciej z niej korzystacie?', value: report.interview_water_heating },
-      { label: 'Jaki sprzet elektryczny jest w domu?', value: report.interview_equipment },
-      { label: 'Jakie plany zakupowe dotyczace urzadzen energochlonnych?', value: report.interview_purchase_plans }
+      { label: 'Koszt roczny:', value: report.interview_annual_cost },
+      { label: 'Mieszkancy:', value: report.interview_residents },
+      { label: 'Wyjscie:', value: report.interview_work_schedule },
+      { label: 'Powrot:', value: report.interview_return_time },
+      { label: 'W domu 10-15:', value: report.interview_home_during_day },
+      { label: 'Szczyt zuzycia:', value: report.interview_peak_usage },
+      { label: 'Urzadzenia:', value: report.interview_appliance_usage },
+      { label: 'Woda:', value: report.interview_water_heating },
+      { label: 'Sprzet:', value: report.interview_equipment },
+      { label: 'Plany zakupowe:', value: report.interview_purchase_plans }
     ].filter(item => item.value);
 
     if (interview.length > 0) {
-      addSectionHeader('WYWIAD ENERGETYCZNY');
-      interview.forEach(item => addField(item.label, item.value));
+      header('WYWIAD ENERGETYCZNY');
+      interview.forEach(item => field(item.label, item.value));
       y += 5;
     }
 
-    // Signature
+    // Podpis
     if (report.client_signature) {
-      checkNewPage();
+      check();
       y += 5;
       doc.setFont('helvetica', 'bold');
-      doc.text(normalize('PODPIS KLIENTA:'), margin, y);
+      doc.text('PODPIS:', m, y);
       y += 6;
       doc.setFont('helvetica', 'italic');
-      doc.text(normalize(report.client_signature), margin, y);
+      doc.text(norm(report.client_signature), m, y);
     }
 
-    // Add page numbers
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
+    // Stopki
+    const pages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pages; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(153, 153, 153);
-      doc.text(`Strona ${i} z ${pageCount}`, pageWidth / 2, 287, { align: 'center' });
-      doc.text('4-ECO Green Energy', pageWidth / 2, 292, { align: 'center' });
+      doc.text(`Strona ${i}/${pages}`, 105, 287, { align: 'center' });
+      doc.text('4-ECO Green Energy', 105, 292, { align: 'center' });
     }
 
     const pdfBase64 = doc.output('datauristring').split(',')[1];
-    const safeFilename = normalize(report.client_name || 'wizyta').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const safeName = norm(report.client_name || 'wizyta').replace(/[^a-zA-Z0-9]/g, '_');
 
     return Response.json({ 
       pdf: pdfBase64, 
-      filename: `raport_${safeFilename}.pdf` 
+      filename: `raport_${safeName}.pdf` 
     });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('PDF Error:', error);
+    return Response.json({ error: error.message, stack: error.stack }, { status: 500 });
   }
 });
