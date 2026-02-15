@@ -277,7 +277,8 @@ Deno.serve(async (req) => {
     
     // Po dodaniu danych, dostosuj szerokość kolumn jeśli arkusz już istniał
     if (sheetExists) {
-      const sheet = spreadsheetData.sheets.find(s => s.properties.title === sheetName);
+      const updatedSpreadsheet = await sheetsResponse.json();
+      const sheet = updatedSpreadsheet.sheets.find(s => s.properties.title === sheetName);
       const sheetId = sheet?.properties?.sheetId;
       
       if (sheetId !== undefined) {

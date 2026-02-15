@@ -255,8 +255,10 @@ Deno.serve(async (req) => {
 
     const pdfBytes = new Uint8Array(pdfBuffer);
     let pdfBinary = '';
-    for (let i = 0; i < pdfBytes.length; i++) {
-      pdfBinary += String.fromCharCode(pdfBytes[i]);
+    const chunkSize = 8192;
+    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+      const chunk = pdfBytes.subarray(i, i + chunkSize);
+      pdfBinary += String.fromCharCode.apply(null, chunk);
     }
     const pdfBase64 = btoa(pdfBinary);
     const safeFilename = normalize(report.client_name || 'wizyta').replace(/[^a-zA-Z0-9_-]/g, '_');
