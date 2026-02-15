@@ -51,18 +51,18 @@ Deno.serve(async (req) => {
         y = 20;
       }
       
-      // Background bar
-      doc.setFillColor(...greenPrimary);
-      doc.rect(15, y - 5, 180, 10, 'F');
-      
       // Title
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...black);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(c(title), 20, y + 1);
+      doc.text(c(title), 15, y);
       
-      doc.setTextColor(...black);
-      y += 12;
+      // Underline
+      doc.setDrawColor(...gray);
+      doc.setLineWidth(0.2);
+      doc.line(15, y + 2, 195, y + 2);
+      
+      y += 10;
     };
     
     // Helper for field display
@@ -107,9 +107,9 @@ Deno.serve(async (req) => {
     doc.setTextColor(...gray);
     doc.text(new Date().toLocaleDateString('pl-PL'), 190, 20, { align: 'right' });
     
-    // Subtle line under header
-    doc.setDrawColor(...greenPrimary);
-    doc.setLineWidth(0.3);
+    // Subtle separator under header
+    doc.setDrawColor(...gray);
+    doc.setLineWidth(0.2);
     doc.line(15, 32, 195, 32);
     
     y = 40;
@@ -238,47 +238,45 @@ Deno.serve(async (req) => {
           y = 20;
         }
         
-        // Bullet point
-        doc.setFillColor(...greenPrimary);
-        doc.circle(17, y - 1, 1.5, 'F');
-        
+        // Dash instead of bullet
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...gray);
         const qLines = doc.splitTextToSize(c(question), 165);
+        doc.text('–', 17, y);
         doc.text(qLines, 22, y);
         y += qLines.length * 4;
-        
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...black);
         const aLines = doc.splitTextToSize(c(answer), 165);
         doc.text(aLines, 22, y);
         y += aLines.length * 5 + 4;
-      });
-      
-      if (report.client_signature) {
+        });
+
+        if (report.client_signature) {
         if (y > 260) {
-          doc.addPage();
-          y = 20;
+         doc.addPage();
+         y = 20;
         }
-        
+
         y += 10;
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...gray);
         doc.text(c('Podpis klienta:'), 20, y);
-        
+
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...black);
         doc.text(c(report.client_signature), 20, y + 6);
-        
+
         // Line under signature
-        doc.setDrawColor(...greenPrimary);
-        doc.setLineWidth(0.3);
+        doc.setDrawColor(...gray);
+        doc.setLineWidth(0.2);
         doc.line(20, y + 10, 100, y + 10);
-      }
+        }
     }
     
     // FOOTER on all pages
@@ -287,8 +285,8 @@ Deno.serve(async (req) => {
       doc.setPage(i);
       
       // Footer line
-      doc.setDrawColor(...greenPrimary);
-      doc.setLineWidth(0.3);
+      doc.setDrawColor(...gray);
+      doc.setLineWidth(0.2);
       doc.line(15, 278, 195, 278);
       
       doc.setFontSize(7);
