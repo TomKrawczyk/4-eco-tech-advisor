@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
 
       // Wykres kolowy
       try {
-        const chartUrl = `https://quickchart.io/chart?width=400&height=300&c=${encodeURIComponent(JSON.stringify({
+        const chartConfig = {
           type: 'pie',
           data: {
             labels: ['Autokonsumpcja', 'Oddane do sieci'],
@@ -164,12 +164,20 @@ Deno.serve(async (req) => {
               }
             }
           }
-        }))}`;
+        };
+        const chartUrl = `https://quickchart.io/chart?width=400&height=300&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
 
         const chartResponse = await fetch(chartUrl);
         if (chartResponse.ok) {
           const chartBuffer = await chartResponse.arrayBuffer();
-          const chartBase64 = btoa(String.fromCharCode(...new Uint8Array(chartBuffer)));
+          const bytes = new Uint8Array(chartBuffer);
+          let binary = '';
+          const chunkSize = 8192;
+          for (let i = 0; i < bytes.length; i += chunkSize) {
+            const chunk = bytes.subarray(i, i + chunkSize);
+            binary += String.fromCharCode.apply(null, chunk);
+          }
+          const chartBase64 = btoa(binary);
           
           checkNewPage();
           const chartWidth = 120;
@@ -177,8 +185,9 @@ Deno.serve(async (req) => {
           doc.addImage(`data:image/png;base64,${chartBase64}`, 'PNG', margin, y, chartWidth, chartHeight);
           y += chartHeight + 10;
         }
-      } catch (error) {
-        console.error('Error adding chart:', error);
+      } catch (chartError) {
+        console.error('Error adding chart:', chartError.message);
+        // Kontynuuj generowanie PDF bez wykresu
       }
     }
 
