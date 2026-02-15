@@ -166,35 +166,45 @@ Deno.serve(async (req) => {
       doc.setFontSize(9);
       doc.setFont(undefined, 'bold');
       doc.text('WYWIAD', 20, y);
-      y += 6;
-      doc.setFont(undefined, 'normal');
+      y += 8;
       
       const questions = [
-        ['Koszt roczny', report.interview_annual_cost],
-        ['Liczba osob', report.interview_residents],
-        ['Wyjscie', report.interview_work_schedule],
-        ['Powrot', report.interview_return_time],
-        ['W domu 10-15', report.interview_home_during_day],
-        ['Szczyt zuzycia', report.interview_peak_usage],
-        ['Urzadzenia', report.interview_appliance_usage],
-        ['Ogrzewanie wody', report.interview_water_heating],
-        ['Sprzet', report.interview_equipment],
-        ['Plany', report.interview_purchase_plans]
+        ['Jaki jest roczny koszt za energie elektryczna?', report.interview_annual_cost],
+        ['Ile osob zamieszkuje dom/mieszkanie?', report.interview_residents],
+        ['O ktorej godzinie domownicy wychodza do pracy/szkoly?', report.interview_work_schedule],
+        ['O ktorej godzinie zwykle wszyscy wracaja do domu?', report.interview_return_time],
+        ['Czy ktos jest w domu w godzinach 10:00-15:00?', report.interview_home_during_day],
+        ['O jakiej porze dnia zuzycie pradu jest najwieksze?', report.interview_peak_usage],
+        ['Kiedy najczesciej wlaczacie pralke, zmywarke i inne urzadzenia?', report.interview_appliance_usage],
+        ['Czym ogrzewana jest ciepla woda i kiedy najczesciej z niej korzystacie?', report.interview_water_heating],
+        ['Jaki sprzet elektryczny jest w domu?', report.interview_equipment],
+        ['Jakie plany zakupowe dotyczace urzadzen energochlonnych?', report.interview_purchase_plans]
       ];
       
-      questions.forEach(([label, value]) => {
-        if (value) {
-          doc.text(`${label}: ${c(value)}`, 20, y);
+      questions.forEach(([question, answer]) => {
+        if (answer) {
+          if (y > 270) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.setFont(undefined, 'normal');
+          doc.text(c(question), 20, y);
           y += 5;
+          doc.setFont(undefined, 'bold');
+          doc.text(c(answer), 20, y);
+          y += 8;
         }
       });
       
       if (report.client_signature) {
-        y += 10;
-        doc.setFont(undefined, 'bold');
-        doc.text('PODPIS:', 20, y);
-        y += 5;
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
         doc.setFont(undefined, 'normal');
+        doc.text('PODPIS KLIENTA:', 20, y);
+        y += 5;
+        doc.setFont(undefined, 'bold');
         doc.text(c(report.client_signature), 20, y);
       }
     }
