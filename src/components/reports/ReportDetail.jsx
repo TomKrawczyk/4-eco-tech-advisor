@@ -69,10 +69,12 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
       const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id });
       const { pdf, filename } = response.data;
       
-      const binaryString = atob(pdf);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      // Decode base64 in chunks to avoid call stack issues
+      const raw = atob(pdf);
+      const rawLength = raw.length;
+      const bytes = new Uint8Array(rawLength);
+      for (let i = 0; i < rawLength; i++) {
+        bytes[i] = raw.charCodeAt(i);
       }
       const blob = new Blob([bytes], { type: 'application/pdf' });
       
