@@ -16,7 +16,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing reportId' }, { status: 400 });
     }
 
-    const report = await base44.entities.VisitReport.get(reportId);
+    const reportRaw = await base44.entities.VisitReport.get(reportId);
+    const report = reportRaw.data || reportRaw;
 
     const c = (t) => {
       if (!t) return '';
