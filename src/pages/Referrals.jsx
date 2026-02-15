@@ -87,7 +87,11 @@ export default function Referrals() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Referral.create(data),
+    mutationFn: (data) => base44.entities.Referral.create({
+      ...data,
+      last_action_date: new Date().toISOString(),
+      assigned_to: currentUser?.email
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(['referrals']);
       setShowAddDialog(false);
@@ -102,7 +106,10 @@ export default function Referrals() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Referral.update(id, data),
+    mutationFn: ({ id, data }) => base44.entities.Referral.update(id, {
+      ...data,
+      last_action_date: new Date().toISOString()
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(['referrals']);
     }
