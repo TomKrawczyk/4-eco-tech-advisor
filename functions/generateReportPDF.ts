@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
             }
           }
         };
-        const chartUrl = `https://quickchart.io/chart?width=400&height=300&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
+        const chartUrl = `https://quickchart.io/chart?width=300&height=220&backgroundColor=white&format=png&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
 
         const chartResponse = await fetch(chartUrl);
         if (chartResponse.ok) {
