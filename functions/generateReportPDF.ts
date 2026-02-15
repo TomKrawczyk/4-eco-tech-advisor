@@ -51,18 +51,33 @@ Deno.serve(async (req) => {
     y += 6;
     
     doc.setFont(undefined, 'normal');
-    doc.text(c(report.client_name) || '-', 20, y);
+    doc.text('Klient:', 20, y);
     y += 5;
+    doc.setFont(undefined, 'bold');
+    doc.text(c(report.client_name) || '-', 20, y);
+    y += 6;
     if (report.client_address) {
-      doc.text(c(report.client_address), 20, y);
+      doc.setFont(undefined, 'normal');
+      doc.text('Adres:', 20, y);
       y += 5;
+      doc.setFont(undefined, 'bold');
+      doc.text(c(report.client_address), 20, y);
+      y += 6;
     }
     if (report.client_phone) {
-      doc.text(c(report.client_phone), 20, y);
+      doc.setFont(undefined, 'normal');
+      doc.text('Telefon:', 20, y);
       y += 5;
+      doc.setFont(undefined, 'bold');
+      doc.text(c(report.client_phone), 20, y);
+      y += 6;
     }
     if (report.visit_date) {
-      doc.text(`Data: ${new Date(report.visit_date).toLocaleDateString('pl-PL')}`, 20, y);
+      doc.setFont(undefined, 'normal');
+      doc.text('Data wizyty:', 20, y);
+      y += 5;
+      doc.setFont(undefined, 'bold');
+      doc.text(new Date(report.visit_date).toLocaleDateString('pl-PL'), 20, y);
       y += 10;
     }
     
@@ -70,18 +85,29 @@ Deno.serve(async (req) => {
       doc.setFont(undefined, 'bold');
       doc.text('INSTALACJA', 20, y);
       y += 6;
-      doc.setFont(undefined, 'normal');
       
       if (report.installation_types?.length) {
-        doc.text(`Typ: ${c(report.installation_types.join(', '))}`, 20, y);
+        doc.setFont(undefined, 'normal');
+        doc.text('Typ instalacji:', 20, y);
         y += 5;
+        doc.setFont(undefined, 'bold');
+        doc.text(c(report.installation_types.join(', ')), 20, y);
+        y += 6;
       }
       if (report.contractor) {
-        doc.text(`Wykonawca: ${c(report.contractor)}`, 20, y);
+        doc.setFont(undefined, 'normal');
+        doc.text('Wykonawca:', 20, y);
         y += 5;
+        doc.setFont(undefined, 'bold');
+        doc.text(c(report.contractor), 20, y);
+        y += 6;
       }
       if (report.launch_date) {
-        doc.text(`Start: ${c(report.launch_date)}`, 20, y);
+        doc.setFont(undefined, 'normal');
+        doc.text('Data uruchomienia:', 20, y);
+        y += 5;
+        doc.setFont(undefined, 'bold');
+        doc.text(c(report.launch_date), 20, y);
         y += 10;
       }
     }
@@ -90,18 +116,29 @@ Deno.serve(async (req) => {
       doc.setFont(undefined, 'bold');
       doc.text('ENERGIA', 20, y);
       y += 6;
-      doc.setFont(undefined, 'normal');
       
       if (report.annual_production_kwh) {
-        doc.text(`Produkcja: ${report.annual_production_kwh} kWh`, 20, y);
+        doc.setFont(undefined, 'normal');
+        doc.text('Roczna produkcja:', 20, y);
         y += 5;
+        doc.setFont(undefined, 'bold');
+        doc.text(`${report.annual_production_kwh} kWh`, 20, y);
+        y += 6;
       }
       if (report.energy_imported_kwh) {
-        doc.text(`Pobrana: ${report.energy_imported_kwh} kWh`, 20, y);
+        doc.setFont(undefined, 'normal');
+        doc.text('Energia pobrana (1.8.0):', 20, y);
         y += 5;
+        doc.setFont(undefined, 'bold');
+        doc.text(`${report.energy_imported_kwh} kWh`, 20, y);
+        y += 6;
       }
       if (report.energy_exported_kwh) {
-        doc.text(`Oddana: ${report.energy_exported_kwh} kWh`, 20, y);
+        doc.setFont(undefined, 'normal');
+        doc.text('Energia oddana (2.8.0):', 20, y);
+        y += 5;
+        doc.setFont(undefined, 'bold');
+        doc.text(`${report.energy_exported_kwh} kWh`, 20, y);
         y += 10;
       }
     }
@@ -117,40 +154,45 @@ Deno.serve(async (req) => {
     }
     
     const checks = [
-      ['Panele', report.panels_condition],
-      ['Mocowania', report.mounting_condition],
-      ['Przewody', report.cables_condition],
-      ['Zabezpieczenia', report.protection_condition],
-      ['Falownik', report.inverter_reading],
-      ['Uziemienie', report.grounding_condition]
+      ['Wizualna kontrola paneli/modulow (pekniecia, zabrudzenia):', report.panels_condition],
+      ['Kontrola mocowan i konstrukcji nosnej:', report.mounting_condition],
+      ['Wizualne sprawdzenie przewodow DC/AC, polaczen MC4:', report.cables_condition],
+      ['Wizualny stan zabezpieczen: SPD, RCD, wylaczniki:', report.protection_condition],
+      ['Odczyt falownika: bledy, produkcja, komunikacja:', report.inverter_reading],
+      ['Wizualna kontrola uziemienia i ciaglosci przewodow ochronnych:', report.grounding_condition],
+      ['Ocena mozliwosci rozbudowy: miejsce, przylacze, ograniczenia:', report.expansion_possibilities]
     ].filter(([_, v]) => v);
     
     if (checks.length > 0) {
       doc.setFont(undefined, 'bold');
-      doc.text('KONTROLA', 20, y);
-      y += 6;
-      doc.setFont(undefined, 'normal');
+      doc.text('KONTROLA TECHNICZNA', 20, y);
+      y += 8;
       
-      checks.forEach(([label, value]) => {
-        if (y > 270) {
+      checks.forEach(([question, answer]) => {
+        if (y > 265) {
           doc.addPage();
           y = 20;
         }
-        doc.text(`${label}: ${c(value)}`, 20, y);
-        y += 5;
+        doc.setFont(undefined, 'normal');
+        const lines = doc.splitTextToSize(c(question), 170);
+        doc.text(lines, 20, y);
+        y += lines.length * 5;
+        doc.setFont(undefined, 'bold');
+        doc.text(c(answer), 20, y);
+        y += 8;
       });
-      y += 5;
+      y += 2;
     }
     
     if (report.recommendations) {
-      if (y > 260) {
+      if (y > 255) {
         doc.addPage();
         y = 20;
       }
-      doc.setFont(undefined, 'bold');
-      doc.text('REKOMENDACJE', 20, y);
-      y += 6;
       doc.setFont(undefined, 'normal');
+      doc.text('Rekomendacje: serwis, czyszczenie, wymiana elementow krytycznych:', 20, y);
+      y += 5;
+      doc.setFont(undefined, 'bold');
       const lines = doc.splitTextToSize(c(report.recommendations), 170);
       doc.text(lines, 20, y);
     }
