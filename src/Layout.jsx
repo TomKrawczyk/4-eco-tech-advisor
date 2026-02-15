@@ -17,6 +17,7 @@ const navItems = [
   { name: "ROICalculator", label: "Opłacalność" },
   { name: "Education", label: "Edukacja" },
   { name: "VisitReports", label: "Raporty" },
+  { name: "Referrals", label: "Polecenia" },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
   { name: "UserActivityLog", label: "Historia aktywności", adminOnly: true },
 ];
