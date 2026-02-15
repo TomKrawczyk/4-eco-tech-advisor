@@ -174,14 +174,12 @@ Deno.serve(async (req) => {
           y = 20;
         }
         
-        // Bullet point
-        doc.setFillColor(...greenPrimary);
-        doc.circle(17, y - 1, 1.5, 'F');
-        
+        // Dash instead of bullet
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...gray);
         const qLines = doc.splitTextToSize(c(question), 165);
+        doc.text('–', 17, y);
         doc.text(qLines, 22, y);
         y += qLines.length * 4;
         
