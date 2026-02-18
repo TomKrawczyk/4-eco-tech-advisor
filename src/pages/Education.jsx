@@ -50,6 +50,10 @@ export default function Education() {
     title: "", description: "", category: "sprzedaz",
     video_url: "", duration_minutes: "", is_required: false
   });
+  const [uploadMode, setUploadMode] = useState("url"); // "url" | "file"
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState("");
 
   const queryClient = useQueryClient();
 
