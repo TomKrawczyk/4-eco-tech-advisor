@@ -15,11 +15,10 @@ const navItems = [
   { name: "AutoconsumptionCalc", label: "Autokonsumpcja" },
   { name: "PVCalculator", label: "Kalkulator PV" },
   { name: "ROICalculator", label: "Opłacalność" },
-  { name: "Education", label: "Edukacja" },
+  { name: "Education", label: "Szkolenia" },
   { name: "VisitReports", label: "Raporty" },
   { name: "Referrals", label: "Polecenia" },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
-  { name: "UserActivityLog", label: "Historia aktywności", adminOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {
