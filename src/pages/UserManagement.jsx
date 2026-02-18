@@ -9,11 +9,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
+import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import { format } from "date-fns";
 
 export default function UserManagement() {
@@ -334,15 +335,16 @@ export default function UserManagement() {
       />
 
       <Tabs defaultValue="users" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="requests">
-            Prośby o dostęp
+            Prośby
             {registrationRequests.length > 0 && (
               <Badge variant="destructive" className="ml-2">{registrationRequests.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="users">Użytkownicy</TabsTrigger>
           <TabsTrigger value="groups">Grupy</TabsTrigger>
+          <TabsTrigger value="activity"><Activity className="w-3 h-3 mr-1" />Aktywność</TabsTrigger>
         </TabsList>
 
         <TabsContent value="requests" className="space-y-4">
@@ -624,6 +626,10 @@ export default function UserManagement() {
 
       <TabsContent value="groups">
         <GroupManagement allowedUsers={allowedUsers} />
+      </TabsContent>
+
+      <TabsContent value="activity">
+        <ActivityLogTab allowedUsers={allowedUsers} />
       </TabsContent>
       </Tabs>
 

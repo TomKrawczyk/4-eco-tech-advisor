@@ -1,284 +1,420 @@
-import React from "react";
-import { motion } from "framer-motion";
-import StorageComparisonChart from "../components/charts/StorageComparisonChart";
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2 } from "lucide-react";
+import PageHeader from "@/components/shared/PageHeader";
 
-const content = {
-  bezMagazynu: {
-    title: "Używanie instalacji PV bez magazynu energii",
-    intro: "Instalacja fotowoltaiczna bez magazynu energii działa dobrze, ale wymaga świadomego zarządzania zużyciem. Energia jest produkowana głównie w ciągu dnia, więc kluczem jest dostosowanie nawyków do momentu produkcji.",
-    sections: [
-      {
-        title: "Jak działa instalacja bez magazynu?",
-        points: [
-          "Energia produkowana przez panele jest od razu wykorzystywana w domu",
-          "Nadwyżki energii są automatycznie oddawane do sieci",
-          "Wieczorem i nocą pobierasz energię z sieci, za którą płacisz standardową cenę",
-          "Autokonsumpcja typowo wynosi 30-40% (zależy od stylu życia)",
-          "W systemie net-billing sprzedajesz energię po cenie rynkowej (~0.20-0.30 zł/kWh), kupujesz po taryfie (~0.90 zł/kWh)"
-        ]
-      },
-      {
-        title: "Praktyczne zasady użytkowania",
-        points: [
-          "Wykorzystuj urządzenia energochłonne między 10:00 a 15:00",
-          "Pralka, zmywarka: włączaj w godzinach produkcji PV",
-          "Bojler: ogrzewaj wodę w ciągu dnia, nie wieczorem",
-          "Ładowanie urządzeń: telefony, laptopy – zawsze w dzień",
-          "Gotowanie: jeśli masz kuchenkę elektryczną, planuj posiłki na środek dnia",
-          "Klimatyzacja/ogrzewanie: maksymalnie wykorzystuj godziny słoneczne"
-        ]
-      },
-      {
-        title: "Monitorowanie produkcji i zużycia",
-        points: [
-          "Sprawdzaj aplikację falownika, aby wiedzieć, kiedy produkujesz najwięcej energii",
-          "Obserwuj bilans: produkcja vs zużycie w czasie rzeczywistym",
-          "Unikaj dużego poboru energii wieczorem i w nocy",
-          "Analizuj dane z licznika: porównuj odczyty 1.8.0 (pobór) i 2.8.0 (oddanie)",
-          "Oblicz swoją autokonsumpcję: (Produkcja − Eksport) / Produkcja × 100%"
-        ]
-      },
-      {
-        title: "Ograniczenia i wyzwania",
-        points: [
-          "Wieczorem i w nocy musisz korzystać z energii sieciowej",
-          "W pochmurne dni produkcja jest niska, więcej energii z sieci",
-          "W zimie produkcja spada – wyższe rachunki za energię",
-          "Trudno wykorzystać całą energię w dzień, jeśli jesteś w pracy",
-          "Oddawanie energii do sieci jest nieopłacalne (niska cena sprzedaży)"
-        ]
-      },
-      {
-        title: "Kiedy warto rozważyć magazyn?",
-        points: [
-          "Duża część energii jest oddawana do sieci (eksport >60%)",
-          "Nie ma możliwości korzystania z urządzeń w ciągu dnia",
-          "Zużycie koncentruje się wieczorem i w nocy (dom jest pusty w dzień)",
-          "Chcesz zwiększyć niezależność od sieci",
-          "Rosnące ceny energii – magazyn staje się bardziej opłacalny"
-        ]
-      }
-    ]
-  },
-  zMagazynem: {
-    title: "Używanie instalacji PV z magazynem energii",
-    intro: "Magazyn energii zmienia sposób korzystania z instalacji fotowoltaicznej. Nadwyżki energii z dnia są przechowywane i wykorzystywane wieczorem oraz nocą, co znacząco zwiększa niezależność energetyczną.",
-    sections: [
-      {
-        title: "Jak działa instalacja z magazynem?",
-        points: [
-          "W ciągu dnia energia z paneli zasila dom, a nadwyżki trafiają do magazynu",
-          "Magazyn ładuje się automatycznie, gdy produkcja przewyższa zużycie",
-          "Wieczorem i w nocy dom korzysta z energii zgromadzonej w magazynie",
-          "Dopiero gdy magazyn jest pusty, energia pobierana jest z sieci",
-          "Autokonsumpcja wzrasta do 70-90%, w zależności od pojemności magazynu"
-        ]
-      },
-      {
-        title: "Zmiana nawyków użytkowania",
-        points: [
-          "Nie musisz już koncentrować całego zużycia na dzień",
-          "Możesz korzystać z urządzeń wieczorem – energia pochodzi z magazynu",
-          "Rano energia z magazynu – zamiast z sieci",
-          "Mniej stresu o optymalizację każdej czynności",
-          "Większa elastyczność w codziennym życiu"
-        ]
-      },
-      {
-        title: "Automatyczne zarządzanie",
-        points: [
-          "System sam decyduje, kiedy ładować magazyn, a kiedy go rozładowywać",
-          "Priorytet: najpierw dom, potem magazyn, na końcu oddanie do sieci",
-          "Możliwość ustawienia 'trybu rezerwowego' – część energii zawsze w magazynie",
-          "Niektóre systemy pozwalają ręcznie zarządzać ładowaniem",
-          "Monitorowanie stanu naładowania w aplikacji"
-        ]
-      },
-      {
-        title: "Dobór pojemności magazynu",
-        points: [
-          "Przeanalizuj swoje wieczorne i nocne zużycie energii (np. 8-10 kWh)",
-          "Magazyn powinien pokryć większość zużycia, gdy panele nie pracują",
-          "Typowa rodzina 4-osobowa: magazyn 5-10 kWh",
-          "Dom z pompą ciepła: 10-15 kWh",
-          "Większa pojemność = wyższa autokonsumpcja, ale dłuższy zwrot inwestycji"
-        ]
-      },
-      {
-        title: "Eksploatacja i utrzymanie",
-        points: [
-          "Magazyn nie wymaga konserwacji – technologia LFP jest trwała",
-          "Sprawność ładowania/rozładowania: około 95%",
-          "Żywotność: 6000-8000 cykli (10-15 lat użytkowania)",
-          "System automatycznie dba o kondycję baterii",
-          "Monitoruj stan magazynu przez aplikację – sprawdzaj, czy działa optymalnie"
-        ]
-      },
-      {
-        title: "Korzyści długoterminowe",
-        points: [
-          "Znacznie niższe rachunki za energię – oszczędność 50-70%",
-          "Niezależność od rosnących cen energii elektrycznej",
-          "Zwiększona wartość nieruchomości",
-          "Komfort użytkowania – brak konieczności planowania zużycia",
-          "Bezpieczeństwo energetyczne – rezerwa na wypadek awarii sieci"
-        ]
-      }
-    ]
-  },
-  porownanie: {
-    title: "Porównanie: Co wybrać?",
-    intro: "Wybór pomiędzy instalacją z magazynem a bez magazynu zależy od wielu czynników. Oto szczegółowe porównanie, które pomoże podjąć decyzję.",
-    sections: [
-      {
-        title: "Aspekty finansowe",
-        points: [
-          "Bez magazynu: niski koszt początkowy, oszczędność ~2500-3500 zł/rok",
-          "Z magazynem: wyższy koszt początkowy (+20000-30000 zł), oszczędność ~5000-7000 zł/rok",
-          "Zwrot inwestycji z magazynu: 7-10 lat (bez dotacji), 3-5 lat (z dotacją Mój Prąd)",
-          "Bez magazynu: szybszy zwrot z samej instalacji PV",
-          "Z magazynem: wyższe długoterminowe oszczędności"
-        ]
-      },
-      {
-        title: "Styl życia i elastyczność",
-        points: [
-          "Bez magazynu: wymaga dostosowania nawyków do produkcji PV",
-          "Z magazynem: elastyczność w korzystaniu z energii o każdej porze",
-          "Bez magazynu: lepsze dla osób będących w domu w ciągu dnia",
-          "Z magazynem: idealne dla pracujących osób, które są w domu wieczorem",
-          "Bez magazynu: wymaga świadomego planowania użycia urządzeń"
-        ]
-      },
-      {
-        title: "Technologia i utrzymanie",
-        points: [
-          "Bez magazynu: prostsza instalacja, mniej elementów do nadzoru",
-          "Z magazynem: bardziej zaawansowany system, automatyczne zarządzanie",
-          "Bez magazynu: brak dodatkowych kosztów utrzymania",
-          "Z magazynem: żywotność baterii 10-15 lat, później wymiana",
-          "Oba rozwiązania: monitoring przez aplikacje falownika"
-        ]
-      },
-      {
-        title: "Dla kogo które rozwiązanie?",
-        points: [
-          "Bez magazynu: dom z osobami w ciągu dnia, świadome zarządzanie energią, ograniczony budżet",
-          "Z magazynem: pracujące osoby, wieczorne zużycie energii, pompa ciepła/samochód elektryczny",
-          "Bez magazynu: niski budżet, chęć szybkiego zwrotu inwestycji",
-          "Z magazynem: wyższy budżet, priorytet = niezależność i komfort",
-          "Oba: mogą być optymalne w zależności od indywidualnej sytuacji"
-        ]
-      }
-    ]
-  }
+const categoryLabels = {
+  sprzedaz: "Sprzedaż",
+  techniczne: "Techniczne",
+  produkty: "Produkty",
+  procesy: "Procesy",
+  inne: "Inne"
 };
 
+const categoryColors = {
+  sprzedaz: "bg-blue-100 text-blue-800",
+  techniczne: "bg-orange-100 text-orange-800",
+  produkty: "bg-green-100 text-green-800",
+  procesy: "bg-purple-100 text-purple-800",
+  inne: "bg-gray-100 text-gray-800"
+};
+
+function getEmbedUrl(url) {
+  if (!url) return null;
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  return url;
+}
+
 export default function Education() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [selectedTraining, setSelectedTraining] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "", description: "", category: "sprzedaz",
+    video_url: "", duration_minutes: "", is_required: false
+  });
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const user = await base44.auth.me();
+      const allowedUsers = await base44.entities.AllowedUser.list();
+      const userAccess = allowedUsers.find(a => (a.data?.email || a.email) === user.email);
+      if (userAccess) {
+        user.role = userAccess.data?.role || userAccess.role;
+        user.displayName = userAccess.data?.name || userAccess.name;
+      }
+      setCurrentUser(user);
+    };
+    fetchUser();
+  }, []);
+
+  const { data: trainings = [] } = useQuery({
+    queryKey: ['trainings'],
+    queryFn: () => base44.entities.Training.list('order'),
+    enabled: !!currentUser
+  });
+
+  const { data: myViews = [] } = useQuery({
+    queryKey: ['trainingViews', currentUser?.email],
+    queryFn: () => base44.entities.TrainingView.filter({ user_email: currentUser.email }),
+    enabled: !!currentUser?.email
+  });
+
+  const { data: allViews = [] } = useQuery({
+    queryKey: ['allTrainingViews'],
+    queryFn: () => base44.entities.TrainingView.list(),
+    enabled: currentUser?.role === 'admin'
+  });
+
+  const { data: allowedUsers = [] } = useQuery({
+    queryKey: ['allowedUsers'],
+    queryFn: () => base44.entities.AllowedUser.list(),
+    enabled: currentUser?.role === 'admin'
+  });
+
+  const markViewedMutation = useMutation({
+    mutationFn: async (training) => {
+      const existing = myViews.find(v => v.training_id === training.id);
+      if (!existing) {
+        await base44.entities.TrainingView.create({
+          training_id: training.id,
+          training_title: training.title,
+          user_email: currentUser.email,
+          user_name: currentUser.displayName || currentUser.full_name,
+          completed: true
+        });
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries(['trainingViews', currentUser?.email])
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.Training.create({
+      ...data,
+      duration_minutes: data.duration_minutes ? Number(data.duration_minutes) : undefined,
+      order: trainings.length + 1
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['trainings']);
+      setShowAddDialog(false);
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Training.delete(id),
+    onSuccess: () => queryClient.invalidateQueries(['trainings'])
+  });
+
+  const handleOpenTraining = (training) => {
+    setSelectedTraining(training);
+    markViewedMutation.mutate(training);
+  };
+
+  const isCompleted = (trainingId) => myViews.some(v => v.training_id === trainingId);
+
+  const filteredTrainings = trainings.filter(t =>
+    t.is_published !== false &&
+    (categoryFilter === "all" || t.category === categoryFilter)
+  );
+
+  const completedCount = trainings.filter(t => isCompleted(t.id)).length;
+
+  // Stats per training for admin
+  const getViewCount = (trainingId) => allViews.filter(v => v.training_id === trainingId).length;
+
   return (
-    <div className="space-y-12 max-w-4xl mx-auto">
-      <div className="text-center space-y-3 py-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-          Edukacja
-        </h1>
-        <p className="text-gray-600 text-lg">
-          Praktyczny przewodnik użytkowania instalacji fotowoltaicznych
-        </p>
-      </div>
+    <div>
+      <PageHeader title="Szkolenia" subtitle="Rozwijaj swoje kompetencje sprzedażowe i techniczne" />
 
-      {/* Visual comparison first */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="bg-white rounded-2xl border border-gray-200 overflow-hidden"
-      >
-        <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 md:p-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-            Wizualizacja: Z magazynem vs Bez magazynu
-          </h2>
-          <p className="text-green-50 leading-relaxed">
-            Zobacz różnicę w poborze energii z sieci w ciągu doby
-          </p>
-        </div>
-        <div className="p-6 md:p-8">
-          <StorageComparisonChart />
-          
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-red-50 rounded-xl border border-red-200 p-4">
-              <h4 className="font-bold text-gray-900 mb-2">Bez magazynu energii</h4>
-              <ul className="space-y-2 text-sm text-gray-700">
-                <li>• Autokonsumpcja: 30-40%</li>
-                <li>• Wysoki import z sieci wieczorem/nocą</li>
-                <li>• Nadwyżki dzienne oddawane do sieci</li>
-                <li>• Import: ~15 kWh/dzień</li>
-              </ul>
-            </div>
-            <div className="bg-green-50 rounded-xl border border-green-200 p-4">
-              <h4 className="font-bold text-gray-900 mb-2">Z magazynem energii</h4>
-              <ul className="space-y-2 text-sm text-gray-700">
-                <li>• Autokonsumpcja: 70-90%</li>
-                <li>• Minimalne zapotrzebowanie z sieci</li>
-                <li>• Energia dostępna 24/7 z magazynu</li>
-                <li>• Import: ~4 kWh/dzień</li>
-              </ul>
-            </div>
+      {/* Progress bar */}
+      {trainings.length > 0 && (
+        <Card className="p-4 mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">Twój postęp</span>
+            <span className="text-sm font-bold text-green-700">{completedCount}/{trainings.filter(t => t.is_published !== false).length} szkoleń</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-green-500 h-2 rounded-full transition-all"
+              style={{ width: `${trainings.filter(t => t.is_published !== false).length > 0 ? (completedCount / trainings.filter(t => t.is_published !== false).length) * 100 : 0}%` }}
+            />
+          </div>
+        </Card>
+      )}
+
+      <Tabs defaultValue="trainings" className="space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <TabsList>
+            <TabsTrigger value="trainings"><BookOpen className="w-4 h-4 mr-1" />Szkolenia</TabsTrigger>
+            {currentUser?.role === 'admin' && (
+              <TabsTrigger value="stats"><BarChart2 className="w-4 h-4 mr-1" />Statystyki</TabsTrigger>
+            )}
+          </TabsList>
+
+          <div className="flex items-center gap-2">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Kategoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Wszystkie</SelectItem>
+                {Object.entries(categoryLabels).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {currentUser?.role === 'admin' && (
+              <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                <DialogTrigger asChild>
+                  <Button className="bg-green-600 hover:bg-green-700 gap-2">
+                    <Plus className="w-4 h-4" />Dodaj szkolenie
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader><DialogTitle>Nowe szkolenie</DialogTitle></DialogHeader>
+                  <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }} className="space-y-4">
+                    <div>
+                      <Label>Tytuł *</Label>
+                      <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+                    </div>
+                    <div>
+                      <Label>Opis</Label>
+                      <Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Kategoria</Label>
+                        <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(categoryLabels).map(([k, v]) => (
+                              <SelectItem key={k} value={k}>{v}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Czas (min)</Label>
+                        <Input type="number" value={formData.duration_minutes} onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })} />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Link do wideo (YouTube/Vimeo)</Label>
+                      <Input placeholder="https://youtube.com/watch?v=..." value={formData.video_url} onChange={(e) => setFormData({ ...formData, video_url: e.target.value })} />
+                    </div>
+                    <Button type="submit" disabled={createMutation.isPending} className="w-full bg-green-600 hover:bg-green-700">
+                      Dodaj szkolenie
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
-      </motion.div>
 
-      {Object.entries(content).map(([key, topic]) => (
-        <motion.div
-          key={key}
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="bg-white rounded-2xl border border-gray-200 overflow-hidden"
-        >
-          <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 md:p-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-              {topic.title}
-            </h2>
-            <p className="text-green-50 leading-relaxed">
-              {topic.intro}
-            </p>
-          </div>
+        <TabsContent value="trainings">
+          {filteredTrainings.length === 0 ? (
+            <Card className="p-12 text-center">
+              <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">Brak szkoleń w tej kategorii</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredTrainings.map((training) => {
+                const completed = isCompleted(training.id);
+                return (
+                  <Card key={training.id} className={`p-5 hover:shadow-md transition-shadow cursor-pointer border-2 ${completed ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <Badge className={categoryColors[training.category]}>
+                            {categoryLabels[training.category]}
+                          </Badge>
+                          {training.is_required && (
+                            <Badge className="bg-red-100 text-red-700">Obowiązkowe</Badge>
+                          )}
+                          {completed && (
+                            <Badge className="bg-green-100 text-green-700">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />Ukończone
+                            </Badge>
+                          )}
+                        </div>
+                        <h3 className="font-semibold text-gray-900">{training.title}</h3>
+                      </div>
+                      {currentUser?.role === 'admin' && (
+                        <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(training.id)} className="text-red-400 hover:text-red-600 shrink-0">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {training.description && (
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{training.description}</p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        {training.duration_minutes && (
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{training.duration_minutes} min</span>
+                        )}
+                        {currentUser?.role === 'admin' && (
+                          <span className="flex items-center gap-1"><Users className="w-3 h-3" />{getViewCount(training.id)} osób</span>
+                        )}
+                      </div>
+                      <Button size="sm" onClick={() => handleOpenTraining(training)} className="bg-green-600 hover:bg-green-700 gap-1">
+                        <Play className="w-3 h-3" />Obejrzyj
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
 
-          <div className="p-6 md:p-8 space-y-8">
-            {topic.sections.map((section, i) => (
-              <div key={i} className="space-y-4">
-                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center text-sm font-bold shrink-0">
-                    {i + 1}
-                  </span>
-                  {section.title}
-                </h3>
-                <ul className="space-y-3">
-                  {section.points.map((point, j) => (
-                    <li key={j} className="flex items-start gap-3 text-gray-700 leading-relaxed">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
+        {currentUser?.role === 'admin' && (
+          <TabsContent value="stats">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="p-4">
+                  <div className="text-sm text-gray-600">Szkolenia</div>
+                  <div className="text-2xl font-bold">{trainings.filter(t => t.is_published !== false).length}</div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-sm text-gray-600">Łącznie odsłon</div>
+                  <div className="text-2xl font-bold text-green-600">{allViews.length}</div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-sm text-gray-600">Aktywni uczący się</div>
+                  <div className="text-2xl font-bold text-blue-600">{new Set(allViews.map(v => v.user_email)).size}</div>
+                </Card>
+                <Card className="p-4">
+                  <div className="text-sm text-gray-600">Handlowcy</div>
+                  <div className="text-2xl font-bold text-purple-600">{allowedUsers.length}</div>
+                </Card>
               </div>
-            ))}
-          </div>
-        </motion.div>
-      ))}
 
-      <div className="bg-green-50 rounded-2xl border border-green-200 p-6 md:p-8 text-center">
-        <h3 className="text-xl font-bold text-gray-900 mb-3">
-          Potrzebujesz pomocy w optymalizacji instalacji?
-        </h3>
-        <p className="text-gray-700 mb-4">
-          Skontaktuj się z naszym doradcą technicznym. Pomożemy przeanalizować Twoje zużycie i dobrać optymalne rozwiązanie.
-        </p>
-        <div className="text-sm text-gray-600">
-          <div className="font-semibold text-green-600 text-base">4-ECO Green Energy</div>
-          <div>Profesjonalne doradztwo techniczne</div>
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Postęp per szkolenie</h3>
+                <div className="space-y-4">
+                  {trainings.filter(t => t.is_published !== false).map(training => {
+                    const viewCount = getViewCount(training.id);
+                    const percent = allowedUsers.length > 0 ? Math.round((viewCount / allowedUsers.length) * 100) : 0;
+                    const viewers = allViews.filter(v => v.training_id === training.id);
+                    return (
+                      <div key={training.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <span className="font-medium text-gray-900">{training.title}</span>
+                            <Badge className={`ml-2 ${categoryColors[training.category]}`}>{categoryLabels[training.category]}</Badge>
+                          </div>
+                          <span className="text-sm font-bold text-gray-700">{viewCount}/{allowedUsers.length} osób ({percent}%)</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-2 mb-3">
+                          <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${percent}%` }} />
+                        </div>
+                        {viewers.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {viewers.map((v, i) => (
+                              <span key={i} className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
+                                {v.user_name || v.user_email}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Postęp per handlowiec</h3>
+                <div className="space-y-3">
+                  {allowedUsers.map(u => {
+                    const userEmail = u.data?.email || u.email;
+                    const userName = u.data?.name || u.name;
+                    const userViewCount = allViews.filter(v => v.user_email === userEmail).length;
+                    const totalPublished = trainings.filter(t => t.is_published !== false).length;
+                    const percent = totalPublished > 0 ? Math.round((userViewCount / totalPublished) * 100) : 0;
+                    return (
+                      <div key={u.id} className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-sm shrink-0">
+                          {userName?.charAt(0) || '?'}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-gray-900">{userName}</span>
+                            <span className="text-xs text-gray-500">{userViewCount}/{totalPublished} ({percent}%)</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-1.5">
+                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${percent}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
+      </Tabs>
+
+      {/* Modal z wideo */}
+      {selectedTraining && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSelectedTraining(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <div>
+                <h2 className="font-bold text-lg text-gray-900">{selectedTraining.title}</h2>
+                <Badge className={categoryColors[selectedTraining.category]}>{categoryLabels[selectedTraining.category]}</Badge>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedTraining(null)}>✕</Button>
+            </div>
+            {selectedTraining.video_url ? (
+              <div className="relative pt-[56.25%] bg-black">
+                <iframe
+                  src={getEmbedUrl(selectedTraining.video_url)}
+                  className="absolute inset-0 w-full h-full"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                />
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center bg-gray-50">
+                <div className="text-center text-gray-400">
+                  <Play className="w-12 h-12 mx-auto mb-2" />
+                  <p>Brak linku do wideo</p>
+                </div>
+              </div>
+            )}
+            {selectedTraining.description && (
+              <div className="p-4">
+                <p className="text-sm text-gray-700">{selectedTraining.description}</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
