@@ -30,15 +30,23 @@ const categoryColors = {
   inne: "bg-gray-100 text-gray-800"
 };
 
+function isExternalEmbed(url) {
+  if (!url) return false;
+  return url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com');
+}
+
 function getEmbedUrl(url) {
   if (!url) return null;
-  // YouTube
   const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
   if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-  // Vimeo
   const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
   if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
   return url;
+}
+
+function isPrivateFileUri(url) {
+  // Private file URIs don't start with http
+  return url && !url.startsWith('http');
 }
 
 export default function Education() {
