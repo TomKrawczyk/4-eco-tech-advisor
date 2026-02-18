@@ -100,7 +100,7 @@ export default function Education() {
   const { data: allowedUsers = [] } = useQuery({
     queryKey: ['allowedUsers'],
     queryFn: () => base44.entities.AllowedUser.list(),
-    enabled: currentUser?.role === 'admin'
+    enabled: !!currentUser
   });
 
   const markViewedMutation = useMutation({
