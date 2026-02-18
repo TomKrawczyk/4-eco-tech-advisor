@@ -54,6 +54,7 @@ export default function Education() {
   const [selectedTraining, setSelectedTraining] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingTraining, setEditingTraining] = useState(null);
   const [formData, setFormData] = useState({
     title: "", description: "", category: "sprzedaz",
     video_url: "", duration_minutes: "", is_required: false
