@@ -493,24 +493,52 @@ export default function Education() {
 
       {/* Modal z wideo */}
       {selectedTraining && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSelectedTraining(null)}>
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); }}>
           <div className="bg-white rounded-2xl w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b">
               <div>
                 <h2 className="font-bold text-lg text-gray-900">{selectedTraining.title}</h2>
                 <Badge className={categoryColors[selectedTraining.category]}>{categoryLabels[selectedTraining.category]}</Badge>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setSelectedTraining(null)}>✕</Button>
+              <Button variant="ghost" size="icon" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); }}>✕</Button>
             </div>
             {selectedTraining.video_url ? (
-              <div className="relative pt-[56.25%] bg-black">
-                <iframe
-                  src={getEmbedUrl(selectedTraining.video_url)}
-                  className="absolute inset-0 w-full h-full"
-                  allowFullScreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                />
-              </div>
+              isExternalEmbed(selectedTraining.video_url) ? (
+                <div className="relative pt-[56.25%] bg-black">
+                  <iframe
+                    src={getEmbedUrl(selectedTraining.video_url)}
+                    className="absolute inset-0 w-full h-full"
+                    allowFullScreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  />
+                </div>
+              ) : loadingVideo ? (
+                <div className="h-64 flex items-center justify-center bg-gray-900">
+                  <div className="text-center text-white">
+                    <Loader2 className="w-10 h-10 animate-spin mx-auto mb-2" />
+                    <p className="text-sm">Ładowanie wideo...</p>
+                  </div>
+                </div>
+              ) : signedVideoUrl ? (
+                <div
+                  className="relative bg-black"
+                  onContextMenu={(e) => { e.preventDefault(); handleDownloadAttempt(selectedTraining); }}
+                >
+                  <video
+                    src={signedVideoUrl}
+                    className="w-full max-h-[60vh]"
+                    controls
+                    controlsList="nodownload nofullscreen"
+                    disablePictureInPicture
+                    onContextMenu={(e) => e.preventDefault()}
+                  />
+                  {/* Invisible overlay to block right-click on video */}
+                  <div
+                    className="absolute inset-0 pointer-events-none select-none"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                  />
+                </div>
+              ) : null
             ) : (
               <div className="h-64 flex items-center justify-center bg-gray-50">
                 <div className="text-center text-gray-400">
