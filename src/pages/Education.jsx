@@ -158,10 +158,40 @@ export default function Education() {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Training.update(id, {
+      ...data,
+      video_url: uploadMode === "file" ? uploadedVideoUrl || data.video_url : data.video_url,
+      duration_minutes: data.duration_minutes ? Number(data.duration_minutes) : undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['trainings']);
+      setEditingTraining(null);
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
+      setUploadedVideoUrl("");
+      setUploadProgress(0);
+      setUploadMode("url");
+    }
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Training.delete(id),
     onSuccess: () => queryClient.invalidateQueries(['trainings'])
   });
+
+  const handleEdit = (training) => {
+    setEditingTraining(training);
+    setFormData({
+      title: training.title || "",
+      description: training.description || "",
+      category: training.category || "sprzedaz",
+      video_url: training.video_url || "",
+      duration_minutes: training.duration_minutes || "",
+      is_required: training.is_required || false
+    });
+    setUploadMode("url");
+    setUploadedVideoUrl("");
+  };
 
   const [signedVideoUrl, setSignedVideoUrl] = useState(null);
   const [loadingVideo, setLoadingVideo] = useState(false);
