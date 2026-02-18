@@ -294,7 +294,7 @@ export default function Education() {
                         </div>
                       )}
                     </div>
-                    <Button type="submit" disabled={createMutation.isPending} className="w-full bg-green-600 hover:bg-green-700">
+                    <Button type="submit" disabled={createMutation.isPending || uploading} className="w-full bg-green-600 hover:bg-green-700">
                       Dodaj szkolenie
                     </Button>
                   </form>
