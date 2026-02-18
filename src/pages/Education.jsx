@@ -111,9 +111,31 @@ export default function Education() {
     onSuccess: () => queryClient.invalidateQueries(['trainingViews', currentUser?.email])
   });
 
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    setUploadProgress(0);
+
+    // Symulacja progresu podczas uploadu
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => Math.min(prev + 5, 90));
+    }, 300);
+
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setUploadedVideoUrl(file_url);
+      setFormData(prev => ({ ...prev, video_url: file_url }));
+      setUploadProgress(100);
+    } finally {
+      clearInterval(progressInterval);
+      setUploading(false);
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Training.create({
       ...data,
+      video_url: uploadMode === "file" ? uploadedVideoUrl : data.video_url,
       duration_minutes: data.duration_minutes ? Number(data.duration_minutes) : undefined,
       order: trainings.length + 1
     }),
@@ -121,6 +143,9 @@ export default function Education() {
       queryClient.invalidateQueries(['trainings']);
       setShowAddDialog(false);
       setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
+      setUploadedVideoUrl("");
+      setUploadProgress(0);
+      setUploadMode("url");
     }
   });
 
