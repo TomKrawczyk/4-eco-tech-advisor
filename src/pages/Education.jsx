@@ -249,8 +249,50 @@ export default function Education() {
                       </div>
                     </div>
                     <div>
-                      <Label>Link do wideo (YouTube/Vimeo)</Label>
-                      <Input placeholder="https://youtube.com/watch?v=..." value={formData.video_url} onChange={(e) => setFormData({ ...formData, video_url: e.target.value })} />
+                      <Label className="mb-2 block">Wideo</Label>
+                      <div className="flex gap-2 mb-2">
+                        <Button type="button" size="sm" variant={uploadMode === "url" ? "default" : "outline"} onClick={() => setUploadMode("url")} className="gap-1">
+                          <Link className="w-3 h-3" />Link
+                        </Button>
+                        <Button type="button" size="sm" variant={uploadMode === "file" ? "default" : "outline"} onClick={() => setUploadMode("file")} className="gap-1">
+                          <Upload className="w-3 h-3" />Plik wideo
+                        </Button>
+                      </div>
+
+                      {uploadMode === "url" ? (
+                        <Input placeholder="https://youtube.com/watch?v=..." value={formData.video_url} onChange={(e) => setFormData({ ...formData, video_url: e.target.value })} />
+                      ) : (
+                        <div>
+                          <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploading ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400 hover:bg-green-50'}`}>
+                            <input
+                              type="file"
+                              accept="video/*"
+                              className="hidden"
+                              onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+                              disabled={uploading}
+                            />
+                            {uploading ? (
+                              <div className="text-center w-full px-4">
+                                <Loader2 className="w-6 h-6 text-green-600 animate-spin mx-auto mb-1" />
+                                <p className="text-sm text-green-700 mb-2">Przesyłanie... {uploadProgress}%</p>
+                                <Progress value={uploadProgress} className="h-2" />
+                              </div>
+                            ) : uploadedVideoUrl ? (
+                              <div className="text-center">
+                                <CheckCircle2 className="w-6 h-6 text-green-600 mx-auto mb-1" />
+                                <p className="text-sm text-green-700 font-medium">Plik przesłany!</p>
+                                <p className="text-xs text-gray-500">Kliknij aby zmienić plik</p>
+                              </div>
+                            ) : (
+                              <div className="text-center">
+                                <Upload className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+                                <p className="text-sm text-gray-600">Kliknij lub przeciągnij plik wideo</p>
+                                <p className="text-xs text-gray-400 mt-1">MP4, MOV, AVI, MKV – duże pliki OK</p>
+                              </div>
+                            )}
+                          </label>
+                        </div>
+                      )}
                     </div>
                     <Button type="submit" disabled={createMutation.isPending} className="w-full bg-green-600 hover:bg-green-700">
                       Dodaj szkolenie
