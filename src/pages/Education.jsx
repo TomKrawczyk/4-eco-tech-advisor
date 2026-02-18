@@ -405,9 +405,14 @@ export default function Education() {
                         <h3 className="font-semibold text-gray-900">{training.title}</h3>
                       </div>
                       {currentUser?.role === 'admin' && (
-                        <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(training.id)} className="text-red-400 hover:text-red-600 shrink-0">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(training)} className="text-gray-400 hover:text-blue-600 shrink-0">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(training.id)} className="text-red-400 hover:text-red-600 shrink-0">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       )}
                     </div>
                     {training.description && (
