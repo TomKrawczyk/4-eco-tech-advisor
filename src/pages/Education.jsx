@@ -32,7 +32,7 @@ const categoryColors = {
 
 function isExternalEmbed(url) {
   if (!url) return false;
-  return url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com');
+  return url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com') || url.includes('drive.google.com');
 }
 
 function getEmbedUrl(url) {
@@ -41,6 +41,13 @@ function getEmbedUrl(url) {
   if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
   const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
   if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  // Google Drive - różne formaty linków
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+  if (url.includes('drive.google.com/open?id=')) {
+    const idMatch = url.match(/id=([^&]+)/);
+    if (idMatch) return `https://drive.google.com/file/d/${idMatch[1]}/preview`;
+  }
   return url;
 }
 
