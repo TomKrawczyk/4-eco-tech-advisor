@@ -122,9 +122,9 @@ export default function Education() {
     }, 300);
 
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setUploadedVideoUrl(file_url);
-      setFormData(prev => ({ ...prev, video_url: file_url }));
+      const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+      setUploadedVideoUrl(file_uri);
+      setFormData(prev => ({ ...prev, video_url: file_uri }));
       setUploadProgress(100);
     } finally {
       clearInterval(progressInterval);
