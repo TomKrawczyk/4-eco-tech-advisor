@@ -375,6 +375,81 @@ export default function Education() {
           </div>
         </div>
 
+        {/* Edit Dialog */}
+        {editingTraining && (
+          <Dialog open={!!editingTraining} onOpenChange={(open) => { if (!open) { setEditingTraining(null); setUploadedVideoUrl(""); setUploadMode("url"); } }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>Edytuj szkolenie</DialogTitle></DialogHeader>
+              <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ id: editingTraining.id, data: formData }); }} className="space-y-4">
+                <div>
+                  <Label>Tytuł *</Label>
+                  <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+                </div>
+                <div>
+                  <Label>Opis</Label>
+                  <Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Kategoria</Label>
+                    <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(categoryLabels).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Czas (min)</Label>
+                    <Input type="number" value={formData.duration_minutes} onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <Label className="mb-2 block">Wideo</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Button type="button" size="sm" variant={uploadMode === "url" ? "default" : "outline"} onClick={() => setUploadMode("url")} className="gap-1">
+                      <Link className="w-3 h-3" />Link
+                    </Button>
+                    <Button type="button" size="sm" variant={uploadMode === "file" ? "default" : "outline"} onClick={() => setUploadMode("file")} className="gap-1">
+                      <Upload className="w-3 h-3" />Nowy plik
+                    </Button>
+                  </div>
+                  {uploadMode === "url" ? (
+                    <Input placeholder="https://youtube.com/watch?v=..." value={formData.video_url} onChange={(e) => setFormData({ ...formData, video_url: e.target.value })} />
+                  ) : (
+                    <label className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploading ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400 hover:bg-green-50'}`}>
+                      <input type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} disabled={uploading} />
+                      {uploading ? (
+                        <div className="text-center w-full px-4">
+                          <Loader2 className="w-5 h-5 text-green-600 animate-spin mx-auto mb-1" />
+                          <p className="text-sm text-green-700 mb-1">Przesyłanie... {uploadProgress}%</p>
+                          <Progress value={uploadProgress} className="h-1.5" />
+                        </div>
+                      ) : uploadedVideoUrl ? (
+                        <div className="text-center">
+                          <CheckCircle2 className="w-5 h-5 text-green-600 mx-auto mb-1" />
+                          <p className="text-xs text-green-700">Plik przesłany! Kliknij aby zmienić</p>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <Upload className="w-5 h-5 text-gray-400 mx-auto mb-1" />
+                          <p className="text-xs text-gray-500">Zastąp obecne wideo nowym plikiem</p>
+                        </div>
+                      )}
+                    </label>
+                  )}
+                </div>
+                <Button type="submit" disabled={updateMutation.isPending || uploading} className="w-full bg-green-600 hover:bg-green-700">
+                  {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Zapisz zmiany
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+
         <TabsContent value="trainings">
           {filteredTrainings.length === 0 ? (
             <Card className="p-12 text-center">
