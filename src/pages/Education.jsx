@@ -162,9 +162,41 @@ export default function Education() {
     onSuccess: () => queryClient.invalidateQueries(['trainings'])
   });
 
-  const handleOpenTraining = (training) => {
+  const [signedVideoUrl, setSignedVideoUrl] = useState(null);
+  const [loadingVideo, setLoadingVideo] = useState(false);
+
+  const handleOpenTraining = async (training) => {
     setSelectedTraining(training);
+    setSignedVideoUrl(null);
     markViewedMutation.mutate(training);
+
+    if (training.video_url && isPrivateFileUri(training.video_url)) {
+      setLoadingVideo(true);
+      try {
+        const res = await base44.integrations.Core.CreateFileSignedUrl({
+          file_uri: training.video_url,
+          expires_in: 3600
+        });
+        setSignedVideoUrl(res.signed_url);
+      } finally {
+        setLoadingVideo(false);
+      }
+    }
+  };
+
+  const handleDownloadAttempt = async (training) => {
+    // Notify all admins about the download attempt
+    const admins = allowedUsers.filter(u => (u.data?.role || u.role) === 'admin');
+    for (const admin of admins) {
+      const adminEmail = admin.data?.email || admin.email;
+      await base44.entities.Notification.create({
+        user_email: adminEmail,
+        type: "system_error",
+        title: "⚠️ Próba pobrania nagrania",
+        message: `Użytkownik ${currentUser?.displayName || currentUser?.email} próbował pobrać szkolenie: "${training.title}"`,
+        link: ""
+      });
+    }
   };
 
   const isCompleted = (trainingId) => myViews.some(v => v.training_id === trainingId);
