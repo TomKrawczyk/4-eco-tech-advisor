@@ -168,6 +168,14 @@ export default function VisitReports() {
                         <span className="text-green-600">{report.installation_types.join(", ")}</span>
                       )}
                     </div>
+                    {report.author_name && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center text-[9px] font-bold text-green-700">
+                          {report.author_name.charAt(0)}
+                        </div>
+                        <span className="text-xs text-gray-500">{report.author_name}</span>
+                      </div>
+                    )}
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                 </div>
