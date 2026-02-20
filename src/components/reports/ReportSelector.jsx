@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,20 @@ export default function ReportSelector({ onSelectReport, currentReport }) {
   const [showDialog, setShowDialog] = useState(false);
   const [newClientName, setNewClientName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const user = await base44.auth.me();
+      const allowedUsers = await base44.entities.AllowedUser.list();
+      const userAccess = allowedUsers.find(a => (a.data?.email || a.email) === user.email);
+      if (userAccess) {
+        user.displayName = userAccess.data?.name || userAccess.name;
+      }
+      setCurrentUser(user);
+    };
+    fetchUser();
+  }, []);
 
   const { data: reports = [] } = useQuery({
     queryKey: ['visitReports'],
@@ -25,6 +39,8 @@ export default function ReportSelector({ onSelectReport, currentReport }) {
       client_name: newClientName,
       visit_date: new Date().toISOString().split("T")[0],
       status: "draft",
+      author_name: currentUser?.displayName || currentUser?.full_name || currentUser?.email || "",
+      author_email: currentUser?.email || "",
     });
     setCreating(false);
     setShowDialog(false);
