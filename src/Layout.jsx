@@ -27,6 +27,7 @@ export default function Layout({ children, currentPageName }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
+  const [pendingRequiredTraining, setPendingRequiredTraining] = useState(null);
 
   React.useEffect(() => {
     const checkAccess = async () => {
