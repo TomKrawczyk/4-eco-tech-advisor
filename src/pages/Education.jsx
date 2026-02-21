@@ -460,6 +460,18 @@ export default function Education() {
                     </label>
                   )}
                 </div>
+                <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
+                  <input
+                    type="checkbox"
+                    id="is_required_edit"
+                    checked={formData.is_required}
+                    onChange={(e) => setFormData({ ...formData, is_required: e.target.checked })}
+                    className="w-4 h-4 accent-red-600"
+                  />
+                  <label htmlFor="is_required_edit" className="text-sm font-medium text-red-800 cursor-pointer">
+                    🔒 Szkolenie obowiązkowe — blokuje dostęp do czasu ukończenia
+                  </label>
+                </div>
                 <Button type="submit" disabled={updateMutation.isPending || uploading} className="w-full bg-green-600 hover:bg-green-700">
                   {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Zapisz zmiany
