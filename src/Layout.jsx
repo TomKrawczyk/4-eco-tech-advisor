@@ -45,6 +45,19 @@ export default function Layout({ children, currentPageName }) {
           user.displayName = userAccess.data?.name || userAccess.name;
           setCurrentUser(user);
           setHasAccess(true);
+
+          // Sprawdź czy są obowiązkowe szkolenia do obejrzenia (pomijamy adminów)
+          if (user.role !== 'admin') {
+            const [trainings, views] = await Promise.all([
+              base44.entities.Training.list('order'),
+              base44.entities.TrainingView.filter({ user_email: user.email })
+            ]);
+            const completedIds = new Set(views.map(v => v.training_id));
+            const requiredPending = trainings.find(t => t.is_required && t.is_published !== false && !completedIds.has(t.id));
+            if (requiredPending) {
+              setPendingRequiredTraining(requiredPending);
+            }
+          }
           
           // Aktualizuj aktywność użytkownika
           base44.functions.invoke('trackUserActivity').catch(err => 
