@@ -7,6 +7,7 @@ import { ShieldAlert, User, LogOut, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import NotificationPanel from "@/components/notifications/NotificationPanel";
+import RequiredTrainingGate from "@/components/training/RequiredTrainingGate";
 
 const navItems = [
   { name: "Dashboard", label: "Start" },
