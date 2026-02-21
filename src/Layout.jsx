@@ -294,6 +294,12 @@ export default function Layout({ children, currentPageName }) {
                 </button>
               </div>
             </div>
+          ) : pendingRequiredTraining ? (
+            <RequiredTrainingGate
+              training={pendingRequiredTraining}
+              currentUser={currentUser}
+              onCompleted={() => setPendingRequiredTraining(null)}
+            />
           ) : (
             children
           )}
