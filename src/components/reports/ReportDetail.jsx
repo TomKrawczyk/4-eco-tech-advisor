@@ -377,6 +377,8 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
           <div className="text-sm text-gray-900 italic">{report.client_signature}</div>
         </Section>
       )}
+
+      <ReportPhotoGallery reportId={report.id} />
     </motion.div>
   );
 }
