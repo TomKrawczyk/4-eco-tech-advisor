@@ -39,11 +39,13 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const agentIdx = headers.findIndex(h => h.toLowerCase().includes('agent dzwoni'));
   const assignedIdx = headers.findIndex(h => h.toLowerCase().includes('komu') && (h.toLowerCase().includes('przypisane') || h.toLowerCase().includes('przekazane')));
   const commentIdx = headers.findIndex(h => h.toLowerCase().includes('komentarz dws') || (h.toLowerCase().includes('komentarz') && h.toLowerCase().includes('dws')));
+  // Data i godzina spotkania jest zawsze kolumną przed Komentarz DWS
   let calendarIdx = headers.findIndex(h =>
-    h.toLowerCase().includes('data i godzina') ||
-    (h.toLowerCase().includes('data') && h.toLowerCase().includes('godzina') && h.toLowerCase().includes('spotkania'))
+    h.toLowerCase().includes('data i godzina') && h.toLowerCase().includes('spotkania')
   );
-  if (calendarIdx === -1 && commentIdx > 0) calendarIdx = commentIdx - 1;
+  if (calendarIdx === -1 && commentIdx > 0) {
+    calendarIdx = commentIdx - 1;
+  }
 
   // Mapowanie pytań z nagłówków
   const questions = {};
