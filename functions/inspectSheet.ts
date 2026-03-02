@@ -11,8 +11,8 @@ Deno.serve(async (req) => {
     const { sheetTitle } = await req.json().catch(() => ({}));
     const tab = sheetTitle || 'Świętokrzyskie';
 
-    // Pobierz pierwsze 50 wierszy
-    const range = `'${tab}'!A1:Z50`;
+    // Pobierz pierwsze 200 wierszy
+    const range = `'${tab}'!A1:Z200`;
     const res = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -22,13 +22,25 @@ Deno.serve(async (req) => {
     if (rows.length < 2) return Response.json({ headers: [], rows: [] });
 
     const headers = rows[0];
-    // Znajdź index kolumny "zainteresowany"
     const intIdx = headers.findIndex(h => h.toLowerCase().includes('zainteresowany'));
+    const commentIdx = headers.findIndex(h => h.toLowerCase().includes('komentarz dws') || (h.toLowerCase().includes('komentarz') && h.toLowerCase().includes('dws')));
+    const calendarIdx = headers.findIndex(h => h.toLowerCase().includes('rozmowy') && h.toLowerCase().includes('dat'));
 
-    // Zwróć unikalne wartości tej kolumny
-    const uniqueValues = [...new Set(rows.slice(1).map(r => r[intIdx] || '').filter(Boolean))];
+    // Pobierz wszystkie wiersze "Spotkanie" i pokaż wartości kluczowych kolumn
+    const meetings = rows.slice(1)
+      .filter(r => (r[intIdx] || '').toLowerCase().includes('spotkanie') && (r[1] || '').trim())
+      .slice(0, 10)
+      .map(r => ({
+        name: r[1],
+        zainteresowany: r[intIdx],
+        komentarz_dws: r[commentIdx],
+        kolumna_kalendarza: r[calendarIdx],
+        komentarz_idx: commentIdx,
+        calendar_idx: calendarIdx,
+        col_before_comment: commentIdx > 0 ? r[commentIdx - 1] : null,
+      }));
 
-    return Response.json({ headers, intIdx, uniqueValues, sampleRows: rows.slice(1, 6) });
+    return Response.json({ headers, intIdx, commentIdx, calendarIdx, meetings });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
