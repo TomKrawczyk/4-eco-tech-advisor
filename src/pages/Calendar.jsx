@@ -7,8 +7,8 @@ import PageHeader from "@/components/shared/PageHeader";
 import { ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, isSameDay, parseISO } from "date-fns";
 import { pl } from "date-fns/locale";
-import CalendarEventModal from "@/components/calendar/CalendarEventModal";
-import CalendarDayModal from "@/components/calendar/CalendarDayModal";
+import CalendarEventModal from "@/components/calendar/CalendarEventModal.jsx";
+import CalendarDayModal from "@/components/calendar/CalendarDayModal.jsx";
 
 export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
