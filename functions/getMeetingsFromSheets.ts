@@ -39,10 +39,13 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const agentIdx = headers.findIndex(h => h.toLowerCase().includes('agent dzwoni'));
   const assignedIdx = headers.findIndex(h => h.toLowerCase().includes('komu') && (h.toLowerCase().includes('przypisane') || h.toLowerCase().includes('przekazane')));
   
-  // Kolumna kalendarza - "Kolumna do rozmowy i zaznaczania dat" (zawiera datę/godzinę spotkania)
-  // Znajduje się tuż przed "Komentarz DWS" - szukamy po nazwie lub pozycji względem "Komentarz DWS"
+  // Kolumna kalendarza - "Data i godzina spotkania" lub "Kolumna do rozmowy i zaznaczania dat"
+  // Znajduje się zawsze tuż przed "Komentarz DWS"
   const commentIdx = headers.findIndex(h => h.toLowerCase().includes('komentarz dws') || (h.toLowerCase().includes('komentarz') && h.toLowerCase().includes('dws')));
-  let calendarIdx = headers.findIndex(h => h.toLowerCase().includes('rozmowy') && h.toLowerCase().includes('dat'));
+  let calendarIdx = headers.findIndex(h =>
+    (h.toLowerCase().includes('data') && h.toLowerCase().includes('godzina')) ||
+    (h.toLowerCase().includes('rozmowy') && h.toLowerCase().includes('dat'))
+  );
   // Fallback: kolumna bezpośrednio przed "Komentarz DWS"
   if (calendarIdx === -1 && commentIdx > 0) calendarIdx = commentIdx - 1;
 
