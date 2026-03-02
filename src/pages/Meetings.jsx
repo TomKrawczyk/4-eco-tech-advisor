@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, RefreshCw, Search, User, MapPin, Phone, Clock, AlertCircle, Table2 } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { motion } from "framer-motion";
+import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 
 export default function Meetings() {
   const [currentUser, setCurrentUser] = useState(null);
