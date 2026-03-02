@@ -24,10 +24,12 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   if (rows.length < 2) return { meetings: [], phoneContacts: [] };
 
   const headers = rows[0];
+  console.log(`[${sheetTitle}] NAGŁÓWKI (${headers.length}):`, headers.map((h, i) => `[${i}] "${h}"`).join(' | '));
 
   const intIdx = headers.findIndex(h =>
     h.toLowerCase().includes('zainteresowany') && h.toLowerCase().includes('doradc')
   );
+  console.log(`[${sheetTitle}] intIdx (zainteresowany doradcy): ${intIdx}`);
   if (intIdx === -1) return { meetings: [], phoneContacts: [] };
 
   const nameIdx = headers.findIndex(h => h.toLowerCase().includes('imi') && h.toLowerCase().includes('nazwisko'));
