@@ -251,6 +251,7 @@ export default function Layout({ children, currentPageName }) {
               
               {navItems.map((item) => {
                 if (item.adminOnly && currentUser?.role !== "admin") return null;
+                if (item.roles && !item.roles.includes(currentUser?.role)) return null;
                 const isActive = currentPageName === item.name;
                 return (
                   <Link
