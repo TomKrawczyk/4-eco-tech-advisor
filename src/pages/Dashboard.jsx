@@ -129,23 +129,24 @@ export default function Dashboard() {
       />
 
       {isAdmin && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Aktywni użytkownicy
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900">{allowedUsers.length}</div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {allowedUsers.filter(u => u.role === "admin").length} administratorów
-                </p>
+            <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-semibold text-gray-500 mb-2">Aktywni użytkownicy</p>
+                    <div className="text-3xl font-bold text-gray-900">{allowedUsers.length}</div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {allowedUsers.filter(u => u.role === "admin").length} administratorów
+                    </p>
+                  </div>
+                  <Users className="w-10 h-10 text-green-500 opacity-20" />
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -155,17 +156,18 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Raporty wizyt
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900">{visitReports.length}</div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {visitReports.filter(r => r.status === "completed").length} ukończonych
-                </p>
+            <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-semibold text-gray-500 mb-2">Raporty wizyt</p>
+                    <div className="text-3xl font-bold text-gray-900">{visitReports.length}</div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {visitReports.filter(r => r.status === "completed").length} ukończonych
+                    </p>
+                  </div>
+                  <FileText className="w-10 h-10 text-blue-500 opacity-20" />
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -175,22 +177,23 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Aktywność
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900">
-                  {visitReports.filter(r => {
-                    const date = new Date(r.created_date);
-                    const now = new Date();
-                    const diffDays = (now - date) / (1000 * 60 * 60 * 24);
-                    return diffDays <= 7;
-                  }).length}
+            <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-semibold text-gray-500 mb-2">Aktywność</p>
+                    <div className="text-3xl font-bold text-gray-900">
+                      {visitReports.filter(r => {
+                        const date = new Date(r.created_date);
+                        const now = new Date();
+                        const diffDays = (now - date) / (1000 * 60 * 60 * 24);
+                        return diffDays <= 7;
+                      }).length}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Raportów w tym tygodniu</p>
+                  </div>
+                  <BarChart3 className="w-10 h-10 text-purple-500 opacity-20" />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Raportów w tym tygodniu</p>
               </CardContent>
             </Card>
           </motion.div>
