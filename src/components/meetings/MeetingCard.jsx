@@ -129,10 +129,11 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
             </div>
           )}
 
-          {(meeting.agent || meeting.comments || meeting.interview_data) && (
+          {(meeting.agent || meeting.comments || meeting.interview_data || meeting.phone) && (
             <button
               onClick={() => {
                 setSelectedDetails({
+                  phone: meeting.phone,
                   agent: meeting.agent,
                   comments: meeting.comments,
                   interview_data: meeting.interview_data || {}
