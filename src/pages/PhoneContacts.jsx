@@ -97,7 +97,8 @@ export default function PhoneContacts() {
     return contacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      return matchSearch && matchSheet;
+      const matchStatus = c.status === "Kontakt do doradcy";
+      return matchSearch && matchSheet && matchStatus;
     });
   }, [contacts, search, sheetFilter]);
 
