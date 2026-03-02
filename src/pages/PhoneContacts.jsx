@@ -79,7 +79,14 @@ export default function PhoneContacts() {
   const { data: contacts = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ["phoneContacts"],
     queryFn: () => base44.functions.invoke('getMeetingsFromSheets'),
-    select: (response) => response.data?.phoneContacts || [],
+    select: (response) => {
+      const all = response.data?.phoneContacts || [];
+      // Filtruj tylko kontakty – wyłącz archusze z tytułem zawierającym "Spotkania" lub "Ai Bober"
+      return all.filter(c => 
+        !c.sheet?.toLowerCase().includes('spotkania') && 
+        !c.sheet?.toLowerCase().includes('ai bober')
+      );
+    },
     enabled: accessChecked && isLeaderOrAdmin,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
