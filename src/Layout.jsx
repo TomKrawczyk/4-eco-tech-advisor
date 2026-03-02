@@ -8,6 +8,53 @@ import { Button } from "@/components/ui/button";
 import NotificationPanel from "@/components/notifications/NotificationPanel";
 import RequiredTrainingGate from "@/components/training/RequiredTrainingGate";
 
+// Dropdown dla desktop
+function DesktopDropdown({ label, items, isGroupActive, currentPageName }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+          isGroupActive
+            ? "bg-green-50 text-green-700 border border-green-200"
+            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+        }`}
+      >
+        {label}
+        <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px] py-1">
+          {items.map(item => {
+            const isActive = currentPageName === item.name;
+            return (
+              <Link
+                key={item.name}
+                to={createPageUrl(item.name)}
+                onClick={() => setOpen(false)}
+                className={`block px-4 py-2 text-xs font-medium transition-colors ${
+                  isActive ? "bg-green-50 text-green-700" : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Struktura nawigacji: pojedyncze linki lub grupy z dropdown
 const navStructure = [
   { name: "Dashboard", label: "Start" },
