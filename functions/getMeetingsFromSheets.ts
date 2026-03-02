@@ -37,6 +37,7 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const assignedIdx = headers.findIndex(h => h.toLowerCase().includes('komu') && (h.toLowerCase().includes('przypisane') || h.toLowerCase().includes('przekazane')));
   const commentIdx = headers.findIndex(h => h.toLowerCase().includes('komentarz') && h.toLowerCase().includes('dws'));
 
+  console.log(`[${sheetTitle}] Headers with index:`, headers.map((h, i) => `[${i}] "${h}"`).slice(0, 20).join(' | '));
   console.log(`[${sheetTitle}] intIdx (zainteresowany doradcy): ${intIdx}`);
   console.log(`[${sheetTitle}] commentIdx (komentarz dws): ${commentIdx}`);
   if (intIdx === -1) return { meetings: [], phoneContacts: [] };
