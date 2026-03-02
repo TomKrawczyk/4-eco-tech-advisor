@@ -183,7 +183,7 @@ export default function Layout({ children, currentPageName }) {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-0.5 overflow-x-auto max-w-[calc(100vw-280px)] scrollbar-none flex-1 mx-3">
+          <nav className="hidden md:flex items-center gap-0.5 overflow-visible max-w-[calc(100vw-280px)] scrollbar-none flex-1 mx-3">
             {visibleNavItems.map((entry) => {
               if (entry.group) {
                 const isGroupActive = entry.items.some(i => i.name === currentPageName);
