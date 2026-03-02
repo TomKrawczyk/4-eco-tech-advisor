@@ -44,41 +44,38 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   if (calendarIdx === -1 && commentIdx > 0) calendarIdx = commentIdx - 1;
 
   // Mapowanie pytań z nagłówków
-  const questions = {
-    'Jak rachunki': headers.findIndex(h => h.toLowerCase().includes('jak rachunki')),
-    'Ile płaci za prąd': headers.findIndex(h => h.toLowerCase().includes('ile płaci za prąd')),
-    'Czy ma foto': headers.findIndex(h => h.toLowerCase().includes('czy ma foto')),
-    'Jakie zasady': headers.findIndex(h => h.toLowerCase().includes('jakie zasady')),
-    'Ile ma kWp': headers.findIndex(h => h.toLowerCase().includes('ile ma kwp')),
-    'Czy ma falownik': headers.findIndex(h => h.toLowerCase().includes('czy ma falownik')),
-    'Czy ma Magazyn': headers.findIndex(h => h.toLowerCase().includes('czy ma magazyn')),
-    'Pojemność magazynu': headers.findIndex(h => h.toLowerCase().includes('pojemność magazynu') || h.toLowerCase().includes('ile kwh')),
-    'Inne urządzenia': headers.findIndex(h => h.toLowerCase().includes('jakieś inne urządzenia')),
-    'Czym ogrzewa': headers.findIndex(h => h.toLowerCase().includes('czym ogrzewa')),
-    'Ile opłatu na rok': headers.findIndex(h => h.toLowerCase().includes('ile opłatu') && h.toLowerCase().includes('na rok')),
-  };
+  const questions = {};
+  const questionMappings = [
+    ['Jak rachunki za prąd', h => h.toLowerCase().includes('jak rachunki')],
+    ['Ile płaci za prąd', h => h.toLowerCase().includes('ile płaci za prąd')],
+    ['Czy ma foto', h => h.toLowerCase().includes('czy ma foto')],
+    ['Jakie zasady', h => h.toLowerCase().includes('jakie zasady')],
+    ['Ile ma kWp instalacji', h => h.toLowerCase().includes('ile ma kwp')],
+    ['Czy ma falownik hybrydowy', h => h.toLowerCase().includes('czy ma falownik')],
+    ['Czy ma Magazyn Energii', h => h.toLowerCase().includes('czy ma magazyn')],
+    ['Pojemność magazynu', h => h.toLowerCase().includes('pojemność magazynu') || h.toLowerCase().includes('ile kwh')],
+    ['Inne urządzenia', h => h.toLowerCase().includes('jakieś inne urządzenia') || h.toLowerCase().includes('inne urządzenia')],
+    ['Czym ogrzewa dom', h => h.toLowerCase().includes('czym ogrzewa')],
+    ['Ile opłatu na rok', h => h.toLowerCase().includes('ile opłatu') && h.toLowerCase().includes('rok')],
+    ['Wielkość instalacji', h => h.toLowerCase().includes('wielkość instalacji')],
+    ['Wielkość instalacji w umowie', h => h.toLowerCase().includes('wielkość') && h.toLowerCase().includes('umowie')],
+  ];
+  
+  questionMappings.forEach(([label, matcher]) => {
+    const idx = headers.findIndex(matcher);
+    if (idx >= 0) {
+      questions[label] = idx;
+    }
+  });
 
   const buildInterviewData = (row) => {
     const data = {};
-    const questionLabels = {
-      'Jak rachunki': 'Jak rachunki za prąd/ energię elektryczną?',
-      'Ile płaci za prąd': 'Ile płaci za prąd?',
-      'Czy ma foto': 'Czy ma foto?',
-      'Jakie zasady': 'Jakie zasady?',
-      'Ile ma kWp': 'Ile ma kWp instalacji?',
-      'Czy ma falownik': 'Czy ma falownik hybrydowy?',
-      'Czy ma Magazyn': 'Czy ma Magazyn Energii?',
-      'Pojemność magazynu': 'Pojemność magazynu / Ile kWh?',
-      'Inne urządzenia': 'Jakieś inne urządzenia pobierające prąd?',
-      'Czym ogrzewa': 'Czym ogrzewa dom?',
-      'Ile opłatu na rok': 'Ile opłatu zużywa na rok?',
-    };
 
     for (const [key, idx] of Object.entries(questions)) {
       if (idx >= 0) {
         const answer = (row[idx] || '').trim();
         if (answer) {
-          data[questionLabels[key]] = answer;
+          data[key] = answer;
         }
       }
     }
