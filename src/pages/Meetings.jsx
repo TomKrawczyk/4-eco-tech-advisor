@@ -163,7 +163,7 @@ export default function Meetings() {
       }));
   }, [allMeetings]);
 
-  // Filtr wyszukiwania + grupy
+  // Filtr wyszukiwania + grupy + arkusz
   const filtered = useMemo(() => {
     return meetingsWithDate.filter(m => {
       const matchSearch = !search || Object.values(m).some(v =>
@@ -174,9 +174,10 @@ export default function Meetings() {
         const mapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
         matchGroup = mapping?.group_id === groupFilter;
       }
-      return matchSearch && matchGroup;
+      const matchSheet = sheetFilter === "all" || m.sheet === sheetFilter;
+      return matchSearch && matchGroup && matchSheet;
     });
-  }, [meetingsWithDate, search, groupFilter, sheetMappings]);
+  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings]);
 
   // Grupuj po zakładce, potem po dacie
   const sheetGroups = useMemo(() => {
