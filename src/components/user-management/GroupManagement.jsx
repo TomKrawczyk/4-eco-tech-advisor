@@ -130,14 +130,27 @@ export default function GroupManagement({ allowedUsers }) {
               />
             </div>
             <div>
-              <Label>Group Leader</Label>
-              <Select value={groupLeaderId} onValueChange={setGroupLeaderId}>
+              <Label>Group Leaderzy</Label>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {groupLeaderIds.map(id => {
+                  const l = groupLeaders.find(x => x.id === id);
+                  if (!l) return null;
+                  return (
+                    <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                      {l.data?.name || l.name}
+                      <button onClick={() => setGroupLeaderIds(prev => prev.filter(x => x !== id))} className="ml-1 hover:text-red-500">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+              <Select onValueChange={val => { if (!groupLeaderIds.includes(val)) setGroupLeaderIds(prev => [...prev, val]); }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Wybierz group leadera..." />
+                  <SelectValue placeholder="Dodaj group leadera..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>Brak przypisania</SelectItem>
-                  {groupLeaders.map(leader => (
+                  {groupLeaders.filter(l => !groupLeaderIds.includes(l.id)).map(leader => (
                     <SelectItem key={leader.id} value={leader.id}>
                       {leader.data?.name || leader.name}
                       <span className="ml-1 text-gray-400 text-xs">({leader.data?.email || leader.email})</span>
