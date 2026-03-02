@@ -146,11 +146,43 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
             />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Anuluj</Button>
-          <Button onClick={handleSave}>Zapisz zmiany</Button>
+        <DialogFooter className="flex items-center justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowResetPassword(true)}
+            className="text-orange-600 border-orange-200 hover:bg-orange-50"
+          >
+            <Key className="w-4 h-4 mr-2" />
+            Resetuj hasło
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>Anuluj</Button>
+            <Button onClick={handleSave}>Zapisz zmiany</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={showResetPassword} onOpenChange={setShowResetPassword}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Resetowanie hasła</AlertDialogTitle>
+            <AlertDialogDescription>
+              Email ze wskazówkami resetowania hasła będzie wysłany na adres <strong>{user?.email || user?.data?.email}</strong>. Użytkownik będzie mógł zmienić hasło poprzez stronę logowania.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleResetPassword}
+              disabled={resettingPassword}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {resettingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Wyślij email
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
