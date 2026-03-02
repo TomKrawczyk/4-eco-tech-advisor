@@ -101,13 +101,13 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
       if (intVal.toLowerCase() === 'spotkanie') meetingsWithData++;
       else contactsWithData++;
     }
+    
     const base = {
       client_name: name,
       phone: phoneIdx >= 0 ? (row[phoneIdx] || '') : '',
       address: addressIdx >= 0 ? (row[addressIdx] || '') : '',
       date: dateIdx >= 0 ? (row[dateIdx] || '') : '',
       agent: agentIdx >= 0 ? (row[agentIdx] || '') : (assignedIdx >= 0 ? (row[assignedIdx] || '') : ''),
-      assigned: assignedIdx >= 0 ? (row[assignedIdx] || '') : '',
       sheet: sheetTitle,
       status: intVal,
       interview_data: interviewData,
@@ -123,6 +123,15 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
       phoneContacts.push({
         ...base,
         contact_calendar: calendarIdx >= 0 ? (row[calendarIdx] || '') : '',
+        contact_key: `${sheetTitle}__${name}__${dateIdx >= 0 ? row[dateIdx] : ''}`,
+        contact_date: dateIdx >= 0 && row[dateIdx] ? (() => {
+          const match = String(row[dateIdx]).match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+          if (match) {
+            const [, d, m, y] = match;
+            return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          }
+          return '';
+        })() : '',
       });
     }
   }
