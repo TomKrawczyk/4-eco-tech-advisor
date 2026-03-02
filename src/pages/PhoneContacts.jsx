@@ -81,9 +81,10 @@ export default function PhoneContacts() {
     queryFn: () => base44.functions.invoke('getMeetingsFromSheets'),
     select: (response) => {
       const all = response.data?.phoneContacts || [];
-      // Filtruj tylko kontakty – wyłącz archusze z tytułem zawierającym "Spotkania" lub "Ai Bober"
+      // Filtruj tylko kontakty – wyłącz archusze zawierające "spotkania", "kontakt" lub "ai bober"
       return all.filter(c => 
         !c.sheet?.toLowerCase().includes('spotkania') && 
+        !c.sheet?.toLowerCase().includes('kontakt') && 
         !c.sheet?.toLowerCase().includes('ai bober')
       );
     },
