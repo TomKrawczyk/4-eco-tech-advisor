@@ -17,6 +17,13 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
     return assignmentsForDate.filter(a => a.assigned_user_email === userEmail && a.meeting_date === date).length;
   };
 
+  // Sprawdź czy raport po spotkaniu istnieje
+  const existingReport = meetingReports.find(r => {
+    const nameMatch = (r.client_name || '').toLowerCase().trim() === (meeting.client_name || '').toLowerCase().trim();
+    const authorMatch = !assignment || r.author_email === assignment.assigned_user_email || r.created_by === assignment.assigned_user_email;
+    return nameMatch && authorMatch;
+  });
+
   const assignMutation = useMutation({
     mutationFn: async ({ userEmail, userName }) => {
       const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
