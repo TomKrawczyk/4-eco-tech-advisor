@@ -94,7 +94,7 @@ export default function GroupManagement({ allowedUsers }) {
       data: {
         name: editFormData.name,
         description: editFormData.description || undefined,
-        group_leader_id: editFormData.group_leader_id || undefined
+        group_leader_ids: editFormData.group_leader_ids.length > 0 ? editFormData.group_leader_ids : undefined
       }
     });
   };
