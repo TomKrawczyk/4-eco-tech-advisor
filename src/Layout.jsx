@@ -215,7 +215,7 @@ export default function Layout({ children, currentPageName }) {
           </nav>
 
           {/* Right side: notifications + user + hamburger */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1 shrink-0 ml-2">
             {currentUser && (
               <>
                 <NotificationPanel currentUser={currentUser} />
