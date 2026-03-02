@@ -167,10 +167,17 @@ export default function Meetings() {
                     </Badge>
                   </div>
 
+                  {meeting.meeting_calendar && (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-green-700 bg-green-50 rounded-md px-2 py-1 w-fit">
+                      <Calendar className="w-3.5 h-3.5 shrink-0" />
+                      Data spotkania: {meeting.meeting_calendar}
+                    </div>
+                  )}
+
                   {meeting.date && (
                     <div className="flex items-center gap-2 text-xs text-gray-600">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      {meeting.date}
+                      <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                      Kontakt: {meeting.date}
                     </div>
                   )}
 
