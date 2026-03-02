@@ -1,13 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, User, MapPin, Phone, Clock, UserCheck, AlertTriangle } from "lucide-react";
+import { Calendar, User, MapPin, Phone, Clock, UserCheck, ChevronRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import MeetingDetailModal from "./MeetingDetailModal";
 
-export default function MeetingCard({ meeting, assignment, salespeople, assignmentsForDate, currentUserRole }) {
+export default function MeetingCard({ meeting, assignment, salespeople, assignmentsForDate, currentUserRole, meetingReports = [] }) {
+  const [showDetail, setShowDetail] = useState(false);
   const queryClient = useQueryClient();
 
   // Policz ile przypisań ma dany handlowiec w tym dniu
