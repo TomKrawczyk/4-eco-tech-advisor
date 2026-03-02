@@ -125,21 +125,33 @@ export default function Layout({ children, currentPageName }) {
             />
           </Link>
 
-          {/* Desktop Nav — scrollable if many items */}
+          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-0.5 overflow-x-auto max-w-[calc(100vw-280px)] scrollbar-none flex-1 mx-3">
-            {visibleNavItems.map((item) => {
-              const isActive = currentPageName === item.name;
+            {visibleNavItems.map((entry) => {
+              if (entry.group) {
+                const isGroupActive = entry.items.some(i => i.name === currentPageName);
+                return (
+                  <DesktopDropdown
+                    key={entry.group}
+                    label={entry.group}
+                    items={entry.items}
+                    isGroupActive={isGroupActive}
+                    currentPageName={currentPageName}
+                  />
+                );
+              }
+              const isActive = currentPageName === entry.name;
               return (
                 <Link
-                  key={item.name}
-                  to={createPageUrl(item.name)}
+                  key={entry.name}
+                  to={createPageUrl(entry.name)}
                   className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 ${
                     isActive
                       ? "bg-green-50 text-green-700 border border-green-200"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   }`}
                 >
-                  {item.label}
+                  {entry.label}
                 </Link>
               );
             })}
