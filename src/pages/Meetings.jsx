@@ -100,15 +100,41 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
-  // Handlowcy do przypisania: wszyscy z role=user lub team_leader
+  // Ustal groupId bieżącego użytkownika (dla group_leader i team_leader)
+  const currentUserGroupId = useMemo(() => {
+    if (!currentUser) return null;
+    const role = currentUser.role;
+    if (role === "admin") return null; // admin widzi wszystko
+    if (role === "group_leader") {
+      // Sprawdź czy jest group_leader_ids w którejś grupie
+      const myGroup = groups.find(g => {
+        const ids = g.data?.group_leader_ids || g.group_leader_ids || [];
+        const legacyId = g.data?.group_leader_id || g.group_leader_id;
+        // Porównaj po email lub id
+        const ua = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+        return ids.includes(ua?.id) || legacyId === ua?.id || ids.includes(currentUser.email);
+      });
+      return myGroup?.id || currentUser.groupId || null;
+    }
+    if (role === "team_leader") {
+      return currentUser.groupId || null;
+    }
+    return null;
+  }, [currentUser, groups, allAllowedUsers]);
+
+  // Handlowcy do przypisania: filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        return role === "user" || role === "team_leader";
+        if (role !== "user" && role !== "team_leader") return false;
+        if (currentUser?.role === "admin") return true;
+        // Dla group_leader i team_leader: tylko użytkownicy z tej samej grupy
+        const uGroupId = u.data?.group_id || u.group_id;
+        return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
-  }, [allAllowedUsers]);
+  }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
   // Okno dat: dziś + 3 dni
   const today = startOfDay(new Date());
