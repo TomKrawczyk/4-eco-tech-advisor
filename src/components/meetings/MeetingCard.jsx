@@ -72,6 +72,13 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
   const canAssign = currentUserRole === "admin" || currentUserRole === "group_leader" || currentUserRole === "team_leader";
 
   return (
+    <>
+    <MeetingDetailModal
+      meeting={showDetail ? meeting : null}
+      assignment={assignment}
+      existingReport={existingReport}
+      onClose={() => setShowDetail(false)}
+    />
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="space-y-1.5 flex-1 min-w-0">
