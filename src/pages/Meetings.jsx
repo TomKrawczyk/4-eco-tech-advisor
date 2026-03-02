@@ -28,6 +28,18 @@ export default function Meetings() {
     fetchUser();
   }, []);
 
+  const { data: groups = [] } = useQuery({
+    queryKey: ["groups"],
+    queryFn: () => base44.entities.Group.list(),
+    enabled: accessChecked && currentUser?.role === "admin",
+  });
+
+  const { data: sheetMappings = [] } = useQuery({
+    queryKey: ["sheetMappings"],
+    queryFn: () => base44.entities.SheetGroupMapping.list(),
+    enabled: accessChecked && currentUser?.role === "admin",
+  });
+
   const { data: result, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["sheetMeetings"],
     queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data),
