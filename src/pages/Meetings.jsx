@@ -414,13 +414,13 @@ export default function Meetings() {
                                     {(assignment?.comments || assignment?.agent || meeting.agent || meeting.interview_data) && (
                                       <button
                                         onClick={() => {
-                                          setSelectedDetails({
-                                            agent: assignment?.agent || meeting.agent,
-                                            comments: assignment?.comments || meeting.notes,
-                                            interview_data: meeting.interview_data
-                                          });
-                                          setDetailsModalOpen(true);
-                                        }}
+                                           setSelectedDetails({
+                                             agent: meeting.agent || assignment?.agent,
+                                             comments: assignment?.comments || meeting.comments,
+                                             interview_data: meeting.interview_data || {}
+                                           });
+                                           setDetailsModalOpen(true);
+                                         }}
                                         className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors shrink-0 mt-0.5"
                                         title="Pokaż szczegóły"
                                       >

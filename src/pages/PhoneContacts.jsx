@@ -268,9 +268,13 @@ export default function PhoneContacts() {
                                       {(contact.comments || contact.agent || contact.interview_data) && (
                                         <button
                                           onClick={() => {
-                                            setSelectedDetails(contact);
-                                            setDetailsModalOpen(true);
-                                          }}
+                                               setSelectedDetails({
+                                                 agent: contact.agent,
+                                                 comments: contact.comments,
+                                                 interview_data: contact.interview_data || {}
+                                               });
+                                               setDetailsModalOpen(true);
+                                             }}
                                           className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors"
                                           title="Pokaż szczegóły"
                                         >
