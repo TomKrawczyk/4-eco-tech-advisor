@@ -128,6 +128,22 @@ export default function Meetings() {
           </Select>
         )}
 
+        {groups.length > 0 && (
+          <Select value={groupFilter} onValueChange={setGroupFilter}>
+            <SelectTrigger className="w-48 h-11">
+              <SelectValue placeholder="Wszystkie grupy" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie grupy</SelectItem>
+              {groups.map(g => (
+                <SelectItem key={g.id} value={g.id}>
+                  {g.data?.name || g.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         <div className="flex flex-col items-end gap-1 shrink-0">
           <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
             <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
