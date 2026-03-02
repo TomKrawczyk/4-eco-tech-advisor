@@ -391,6 +391,7 @@ export default function Meetings() {
                                     salespeople={salespeople}
                                     assignmentsForDate={meetingAssignments.filter(a => a.meeting_date === meeting.meeting_date)}
                                     currentUserRole={currentUser?.role}
+                                    meetingReports={meetingReports}
                                   />
                                 );
                               })}
