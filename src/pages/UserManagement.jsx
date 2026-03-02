@@ -66,17 +66,19 @@ export default function UserManagement() {
   const addUserMutation = useMutation({
     mutationFn: async (data) => {
       console.log("Dodawanie użytkownika:", data);
-      
+
       // Najpierw dodajemy do AllowedUser
       const allowedUser = await base44.entities.AllowedUser.create(data);
-      
+
       // Jeśli użytkownik jest przypisany do kogoś, aktualizuj managed_users
       if (data.assigned_to) {
         const leader = allowedUsers.find(u => u.id === data.assigned_to);
-        const managedUsers = leader.managed_users || [];
-        await base44.entities.AllowedUser.update(data.assigned_to, {
-          managed_users: [...managedUsers, allowedUser.id]
-        });
+        if (leader) {
+          const managedUsers = (leader.data?.managed_users || leader.managed_users) || [];
+          await base44.entities.AllowedUser.update(data.assigned_to, {
+            managed_users: [...managedUsers, allowedUser.id]
+          });
+        }
       }
       
       // Następnie zapraszamy przez Base44
@@ -466,7 +468,7 @@ export default function UserManagement() {
                 <SelectContent>
                   <SelectItem value={null}>Brak przypisania</SelectItem>
                   {availableLeaders.map(leader => (
-                    <SelectItem key={leader.id} value={leader.id}>
+                    <SelectItem key={leader.id} value={leader.id || ""}>
                       {leader.data?.name || leader.name} ({leader.data?.role || leader.role})
                     </SelectItem>
                   ))}

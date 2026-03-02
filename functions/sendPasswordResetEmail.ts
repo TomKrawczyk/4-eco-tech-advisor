@@ -5,7 +5,15 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user || user.role !== 'admin') {
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin through AllowedUser
+    const allowedUsers = await base44.asServiceRole.entities.AllowedUser.list();
+    const allowedUser = allowedUsers.find(u => (u.data?.email || u.email) === user.email);
+    
+    if (!allowedUser || (allowedUser.data?.role || allowedUser.role) !== 'admin') {
       return Response.json({ error: 'Tylko adminowie mogą resetować hasła' }, { status: 403 });
     }
 
