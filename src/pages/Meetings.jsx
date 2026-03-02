@@ -89,6 +89,12 @@ export default function Meetings() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
+  const { data: meetingReports = [] } = useQuery({
+    queryKey: ["meetingReportsForMeetings"],
+    queryFn: () => base44.entities.MeetingReport.list("-created_date", 200),
+    enabled: accessChecked && isLeaderOrAdmin,
+  });
+
   const { data: result, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["sheetMeetings"],
     queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data),
