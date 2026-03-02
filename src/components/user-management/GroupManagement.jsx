@@ -15,9 +15,9 @@ import { Badge } from "@/components/ui/badge";
 export default function GroupManagement({ allowedUsers }) {
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
-  const [groupLeaderId, setGroupLeaderId] = useState("");
+  const [groupLeaderIds, setGroupLeaderIds] = useState([]);
   const [editingGroup, setEditingGroup] = useState(null);
-  const [editFormData, setEditFormData] = useState({ name: "", description: "", group_leader_id: "" });
+  const [editFormData, setEditFormData] = useState({ name: "", description: "", group_leader_ids: [] });
   const [expandedGroups, setExpandedGroups] = useState([]);
   const queryClient = useQueryClient();
 
