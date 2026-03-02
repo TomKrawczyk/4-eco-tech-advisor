@@ -82,6 +82,11 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
       existingReport={existingReport}
       onClose={() => setShowDetail(false)}
     />
+    <DetailsModal
+      open={detailsModalOpen}
+      onOpenChange={setDetailsModalOpen}
+      data={selectedDetails}
+    />
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
       <div className="flex items-start gap-3 flex-wrap">
         <div className="space-y-1.5 flex-1 min-w-0">
