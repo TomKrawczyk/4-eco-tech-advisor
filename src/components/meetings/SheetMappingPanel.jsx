@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Settings2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function SheetMappingPanel({ sheetTabs, groups }) {
+export default function SheetMappingPanel({ sheetTabs, groups, onClose }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
