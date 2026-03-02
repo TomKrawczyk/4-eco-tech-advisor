@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Users, FileText, Calculator, TrendingUp, 
   CheckSquare, MessageSquare, BookOpen, Settings,
-  Activity
+  Activity, ArrowRight, BarChart3, Zap
 } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { motion } from "framer-motion";
