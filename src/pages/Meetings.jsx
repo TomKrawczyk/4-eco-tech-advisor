@@ -97,6 +97,9 @@ export default function Meetings() {
         subtitle={`Leady oznaczone jako "Spotkanie" z arkusza Google Sheets`}
       />
 
+      {/* Panel przypisań arkuszy */}
+      <SheetMappingPanel sheetTabs={sheetTabs} groups={groups} />
+
       {/* Pasek narzędzi */}
       <div className="flex flex-wrap gap-2 items-start">
         <div className="relative flex-1 min-w-[180px]">
