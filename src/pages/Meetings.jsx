@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, AlertCircle, Table2, ChevronDown, ChevronUp, Settings2 } from "lucide-react";
+import { RefreshCw, Search, AlertCircle, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
+import DetailsModal from "@/components/shared/DetailsModal";
 import { motion, AnimatePresence } from "framer-motion";
 import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 import MeetingCard from "@/components/meetings/MeetingCard";
@@ -47,6 +48,8 @@ export default function Meetings() {
   const [expandedSheets, setExpandedSheets] = useState({});
   const [showMappingPanel, setShowMappingPanel] = useState(false);
   const [sheetFilter, setSheetFilter] = useState("all");
+  const [selectedDetails, setSelectedDetails] = useState(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -407,15 +410,33 @@ export default function Meetings() {
                                 const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
                                 const assignment = meetingAssignments.find(a => a.meeting_key === key);
                                 return (
-                                  <MeetingCard
-                                    key={i}
-                                    meeting={meeting}
-                                    assignment={assignment}
-                                    salespeople={salespeople}
-                                    assignmentsForDate={meetingAssignments.filter(a => a.meeting_date === meeting.meeting_date)}
-                                    currentUserRole={currentUser?.role}
-                                    meetingReports={meetingReports}
-                                  />
+                                  <div key={i} className="flex gap-2 items-start">
+                                    {(assignment?.comments || assignment?.agent || meeting.agent) && (
+                                      <button
+                                        onClick={() => {
+                                          setSelectedDetails({
+                                            agent: assignment?.agent || meeting.agent,
+                                            comments: assignment?.comments || meeting.notes
+                                          });
+                                          setDetailsModalOpen(true);
+                                        }}
+                                        className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors shrink-0 mt-0.5"
+                                        title="Pokaż szczegóły"
+                                      >
+                                        <MessageSquare className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                    <div className="flex-1">
+                                      <MeetingCard
+                                        meeting={meeting}
+                                        assignment={assignment}
+                                        salespeople={salespeople}
+                                        assignmentsForDate={meetingAssignments.filter(a => a.meeting_date === meeting.meeting_date)}
+                                        currentUserRole={currentUser?.role}
+                                        meetingReports={meetingReports}
+                                      />
+                                    </div>
+                                  </div>
                                 );
                               })}
                             </div>
@@ -430,6 +451,12 @@ export default function Meetings() {
           })}
         </div>
       )}
+
+      <DetailsModal
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        data={selectedDetails}
+      />
     </div>
   );
 }
