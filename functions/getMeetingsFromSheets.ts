@@ -161,45 +161,8 @@ Deno.serve(async (req) => {
     const results = await Promise.all(allTabs.map(tab => fetchLeadsFromSheet(accessToken, tab)));
 
     const meetings = results.flatMap(r => r.meetings);
-    const phoneContacts = results.flatMap(r => r.phoneContacts);
 
-    // Zapisz/aktualizuj kontakty z danymi z Sheets
-    if (phoneContacts.length > 0) {
-      for (const contact of phoneContacts) {
-        const existingContact = await base44.asServiceRole.entities.PhoneContact.filter({
-          contact_key: contact.contact_key
-        });
-        
-        if (existingContact.length > 0) {
-          // Update existing
-          await base44.asServiceRole.entities.PhoneContact.update(existingContact[0].id, {
-            interview_data: contact.interview_data,
-            contact_calendar: contact.contact_calendar,
-            agent: contact.agent,
-            status: contact.status,
-            comments: contact.comments,
-          });
-        } else {
-          // Create new
-          await base44.asServiceRole.entities.PhoneContact.create({
-            contact_key: contact.contact_key,
-            sheet: contact.sheet,
-            client_name: contact.client_name,
-            phone: contact.phone,
-            address: contact.address,
-            date: contact.date,
-            agent: contact.agent,
-            contact_calendar: contact.contact_calendar,
-            status: contact.status,
-            interview_data: contact.interview_data,
-            comments: contact.comments,
-            contact_date: contact.contact_date,
-          });
-        }
-      }
-    }
-
-    // Pobierz aktualne kontakty z bazy
+    // Pobierz tylko kontakty z bazy - bez zapisywania
     const dbPhoneContacts = await base44.asServiceRole.entities.PhoneContact.list('-created_date', 1000);
 
     return Response.json({
