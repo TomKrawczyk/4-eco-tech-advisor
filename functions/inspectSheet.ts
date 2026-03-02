@@ -3,7 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    await base44.auth.me();
 
     const spreadsheetId = '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
     const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
@@ -28,21 +28,29 @@ Deno.serve(async (req) => {
       colCount: s.properties.gridProperties?.columnCount
     }));
 
-    // Pobierz pierwsze 3 wiersze z każdej zakładki (nagłówki + przykładowe dane)
-    const previews = {};
-    for (const sheet of sheets.slice(0, 20)) { // max 20 zakładek
-      const range = `'${sheet.title}'!A1:Z3`;
-      const dataRes = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      if (dataRes.ok) {
-        const d = await dataRes.json();
-        previews[sheet.title] = d.values || [];
-      }
+    // Pobierz tylko wiersz 1 (nagłówki) z każdej zakładki – batch request
+    const ranges = sheets.map(s => `'${s.title}'!A1:Z1`);
+    const batchRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&')}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    let headers = {};
+    if (batchRes.ok) {
+      const batchData = await batchRes.json();
+      (batchData.valueRanges || []).forEach(vr => {
+        const sheetTitle = vr.range?.split('!')[0]?.replace(/'/g, '');
+        headers[sheetTitle] = (vr.values?.[0] || []);
+      });
     }
 
-    return Response.json({ sheets, previews });
+    // Połącz wyniki
+    const result = sheets.map(s => ({
+      ...s,
+      headers: headers[s.title] || []
+    }));
+
+    return Response.json({ sheets: result });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
