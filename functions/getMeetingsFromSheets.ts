@@ -24,7 +24,12 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   if (rows.length < 2) return { meetings: [], phoneContacts: [] };
 
   const headers = rows[0];
-  console.log(`[${sheetTitle}] NAGŁÓWKI (${headers.length}):`, headers.map((h, i) => `[${i}] "${h}"`).join(' | '));
+  console.log(`[${sheetTitle}] WSZYSTKIE NAGŁÓWKI:`, headers.map((h, i) => `[${i}] "${h}"`).join(' | '));
+  
+  // Dla debugowania - jeśli to Kujawsko-pomorskie, wyświetl wszystko
+  if (sheetTitle === 'Kujawsko-pomorskie') {
+    console.log(`[${sheetTitle}] GERTRUDA ROW:`, rows.find(r => r.some(cell => String(cell || '').includes('GERTRUDA')))?.map((v, i) => `[${i}] "${v}"`).join(' | '));
+  }
 
   const intIdx = headers.findIndex(h =>
     h.toLowerCase().includes('zainteresowany') && h.toLowerCase().includes('doradc')
@@ -32,35 +37,11 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const nameIdx = headers.findIndex(h => h.toLowerCase().includes('imi') && h.toLowerCase().includes('nazwisko'));
   const phoneIdx = headers.findIndex(h => h.toLowerCase().includes('telefon') || h.toLowerCase().includes('tel'));
   const addressIdx = headers.findIndex(h => h.toLowerCase().trim() === 'adres');
-  let dateIdx = headers.findIndex(h => h.toLowerCase().includes('data kontaktu'));
-  if (dateIdx === -1) {
-    dateIdx = headers.findIndex(h => h.toLowerCase().includes('data') && !h.toLowerCase().includes('godzina'));
-  }
-  
-  const agentIdx = headers.findIndex(h => h.toLowerCase().includes('agent dzwoni'));
-  const assignedIdx = headers.findIndex(h => h.toLowerCase().includes('komu') && (h.toLowerCase().includes('przypisane') || h.toLowerCase().includes('przekazane')));
-  
-  let commentIdx = headers.findIndex(h => 
-    h.toLowerCase().includes('komentarz') && 
-    (h.toLowerCase().includes('dws') || h.toLowerCase().includes('inne') || h.toLowerCase().includes('sprzęty'))
-  );
-  // Fallback: szukaj kolumny o treści zawierającej słowa z komentarza
-  if (commentIdx === -1) {
-    commentIdx = headers.findIndex(h => {
-      const lower = h.toLowerCase();
-      return lower.includes('komentarz') || (lower.includes('uwagi') && !lower.includes('dodatkowe'));
-    });
-  }
-
-  console.log(`[${sheetTitle}] commentIdx: ${commentIdx}, dateIdx: ${dateIdx}`, commentIdx >= 0 ? `"${headers[commentIdx]}"` : '', dateIdx >= 0 ? `"${headers[dateIdx]}"` : '');
-  if (intIdx === -1) return { meetings: [], phoneContacts: [] };
-  
-  let calendarIdx = headers.findIndex(h =>
-    h.toLowerCase().includes('data') && h.toLowerCase().includes('godzina') && h.toLowerCase().includes('spotkania')
-  );
-  if (calendarIdx === -1) {
-    calendarIdx = headers.findIndex(h => h.toLowerCase().includes('godzina'));
-  }
+  const dateIdx = headers.findIndex(h => h.toLowerCase().includes('data'));
+  const agentIdx = headers.findIndex(h => h.toLowerCase().includes('agent'));
+  const assignedIdx = headers.findIndex(h => h.toLowerCase().includes('komu'));
+  const commentIdx = headers.findIndex(h => h.toLowerCase().includes('komentarz') || h.toLowerCase().includes('uwagi'));
+  const calendarIdx = headers.findIndex(h => h.toLowerCase().includes('godzina'));
 
   // Mapowanie pytań z nagłówków
   const questions = {};
