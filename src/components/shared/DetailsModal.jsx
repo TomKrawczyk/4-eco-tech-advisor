@@ -10,6 +10,7 @@ import { MessageSquare, User, HelpCircle, Phone } from "lucide-react";
 export default function DetailsModal({ open, onOpenChange, data }) {
   if (!data) return null;
 
+  const hasPhone = data.phone?.trim();
   const hasComments = data.comments?.trim();
   const hasAgent = data.agent?.trim();
   const hasInterview = data.interview_data && Object.keys(data.interview_data).length > 0;
