@@ -30,20 +30,10 @@ Deno.serve(async (req) => {
       return Response.json({ ok: true, action: 'invite_sent' });
     }
 
-    // DELETE - usuń powiązane kontakty
+    // DELETE - nie usuwamy danych użytkownika, przechowujemy je dla archiwizacji
     if (event.type === 'delete') {
-      try {
-        const contacts = await base44.asServiceRole.entities.PhoneContact.filter({ 
-          assigned_user_email: email 
-        });
-        for (const contact of contacts) {
-          await base44.asServiceRole.entities.PhoneContact.delete(contact.id);
-        }
-        console.log(`Usunięto ${contacts.length} kontaktów dla ${email}`);
-      } catch (contactError) {
-        console.warn(`Błąd przy usuwaniu kontaktów dla ${email}:`, contactError);
-      }
-      return Response.json({ ok: true, action: 'contacts_deleted' });
+      console.log(`Użytkownik ${email} usunięty z dostępu, dane zachowane dla archiwizacji`);
+      return Response.json({ ok: true, action: 'access_removed_data_preserved' });
     }
 
     return Response.json({ ok: true });
