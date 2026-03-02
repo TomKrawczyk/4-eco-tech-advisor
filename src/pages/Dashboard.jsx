@@ -291,9 +291,10 @@ export default function Dashboard() {
       )}
 
       {isAdmin && (
-        <div className="mt-6">
+        <div className="mt-8">
           <Link to={createPageUrl("UserManagement")}>
-            <Button variant="outline" className="w-full">
+            <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium">
+              <Users className="w-4 h-4 mr-2" />
               Zarządzanie użytkownikami
             </Button>
           </Link>
