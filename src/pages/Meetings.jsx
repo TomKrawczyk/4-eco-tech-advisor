@@ -15,6 +15,7 @@ export default function Meetings() {
   const [accessChecked, setAccessChecked] = useState(false);
   const [search, setSearch] = useState("");
   const [sheetFilter, setSheetFilter] = useState("all");
+  const [groupFilter, setGroupFilter] = useState("all");
 
   React.useEffect(() => {
     const fetchUser = async () => {
