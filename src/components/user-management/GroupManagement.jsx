@@ -177,7 +177,8 @@ export default function GroupManagement({ allowedUsers }) {
             <div className="space-y-3">
               {groups.map((group) => {
                 const usersInGroup = getUsersInGroup(group.id);
-                const leader = groupLeaders.find(l => l.id === group.group_leader_id);
+                const leaderIds = group.group_leader_ids || (group.group_leader_id ? [group.group_leader_id] : []);
+                const leaders = groupLeaders.filter(l => leaderIds.includes(l.id));
                 const isExpanded = expandedGroups.includes(group.id);
                 return (
                   <div key={group.id} className="border rounded-lg p-4">
