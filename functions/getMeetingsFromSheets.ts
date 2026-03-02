@@ -24,24 +24,23 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   if (rows.length < 2) return { meetings: [], phoneContacts: [] };
 
   const headers = rows[0];
-  console.log(`[${sheetTitle}] WSZYSTKIE NAGŁÓWKI:`, headers.map((h, i) => `[${i}] "${h}"`).join(' | '));
-  
-  // Dla debugowania - jeśli to Kujawsko-pomorskie, wyświetl wszystko
-  if (sheetTitle === 'Kujawsko-pomorskie') {
-    console.log(`[${sheetTitle}] GERTRUDA ROW:`, rows.find(r => r.some(cell => String(cell || '').includes('GERTRUDA')))?.map((v, i) => `[${i}] "${v}"`).join(' | '));
-  }
 
-  const intIdx = headers.findIndex(h =>
-    h.toLowerCase().includes('zainteresowany') && h.toLowerCase().includes('doradc')
-  );
-  const nameIdx = headers.findIndex(h => h.toLowerCase().includes('imi') && h.toLowerCase().includes('nazwisko'));
-  const phoneIdx = headers.findIndex(h => h.toLowerCase().includes('telefon') || h.toLowerCase().includes('tel'));
-  const addressIdx = headers.findIndex(h => h.toLowerCase().trim() === 'adres');
-  const dateIdx = headers.findIndex(h => h.toLowerCase().includes('data'));
-  const agentIdx = headers.findIndex(h => h.toLowerCase().includes('agent'));
-  const assignedIdx = headers.findIndex(h => h.toLowerCase().includes('komu'));
-  const commentIdx = headers.findIndex(h => h.toLowerCase().includes('komentarz') || h.toLowerCase().includes('uwagi'));
-  const calendarIdx = headers.findIndex(h => h.toLowerCase().includes('godzina'));
+  // Mapowanie kolumn na podstawie dokładnych nagłówków
+  const columnMap = {
+    nameIdx: headers.findIndex(h => h.includes('Imię i nazwisko')),
+    phoneIdx: headers.findIndex(h => h.includes('Nr telefonu')),
+    addressIdx: headers.findIndex(h => h === 'Adres'),
+    dateIdx: headers.findIndex(h => h === 'Data kontaktu'),
+    agentIdx: headers.findIndex(h => h === 'Agent dzwoniący'),
+    assignedIdx: headers.findIndex(h => h === 'Komu przypisane'),
+    commentIdx: headers.findIndex(h => h.includes('Komentarz DWS')),
+    intIdx: headers.findIndex(h => h.includes('Zainteresowany rozmową z doradcą')),
+    calendarIdx: headers.findIndex(h => h.includes('Data i godzina spotkania')),
+  };
+
+  const { nameIdx, phoneIdx, addressIdx, dateIdx, agentIdx, assignedIdx, commentIdx, intIdx, calendarIdx } = columnMap;
+
+  console.log(`[${sheetTitle}] Mapowanie kolumn:`, columnMap);
 
   // Mapowanie pytań z nagłówków
   const questions = {};
