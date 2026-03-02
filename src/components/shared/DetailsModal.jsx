@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MessageSquare, User, HelpCircle } from "lucide-react";
+import { MessageSquare, User, HelpCircle, Phone } from "lucide-react";
 
 export default function DetailsModal({ open, onOpenChange, data }) {
   if (!data) return null;
