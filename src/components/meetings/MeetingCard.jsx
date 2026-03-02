@@ -177,11 +177,10 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
             </Badge>
           )}
         </div>
+        <button onClick={() => setShowDetail(true)} className="text-gray-400 hover:text-green-600 transition-colors self-start mt-1 shrink-0">
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
-      <button onClick={() => setShowDetail(true)} className="text-gray-400 hover:text-green-600 transition-colors self-start mt-1 shrink-0">
-        <ChevronRight className="w-4 h-4" />
-      </button>
-    </div>
     </div>
     </>
   );
