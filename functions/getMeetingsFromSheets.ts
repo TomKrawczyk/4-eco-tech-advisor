@@ -131,17 +131,6 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   return { meetings, phoneContacts };
 }
 
-async function getSheetHeaders(accessToken, sheetTitle) {
-  const range = `'${sheetTitle}'!A1:Z1`;
-  const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.values?.[0] || [];
-}
-
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -157,20 +146,6 @@ Deno.serve(async (req) => {
 
     const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
     const allTabs = await getAllSheetTabs(accessToken);
-    
-    // Debug mode - jeśli url ma ?debug=1
-    const url = new URL(req.url);
-    const debugMode = url.searchParams.get('debug') === '1';
-    
-    if (debugMode) {
-      const headersMap = {};
-      for (const tab of allTabs) {
-        const headers = await getSheetHeaders(accessToken, tab);
-        headersMap[tab] = headers.map((h, i) => ({ index: i, header: h }));
-      }
-      return Response.json({ debug: true, headers: headersMap });
-    }
-
     const results = await Promise.all(allTabs.map(tab => fetchLeadsFromSheet(accessToken, tab)));
 
     const meetings = results.flatMap(r => r.meetings);
