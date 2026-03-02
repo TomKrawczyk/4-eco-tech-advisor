@@ -161,15 +161,13 @@ Deno.serve(async (req) => {
     const results = await Promise.all(allTabs.map(tab => fetchLeadsFromSheet(accessToken, tab)));
 
     const meetings = results.flatMap(r => r.meetings);
-
-    // Pobierz tylko kontakty z bazy - bez zapisywania
-    const dbPhoneContacts = await base44.asServiceRole.entities.PhoneContact.list('-created_date', 1000);
+    const phoneContacts = results.flatMap(r => r.phoneContacts);
 
     return Response.json({
       meetings,
-      phoneContacts: dbPhoneContacts,
+      phoneContacts,
       total: meetings.length,
-      totalPhoneContacts: dbPhoneContacts.length,
+      totalPhoneContacts: phoneContacts.length,
       refreshed_at: new Date().toISOString()
     });
   } catch (error) {
