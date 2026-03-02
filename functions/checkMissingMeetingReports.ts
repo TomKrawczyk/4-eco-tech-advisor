@@ -51,11 +51,13 @@ Deno.serve(async (req) => {
       });
 
       // Email przypomnienie
-      await base44.asServiceRole.integrations.Core.SendEmail({
-        to: assignment.assigned_user_email,
-        subject: `Przypomnienie: Brak raportu – ${assignment.client_name}`,
-        body: `Cześć!\n\nPrzypominamy, że nie uzupełniłeś/aś raportu po spotkaniu z klientem:\n\nKlient: ${assignment.client_name}\nData spotkania: ${assignment.meeting_date}\n\nProsimy o uzupełnienie raportu w aplikacji jak najszybciej.\n\nPozdrawiamy,\n4-ECO Green Energy`,
-      });
+      try {
+        await base44.asServiceRole.integrations.Core.SendEmail({
+          to: assignment.assigned_user_email,
+          subject: `Przypomnienie: Brak raportu – ${assignment.client_name}`,
+          body: `Cześć!\n\nPrzypominamy, że nie uzupełniłeś/aś raportu po spotkaniu z klientem:\n\nKlient: ${assignment.client_name}\nData spotkania: ${assignment.meeting_date}\n\nProsimy o uzupełnienie raportu w aplikacji jak najszybciej.\n\nPozdrawiamy,\n4-ECO Green Energy`,
+        });
+      } catch (_) { /* ignoruj błąd email */ }
     }
 
     return Response.json({ ok: true, checked: assignments.length });
