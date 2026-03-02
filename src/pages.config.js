@@ -62,6 +62,7 @@ import UserActivityLog from './pages/UserActivityLog';
 import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
 import VisitReports from './pages/VisitReports';
+import Calendar from './pages/Calendar';
 import __Layout from './Layout.jsx';
 
 
@@ -81,6 +82,7 @@ export const PAGES = {
     "UserManagement": UserManagement,
     "UserProfile": UserProfile,
     "VisitReports": VisitReports,
+    "Calendar": Calendar,
 }
 
 export const pagesConfig = {
