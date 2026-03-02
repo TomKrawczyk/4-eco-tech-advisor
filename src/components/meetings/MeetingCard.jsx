@@ -11,6 +11,8 @@ import DetailsModal from "@/components/shared/DetailsModal";
 
 export default function MeetingCard({ meeting, assignment, salespeople, assignmentsForDate, currentUserRole, meetingReports = [] }) {
   const [showDetail, setShowDetail] = useState(false);
+  const [selectedDetails, setSelectedDetails] = useState(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Policz ile przypisań ma dany handlowiec w tym dniu
