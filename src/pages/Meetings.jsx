@@ -27,12 +27,16 @@ export default function Meetings() {
     fetchUser();
   }, []);
 
-  const { data: meetings = [], isLoading, refetch, isFetching } = useQuery({
+  const { data: result, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["sheetMeetings"],
-    queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data?.meetings || []),
+    queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data),
     enabled: accessChecked && currentUser?.role === "admin",
-    staleTime: 2 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
   });
+
+  const meetings = result?.meetings || [];
+  const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
   if (!accessChecked) {
     return (
