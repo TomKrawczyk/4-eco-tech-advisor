@@ -3,24 +3,23 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
-import { ShieldAlert, User, LogOut, Shield } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ShieldAlert, User, LogOut, Shield, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationPanel from "@/components/notifications/NotificationPanel";
 import RequiredTrainingGate from "@/components/training/RequiredTrainingGate";
 
 const navItems = [
   { name: "Dashboard", label: "Start" },
+  { name: "Calendar", label: "Kalendarz" },
   { name: "Checklist", label: "Checklista" },
   { name: "Interview", label: "Wywiad" },
   { name: "AutoconsumptionCalc", label: "Autokonsumpcja" },
   { name: "PVCalculator", label: "Kalkulator PV" },
   { name: "ROICalculator", label: "Opłacalność" },
   { name: "Education", label: "Szkolenia" },
-  { name: "VisitReports", label: "Raporty" },
-  { name: "MeetingReports", label: "Raporty ze spotkań" },
+  { name: "VisitReports", label: "Raporty wizytowe" },
+  { name: "MeetingReports", label: "Raporty spotkań" },
   { name: "Referrals", label: "Polecenia" },
-  { name: "Calendar", label: "Kalendarz" },
   { name: "Meetings", label: "Spotkania", roles: ["admin", "group_leader", "team_leader"] },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
 ];
@@ -36,20 +35,16 @@ export default function Layout({ children, currentPageName }) {
     const checkAccess = async () => {
       try {
         const user = await base44.auth.me();
-        
         const allowedUsers = await base44.entities.AllowedUser.list();
-        const userAccess = allowedUsers.find(allowed => 
+        const userAccess = allowedUsers.find(allowed =>
           (allowed.data?.email || allowed.email) === user.email
         );
-        
         if (userAccess) {
-          // Ustawiamy dane z AllowedUser (sprawdzamy data.* lub bezpośrednio)
           user.role = userAccess.data?.role || userAccess.role;
           user.displayName = userAccess.data?.name || userAccess.name;
           setCurrentUser(user);
           setHasAccess(true);
 
-          // Sprawdź czy są obowiązkowe szkolenia do obejrzenia (pomijamy adminów)
           if (user.role !== 'admin') {
             const [trainings, views] = await Promise.all([
               base44.entities.Training.list('order'),
@@ -57,21 +52,15 @@ export default function Layout({ children, currentPageName }) {
             ]);
             const completedIds = new Set(views.map(v => v.training_id));
             const requiredPending = trainings.find(t => t.is_required && t.is_published !== false && !completedIds.has(t.id));
-            if (requiredPending) {
-              setPendingRequiredTraining(requiredPending);
-            }
+            if (requiredPending) setPendingRequiredTraining(requiredPending);
           }
-          
-          // Aktualizuj aktywność użytkownika
-          base44.functions.invoke('trackUserActivity').catch(err => 
-            console.error('Błąd śledzenia aktywności:', err)
-          );
+
+          base44.functions.invoke('trackUserActivity').catch(() => {});
         } else {
           setCurrentUser(user);
           setHasAccess(false);
         }
       } catch (error) {
-        console.error('Błąd sprawdzania dostępu:', error);
         setCurrentUser(null);
         setHasAccess(false);
       } finally {
@@ -80,18 +69,17 @@ export default function Layout({ children, currentPageName }) {
     };
 
     checkAccess();
-    
-    // Okresowe odświeżanie aktywności co 5 minut
     const activityInterval = setInterval(() => {
-      if (hasAccess) {
-        base44.functions.invoke('trackUserActivity').catch(err => 
-          console.error('Błąd śledzenia aktywności:', err)
-        );
-      }
+      if (hasAccess) base44.functions.invoke('trackUserActivity').catch(() => {});
     }, 5 * 60 * 1000);
-
     return () => clearInterval(activityInterval);
   }, [hasAccess]);
+
+  const visibleNavItems = navItems.filter(item => {
+    if (item.adminOnly && currentUser?.role !== "admin") return false;
+    if (item.roles && !item.roles.includes(currentUser?.role)) return false;
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-500/10 via-emerald-50 to-green-500/10 text-gray-900">
@@ -104,29 +92,28 @@ export default function Layout({ children, currentPageName }) {
       `}</style>
 
       {/* Top Navigation */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6985025012ef2a10cfdedf68/cfe2d3285_4-eco-logo.png" 
-              alt="4-ECO Green Energy" 
-              className="h-12 w-auto"
+      <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 z-50 shadow-sm">
+        <div className="h-full flex items-center justify-between px-3 md:px-4">
+          {/* Logo */}
+          <Link to={createPageUrl("Dashboard")} className="shrink-0">
+            <img
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6985025012ef2a10cfdedf68/cfe2d3285_4-eco-logo.png"
+              alt="4-ECO Green Energy"
+              className="h-10 w-auto"
             />
-          </div>
+          </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
-              if (item.adminOnly && currentUser?.role !== "admin") return null;
-              if (item.roles && !item.roles.includes(currentUser?.role)) return null;
+          {/* Desktop Nav — scrollable if many items */}
+          <nav className="hidden md:flex items-center gap-0.5 overflow-x-auto max-w-[calc(100vw-280px)] scrollbar-none flex-1 mx-3">
+            {visibleNavItems.map((item) => {
               const isActive = currentPageName === item.name;
               return (
                 <Link
                   key={item.name}
                   to={createPageUrl(item.name)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 ${
                     isActive
-                      ? "bg-green-50 text-green-600"
+                      ? "bg-green-50 text-green-700 border border-green-200"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   }`}
                 >
@@ -136,151 +123,149 @@ export default function Layout({ children, currentPageName }) {
             })}
           </nav>
 
-          {/* User Menu */}
-          <div className="flex items-center gap-2">
+          {/* Right side: notifications + user + hamburger */}
+          <div className="flex items-center gap-1 shrink-0">
             {currentUser && (
               <>
                 <NotificationPanel currentUser={currentUser} />
-                <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                      <User className="w-4 h-4 text-green-600" />
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{currentUser.displayName}</span>
-                      <span className="text-xs text-gray-500">{currentUser.email}</span>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem disabled>
-                    <Shield className="w-4 h-4 mr-2" />
-                    <span>
+                {/* User info on desktop */}
+                <div className="hidden md:flex items-center gap-2 ml-1">
+                  <div className="text-right">
+                    <div className="text-xs font-semibold text-gray-800 leading-tight">{currentUser.displayName}</div>
+                    <div className="text-[10px] text-gray-400 leading-tight">
                       {currentUser.role === "admin" ? "Administrator" :
                        currentUser.role === "group_leader" ? "Group Leader" :
-                       currentUser.role === "team_leader" ? "Team Leader" :
-                       "Użytkownik"}
-                    </span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <Link to={createPageUrl("UserProfile")}>
-                    <DropdownMenuItem>
-                      <User className="w-4 h-4 mr-2" />
-                      <span>Mój profil</span>
-                    </DropdownMenuItem>
-                  </Link>
-                  <DropdownMenuItem onClick={() => base44.auth.logout()} className="text-red-600">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    <span>Wyloguj się</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                       currentUser.role === "team_leader" ? "Team Leader" : "Użytkownik"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => base44.auth.logout()}
+                    className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                    title="Wyloguj"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
               </>
             )}
 
-            {/* Mobile Menu Button */}
+            {/* Hamburger */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100"
+              className="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="Menu"
             >
-              <div className="w-5 h-0.5 bg-gray-900 relative">
-                <div className={`absolute w-5 h-0.5 bg-gray-900 transition-all ${mobileMenuOpen ? 'rotate-45 top-0' : '-top-1.5'}`}></div>
-                <div className={`absolute w-5 h-0.5 bg-gray-900 transition-all ${mobileMenuOpen ? '-rotate-45 top-0' : 'top-1.5'}`}></div>
-              </div>
+              {mobileMenuOpen ? <X className="w-5 h-5 text-gray-700" /> : <Menu className="w-5 h-5 text-gray-700" />}
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu — full screen overlay */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="fixed top-16 left-0 right-0 bg-white border-b border-gray-200 z-40 overflow-hidden md:hidden"
-          >
-            <nav className="p-4 space-y-1">
-              {/* User Profile in Mobile Menu */}
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/30 z-40 md:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            {/* Drawer from right */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "tween", duration: 0.25 }}
+              className="fixed top-0 right-0 bottom-0 w-72 bg-white z-50 md:hidden flex flex-col shadow-2xl"
+            >
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <img
+                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6985025012ef2a10cfdedf68/cfe2d3285_4-eco-logo.png"
+                  alt="4-ECO"
+                  className="h-8 w-auto"
+                />
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              {/* User info */}
               {currentUser && (
-                <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-100">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
-                      <User className="w-5 h-5 text-white" />
+                <div className="px-4 py-3 bg-green-50 border-b border-green-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center shrink-0">
+                      <User className="w-4 h-4 text-white" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 text-sm truncate">{currentUser.full_name}</div>
-                      <div className="text-xs text-gray-600 truncate">{currentUser.email}</div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-gray-900 text-sm truncate">{currentUser.displayName}</div>
+                      <div className="text-[11px] text-gray-500 truncate">{currentUser.email}</div>
+                      <div className="text-[11px] text-green-700 flex items-center gap-1 mt-0.5">
+                        <Shield className="w-3 h-3" />
+                        {currentUser.role === "admin" ? "Administrator" :
+                         currentUser.role === "group_leader" ? "Group Leader" :
+                         currentUser.role === "team_leader" ? "Team Leader" : "Użytkownik"}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600 mb-3">
-                    Witaj {currentUser.displayName}! 👋
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>
-                      {currentUser.role === "admin" ? "Administrator" :
-                       currentUser.role === "group_leader" ? "Group Leader" :
-                       currentUser.role === "team_leader" ? "Team Leader" :
-                       "Użytkownik"}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Link to={createPageUrl("UserProfile")} onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="outline" size="sm" className="w-full">
-                        <User className="w-4 h-4 mr-2" />
-                        Mój profil
-                      </Button>
-                    </Link>
-                    <Button
-                      onClick={() => base44.auth.logout()}
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Wyloguj się
-                    </Button>
                   </div>
                 </div>
               )}
-              
-              {navItems.map((item) => {
-                if (item.adminOnly && currentUser?.role !== "admin") return null;
-                if (item.roles && !item.roles.includes(currentUser?.role)) return null;
-                const isActive = currentPageName === item.name;
-                return (
-                  <Link
-                    key={item.name}
-                    to={createPageUrl(item.name)}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                      isActive
-                        ? "bg-green-50 text-green-600"
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </motion.div>
+
+              {/* Nav links — scrollable */}
+              <nav className="flex-1 overflow-y-auto py-2 px-2">
+                {visibleNavItems.map((item) => {
+                  const isActive = currentPageName === item.name;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={createPageUrl(item.name)}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium mb-0.5 transition-all ${
+                        isActive
+                          ? "bg-green-50 text-green-700 border border-green-200"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {/* Footer actions */}
+              <div className="px-3 py-3 border-t border-gray-100 space-y-1">
+                <Link to={createPageUrl("UserProfile")} onClick={() => setMobileMenuOpen(false)}>
+                  <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <User className="w-4 h-4" />
+                    Mój profil
+                  </button>
+                </Link>
+                <button
+                  onClick={() => base44.auth.logout()}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Wyloguj się
+                </button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="pt-16">
-        <div className="max-w-5xl mx-auto px-4 py-8">
+      <main className="pt-14">
+        <div className="max-w-5xl mx-auto px-3 md:px-4 py-6 md:py-8">
           {checkingAccess ? (
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center">
-                <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto" />
                 <p className="text-gray-600 mt-4">Sprawdzanie dostępu...</p>
               </div>
             </div>
