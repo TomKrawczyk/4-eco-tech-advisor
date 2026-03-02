@@ -44,9 +44,17 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
         });
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
       toast.success("Przypisano handlowca");
+      // Wyślij powiadomienie
+      base44.functions.invoke("notifyMeetingAssigned", {
+        assignedUserEmail: variables.userEmail,
+        assignedUserName: variables.userName,
+        clientName: meeting.client_name,
+        meetingCalendar: meeting.meeting_calendar,
+        sheet: meeting.sheet,
+      }).catch(() => {});
     },
     onError: (e) => toast.error(e.message),
   });
