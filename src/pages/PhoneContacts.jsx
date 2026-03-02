@@ -67,6 +67,12 @@ export default function PhoneContacts() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
+  const { data: groups = [] } = useQuery({
+    queryKey: ["groups"],
+    queryFn: () => base44.entities.Group.list(),
+    enabled: accessChecked && isLeaderOrAdmin,
+  });
+
   const { data: contacts = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ["phoneContacts"],
     queryFn: () => base44.entities.PhoneContact.list("-created_date", 500),
@@ -78,6 +84,12 @@ export default function PhoneContacts() {
   const assignMutation = useMutation({
     mutationFn: ({ id, email, name }) =>
       base44.entities.PhoneContact.update(id, { assigned_user_email: email, assigned_user_name: name }),
+    onSuccess: () => queryClient.invalidateQueries(["phoneContacts"]),
+  });
+
+  const assignGroupMutation = useMutation({
+    mutationFn: ({ id, groupId, groupName }) =>
+      base44.entities.PhoneContact.update(id, { assigned_group_id: groupId, assigned_group_name: groupName }),
     onSuccess: () => queryClient.invalidateQueries(["phoneContacts"]),
   });
 
@@ -249,7 +261,7 @@ export default function PhoneContacts() {
                                         <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
                                       )}
                                     </div>
-                                    <div className="shrink-0 min-w-[160px]">
+                                    <div className="shrink-0 flex gap-2">
                                       {contact.assigned_user_email ? (
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
                                           <User className="w-3 h-3 text-green-600" />
@@ -266,7 +278,7 @@ export default function PhoneContacts() {
                                           const sp = salespeople.find(s => s.email === val);
                                           if (sp) assignMutation.mutate({ id: contact.id, email: sp.email, name: sp.name });
                                         }}>
-                                          <SelectTrigger className="h-8 text-xs w-full">
+                                          <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
                                             <SelectValue placeholder="Przypisz doradcę" />
                                           </SelectTrigger>
                                           <SelectContent>
@@ -275,6 +287,34 @@ export default function PhoneContacts() {
                                             ))}
                                           </SelectContent>
                                         </Select>
+                                      )}
+
+                                      {(currentUser?.role === "group_leader" || currentUser?.role === "team_leader" || currentUser?.role === "admin") && (
+                                        <>
+                                          {contact.assigned_group_id ? (
+                                            <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
+                                              <span className="text-xs font-medium text-blue-700">{contact.assigned_group_name}</span>
+                                              <button
+                                                onClick={() => assignGroupMutation.mutate({ id: contact.id, groupId: "", groupName: "" })}
+                                                className="ml-1 text-gray-400 hover:text-red-500 text-xs"
+                                              >×</button>
+                                            </div>
+                                          ) : (
+                                            <Select onValueChange={(val) => {
+                                              const g = groups.find(gr => gr.id === val);
+                                              if (g) assignGroupMutation.mutate({ id: contact.id, groupId: g.id, groupName: g.name });
+                                            }}>
+                                              <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
+                                                <SelectValue placeholder="Przypisz grupę" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {groups.map(g => (
+                                                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          )}
+                                        </>
                                       )}
                                     </div>
                                   </div>
