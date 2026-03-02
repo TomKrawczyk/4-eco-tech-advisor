@@ -46,6 +46,7 @@ export default function Meetings() {
   const [groupFilter, setGroupFilter] = useState("all");
   const [expandedSheets, setExpandedSheets] = useState({});
   const [showMappingPanel, setShowMappingPanel] = useState(false);
+  const [sheetFilter, setSheetFilter] = useState("all");
 
   React.useEffect(() => {
     const fetchUser = async () => {

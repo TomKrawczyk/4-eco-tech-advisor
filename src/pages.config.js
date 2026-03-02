@@ -48,6 +48,7 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import AutoconsumptionCalc from './pages/AutoconsumptionCalc';
+import Calendar from './pages/Calendar';
 import Checklist from './pages/Checklist';
 import Dashboard from './pages/Dashboard';
 import Education from './pages/Education';
@@ -62,12 +63,12 @@ import UserActivityLog from './pages/UserActivityLog';
 import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
 import VisitReports from './pages/VisitReports';
-import Calendar from './pages/Calendar';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AutoconsumptionCalc": AutoconsumptionCalc,
+    "Calendar": Calendar,
     "Checklist": Checklist,
     "Dashboard": Dashboard,
     "Education": Education,
@@ -82,7 +83,6 @@ export const PAGES = {
     "UserManagement": UserManagement,
     "UserProfile": UserProfile,
     "VisitReports": VisitReports,
-    "Calendar": Calendar,
 }
 
 export const pagesConfig = {
