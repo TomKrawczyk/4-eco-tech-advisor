@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Trash2, Users, Edit, ChevronDown } from "lucide-react";
+import { Trash2, Users, Edit, ChevronDown, X } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { Badge } from "@/components/ui/badge";
 
 export default function GroupManagement({ allowedUsers }) {
   const [groupName, setGroupName] = useState("");
