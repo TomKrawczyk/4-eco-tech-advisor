@@ -73,7 +73,7 @@ export default function DetailsModal({ open, onOpenChange, data }) {
             </div>
           )}
 
-          {!hasComments && !hasAgent && !hasInterview && (
+          {!hasPhone && !hasComments && !hasAgent && !hasInterview && (
             <p className="text-sm text-gray-500 text-center py-4">Brak szczegółów do wyświetlenia</p>
           )}
         </div>
