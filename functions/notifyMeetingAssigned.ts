@@ -17,12 +17,14 @@ Deno.serve(async (req) => {
       is_read: false,
     });
 
-    // Wyślij email
-    await base44.asServiceRole.integrations.Core.SendEmail({
-      to: assignedUserEmail,
-      subject: `Nowe spotkanie: ${clientName} – ${meetingCalendar}`,
-      body: `Cześć ${assignedUserName}!\n\nZostało Ci przypisane nowe spotkanie:\n\nKlient: ${clientName}\nArkusz: ${sheet}\nData i godzina: ${meetingCalendar}\n\nPamiętaj, że po spotkaniu należy uzupełnić raport w aplikacji.\n\nPozdrawiamy,\n4-ECO Green Energy`,
-    });
+    // Wyślij email (tylko do użytkowników w aplikacji)
+    try {
+      await base44.asServiceRole.integrations.Core.SendEmail({
+        to: assignedUserEmail,
+        subject: `Nowe spotkanie: ${clientName} – ${meetingCalendar}`,
+        body: `Cześć ${assignedUserName}!\n\nZostało Ci przypisane nowe spotkanie:\n\nKlient: ${clientName}\nArkusz: ${sheet}\nData i godzina: ${meetingCalendar}\n\nPamiętaj, że po spotkaniu należy uzupełnić raport w aplikacji.\n\nPozdrawiamy,\n4-ECO Green Energy`,
+      });
+    } catch (_) { /* ignoruj błąd email */ }
 
     return Response.json({ ok: true });
   } catch (error) {
