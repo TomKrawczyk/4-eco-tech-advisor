@@ -32,7 +32,7 @@ export default function GroupManagement({ allowedUsers }) {
       queryClient.invalidateQueries(["groups"]);
       setGroupName("");
       setGroupDescription("");
-      setGroupLeaderId("");
+      setGroupLeaderIds([]);
       toast.success("Grupa utworzona");
     },
   });
