@@ -239,10 +239,15 @@ export default function Dashboard() {
 
       {recentReports.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Ostatnie raporty</h2>
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-green-600" />
+              <h2 className="text-lg font-bold text-gray-900">Ostatnie raporty</h2>
+            </div>
             <Link to={createPageUrl("VisitReports")}>
-              <Button variant="outline" size="sm">Zobacz wszystkie</Button>
+              <Button variant="ghost" size="sm" className="text-green-700 hover:bg-green-50">
+                Wszystkie <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
             </Link>
           </div>
           <div className="space-y-3">
@@ -254,15 +259,15 @@ export default function Dashboard() {
                 transition={{ delay: 0.1 * index }}
               >
                 <Link to={createPageUrl(`VisitReports?reportId=${report.id}`)}>
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                    <CardContent className="p-4">
+                  <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                    <CardContent className="p-5">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-medium text-gray-900">{report.client_name}</h3>
-                          <p className="text-sm text-gray-500">{report.client_address}</p>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 text-sm">{report.client_name}</h3>
+                          <p className="text-xs text-gray-500 mt-1 truncate">{report.client_address}</p>
                         </div>
-                        <div className="text-right">
-                          <span className={`text-xs px-2 py-1 rounded ${
+                        <div className="text-right ml-4 shrink-0">
+                          <span className={`inline-block text-xs px-3 py-1 rounded-full font-medium ${
                             report.status === "completed" 
                               ? "bg-green-100 text-green-700"
                               : report.status === "sent"
@@ -271,7 +276,7 @@ export default function Dashboard() {
                           }`}>
                             {report.status === "completed" ? "Ukończony" : report.status === "sent" ? "Wysłany" : "Roboczy"}
                           </span>
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-xs text-gray-400 mt-2">
                             {new Date(report.visit_date).toLocaleDateString("pl-PL")}
                           </p>
                         </div>
