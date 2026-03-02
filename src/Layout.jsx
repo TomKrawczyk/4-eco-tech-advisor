@@ -86,11 +86,22 @@ export default function Layout({ children, currentPageName }) {
     return () => clearInterval(activityInterval);
   }, [hasAccess]);
 
-  const visibleNavItems = navItems.filter(item => {
+  const isItemVisible = (item) => {
     if (item.adminOnly && currentUser?.role !== "admin") return false;
     if (item.roles && !item.roles.includes(currentUser?.role)) return false;
     return true;
-  });
+  };
+
+  const visibleNavItems = navStructure
+    .map(entry => {
+      if (entry.group) {
+        const visibleItems = entry.items.filter(isItemVisible);
+        if (visibleItems.length === 0) return null;
+        return { ...entry, items: visibleItems };
+      }
+      return isItemVisible(entry) ? entry : null;
+    })
+    .filter(Boolean);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-500/10 via-emerald-50 to-green-500/10 text-gray-900">
