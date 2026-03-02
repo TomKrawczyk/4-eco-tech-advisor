@@ -108,6 +108,7 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
       address: addressIdx >= 0 ? (row[addressIdx] || '') : '',
       date: dateIdx >= 0 ? (row[dateIdx] || '') : '',
       agent: agentIdx >= 0 ? (row[agentIdx] || '') : (assignedIdx >= 0 ? (row[assignedIdx] || '') : ''),
+      comments: commentIdx >= 0 ? (row[commentIdx] || '') : '',
       sheet: sheetTitle,
       status: intVal,
       interview_data: interviewData,
