@@ -47,23 +47,23 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const questions = {};
   const questionMappings = [
     ['Jak rachunki za prąd', h => h.toLowerCase().includes('jak rachunki')],
-    ['Ile płaci za prąd', h => h.toLowerCase().includes('ile płaci za prąd')],
-    ['Czy ma foto', h => h.toLowerCase().includes('czy ma foto')],
-    ['Jakie zasady', h => h.toLowerCase().includes('jakie zasady')],
-    ['Ile ma kWp instalacji', h => h.toLowerCase().includes('ile ma kwp')],
-    ['Czy ma falownik hybrydowy', h => h.toLowerCase().includes('czy ma falownik')],
-    ['Czy ma Magazyn Energii', h => h.toLowerCase().includes('czy ma magazyn')],
-    ['Pojemność magazynu', h => h.toLowerCase().includes('pojemność magazynu') || h.toLowerCase().includes('ile kwh')],
-    ['Inne urządzenia', h => h.toLowerCase().includes('jakieś inne urządzenia') || h.toLowerCase().includes('inne urządzenia')],
-    ['Czym ogrzewa dom', h => h.toLowerCase().includes('czym ogrzewa')],
-    ['Ile opłatu na rok', h => h.toLowerCase().includes('ile opłatu') && h.toLowerCase().includes('rok')],
-    ['Wielkość instalacji', h => h.toLowerCase().includes('wielkość instalacji')],
+    ['Ile płaci za prąd', h => h.toLowerCase().includes('ile płaci') && h.toLowerCase().includes('prąd')],
+    ['Czy ma foto', h => h.toLowerCase().includes('czy') && h.toLowerCase().includes('foto')],
+    ['Jakie zasady', h => h.toLowerCase().includes('jakie') && h.toLowerCase().includes('zasady')],
+    ['Ile ma kWp instalacji', h => h.toLowerCase().includes('kwp')],
+    ['Czy ma falownik hybrydowy', h => h.toLowerCase().includes('falownik')],
+    ['Czy ma Magazyn Energii', h => h.toLowerCase().includes('magazyn') && (h.toLowerCase().includes('energia') || h.toLowerCase().includes('magazyn'))],
+    ['Pojemność magazynu', h => h.toLowerCase().includes('pojemność') || (h.toLowerCase().includes('kwh') && !h.toLowerCase().includes('roczna'))],
+    ['Inne urządzenia', h => h.toLowerCase().includes('inne') && h.toLowerCase().includes('urządzenia')],
+    ['Czym ogrzewa dom', h => h.toLowerCase().includes('ogrzewa')],
+    ['Ile opłatu na rok', h => h.toLowerCase().includes('opłatu') && h.toLowerCase().includes('rok')],
+    ['Wielkość instalacji', h => h.toLowerCase().includes('wielkość') && h.toLowerCase().includes('instalacji')],
     ['Wielkość instalacji w umowie', h => h.toLowerCase().includes('wielkość') && h.toLowerCase().includes('umowie')],
   ];
   
   questionMappings.forEach(([label, matcher]) => {
     const idx = headers.findIndex(matcher);
-    if (idx >= 0) {
+    if (idx >= 0 && !questions[label]) {
       questions[label] = idx;
     }
   });
