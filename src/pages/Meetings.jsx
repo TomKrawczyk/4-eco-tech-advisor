@@ -64,9 +64,14 @@ export default function Meetings() {
       const matchSearch = !search || Object.values(m).some(v =>
         String(v || "").toLowerCase().includes(search.toLowerCase())
       );
-      return matchSheet && matchSearch;
+      let matchGroup = true;
+      if (groupFilter !== "all") {
+        const mapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
+        matchGroup = mapping?.group_id === groupFilter;
+      }
+      return matchSheet && matchSearch && matchGroup;
     });
-  }, [meetings, sheetFilter, search]);
+  }, [meetings, sheetFilter, search, groupFilter, sheetMappings]);
 
   if (!accessChecked) {
     return (
