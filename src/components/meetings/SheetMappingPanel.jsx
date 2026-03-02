@@ -33,22 +33,15 @@ export default function SheetMappingPanel({ sheetTabs, groups, onClose }) {
 
   const getMapping = (sheetName) => mappings.find(m => m.sheet_name === sheetName);
 
-  if (!open) {
-    return (
-      <Button variant="outline" size="sm" className="gap-2 h-11" onClick={() => setOpen(true)}>
-        <Settings2 className="w-4 h-4" />
-        Przypisz arkusze do grup
-      </Button>
-    );
-  }
-
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 w-full">
       <div className="flex items-center justify-between mb-3">
         <span className="font-semibold text-sm text-gray-800">Przypisanie zakładek do grup</span>
-        <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
-          <X className="w-4 h-4" />
-        </button>
+        {onClose && (
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
       <div className="space-y-2">
         {sheetTabs.map(tab => {
