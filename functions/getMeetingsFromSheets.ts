@@ -29,10 +29,6 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const intIdx = headers.findIndex(h =>
     h.toLowerCase().includes('zainteresowany') && h.toLowerCase().includes('doradc')
   );
-  console.log(`[${sheetTitle}] intIdx (zainteresowany doradcy): ${intIdx}`);
-  console.log(`[${sheetTitle}] commentIdx (komentarz dws): ${commentIdx}`);
-  if (intIdx === -1) return { meetings: [], phoneContacts: [] };
-
   const nameIdx = headers.findIndex(h => h.toLowerCase().includes('imi') && h.toLowerCase().includes('nazwisko'));
   const phoneIdx = headers.findIndex(h => h.toLowerCase().includes('telefon') || h.toLowerCase().includes('tel'));
   const addressIdx = headers.findIndex(h => h.toLowerCase().trim() === 'adres');
@@ -40,6 +36,10 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const agentIdx = headers.findIndex(h => h.toLowerCase().includes('agent dzwoni'));
   const assignedIdx = headers.findIndex(h => h.toLowerCase().includes('komu') && (h.toLowerCase().includes('przypisane') || h.toLowerCase().includes('przekazane')));
   const commentIdx = headers.findIndex(h => h.toLowerCase().includes('komentarz') && h.toLowerCase().includes('dws'));
+
+  console.log(`[${sheetTitle}] intIdx (zainteresowany doradcy): ${intIdx}`);
+  console.log(`[${sheetTitle}] commentIdx (komentarz dws): ${commentIdx}`);
+  if (intIdx === -1) return { meetings: [], phoneContacts: [] };
   // Data i godzina spotkania jest zawsze kolumną przed Komentarz DWS
   let calendarIdx = headers.findIndex(h =>
     h.toLowerCase().includes('data i godzina') && h.toLowerCase().includes('spotkania')
