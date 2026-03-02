@@ -253,12 +253,38 @@ export default function Layout({ children, currentPageName }) {
 
               {/* Nav links — scrollable */}
               <nav className="flex-1 overflow-y-auto py-2 px-2">
-                {visibleNavItems.map((item) => {
-                  const isActive = currentPageName === item.name;
+                {visibleNavItems.map((entry) => {
+                  if (entry.group) {
+                    return (
+                      <div key={entry.group} className="mb-1">
+                        <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                          {entry.group}
+                        </div>
+                        {entry.items.map(item => {
+                          const isActive = currentPageName === item.name;
+                          return (
+                            <Link
+                              key={item.name}
+                              to={createPageUrl(item.name)}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className={`flex items-center pl-5 pr-3 py-2 rounded-lg text-sm font-medium mb-0.5 transition-all ${
+                                isActive
+                                  ? "bg-green-50 text-green-700 border border-green-200"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {item.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+                  const isActive = currentPageName === entry.name;
                   return (
                     <Link
-                      key={item.name}
-                      to={createPageUrl(item.name)}
+                      key={entry.name}
+                      to={createPageUrl(entry.name)}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium mb-0.5 transition-all ${
                         isActive
@@ -266,7 +292,7 @@ export default function Layout({ children, currentPageName }) {
                           : "text-gray-700 hover:bg-gray-50"
                       }`}
                     >
-                      {item.label}
+                      {entry.label}
                     </Link>
                   );
                 })}
