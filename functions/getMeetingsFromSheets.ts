@@ -41,22 +41,16 @@ async function fetchMeetingsFromSheets(accessToken, spreadsheetId) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
 
-    // Sprawdź czy to wywołanie schedulowane (bez użytkownika) czy przez frontend
-    const isAuthenticated = await base44.auth.isAuthenticated();
+    // Sprawdź rolę w AllowedUser (tam przechowywana jest rzeczywista rola)
+    const allowedUsers = await base44.asServiceRole.entities.AllowedUser.list();
+    const ua = allowedUsers.find(a => (a.email || a.data?.email) === user.email);
+    const role = ua?.role || ua?.data?.role;
 
-    if (isAuthenticated) {
-      // Wywołanie przez frontend – sprawdź rolę z AllowedUser
-      const user = await base44.auth.me();
-      const allowedUsers = await base44.asServiceRole.entities.AllowedUser.list();
-      const ua = allowedUsers.find(a => (a.email || a.data?.email) === user.email);
-      const role = ua?.role || ua?.data?.role;
-
-      if (role !== 'admin') {
-        return Response.json({ error: 'Forbidden' }, { status: 403 });
-      }
+    if (role !== 'admin') {
+      return Response.json({ error: 'Forbidden – tylko dla administratora' }, { status: 403 });
     }
-    // Jeśli brak sesji użytkownika – wywołanie schedulowane, dozwolone
 
     const spreadsheetId = Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID');
     if (!spreadsheetId) {
@@ -65,20 +59,6 @@ Deno.serve(async (req) => {
 
     const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
     const meetings = await fetchMeetingsFromSheets(accessToken, spreadsheetId);
-
-    // Zapisz do cache w bazie (nadpisz poprzednie dane)
-    const existing = await base44.asServiceRole.entities.MeetingsCache.list();
-    if (existing.length > 0) {
-      await base44.asServiceRole.entities.MeetingsCache.update(existing[0].id, {
-        data: meetings,
-        refreshed_at: new Date().toISOString()
-      });
-    } else {
-      await base44.asServiceRole.entities.MeetingsCache.create({
-        data: meetings,
-        refreshed_at: new Date().toISOString()
-      });
-    }
 
     return Response.json({ meetings, refreshed_at: new Date().toISOString() });
   } catch (error) {
