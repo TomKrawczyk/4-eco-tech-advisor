@@ -1,0 +1,105 @@
+import React from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { format, parseISO } from "date-fns";
+import { pl } from "date-fns/locale";
+import { Plus, Pencil, Trash2, MapPin, Phone, Clock, User } from "lucide-react";
+
+const typeLabels = { meeting: "Spotkanie", task: "Zadanie", reminder: "Przypomnienie", other: "Inne" };
+const typeColors = {
+  meeting: "bg-violet-100 text-violet-700 border-violet-200",
+  task: "bg-amber-100 text-amber-700 border-amber-200",
+  reminder: "bg-pink-100 text-pink-700 border-pink-200",
+  other: "bg-gray-100 text-gray-700 border-gray-200",
+};
+const statusColors = {
+  planned: "bg-blue-50 text-blue-700 border-blue-200",
+  completed: "bg-green-50 text-green-700 border-green-200",
+  cancelled: "bg-red-50 text-red-600 border-red-200",
+};
+const statusLabels = { planned: "Zaplanowane", completed: "Zakończone", cancelled: "Anulowane" };
+
+export default function CalendarDayModal({ day, events, currentUser, viewMode, onClose, onEdit, onDelete, onAdd }) {
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="capitalize">
+            {format(day, "EEEE, d MMMM yyyy", { locale: pl })}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          {events.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">Brak wydarzeń tego dnia</p>
+          ) : (
+            events
+              .sort((a, b) => (a.event_time || "").localeCompare(b.event_time || ""))
+              .map(ev => {
+                const canEdit = currentUser?.email === ev.owner_email || currentUser?.role === "admin";
+                return (
+                  <div key={ev.id} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="font-semibold text-sm text-gray-900">{ev.title}</span>
+                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${typeColors[ev.event_type]}`}>
+                            {typeLabels[ev.event_type]}
+                          </Badge>
+                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusColors[ev.status]}`}>
+                            {statusLabels[ev.status]}
+                          </Badge>
+                        </div>
+
+                        {(ev.event_time || ev.end_time) && (
+                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <Clock className="w-3 h-3" />
+                            {ev.event_time || ""}{ev.end_time ? ` – ${ev.end_time}` : ""}
+                          </div>
+                        )}
+                        {ev.client_name && (
+                          <div className="flex items-center gap-1 text-xs text-gray-600 mt-0.5">
+                            <User className="w-3 h-3 text-gray-400" />
+                            {ev.client_name}
+                            {ev.client_phone && <span className="text-gray-400 ml-1">· {ev.client_phone}</span>}
+                          </div>
+                        )}
+                        {ev.location && (
+                          <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                            <MapPin className="w-3 h-3" />
+                            {ev.location}
+                          </div>
+                        )}
+                        {viewMode === "team" && ev.owner_name && (
+                          <div className="text-[10px] text-gray-400 mt-1">Handlowiec: {ev.owner_name}</div>
+                        )}
+                        {ev.description && (
+                          <p className="text-xs text-gray-500 mt-1 whitespace-pre-wrap">{ev.description}</p>
+                        )}
+                      </div>
+
+                      {canEdit && (
+                        <div className="flex gap-1 shrink-0">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(ev)}>
+                            <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => onDelete(ev.id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+          )}
+        </div>
+
+        <Button onClick={onAdd} className="w-full mt-2 bg-green-600 hover:bg-green-700 gap-2">
+          <Plus className="w-4 h-4" /> Dodaj wydarzenie
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
