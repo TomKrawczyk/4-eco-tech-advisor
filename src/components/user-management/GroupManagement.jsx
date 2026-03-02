@@ -277,17 +277,30 @@ export default function GroupManagement({ allowedUsers }) {
               />
             </div>
             <div>
-              <Label>Group Leader</Label>
-              <Select 
-                value={editFormData.group_leader_id} 
-                onValueChange={(val) => setEditFormData({ ...editFormData, group_leader_id: val })}
-              >
+              <Label>Group Leaderzy</Label>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {editFormData.group_leader_ids.map(id => {
+                  const l = groupLeaders.find(x => x.id === id);
+                  if (!l) return null;
+                  return (
+                    <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                      {l.data?.name || l.name}
+                      <button onClick={() => setEditFormData(prev => ({ ...prev, group_leader_ids: prev.group_leader_ids.filter(x => x !== id) }))} className="ml-1 hover:text-red-500">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+              <Select onValueChange={val => {
+                if (!editFormData.group_leader_ids.includes(val))
+                  setEditFormData(prev => ({ ...prev, group_leader_ids: [...prev.group_leader_ids, val] }));
+              }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Wybierz group leadera..." />
+                  <SelectValue placeholder="Dodaj group leadera..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>Brak przypisania</SelectItem>
-                  {groupLeaders.map(leader => (
+                  {groupLeaders.filter(l => !editFormData.group_leader_ids.includes(l.id)).map(leader => (
                     <SelectItem key={leader.id} value={leader.id}>
                       {leader.data?.name || leader.name}
                       <span className="ml-1 text-gray-400 text-xs">({leader.data?.email || leader.email})</span>
