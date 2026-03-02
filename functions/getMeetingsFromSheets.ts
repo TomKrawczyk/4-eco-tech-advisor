@@ -72,7 +72,7 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
     const data = {};
 
     for (const [key, idx] of Object.entries(questions)) {
-      if (idx >= 0) {
+      if (typeof idx === 'number' && idx >= 0) {
         const answer = (row[idx] || '').trim();
         if (answer) {
           data[key] = answer;
@@ -84,6 +84,8 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
 
   const meetings = [];
   const phoneContacts = [];
+  let meetingsWithData = 0;
+  let contactsWithData = 0;
 
   for (const row of rows.slice(1)) {
     const intVal = (row[intIdx] || '').trim();
@@ -91,6 +93,10 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
     if (!name.trim()) continue;
 
     const interviewData = buildInterviewData(row);
+    if (interviewData) {
+      if (intVal.toLowerCase() === 'spotkanie') meetingsWithData++;
+      else contactsWithData++;
+    }
     const base = {
       client_name: name,
       phone: phoneIdx >= 0 ? (row[phoneIdx] || '') : '',
@@ -117,6 +123,9 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
     }
   }
 
+  console.log(`[${sheetTitle}] Znalezione pytania:`, Object.keys(questions).map(k => `${k} (kolumna ${questions[k]})`).join(', '));
+  console.log(`[${sheetTitle}] Spotkania: ${meetings.length} (z danymi: ${meetingsWithData}), Kontakty: ${phoneContacts.length} (z danymi: ${contactsWithData})`);
+  
   return { meetings, phoneContacts };
 }
 
