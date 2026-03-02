@@ -221,14 +221,14 @@ export default function Layout({ children, currentPageName }) {
                 <NotificationPanel currentUser={currentUser} />
                 {/* User info on desktop */}
                 <div className="hidden md:flex items-center gap-2 ml-1">
-                  <div className="text-right">
+                  <Link to={createPageUrl("UserProfile")} className="text-right hover:opacity-75 transition-opacity">
                     <div className="text-xs font-semibold text-gray-800 leading-tight">{currentUser.displayName}</div>
                     <div className="text-[10px] text-gray-400 leading-tight">
                       {currentUser.role === "admin" ? "Administrator" :
                        currentUser.role === "group_leader" ? "Group Leader" :
                        currentUser.role === "team_leader" ? "Team Leader" : "Użytkownik"}
                     </div>
-                  </div>
+                  </Link>
                   <button
                     onClick={() => base44.auth.logout()}
                     className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
