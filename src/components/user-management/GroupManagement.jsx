@@ -188,9 +188,9 @@ export default function GroupManagement({ allowedUsers }) {
                         {group.description && (
                           <p className="text-sm text-gray-600">{group.description}</p>
                         )}
-                        {leader && (
+                        {leaders.length > 0 && (
                           <p className="text-xs text-gray-500 mt-1">
-                            Group Leader: {leader.data?.name || leader.name}
+                            Group Leaderzy: {leaders.map(l => l.data?.name || l.name).join(", ")}
                           </p>
                         )}
                       </div>
