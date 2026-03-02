@@ -78,7 +78,8 @@ export default function PhoneContacts() {
 
   const { data: contacts = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ["phoneContacts"],
-    queryFn: () => base44.entities.PhoneContact.list("-created_date", 500),
+    queryFn: () => base44.functions.invoke('getMeetingsFromSheets'),
+    select: (response) => response.data?.phoneContacts || [],
     enabled: accessChecked && isLeaderOrAdmin,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
