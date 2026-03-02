@@ -268,6 +268,27 @@ export default function Meetings() {
           </Select>
         )}
 
+        {currentUser?.role === "admin" && allSheetTabs.length > 0 && (
+          <Select value={sheetFilter} onValueChange={setSheetFilter}>
+            <SelectTrigger className="w-52 h-11">
+              <SelectValue placeholder="Wszystkie arkusze" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                Wszystkie arkusze ({meetingsWithDate.length})
+              </SelectItem>
+              {allSheetTabs.map(sheet => {
+                const count = meetingsWithDate.filter(m => m.sheet === sheet).length;
+                return (
+                  <SelectItem key={sheet} value={sheet}>
+                    {sheet} ({count})
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        )}
+
         {currentUser?.role === "admin" && (
           <Button
             variant="outline"
