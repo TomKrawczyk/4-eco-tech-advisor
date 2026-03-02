@@ -85,8 +85,8 @@ const navStructure = [
       { name: "PhoneContacts", label: "Kontakt telefoniczny", adminOnly: true },
     ]
   },
-  { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
   { name: "Education", label: "Szkolenia" },
+  { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {
