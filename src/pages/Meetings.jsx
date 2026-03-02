@@ -74,15 +74,20 @@ export default function Meetings() {
             className="pl-10 h-11"
           />
         </div>
-        <Button
-          onClick={() => refetch()}
-          variant="outline"
-          className="gap-2 shrink-0"
-          disabled={isFetching}
-        >
-          <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-          Odśwież
-        </Button>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            className="gap-2"
+            disabled={isFetching}
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+            Odśwież
+          </Button>
+          {refreshedAt && (
+            <span className="text-[10px] text-gray-400">Ostatnia aktualizacja: {refreshedAt}</span>
+          )}
+        </div>
       </div>
 
       {isLoading || isFetching ? (
