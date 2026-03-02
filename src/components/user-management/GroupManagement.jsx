@@ -139,6 +139,7 @@ export default function GroupManagement({ allowedUsers }) {
                   {groupLeaders.map(leader => (
                     <SelectItem key={leader.id} value={leader.id}>
                       {leader.data?.name || leader.name}
+                      <span className="ml-1 text-gray-400 text-xs">({leader.data?.email || leader.email})</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
