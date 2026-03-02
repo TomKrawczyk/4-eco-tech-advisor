@@ -82,11 +82,17 @@ export default function PhoneContacts() {
     select: (response) => {
       const all = response.data?.phoneContacts || [];
       // Filtruj tylko kontakty – wyłącz archusze zawierające "spotkania", "kontakt" lub "ai bober"
-      return all.filter(c => 
+      const filtered = all.filter(c => 
         !c.sheet?.toLowerCase().includes('spotkania') && 
         !c.sheet?.toLowerCase().includes('kontakt') && 
         !c.sheet?.toLowerCase().includes('ai bober')
       );
+      // DEBUG: Gertruda
+      const gertruda = filtered.find(c => c.client_name?.toLowerCase().includes('gertruda'));
+      if (gertruda) console.log('🔍 Gertruda:', gertruda);
+      const allGertruda = all.find(c => c.client_name?.toLowerCase().includes('gertruda'));
+      if (allGertruda && !gertruda) console.log('⚠️ Gertruda filtrowana:', allGertruda);
+      return filtered;
     },
     enabled: accessChecked && isLeaderOrAdmin,
     staleTime: 5 * 60 * 1000,
