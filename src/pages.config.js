@@ -52,6 +52,7 @@ import Checklist from './pages/Checklist';
 import Dashboard from './pages/Dashboard';
 import Education from './pages/Education';
 import Interview from './pages/Interview';
+import MeetingReports from './pages/MeetingReports';
 import NotificationSettings from './pages/NotificationSettings';
 import PVCalculator from './pages/PVCalculator';
 import ROICalculator from './pages/ROICalculator';
@@ -60,7 +61,7 @@ import UserActivityLog from './pages/UserActivityLog';
 import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
 import VisitReports from './pages/VisitReports';
-import MeetingReports from './pages/MeetingReports';
+import Meetings from './pages/Meetings';
 import __Layout from './Layout.jsx';
 
 
@@ -70,6 +71,7 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "Education": Education,
     "Interview": Interview,
+    "MeetingReports": MeetingReports,
     "NotificationSettings": NotificationSettings,
     "PVCalculator": PVCalculator,
     "ROICalculator": ROICalculator,
@@ -78,7 +80,7 @@ export const PAGES = {
     "UserManagement": UserManagement,
     "UserProfile": UserProfile,
     "VisitReports": VisitReports,
-    "MeetingReports": MeetingReports,
+    "Meetings": Meetings,
 }
 
 export const pagesConfig = {
