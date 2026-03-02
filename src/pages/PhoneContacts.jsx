@@ -265,7 +265,7 @@ export default function PhoneContacts() {
                                       )}
                                     </div>
                                     <div className="shrink-0 flex gap-2 flex-wrap">
-                                      {(contact.comments || contact.agent) && (
+                                      {(contact.comments || contact.agent || contact.interview_data) && (
                                         <button
                                           onClick={() => {
                                             setSelectedDetails(contact);

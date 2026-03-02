@@ -411,12 +411,13 @@ export default function Meetings() {
                                 const assignment = meetingAssignments.find(a => a.meeting_key === key);
                                 return (
                                   <div key={i} className="flex gap-2 items-start">
-                                    {(assignment?.comments || assignment?.agent || meeting.agent) && (
+                                    {(assignment?.comments || assignment?.agent || meeting.agent || meeting.interview_data) && (
                                       <button
                                         onClick={() => {
                                           setSelectedDetails({
                                             agent: assignment?.agent || meeting.agent,
-                                            comments: assignment?.comments || meeting.notes
+                                            comments: assignment?.comments || meeting.notes,
+                                            interview_data: meeting.interview_data
                                           });
                                           setDetailsModalOpen(true);
                                         }}
