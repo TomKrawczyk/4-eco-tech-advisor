@@ -48,6 +48,22 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
     onSave(user.id, updates);
   };
 
+  const handleResetPassword = async () => {
+    setResettingPassword(true);
+    try {
+      await base44.functions.invoke('sendPasswordResetEmail', {
+        targetEmail: user?.email || user?.data?.email,
+        targetName: formData.name
+      });
+      toast.success('Email ze wskazówkami resetowania został wysłany');
+      setShowResetPassword(false);
+    } catch (error) {
+      toast.error('Błąd: ' + error.message);
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
