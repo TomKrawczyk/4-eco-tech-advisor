@@ -82,9 +82,12 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="space-y-1.5 flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap cursor-pointer" onClick={() => setShowDetail(true)}>
             <User className="w-4 h-4 text-gray-400 shrink-0" />
-            <span className="font-semibold text-gray-900 text-sm">{meeting.client_name}</span>
+            <span className="font-semibold text-gray-900 text-sm hover:text-green-700 transition-colors">{meeting.client_name}</span>
+            {existingReport && (
+              <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">✓ Raport</Badge>
+            )}
             <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-medium">
               {meeting.sheet}
             </Badge>
