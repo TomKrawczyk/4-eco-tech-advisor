@@ -1,27 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
-import { ShieldAlert, User, LogOut, Shield, Menu, X } from "lucide-react";
+import { ShieldAlert, User, LogOut, Shield, Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationPanel from "@/components/notifications/NotificationPanel";
 import RequiredTrainingGate from "@/components/training/RequiredTrainingGate";
 
-const navItems = [
+// Struktura nawigacji: pojedyncze linki lub grupy z dropdown
+const navStructure = [
   { name: "Dashboard", label: "Start" },
-  { name: "Calendar", label: "Kalendarz" },
   { name: "Checklist", label: "Checklista" },
   { name: "Interview", label: "Wywiad" },
   { name: "AutoconsumptionCalc", label: "Autokonsumpcja" },
-  { name: "PVCalculator", label: "Kalkulator PV" },
-  { name: "ROICalculator", label: "Opłacalność" },
-  { name: "Education", label: "Szkolenia" },
-  { name: "VisitReports", label: "Raporty wizytowe" },
-  { name: "MeetingReports", label: "Raporty spotkań" },
+  {
+    group: "Kalkulatory",
+    items: [
+      { name: "PVCalculator", label: "Kalkulator PV" },
+      { name: "ROICalculator", label: "Opłacalność" },
+    ]
+  },
+  { name: "Calendar", label: "Kalendarz" },
   { name: "Referrals", label: "Polecenia" },
+  {
+    group: "Raportowanie",
+    items: [
+      { name: "VisitReports", label: "Raporty wizytowe" },
+      { name: "MeetingReports", label: "Raporty po spotkaniu" },
+    ]
+  },
   { name: "Meetings", label: "Spotkania", roles: ["admin", "group_leader", "team_leader"] },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
+  { name: "Education", label: "Szkolenia" },
 ];
 
 export default function Layout({ children, currentPageName }) {
