@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, AlertCircle, Phone, ChevronDown, ChevronUp, User } from "lucide-react";
+import { RefreshCw, Search, AlertCircle, Phone, ChevronDown, ChevronUp, User, MessageSquare } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
+import DetailsModal from "@/components/shared/DetailsModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, addDays, isValid, startOfDay } from "date-fns";
 
@@ -41,6 +42,8 @@ export default function PhoneContacts() {
   const [search, setSearch] = useState("");
   const [sheetFilter, setSheetFilter] = useState("all");
   const [expandedSheets, setExpandedSheets] = useState({});
+  const [selectedDetails, setSelectedDetails] = useState(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -261,7 +264,20 @@ export default function PhoneContacts() {
                                         <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
                                       )}
                                     </div>
-                                    <div className="shrink-0 flex gap-2">
+                                    <div className="shrink-0 flex gap-2 flex-wrap">
+                                      {(contact.comments || contact.agent) && (
+                                        <button
+                                          onClick={() => {
+                                            setSelectedDetails(contact);
+                                            setDetailsModalOpen(true);
+                                          }}
+                                          className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors"
+                                          title="Pokaż szczegóły"
+                                        >
+                                          <MessageSquare className="w-4 h-4" />
+                                        </button>
+                                      )}
+
                                       {contact.assigned_user_email ? (
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
                                           <User className="w-3 h-3 text-green-600" />
@@ -332,6 +348,12 @@ export default function PhoneContacts() {
           })}
         </div>
       )}
+
+      <DetailsModal
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        data={selectedDetails}
+      />
     </div>
   );
 }
