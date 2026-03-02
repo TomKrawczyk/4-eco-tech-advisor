@@ -32,24 +32,34 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const nameIdx = headers.findIndex(h => h.toLowerCase().includes('imi') && h.toLowerCase().includes('nazwisko'));
   const phoneIdx = headers.findIndex(h => h.toLowerCase().includes('telefon') || h.toLowerCase().includes('tel'));
   const addressIdx = headers.findIndex(h => h.toLowerCase().trim() === 'adres');
-  const dateIdx = headers.findIndex(h => h.toLowerCase().includes('data kontaktu'));
+  let dateIdx = headers.findIndex(h => h.toLowerCase().includes('data kontaktu'));
+  if (dateIdx === -1) {
+    dateIdx = headers.findIndex(h => h.toLowerCase().includes('data') && !h.toLowerCase().includes('godzina'));
+  }
+  
   const agentIdx = headers.findIndex(h => h.toLowerCase().includes('agent dzwoni'));
   const assignedIdx = headers.findIndex(h => h.toLowerCase().includes('komu') && (h.toLowerCase().includes('przypisane') || h.toLowerCase().includes('przekazane')));
-  const commentIdx = headers.findIndex(h => 
-    (h.toLowerCase().includes('komentarz') && (h.toLowerCase().includes('dws') || h.toLowerCase().includes('inne'))) ||
-    h.toLowerCase().includes('komentarz dws')
+  
+  let commentIdx = headers.findIndex(h => 
+    h.toLowerCase().includes('komentarz') && 
+    (h.toLowerCase().includes('dws') || h.toLowerCase().includes('inne') || h.toLowerCase().includes('sprzęty'))
   );
+  // Fallback: szukaj kolumny o treści zawierającej słowa z komentarza
+  if (commentIdx === -1) {
+    commentIdx = headers.findIndex(h => {
+      const lower = h.toLowerCase();
+      return lower.includes('komentarz') || (lower.includes('uwagi') && !lower.includes('dodatkowe'));
+    });
+  }
 
-  console.log(`[${sheetTitle}] Headers with index:`, headers.map((h, i) => `[${i}] "${h}"`).slice(0, 20).join(' | '));
-  console.log(`[${sheetTitle}] intIdx (zainteresowany doradcy): ${intIdx}`);
-  console.log(`[${sheetTitle}] commentIdx (komentarz dws): ${commentIdx}`);
+  console.log(`[${sheetTitle}] commentIdx: ${commentIdx}, dateIdx: ${dateIdx}`, commentIdx >= 0 ? `"${headers[commentIdx]}"` : '', dateIdx >= 0 ? `"${headers[dateIdx]}"` : '');
   if (intIdx === -1) return { meetings: [], phoneContacts: [] };
-  // Data i godzina spotkania jest zawsze kolumną przed Komentarz DWS
+  
   let calendarIdx = headers.findIndex(h =>
-    h.toLowerCase().includes('data i godzina') && h.toLowerCase().includes('spotkania')
+    h.toLowerCase().includes('data') && h.toLowerCase().includes('godzina') && h.toLowerCase().includes('spotkania')
   );
-  if (calendarIdx === -1 && commentIdx > 0) {
-    calendarIdx = commentIdx - 1;
+  if (calendarIdx === -1) {
+    calendarIdx = headers.findIndex(h => h.toLowerCase().includes('godzina'));
   }
 
   // Mapowanie pytań z nagłówków
