@@ -124,6 +124,23 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
             </div>
           )}
 
+          {(meeting.agent || meeting.comments || meeting.interview_data) && (
+            <button
+              onClick={() => {
+                setSelectedDetails({
+                  agent: meeting.agent,
+                  comments: meeting.comments,
+                  interview_data: meeting.interview_data || {}
+                });
+                setDetailsModalOpen(true);
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center gap-1 mt-2"
+            >
+              <MessageSquare className="w-3 h-3" />
+              Szczegóły
+            </button>
+          )}
+
           {/* Przypisanie handlowca */}
           {canAssign && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
