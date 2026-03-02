@@ -80,7 +80,7 @@ export default function GroupManagement({ allowedUsers }) {
     setEditFormData({
       name: group.name,
       description: group.description || "",
-      group_leader_id: group.group_leader_id || ""
+      group_leader_ids: group.group_leader_ids || (group.group_leader_id ? [group.group_leader_id] : [])
     });
   };
 
