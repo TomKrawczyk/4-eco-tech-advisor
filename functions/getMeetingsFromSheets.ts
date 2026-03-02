@@ -62,6 +62,7 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
       date: dateIdx >= 0 ? (row[dateIdx] || '') : '',
       agent: agentIdx >= 0 ? (row[agentIdx] || '') : (assignedIdx >= 0 ? (row[assignedIdx] || '') : ''),
       assigned: assignedIdx >= 0 ? (row[assignedIdx] || '') : '',
+      meeting_calendar: calendarIdx >= 0 ? (row[calendarIdx] || '') : '',
       meeting_note: intVal,
       sheet: sheetTitle,
       status: 'Spotkanie',
