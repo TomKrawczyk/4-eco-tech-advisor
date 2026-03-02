@@ -26,6 +26,16 @@ export default function DetailsModal({ open, onOpenChange, data }) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {hasPhone && (
+            <div className="border-l-4 border-orange-500 bg-orange-50 p-3 rounded">
+              <div className="flex items-center gap-2 mb-1">
+                <Phone className="w-4 h-4 text-orange-600" />
+                <span className="text-xs font-semibold text-gray-600 uppercase">Telefon</span>
+              </div>
+              <a href={`tel:${data.phone}`} className="text-sm text-orange-600 hover:underline font-medium">{data.phone}</a>
+            </div>
+          )}
+
           {hasAgent && (
             <div className="border-l-4 border-blue-500 bg-blue-50 p-3 rounded">
               <div className="flex items-center gap-2 mb-1">
