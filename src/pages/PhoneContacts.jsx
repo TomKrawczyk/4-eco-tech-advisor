@@ -89,9 +89,7 @@ export default function PhoneContacts() {
       );
       // DEBUG: Gertruda
       const gertruda = filtered.find(c => c.client_name?.toLowerCase().includes('gertruda'));
-      if (gertruda) console.log('🔍 Gertruda:', gertruda);
-      const allGertruda = all.find(c => c.client_name?.toLowerCase().includes('gertruda'));
-      if (allGertruda && !gertruda) console.log('⚠️ Gertruda filtrowana:', allGertruda);
+      if (gertruda) console.log('🔍 Gertruda found:', JSON.stringify(gertruda, null, 2));
       return filtered;
     },
     enabled: accessChecked && isLeaderOrAdmin,
