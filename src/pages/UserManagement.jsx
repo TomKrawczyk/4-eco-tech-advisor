@@ -134,14 +134,34 @@ export default function UserManagement() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids) => {
+      // Usuń kontakty dla każdego użytkownika
+      for (const id of ids) {
+        const user = allowedUsers.find(u => u.id === id);
+        const email = user?.data?.email || user?.email;
+        if (email) {
+          try {
+            const contacts = await base44.entities.PhoneContact.filter({ assigned_user_email: email });
+            for (const contact of contacts) {
+              await base44.entities.PhoneContact.delete(contact.id);
+            }
+          } catch (error) {
+            console.warn("Błąd przy usuwaniu kontaktów:", error);
+          }
+        }
+      }
+      // Usuń użytkowników
       await Promise.all(ids.map(id => base44.entities.AllowedUser.delete(id)));
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["allowedUsers"]);
+      queryClient.invalidateQueries(["phoneContacts"]);
       setSelectedUsers([]);
       setShowBulkDeleteDialog(false);
-      toast.success("Użytkownicy usunięci");
+      toast.success("Użytkownicy i powiązane kontakty usunięci");
     },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
+    }
   });
 
   const resendInviteMutation = useMutation({
