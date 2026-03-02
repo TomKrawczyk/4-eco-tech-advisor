@@ -79,10 +79,10 @@ const navStructure = [
   },
   {
     group: "Umówione",
-    roles: ["admin", "group_leader", "team_leader"],
+    adminOnly: true,
     items: [
-      { name: "Meetings", label: "Spotkania", roles: ["admin", "group_leader", "team_leader"] },
-      { name: "PhoneContacts", label: "Kontakt telefoniczny", roles: ["admin", "group_leader", "team_leader"] },
+      { name: "Meetings", label: "Spotkania", adminOnly: true },
+      { name: "PhoneContacts", label: "Kontakt telefoniczny", adminOnly: true },
     ]
   },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
