@@ -117,6 +117,7 @@ export default function Layout({ children, currentPageName }) {
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               if (item.adminOnly && currentUser?.role !== "admin") return null;
+              if (item.roles && !item.roles.includes(currentUser?.role)) return null;
               const isActive = currentPageName === item.name;
               return (
                 <Link
