@@ -67,7 +67,7 @@ export default function GroupManagement({ allowedUsers }) {
     createGroupMutation.mutate({
       name: groupName,
       description: groupDescription,
-      group_leader_id: groupLeaderId || undefined
+      group_leader_ids: groupLeaderIds.length > 0 ? groupLeaderIds : undefined
     });
   };
 
