@@ -149,6 +149,8 @@ export default function Layout({ children, currentPageName }) {
   const visibleNavItems = navStructure
     .map(entry => {
       if (entry.group) {
+        // Jeśli cała grupa ma roles, sprawdź czy user ma dostęp
+        if (entry.roles && !entry.roles.includes(currentUser?.role)) return null;
         const visibleItems = entry.items.filter(isItemVisible);
         if (visibleItems.length === 0) return null;
         return { ...entry, items: visibleItems };
