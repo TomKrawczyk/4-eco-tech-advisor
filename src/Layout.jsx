@@ -77,7 +77,14 @@ const navStructure = [
       { name: "MeetingReports", label: "Raporty po spotkaniu" },
     ]
   },
-  { name: "Meetings", label: "Spotkania", roles: ["admin", "group_leader", "team_leader"] },
+  {
+    group: "Umówione",
+    roles: ["admin", "group_leader", "team_leader"],
+    items: [
+      { name: "Meetings", label: "Spotkania", roles: ["admin", "group_leader", "team_leader"] },
+      { name: "PhoneContacts", label: "Kontakt telefoniczny", roles: ["admin", "group_leader", "team_leader"] },
+    ]
+  },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
   { name: "Education", label: "Szkolenia" },
 ];
