@@ -35,7 +35,10 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const dateIdx = headers.findIndex(h => h.toLowerCase().includes('data kontaktu'));
   const agentIdx = headers.findIndex(h => h.toLowerCase().includes('agent dzwoni'));
   const assignedIdx = headers.findIndex(h => h.toLowerCase().includes('komu') && (h.toLowerCase().includes('przypisane') || h.toLowerCase().includes('przekazane')));
-  const commentIdx = headers.findIndex(h => h.toLowerCase().includes('komentarz') && h.toLowerCase().includes('dws'));
+  const commentIdx = headers.findIndex(h => 
+    (h.toLowerCase().includes('komentarz') && (h.toLowerCase().includes('dws') || h.toLowerCase().includes('inne'))) ||
+    h.toLowerCase().includes('komentarz dws')
+  );
 
   console.log(`[${sheetTitle}] Headers with index:`, headers.map((h, i) => `[${i}] "${h}"`).slice(0, 20).join(' | '));
   console.log(`[${sheetTitle}] intIdx (zainteresowany doradcy): ${intIdx}`);
