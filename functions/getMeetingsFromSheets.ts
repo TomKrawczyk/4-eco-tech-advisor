@@ -162,45 +162,14 @@ Deno.serve(async (req) => {
     const meetings = results.flatMap(r => r.meetings);
     const phoneContacts = results.flatMap(r => r.phoneContacts);
 
-    // Zapisz kontakty telefoniczne do bazy
-    if (phoneContacts.length > 0) {
-      for (const contact of phoneContacts) {
-        const existingContact = await base44.asServiceRole.entities.PhoneContact.filter({
-          contact_key: contact.contact_key
-        });
-        
-        if (existingContact.length > 0) {
-          // Update existing
-          await base44.asServiceRole.entities.PhoneContact.update(existingContact[0].id, {
-            interview_data: contact.interview_data,
-            contact_calendar: contact.contact_calendar,
-            agent: contact.agent,
-            status: contact.status,
-          });
-        } else {
-          // Create new
-          await base44.asServiceRole.entities.PhoneContact.create({
-            contact_key: contact.contact_key,
-            sheet: contact.sheet,
-            client_name: contact.client_name,
-            phone: contact.phone,
-            address: contact.address,
-            date: contact.date,
-            agent: contact.agent,
-            contact_calendar: contact.contact_calendar,
-            status: contact.status,
-            interview_data: contact.interview_data,
-            contact_date: contact.contact_date,
-          });
-        }
-      }
-    }
+    // Pobierz kontakty z bazy zamiast zwracać z funkcji
+    const dbPhoneContacts = await base44.asServiceRole.entities.PhoneContact.list('-created_date', 1000);
 
     return Response.json({
       meetings,
-      phoneContacts,
+      phoneContacts: dbPhoneContacts,
       total: meetings.length,
-      totalPhoneContacts: phoneContacts.length,
+      totalPhoneContacts: dbPhoneContacts.length,
       refreshed_at: new Date().toISOString()
     });
   } catch (error) {
