@@ -20,6 +20,7 @@ const navItems = [
   { name: "VisitReports", label: "Raporty" },
   { name: "MeetingReports", label: "Raporty ze spotkań" },
   { name: "Referrals", label: "Polecenia" },
+  { name: "Calendar", label: "Kalendarz" },
   { name: "Meetings", label: "Spotkania", roles: ["admin", "group_leader", "team_leader"] },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: true },
 ];
