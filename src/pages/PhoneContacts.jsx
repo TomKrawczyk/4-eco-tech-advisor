@@ -265,22 +265,20 @@ export default function PhoneContacts() {
                                       )}
                                     </div>
                                     <div className="shrink-0 flex gap-2 flex-wrap">
-                                      {(contact.comments || contact.agent || contact.interview_data) && (
-                                        <button
-                                          onClick={() => {
-                                               setSelectedDetails({
-                                                 agent: contact.agent,
-                                                 comments: contact.comments,
-                                                 interview_data: contact.interview_data || {}
-                                               });
-                                               setDetailsModalOpen(true);
-                                             }}
-                                          className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors"
-                                          title="Pokaż szczegóły"
-                                        >
-                                          <MessageSquare className="w-4 h-4" />
-                                        </button>
-                                      )}
+                                      <button
+                                        onClick={() => {
+                                          setSelectedDetails({
+                                            agent: contact.agent,
+                                            comments: contact.comments,
+                                            interview_data: contact.interview_data || {}
+                                          });
+                                          setDetailsModalOpen(true);
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                        title="Pokaż szczegóły"
+                                      >
+                                        Szczegóły
+                                      </button>
 
                                       {contact.assigned_user_email ? (
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
