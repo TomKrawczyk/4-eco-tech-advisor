@@ -104,32 +104,12 @@ export default function UserManagement() {
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: async (id) => {
-      const user = allowedUsers.find(u => u.id === id);
-      const email = user?.data?.email || user?.email;
-      // Usuń z PhoneContacts jeśli istnieją
-      if (email) {
-        try {
-          const contacts = await base44.entities.PhoneContact.filter({ assigned_user_email: email });
-          for (const contact of contacts) {
-            await base44.entities.PhoneContact.delete(contact.id);
-          }
-        } catch (error) {
-          console.warn("Błąd przy usuwaniu kontaktów:", error);
-        }
-      }
-      // Usuń użytkownika z AllowedUser
-      await base44.entities.AllowedUser.delete(id);
-    },
+    mutationFn: (id) => base44.entities.AllowedUser.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(["allowedUsers"]);
-      queryClient.invalidateQueries(["phoneContacts"]);
       setUserToDelete(null);
-      toast.success("Użytkownik i powiązane kontakty usunięte");
+      toast.success("Dostęp użytkownika usunięty (dane zachowane dla archiwizacji)");
     },
-    onError: (error) => {
-      toast.error(`Błąd: ${error.message}`);
-    }
   });
 
   const bulkDeleteMutation = useMutation({
