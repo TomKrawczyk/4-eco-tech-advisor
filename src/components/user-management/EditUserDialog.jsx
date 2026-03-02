@@ -17,6 +17,8 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
     group_id: "",
     assigned_to: ""
   });
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
