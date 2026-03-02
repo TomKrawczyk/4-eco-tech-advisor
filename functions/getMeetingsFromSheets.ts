@@ -1,77 +1,21 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// Wszystkie zakładki które mają być przeszukiwane
-const SHEET_TABS = [
-  "Kujawsko-pomorskie",
-  "Świętokrzyskie",
-  "Podkarpackie",
-  "Podkarpackie - 2",
-  "Pomorskie",
-  "Pomorskie - 2",
-  "Zachodniopomorskie",
-  "Kopia arkusza Zachodniopomorskie",
-  "Lubelskie",
-  "Mazowieckie",
-  "Facebook",
-  "Spółdzielnie mieszkaniowe",
-  "Deweloperzy",
-  "Agroturystyka",
-];
+const SPREADSHEET_ID = '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
 
-// Dodaj dynamicznie pozostałe zakładki przy pierwszym uruchomieniu
-async function getAllSheetTabs(accessToken, spreadsheetId) {
+async function getAllSheetTabs(accessToken) {
   const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?includeGridData=false`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?includeGridData=false`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
-  if (!res.ok) return SHEET_TABS;
+  if (!res.ok) return [];
   const meta = await res.json();
   return meta.sheets.map(s => s.properties.title);
 }
 
-function normalizeRow(headers, row, sheetTitle) {
-  const obj = {};
-  headers.forEach((h, i) => { obj[h.trim()] = (row[i] || '').trim(); });
-
-  // Znajdź kolumnę "zainteresowany"
-  const interestedKey = Object.keys(obj).find(k =>
-    k.toLowerCase().includes('zainteresowany') && k.toLowerCase().includes('doradc')
-  );
-  const interested = interestedKey ? obj[interestedKey] : '';
-
-  // Znajdź kolumnę z imieniem i nazwiskiem
-  const nameKey = Object.keys(obj).find(k => k.toLowerCase().includes('imi') && k.toLowerCase().includes('nazwisko')) || 'Imię i nazwisko';
-  // Telefon
-  const phoneKey = Object.keys(obj).find(k => k.toLowerCase().includes('telefon') || k.toLowerCase().includes('tel.')) || 'Nr telefonu';
-  // Adres
-  const addressKey = Object.keys(obj).find(k => k.toLowerCase() === 'adres') || 'Adres';
-  // Data kontaktu
-  const dateKey = Object.keys(obj).find(k => k.toLowerCase().includes('data kontaktu')) || 'Data kontaktu';
-  // Data spotkania (z pola "zainteresowany" może być wpisana data)
-  const meetingNoteKey = Object.keys(obj).find(k => k.toLowerCase().includes('zainteresowany') && k.toLowerCase().includes('doradc'));
-  // Komu przypisane
-  const agentKey = Object.keys(obj).find(k => k.toLowerCase().includes('komu') && (k.toLowerCase().includes('przypisane') || k.toLowerCase().includes('przekazane')));
-  // Agent dzwoniący
-  const callerKey = Object.keys(obj).find(k => k.toLowerCase().includes('agent'));
-
-  return {
-    client_name: obj[nameKey] || '',
-    phone: obj[phoneKey] || '',
-    address: obj[addressKey] || '',
-    date: obj[dateKey] || '',
-    meeting_note: meetingNoteKey ? obj[meetingNoteKey] : '',
-    agent: obj[agentKey] || obj[callerKey] || '',
-    status: 'Spotkanie',
-    sheet: sheetTitle,
-    raw: obj,
-    interested
-  };
-}
-
-async function fetchLeadsFromSheet(accessToken, spreadsheetId, sheetTitle) {
-  const range = `'${sheetTitle}'!A1:Z2000`;
+async function fetchLeadsFromSheet(accessToken, sheetTitle) {
+  const range = `'${sheetTitle}'!A1:Z3000`;
   const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   if (!res.ok) return [];
@@ -80,14 +24,41 @@ async function fetchLeadsFromSheet(accessToken, spreadsheetId, sheetTitle) {
   if (rows.length < 2) return [];
 
   const headers = rows[0];
-  const leads = [];
 
+  // Znajdź indeks kolumny "Zainteresowany rozmową z doradcą?"
+  const intIdx = headers.findIndex(h =>
+    h.toLowerCase().includes('zainteresowany') && h.toLowerCase().includes('doradc')
+  );
+  if (intIdx === -1) return [];
+
+  // Znajdź pozostałe kolumny
+  const nameIdx = headers.findIndex(h => h.toLowerCase().includes('imi') && h.toLowerCase().includes('nazwisko'));
+  const phoneIdx = headers.findIndex(h => h.toLowerCase().includes('telefon') || h.toLowerCase().includes('tel'));
+  const addressIdx = headers.findIndex(h => h.toLowerCase().trim() === 'adres');
+  const dateIdx = headers.findIndex(h => h.toLowerCase().includes('data kontaktu'));
+  const agentIdx = headers.findIndex(h => h.toLowerCase().includes('agent dzwoni'));
+  const assignedIdx = headers.findIndex(h => h.toLowerCase().includes('komu') && (h.toLowerCase().includes('przypisane') || h.toLowerCase().includes('przekazane')));
+
+  const leads = [];
   for (const row of rows.slice(1)) {
-    const normalized = normalizeRow(headers, row, sheetTitle);
-    // Filtruj tylko te z wartością "Spotkanie" w kolumnie zainteresowany
-    if (normalized.interested.toLowerCase().includes('spotkanie')) {
-      leads.push(normalized);
-    }
+    const intVal = (row[intIdx] || '').trim();
+    // Filtruj tylko wiersze z "Spotkanie"
+    if (intVal.toLowerCase() !== 'spotkanie') continue;
+    // Pomiń puste wiersze
+    const name = (nameIdx >= 0 ? row[nameIdx] : '') || '';
+    if (!name.trim()) continue;
+
+    leads.push({
+      client_name: name,
+      phone: phoneIdx >= 0 ? (row[phoneIdx] || '') : '',
+      address: addressIdx >= 0 ? (row[addressIdx] || '') : '',
+      date: dateIdx >= 0 ? (row[dateIdx] || '') : '',
+      agent: agentIdx >= 0 ? (row[agentIdx] || '') : (assignedIdx >= 0 ? (row[assignedIdx] || '') : ''),
+      assigned: assignedIdx >= 0 ? (row[assignedIdx] || '') : '',
+      meeting_note: intVal,
+      sheet: sheetTitle,
+      status: 'Spotkanie',
+    });
   }
   return leads;
 }
@@ -106,19 +77,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden – tylko dla administratora' }, { status: 403 });
     }
 
-    const spreadsheetId = Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID');
-    if (!spreadsheetId) {
-      return Response.json({ error: 'Brak GOOGLE_SHEETS_SPREADSHEET_ID' }, { status: 500 });
-    }
-
     const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
 
     // Pobierz wszystkie zakładki dynamicznie
-    const allTabs = await getAllSheetTabs(accessToken, spreadsheetId);
+    const allTabs = await getAllSheetTabs(accessToken);
 
     // Pobierz dane równolegle ze wszystkich zakładek
     const results = await Promise.all(
-      allTabs.map(tab => fetchLeadsFromSheet(accessToken, spreadsheetId, tab))
+      allTabs.map(tab => fetchLeadsFromSheet(accessToken, tab))
     );
 
     const meetings = results.flat();
