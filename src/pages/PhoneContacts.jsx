@@ -209,15 +209,17 @@ export default function PhoneContacts() {
           Odśwież
         </Button>
 
-        <Button
-          variant={showStats ? "default" : "outline"}
-          size="sm"
-          className="gap-2 h-11"
-          onClick={() => setShowStats(p => !p)}
-        >
-          <BarChart2 className="w-4 h-4" />
-          Statystyki
-        </Button>
+        {currentUser?.role === "admin" && (
+          <Button
+            variant={showStats ? "default" : "outline"}
+            size="sm"
+            className="gap-2 h-11"
+            onClick={() => setShowStats(p => !p)}
+          >
+            <BarChart2 className="w-4 h-4" />
+            Statystyki
+          </Button>
+        )}
       </div>
 
       <div className="text-sm text-gray-500">
