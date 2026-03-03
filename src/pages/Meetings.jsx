@@ -245,6 +245,11 @@ export default function Meetings() {
         subtitle={`Spotkania z datą – najbliższe 3 dni`}
       />
 
+      {/* Statystyki przypisań */}
+      {showStats && (
+        <AssignmentStats onClose={() => setShowStats(false)} />
+      )}
+
       {/* Pasek narzędzi */}
       <div className="flex flex-wrap gap-2 items-center">
         <div className="relative flex-1 min-w-[180px]">
