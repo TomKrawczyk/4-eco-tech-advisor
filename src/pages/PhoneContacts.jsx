@@ -180,6 +180,10 @@ export default function PhoneContacts() {
     <div className="space-y-6">
       <PageHeader title="Kontakt telefoniczny do doradcy" subtitle="Klienci zainteresowani kontaktem z doradcą – aktualizacja co 5 minut" />
 
+      {showStats && (
+        <AssignmentStats onClose={() => setShowStats(false)} />
+      )}
+
       <div className="flex flex-wrap gap-2 items-center">
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
