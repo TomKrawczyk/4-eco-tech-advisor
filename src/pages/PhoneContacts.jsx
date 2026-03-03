@@ -45,6 +45,7 @@ export default function PhoneContacts() {
   const [expandedSheets, setExpandedSheets] = useState({});
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
