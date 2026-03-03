@@ -245,8 +245,8 @@ export default function Meetings() {
         subtitle={`Spotkania z datą – najbliższe 3 dni`}
       />
 
-      {/* Statystyki przypisań */}
-      {showStats && (
+      {/* Statystyki przypisań – tylko admin */}
+      {currentUser?.role === "admin" && showStats && (
         <AssignmentStats onClose={() => setShowStats(false)} />
       )}
 
