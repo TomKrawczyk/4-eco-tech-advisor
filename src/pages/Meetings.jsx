@@ -48,6 +48,7 @@ export default function Meetings() {
   const [groupFilter, setGroupFilter] = useState("all");
   const [expandedSheets, setExpandedSheets] = useState({});
   const [showMappingPanel, setShowMappingPanel] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [sheetFilter, setSheetFilter] = useState("all");
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
