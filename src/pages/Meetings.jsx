@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, AlertCircle, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare } from "lucide-react";
+import { RefreshCw, Search, AlertCircle, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2 } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
 import { motion, AnimatePresence } from "framer-motion";
 import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 import MeetingCard from "@/components/meetings/MeetingCard";
+import AssignmentStats from "@/components/meetings/AssignmentStats";
 import { format, addDays, parseISO, isValid, startOfDay } from "date-fns";
 
 // Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
