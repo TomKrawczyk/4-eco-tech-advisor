@@ -311,15 +311,17 @@ export default function Meetings() {
           </Button>
         )}
 
-        <Button
-          variant={showStats ? "default" : "outline"}
-          size="sm"
-          className="gap-2 h-11"
-          onClick={() => setShowStats(p => !p)}
-        >
-          <BarChart2 className="w-4 h-4" />
-          Statystyki
-        </Button>
+        {currentUser?.role === "admin" && (
+          <Button
+            variant={showStats ? "default" : "outline"}
+            size="sm"
+            className="gap-2 h-11"
+            onClick={() => setShowStats(p => !p)}
+          >
+            <BarChart2 className="w-4 h-4" />
+            Statystyki
+          </Button>
+        )}
 
         <div className="flex flex-col items-end gap-1 shrink-0">
           <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
