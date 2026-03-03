@@ -180,7 +180,7 @@ export default function PhoneContacts() {
     <div className="space-y-6">
       <PageHeader title="Kontakt telefoniczny do doradcy" subtitle="Klienci zainteresowani kontaktem z doradcą – aktualizacja co 5 minut" />
 
-      {showStats && (
+      {currentUser?.role === "admin" && showStats && (
         <AssignmentStats onClose={() => setShowStats(false)} />
       )}
 
