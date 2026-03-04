@@ -14,18 +14,33 @@ Deno.serve(async (req) => {
 
     const doc = new jsPDF();
 
+    // Load logo
+    let logoDataUrl = null;
+    try {
+      const logoRes = await fetch('https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6985025012ef2a10cfdedf68/dcc00b19d_4-eco-logo.png');
+      const logoBuffer = await logoRes.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(logoBuffer)));
+      logoDataUrl = `data:image/png;base64,${base64}`;
+    } catch (e) {
+      console.warn('Could not load logo:', e.message);
+    }
+
     // Header
     doc.setFillColor(34, 197, 94);
-    doc.rect(0, 0, 210, 45, 'F');
+    doc.rect(0, 0, 210, 48, 'F');
+
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, 'PNG', 12, 5, 40, 21);
+    }
     
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(26);
-    doc.text('ANALIZA OPŁACALNOŚCI', 105, 20, { align: 'center' });
-    doc.setFontSize(16);
-    doc.text('Instalacja fotowoltaiczna', 105, 30, { align: 'center' });
+    doc.setFontSize(22);
+    doc.text('ANALIZA OPLACALNOSCI', 190, 18, { align: 'right' });
+    doc.setFontSize(13);
+    doc.text('Instalacja fotowoltaiczna', 190, 28, { align: 'right' });
     
     doc.setFontSize(9);
-    doc.text(`Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}`, 105, 38, { align: 'center' });
+    doc.text(`Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}`, 190, 38, { align: 'right' });
 
     // Key metrics
     doc.setTextColor(0, 0, 0);
