@@ -39,6 +39,47 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
     return nameMatch && authorMatch;
   });
 
+  const assignGroupMutation = useMutation({
+    mutationFn: async ({ groupId, groupName }) => {
+      const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
+      if (assignment) {
+        await base44.entities.MeetingAssignment.update(assignment.id, {
+          assigned_group_id: groupId,
+          assigned_group_name: groupName,
+        });
+      } else {
+        await base44.entities.MeetingAssignment.create({
+          meeting_key: key,
+          sheet: meeting.sheet,
+          client_name: meeting.client_name,
+          meeting_calendar: meeting.meeting_calendar,
+          meeting_date: meeting.meeting_date,
+          assigned_group_id: groupId,
+          assigned_group_name: groupName,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
+      toast.success("Przypisano spotkanie do grupy");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const unassignGroupMutation = useMutation({
+    mutationFn: async () => {
+      if (!assignment) return;
+      await base44.entities.MeetingAssignment.update(assignment.id, {
+        assigned_group_id: null,
+        assigned_group_name: null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
+      toast.success("Usunięto przypisanie grupy");
+    },
+  });
+
   const assignMutation = useMutation({
     mutationFn: async ({ userEmail, userName }) => {
       const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
