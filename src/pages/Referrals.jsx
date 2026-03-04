@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { smartList, smartCreate, smartUpdate, smartDelete } from "@/components/offline/offlineSync";
 import { motion } from "framer-motion";
 import { Plus, Phone, MapPin, User, FileText, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
