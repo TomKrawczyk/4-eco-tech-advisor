@@ -77,7 +77,7 @@ export default function Interview() {
 
   const autoSave = async (updatedForm) => {
     if (!currentReport) return;
-    await base44.entities.VisitReport.update(currentReport.id, updatedForm);
+    await smartUpdate(base44.entities.VisitReport, "VisitReport", currentReport.id, updatedForm);
     
     // Log activity
     base44.functions.invoke('logActivity', {
