@@ -111,11 +111,19 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
 
   const unassignMutation = useMutation({
     mutationFn: async () => {
-      if (assignment) await base44.entities.MeetingAssignment.delete(assignment.id);
+      if (!assignment) return;
+      await base44.entities.MeetingAssignment.delete(assignment.id);
+      // Usuń powiązany event z kalendarza
+      const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
+      const existingEvents = await base44.entities.CalendarEvent.filter({ meeting_assignment_id: key });
+      for (const ev of existingEvents) {
+        await base44.entities.CalendarEvent.delete(ev.id);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
-      toast.success("Usunięto przypisanie");
+      queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
+      toast.success("Usunięto przypisanie i wydarzenie z kalendarza");
     },
   });
 
