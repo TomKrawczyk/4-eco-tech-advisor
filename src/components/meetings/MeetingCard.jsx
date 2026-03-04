@@ -9,16 +9,22 @@ import { toast } from "sonner";
 import MeetingDetailModal from "./MeetingDetailModal";
 import DetailsModal from "@/components/shared/DetailsModal";
 
-// Parsuje "DD.MM.YYYY HH:MM" -> { date: "YYYY-MM-DD", time: "HH:MM" }
+// Parsuje "DD.MM.YYYY HH:MM" lub "YYYY-MM-DD HH:MM" -> { date: "YYYY-MM-DD", time: "HH:MM" }
 function parseMeetingCalendar(str) {
   if (!str) return null;
-  const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}:\d{2})/);
-  if (!match) return null;
-  const [, d, m, y, t] = match;
-  return {
-    date: `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`,
-    time: t,
-  };
+  // Format DD.MM.YYYY HH:MM
+  const match1 = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}:\d{2})/);
+  if (match1) {
+    const [, d, m, y, t] = match1;
+    return { date: `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`, time: t };
+  }
+  // Format YYYY-MM-DD HH:MM
+  const match2 = str.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}:\d{2})/);
+  if (match2) {
+    const [, y, m, d, t] = match2;
+    return { date: `${y}-${m}-${d}`, time: t };
+  }
+  return null;
 }
 
 export default function MeetingCard({ meeting, assignment, salespeople, assignmentsForDate, currentUserRole, meetingReports = [], groups = [] }) {
