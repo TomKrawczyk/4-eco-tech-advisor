@@ -78,20 +78,23 @@ export default function PhoneContacts() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
+  // Pobierz przypisania z bazy dla zwykłego użytkownika
+  const { data: phoneContactsFromDB = [] } = useQuery({
+    queryKey: ["phoneContactsDB"],
+    queryFn: () => base44.entities.PhoneContact.list(),
+    enabled: accessChecked && !isLeaderOrAdmin,
+  });
+
   const { data: contacts = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ["phoneContacts"],
     queryFn: () => base44.functions.invoke('getMeetingsFromSheets'),
     select: (response) => {
       const all = response.data?.phoneContacts || [];
-      // Filtruj tylko kontakty – wyłącz archusze zawierające "spotkania", "kontakt" lub "ai bober"
       const filtered = all.filter(c => 
         !c.sheet?.toLowerCase().includes('spotkania') && 
         !c.sheet?.toLowerCase().includes('kontakt') && 
         !c.sheet?.toLowerCase().includes('ai bober')
       );
-      // DEBUG: Gertruda
-      const gertruda = filtered.find(c => c.client_name?.toLowerCase().includes('gertruda'));
-      if (gertruda) console.log('🔍 Gertruda found:', JSON.stringify(gertruda, null, 2));
       return filtered;
     },
     enabled: accessChecked && isLeaderOrAdmin,
