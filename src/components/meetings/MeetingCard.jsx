@@ -9,6 +9,18 @@ import { toast } from "sonner";
 import MeetingDetailModal from "./MeetingDetailModal";
 import DetailsModal from "@/components/shared/DetailsModal";
 
+// Parsuje "DD.MM.YYYY HH:MM" -> { date: "YYYY-MM-DD", time: "HH:MM" }
+function parseMeetingCalendar(str) {
+  if (!str) return null;
+  const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}:\d{2})/);
+  if (!match) return null;
+  const [, d, m, y, t] = match;
+  return {
+    date: `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`,
+    time: t,
+  };
+}
+
 export default function MeetingCard({ meeting, assignment, salespeople, assignmentsForDate, currentUserRole, meetingReports = [] }) {
   const [showDetail, setShowDetail] = useState(false);
   const [selectedDetails, setSelectedDetails] = useState(null);
