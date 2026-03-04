@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     // Main result
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(16);
-    doc.text('WYNIK ANALIZY', 20, 55);
+    doc.text('WYNIK ANALIZY', 20, 60);
 
     const resultColor = result.color === 'green' ? [34, 197, 94] : 
                        result.color === 'yellow' ? [245, 158, 11] : [239, 68, 68];
