@@ -79,7 +79,6 @@ const navStructure = [
   },
   {
     group: "Umówione",
-    adminOnly: true,
     items: [
       { name: "Meetings", label: "Spotkania" },
       { name: "PhoneContacts", label: "Kontakt telefoniczny", adminOnly: true },
