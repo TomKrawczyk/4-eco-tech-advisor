@@ -21,7 +21,7 @@ function parseMeetingCalendar(str) {
   };
 }
 
-export default function MeetingCard({ meeting, assignment, salespeople, assignmentsForDate, currentUserRole, meetingReports = [] }) {
+export default function MeetingCard({ meeting, assignment, salespeople, assignmentsForDate, currentUserRole, meetingReports = [], groups = [] }) {
   const [showDetail, setShowDetail] = useState(false);
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
