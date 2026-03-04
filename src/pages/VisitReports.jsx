@@ -62,7 +62,7 @@ export default function VisitReports() {
   }, [allReports, hierarchyData, currentUser]);
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.VisitReport.delete(id),
+    mutationFn: (id) => smartDelete(base44.entities.VisitReport, "VisitReport", id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["visitReports"] });
       setSelectedReport(null);
