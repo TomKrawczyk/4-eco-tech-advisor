@@ -1,6 +1,20 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { jsPDF } from 'npm:jspdf@4.0.0';
 
+const c = (t) => {
+  if (!t) return '';
+  return String(t)
+    .replace(/ą/g, 'a').replace(/Ą/g, 'A')
+    .replace(/ć/g, 'c').replace(/Ć/g, 'C')
+    .replace(/ę/g, 'e').replace(/Ę/g, 'E')
+    .replace(/ł/g, 'l').replace(/Ł/g, 'L')
+    .replace(/ń/g, 'n').replace(/Ń/g, 'N')
+    .replace(/ó/g, 'o').replace(/Ó/g, 'O')
+    .replace(/ś/g, 's').replace(/Ś/g, 'S')
+    .replace(/ź/g, 'z').replace(/Ź/g, 'Z')
+    .replace(/ż/g, 'z').replace(/Ż/g, 'Z');
+};
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -35,15 +49,15 @@ Deno.serve(async (req) => {
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
-    doc.text('KALKULATOR INSTALACJI PV', 190, 18, { align: 'right' });
+    doc.text('PV INSTALLATION CALCULATOR', 190, 18, { align: 'right' });
     
     doc.setFontSize(9);
-    doc.text(`Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}`, 190, 27, { align: 'right' });
+    doc.text(`Generated: ${new Date().toLocaleDateString('pl-PL')}`, 190, 27, { align: 'right' });
 
     // Main result
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(16);
-    doc.text('REKOMENDOWANA INSTALACJA', 20, 60);
+    doc.text('RECOMMENDED INSTALLATION', 20, 60);
 
     doc.setFillColor(34, 197, 94);
     doc.roundedRect(20, 65, 80, 25, 3, 3, 'F');
@@ -55,30 +69,32 @@ Deno.serve(async (req) => {
     doc.text(`${result.rocznaProdukcja} kWh`, 150, 80, { align: 'center' });
     
     doc.setFontSize(9);
-    doc.text('Moc instalacji', 60, 87, { align: 'center' });
-    doc.text('Produkcja roczna', 150, 87, { align: 'center' });
+    doc.text('Installation power', 60, 87, { align: 'center' });
+    doc.text('Annual production', 150, 87, { align: 'center' });
 
     // Key stats
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(14);
-    doc.text('Kluczowe parametry', 20, 105);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Key parameters', 20, 105);
 
     const stats = [
-      ['Liczba paneli:', `${result.liczbaPaneli} szt. (${result.mocPanela}Wp)`],
-      ['Moc instalacji:', `${result.mocInstalacji} kWp`],
-      ['Roczna produkcja:', `${result.rocznaProdukcja} kWh`],
-      ['Oszczędności roczne:', `${result.oszczednosciRoczne.toFixed(0)} zł`]
+      ['Number of panels:', `${result.liczbaPaneli} pcs. (${result.mocPanela}Wp)`],
+      ['Installation power:', `${result.mocInstalacji} kWp`],
+      ['Annual production:', `${result.rocznaProdukcja} kWh`],
+      ['Annual savings:', `${result.oszczednosciRoczne.toFixed(0)} PLN`]
     ];
 
     if (result.kosztInstalacji) {
-      stats.push(['Koszt instalacji:', `${result.kosztInstalacji.toLocaleString()} zł`]);
+      stats.push(['Installation cost:', `${result.kosztInstalacji.toLocaleString()} PLN`]);
     }
     if (result.rokZwrotu) {
-      stats.push(['Zwrot inwestycji:', `${result.rokZwrotu} lat`]);
+      stats.push(['Return on investment:', `${result.rokZwrotu} years`]);
     }
 
     let y = 115;
     doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
     stats.forEach(([label, value]) => {
       doc.text(label, 25, y);
       doc.text(value, 180, y, { align: 'right' });
@@ -88,22 +104,24 @@ Deno.serve(async (req) => {
     // Parameters
     y += 10;
     doc.setFontSize(14);
-    doc.text('Parametry kalkulacji', 20, y);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Calculation parameters', 20, y);
     y += 10;
 
     const orientacjaMap = {
-      "1.0": "Południe (100%)",
-      "0.9": "Płd-Wsch / Płd-Zach (90%)",
-      "0.8": "Wschód / Zachód (80%)"
+      "1.0": "South (100%)",
+      "0.9": "South-East / South-West (90%)",
+      "0.8": "East / West (80%)"
     };
 
     const params = [
-      ['Roczne zużycie energii:', `${zuzycie} kWh`],
-      ['Orientacja dachu:', orientacjaMap[orientacja] || orientacja],
-      ['Cena prądu brutto:', `${cenaPradu} zł/kWh`]
+      ['Annual energy consumption:', `${zuzycie} kWh`],
+      ['Roof orientation:', orientacjaMap[orientacja] || orientacja],
+      ['Electricity price (gross):', `${cenaPradu} PLN/kWh`]
     ];
 
     doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
     params.forEach(([label, value]) => {
       doc.text(label, 25, y);
       doc.text(value, 180, y, { align: 'right' });
@@ -113,14 +131,17 @@ Deno.serve(async (req) => {
     // Weather info
     if (weatherData) {
       y += 10;
-      doc.setFillColor(219, 234, 254);
-      doc.roundedRect(20, y, 170, 20, 2, 2, 'F');
+      doc.setFillColor(236, 253, 245);
+      doc.setDrawColor(34, 197, 94);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(20, y, 170, 20, 2, 2, 'S');
       
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(11);
-      doc.text('Uwzględniono prognozę pogody (7 dni):', 25, y + 8);
-      doc.text(`Śr. godziny słoneczne: ${weatherData.summary.avg_sun_hours}h/dzień`, 25, y + 15);
-      doc.text(`Potencjał produkcji: ${weatherData.summary.avg_production_factor}%`, 105, y + 15);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Weather forecast included (7 days):', 25, y + 8);
+      doc.text(`Avg sun hours: ${weatherData.summary.avg_sun_hours}h/day`, 25, y + 15);
+      doc.text(`Production potential: ${weatherData.summary.avg_production_factor}%`, 105, y + 15);
       y += 25;
     }
 
@@ -132,15 +153,17 @@ Deno.serve(async (req) => {
       
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(14);
-      doc.text('Zwrot inwestycji', 105, y + 12, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.text('Return on investment', 105, y + 12, { align: 'center' });
       doc.setFontSize(24);
-      doc.text(`${result.rokZwrotu} lat`, 105, y + 25, { align: 'center' });
+      doc.text(`${result.rokZwrotu} years`, 105, y + 25, { align: 'center' });
     }
 
     // Footer
     doc.setTextColor(150, 150, 150);
     doc.setFontSize(9);
-    doc.text('4-ECO Green Energy | Kalkulator instalacji PV', 105, 285, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('4-ECO Green Energy | PV Installation Calculator', 105, 285, { align: 'center' });
 
     const pdfBytes = doc.output('arraybuffer');
 
