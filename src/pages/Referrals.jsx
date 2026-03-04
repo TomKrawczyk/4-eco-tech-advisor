@@ -55,8 +55,9 @@ export default function Referrals() {
 
   const { data: allReferrals = [] } = useQuery({
     queryKey: ['referrals'],
-    queryFn: () => base44.entities.Referral.list('-created_date'),
-    enabled: !!currentUser
+    queryFn: () => smartList(base44.entities.Referral, "Referral", "-created_date"),
+    enabled: !!currentUser,
+    staleTime: 30000,
   });
 
   const { data: hierarchy = [] } = useQuery({
