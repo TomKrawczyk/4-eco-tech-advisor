@@ -8,6 +8,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import PageHeader from "../components/shared/PageHeader";
 import ReportDetail from "../components/reports/ReportDetail";
+import { smartList, smartDelete } from "@/components/offline/offlineSync";
 
 const statusConfig = {
   draft: { label: "Szkic", icon: Clock, color: "bg-gray-100 text-gray-700 border-gray-300" },
