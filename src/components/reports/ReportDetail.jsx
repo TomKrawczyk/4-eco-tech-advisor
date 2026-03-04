@@ -67,22 +67,39 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
   const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
-      const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id }, { responseType: 'arraybuffer' });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      let pdfData;
+      let retries = 0;
+      const maxRetries = 3;
+      
+      while (retries < maxRetries) {
+        try {
+          const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id }, { responseType: 'arraybuffer' });
+          pdfData = response.data;
+          break;
+        } catch (error) {
+          retries++;
+          if (retries >= maxRetries) throw error;
+          await new Promise(r => setTimeout(r, 500 * retries));
+        }
+      }
+      
+      if (!pdfData) throw new Error('No PDF data received');
+      
+      const blob = new Blob([pdfData], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const filename = `raport_${report.client_name?.replace(/\s+/g, '_') || 'wizyta'}.pdf`;
       
-      // Mobile-friendly download
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
       
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
       
       base44.functions.invoke('logActivity', {
         action_type: 'report_export',
@@ -92,7 +109,7 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
       }).catch(() => {});
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      alert('Błąd podczas pobierania PDF: ' + error.message);
+      alert('Błąd podczas pobierania PDF. Spróbuj ponownie.');
     } finally {
       setDownloading(false);
     }
