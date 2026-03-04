@@ -291,7 +291,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                       return (
                         <SelectItem key={sp.email} value={sp.email} disabled={full}>
                           <span className={full ? "text-red-400" : warn ? "text-orange-500" : ""}>
-                            {sp.name} {full ? `(max ${count}/5)` : count > 0 ? `(${count}/5)` : ""}
+                            {sp.name} <span className="text-gray-400 text-[10px]">({sp.email})</span>{full ? ` (max ${count}/5)` : count > 0 ? ` (${count}/5)` : ""}
                           </span>
                         </SelectItem>
                       );
