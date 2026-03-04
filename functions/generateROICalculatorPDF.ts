@@ -45,18 +45,18 @@ Deno.serve(async (req) => {
     // Key metrics
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(14);
-    doc.text('KLUCZOWE WSKAŹNIKI', 20, 58);
+    doc.text('KLUCZOWE WSKAZNIKI', 20, 63);
 
     // ROI boxes
     const boxes = [
       { label: 'ZWROT W', value: `${result.rokZwrotu || '25+'} LAT`, x: 20 },
       { label: 'ROI', value: `${result.roiProcent}%`, x: 75 },
-      { label: 'ZYSK', value: `${(result.zyskCalkowity / 1000).toFixed(0)}k zł`, x: 130 }
+      { label: 'ZYSK', value: `${(result.zyskCalkowity / 1000).toFixed(0)}k zl`, x: 130 }
     ];
 
     boxes.forEach(box => {
       doc.setFillColor(34, 197, 94);
-      doc.roundedRect(box.x, 65, 45, 25, 3, 3, 'F');
+      doc.roundedRect(box.x, 70, 45, 25, 3, 3, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(8);
       doc.text(box.label, box.x + 22.5, 72, { align: 'center' });
