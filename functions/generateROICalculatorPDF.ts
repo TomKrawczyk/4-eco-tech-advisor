@@ -1,6 +1,20 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { jsPDF } from 'npm:jspdf@4.0.0';
 
+const c = (t) => {
+  if (!t) return '';
+  return String(t)
+    .replace(/ą/g, 'a').replace(/Ą/g, 'A')
+    .replace(/ć/g, 'c').replace(/Ć/g, 'C')
+    .replace(/ę/g, 'e').replace(/Ę/g, 'E')
+    .replace(/ł/g, 'l').replace(/Ł/g, 'L')
+    .replace(/ń/g, 'n').replace(/Ń/g, 'N')
+    .replace(/ó/g, 'o').replace(/Ó/g, 'O')
+    .replace(/ś/g, 's').replace(/Ś/g, 'S')
+    .replace(/ź/g, 'z').replace(/Ź/g, 'Z')
+    .replace(/ż/g, 'z').replace(/Ż/g, 'Z');
+};
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -35,23 +49,26 @@ Deno.serve(async (req) => {
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
-    doc.text('ANALIZA OPLACALNOSCI', 190, 18, { align: 'right' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('PROFITABILITY ANALYSIS', 190, 18, { align: 'right' });
     doc.setFontSize(13);
-    doc.text('Instalacja fotowoltaiczna', 190, 28, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('Photovoltaic installation', 190, 28, { align: 'right' });
     
     doc.setFontSize(9);
-    doc.text(`Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}`, 190, 38, { align: 'right' });
+    doc.text(`Generated: ${new Date().toLocaleDateString('pl-PL')}`, 190, 38, { align: 'right' });
 
     // Key metrics
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(14);
-    doc.text('KLUCZOWE WSKAZNIKI', 20, 63);
+    doc.setFont('helvetica', 'bold');
+    doc.text('KEY INDICATORS', 20, 63);
 
     // ROI boxes
     const boxes = [
-      { label: 'ZWROT W', value: `${result.rokZwrotu || '25+'} LAT`, x: 20 },
+      { label: 'PAYBACK', value: `${result.rokZwrotu || '25+'} YEARS`, x: 20 },
       { label: 'ROI', value: `${result.roiProcent}%`, x: 75 },
-      { label: 'ZYSK', value: `${(result.zyskCalkowity / 1000).toFixed(0)}k zl`, x: 130 }
+      { label: 'PROFIT', value: `${(result.zyskCalkowity / 1000).toFixed(0)}k PLN`, x: 130 }
     ];
 
     boxes.forEach(box => {
@@ -59,6 +76,7 @@ Deno.serve(async (req) => {
       doc.roundedRect(box.x, 70, 45, 25, 3, 3, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
       doc.text(box.label, box.x + 22.5, 77, { align: 'center' });
       doc.setFontSize(16);
       doc.text(box.value, box.x + 22.5, 90, { align: 'center' });
@@ -67,19 +85,21 @@ Deno.serve(async (req) => {
     // Parameters
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text('Parametry analizy', 20, 110);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Analysis parameters', 20, 110);
 
     const params = [
-      ['Koszt instalacji:', `${parseFloat(kosztInstalacji).toLocaleString()} zł`],
-      ['Roczna produkcja:', `${rocznaProdukcja} kWh`],
-      ['Cena prądu (start):', `${cenaPradu} zł/kWh`],
-      ['Koszt utrzymania:', `${kosztUtrzymania} zł/rok`],
-      ['Inflacja energii:', `${inflacjaEnergii}%/rok`],
-      ['Degradacja paneli:', `${degradacjaPaneli}%/rok`]
+      ['Installation cost:', `${parseFloat(kosztInstalacji).toLocaleString()} PLN`],
+      ['Annual production:', `${rocznaProdukcja} kWh`],
+      ['Electricity price (initial):', `${cenaPradu} PLN/kWh`],
+      ['Maintenance cost:', `${kosztUtrzymania} PLN/year`],
+      ['Energy inflation:', `${inflacjaEnergii}%/year`],
+      ['Panel degradation:', `${degradacjaPaneli}%/year`]
     ];
 
     let y = 118;
     doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
     params.forEach(([label, value]) => {
       doc.text(label, 25, y);
       doc.text(value, 180, y, { align: 'right' });
@@ -89,34 +109,38 @@ Deno.serve(async (req) => {
     // Yearly breakdown table
     y = 155;
     doc.setFontSize(12);
-    doc.text('Szczegółowa analiza (pierwsze 10 lat)', 20, y);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Detailed analysis (first 10 years)', 20, y);
     y += 8;
 
     // Table header
-    doc.setFillColor(240, 240, 240);
+    doc.setFillColor(34, 197, 94);
     doc.rect(20, y, 170, 8, 'F');
     doc.setFontSize(8);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Rok', 25, y + 5);
-    doc.text('Produkcja', 55, y + 5);
-    doc.text('Cena', 95, y + 5);
-    doc.text('Oszczędności', 120, y + 5);
-    doc.text('Zysk', 165, y + 5, { align: 'right' });
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('Year', 25, y + 5);
+    doc.text('Production', 55, y + 5);
+    doc.text('Price', 95, y + 5);
+    doc.text('Savings', 120, y + 5);
+    doc.text('Profit', 165, y + 5, { align: 'right' });
     y += 8;
 
     // Table rows
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
     result.dataRoczna.slice(0, 10).forEach((row, idx) => {
       if (idx % 2 === 0) {
-        doc.setFillColor(250, 250, 250);
+        doc.setFillColor(243, 244, 246);
         doc.rect(20, y, 170, 6, 'F');
       }
-      doc.setFontSize(8);
       doc.text(row.rok, 25, y + 4);
       doc.text(`${row.produkcja} kWh`, 55, y + 4);
-      doc.text(`${row.cenaPradu} zł`, 95, y + 4);
-      doc.text(`${row.oszczednosci.toLocaleString()} zł`, 120, y + 4);
+      doc.text(`${row.cenaPradu} PLN`, 95, y + 4);
+      doc.text(`${row.oszczednosci.toLocaleString()} PLN`, 120, y + 4);
       doc.setTextColor(row.zysk > 0 ? 34 : 239, row.zysk > 0 ? 197 : 68, row.zysk > 0 ? 94 : 68);
-      doc.text(`${row.zysk.toLocaleString()} zł`, 185, y + 4, { align: 'right' });
+      doc.text(`${row.zysk.toLocaleString()} PLN`, 185, y + 4, { align: 'right' });
       doc.setTextColor(0, 0, 0);
       y += 6;
     });
@@ -131,17 +155,21 @@ Deno.serve(async (req) => {
 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
-    doc.text('PODSUMOWANIE INWESTYCJI', 105, y + 8, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('INVESTMENT SUMMARY', 105, y + 8, { align: 'center' });
     doc.setFontSize(9);
-    doc.text(`Całkowite oszczędności (25 lat): ${result.skumulowaneOszczednosci.toLocaleString()} zł`, 105, y + 15, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total savings (25 years): ${result.skumulowaneOszczednosci.toLocaleString()} PLN`, 105, y + 15, { align: 'center' });
     doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(34, 197, 94);
-    doc.text(`ZYSK NETTO: ${result.zyskCalkowity.toLocaleString()} zł`, 105, y + 22, { align: 'center' });
+    doc.text(`NET PROFIT: ${result.zyskCalkowity.toLocaleString()} PLN`, 105, y + 22, { align: 'center' });
 
     // Footer
     doc.setTextColor(150, 150, 150);
     doc.setFontSize(8);
-    doc.text('4-ECO Green Energy | Analiza opłacalności instalacji PV', 105, 285, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('4-ECO Green Energy | PV Installation Profitability Analysis', 105, 285, { align: 'center' });
 
     const pdfBytes = doc.output('arraybuffer');
 
