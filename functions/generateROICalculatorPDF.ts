@@ -59,9 +59,9 @@ Deno.serve(async (req) => {
       doc.roundedRect(box.x, 70, 45, 25, 3, 3, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(8);
-      doc.text(box.label, box.x + 22.5, 72, { align: 'center' });
+      doc.text(box.label, box.x + 22.5, 77, { align: 'center' });
       doc.setFontSize(16);
-      doc.text(box.value, box.x + 22.5, 85, { align: 'center' });
+      doc.text(box.value, box.x + 22.5, 90, { align: 'center' });
     });
 
     // Parameters
