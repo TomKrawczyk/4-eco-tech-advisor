@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import PageHeader from "../components/shared/PageHeader";
 import ReportSelector from "../components/reports/ReportSelector";
+import { smartUpdate } from "@/components/offline/offlineSync";
 
 const questions = [
   { key: "interview_annual_cost", label: "Jaki jest roczny koszt za energię elektryczną?", placeholder: "np. 4500 zł/rok" },
