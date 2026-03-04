@@ -48,26 +48,26 @@ Deno.serve(async (req) => {
     const resultColor = result.color === 'green' ? [34, 197, 94] : 
                        result.color === 'yellow' ? [245, 158, 11] : [239, 68, 68];
     doc.setFillColor(...resultColor);
-    doc.roundedRect(20, 60, 170, 35, 3, 3, 'F');
+    doc.roundedRect(20, 65, 170, 35, 3, 3, 'F');
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
-    doc.text(result.level, 105, 72, { align: 'center' });
+    doc.text(result.level, 105, 77, { align: 'center' });
     doc.setFontSize(32);
-    doc.text(`${result.pctAuto}%`, 105, 88, { align: 'center' });
+    doc.text(`${result.pctAuto}%`, 105, 93, { align: 'center' });
 
     // Details
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(14);
-    doc.text('Szczegóły energetyczne', 20, 110);
+    doc.text('Szczegóły energetyczne', 20, 115);
 
     const details = [
-      ['Produkcja prądu:', `${parseFloat(produkcja).toFixed(1)} kWh`],
+      ['Produkcja pradu:', `${parseFloat(produkcja).toFixed(1)} kWh`],
       ['Autokonsumpcja:', `${result.auto.toFixed(1)} kWh`],
       ['Eksport do sieci:', `${parseFloat(eksport).toFixed(1)} kWh (${result.pctExport}%)`]
     ];
 
-    let y = 120;
+    let y = 125;
     doc.setFontSize(11);
     details.forEach(([label, value]) => {
       doc.text(label, 25, y);
