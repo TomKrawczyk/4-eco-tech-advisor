@@ -170,11 +170,37 @@ export default function PhoneContacts() {
     );
   }
 
+  // Zwykły użytkownik widzi tylko swoje przypisane kontakty
   if (!isLeaderOrAdmin) {
+    const myContacts = phoneContactsFromDB.filter(c => c.assigned_user_email === currentUser?.email);
     return (
-      <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
-        <AlertCircle className="w-12 h-12 text-red-400 mb-3" />
-        <p className="text-gray-700 font-medium">Brak dostępu – tylko dla liderów i administratorów</p>
+      <div className="space-y-6">
+        <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
+        {myContacts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Phone className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="font-semibold text-gray-800 mb-1">Brak przypisanych kontaktów</h3>
+            <p className="text-sm text-gray-500">Nie masz jeszcze żadnych przypisanych kontaktów telefonicznych.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {myContacts.map((c, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
+                {c.phone && (
+                  <a href={`tel:${c.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
+                    <Phone className="w-3 h-3" /> {c.phone}
+                  </a>
+                )}
+                {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
+                {c.sheet && <Badge className="mt-1 bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{c.sheet}</Badge>}
+              </div>
+            ))}
+          </div>
+        )}
+        <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
       </div>
     );
   }
