@@ -118,7 +118,7 @@ export default function Referrals() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Referral.delete(id),
+    mutationFn: (id) => smartDelete(base44.entities.Referral, "Referral", id),
     onSuccess: () => {
       queryClient.invalidateQueries(['referrals']);
     }
