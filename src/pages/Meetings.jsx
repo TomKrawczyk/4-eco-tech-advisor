@@ -460,12 +460,13 @@ export default function Meetings() {
                                     )}
                                     <div className="flex-1">
                                       <MeetingCard
-                                        meeting={meeting}
-                                        assignment={assignment}
-                                        salespeople={salespeople}
-                                        assignmentsForDate={meetingAssignments.filter(a => a.meeting_date === meeting.meeting_date)}
-                                        currentUserRole={currentUser?.role}
-                                        meetingReports={meetingReports}
+                                       meeting={meeting}
+                                       assignment={assignment}
+                                       salespeople={salespeople}
+                                       assignmentsForDate={meetingAssignments.filter(a => a.meeting_date === meeting.meeting_date)}
+                                       currentUserRole={currentUser?.role}
+                                       meetingReports={meetingReports}
+                                       groups={groups}
                                       />
                                     </div>
                                   </div>
