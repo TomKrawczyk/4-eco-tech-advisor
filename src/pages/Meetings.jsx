@@ -184,12 +184,11 @@ export default function Meetings() {
       }
       const matchSheet = sheetFilter === "all" || m.sheet === sheetFilter;
 
-      // Dla group_leader: pokaż tylko spotkania przypisane do jego grupy
+      // Dla group_leader: pokaż tylko spotkania z arkuszy przypisanych do jego grupy
       let matchLeaderGroup = true;
       if (currentUser?.role === "group_leader" && currentUserGroupId) {
-        const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-        const assignment = meetingAssignments.find(a => a.meeting_key === key);
-        matchLeaderGroup = assignment?.assigned_group_id === currentUserGroupId;
+        const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
+        matchLeaderGroup = sheetMapping?.group_id === currentUserGroupId;
       }
 
       return matchSearch && matchGroup && matchSheet && matchLeaderGroup;
