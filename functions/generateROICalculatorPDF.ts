@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
       ['Degradacja paneli:', `${degradacjaPaneli}%/rok`]
     ];
 
-    let y = 113;
+    let y = 118;
     doc.setFontSize(9);
     params.forEach(([label, value]) => {
       doc.text(label, 25, y);
