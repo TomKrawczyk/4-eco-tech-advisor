@@ -39,9 +39,10 @@ Deno.serve(async (req) => {
     let y = 20;
     
     // Color palette
-    const greenPrimary = [149, 193, 31];
-    const greenLight = [220, 252, 231];
-    const gray = [100, 100, 100];
+    const greenPrimary = [34, 197, 94];
+    const greenDark = [22, 163, 74];
+    const grayLight = [243, 244, 246];
+    const grayDark = [75, 85, 99];
     const black = [0, 0, 0];
 
     // Load logo
@@ -59,21 +60,20 @@ Deno.serve(async (req) => {
     const addSectionHeader = (title) => {
       if (y > 250) {
         doc.addPage();
-        y = 20;
+        y = 15;
       }
       
+      // Background box
+      doc.setFillColor(...grayLight);
+      doc.rect(15, y - 3, 180, 8, 'F');
+      
       // Title
-      doc.setTextColor(...black);
-      doc.setFontSize(12);
+      doc.setTextColor(...greenPrimary);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text(c(title), 15, y);
+      doc.text(c(title), 17, y + 2);
       
-      // Underline
-      doc.setDrawColor(...gray);
-      doc.setLineWidth(0.2);
-      doc.line(15, y + 2, 195, y + 2);
-      
-      y += 10;
+      y += 12;
     };
     
     // Helper for field display
@@ -81,78 +81,78 @@ Deno.serve(async (req) => {
       if (!value) return;
       if (y > 270) {
         doc.addPage();
-        y = 20;
+        y = 15;
       }
       
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...gray);
+      doc.setTextColor(...grayDark);
       doc.text(c(label), 20, y);
-      y += 5;
+      y += 4;
       
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(...black);
       const lines = doc.splitTextToSize(c(String(value)), 170);
       doc.text(lines, 20, y);
-      y += lines.length * 5 + 3;
+      y += lines.length * 5 + 4;
     };
     
     // HEADER
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, 210, 38, 'F');
+    doc.setFillColor(...greenPrimary);
+    doc.rect(0, 0, 210, 42, 'F');
 
     if (logoDataUrl) {
-      doc.addImage(logoDataUrl, 'PNG', 15, 5, 42, 22);
+      doc.addImage(logoDataUrl, 'PNG', 15, 6, 40, 20);
     }
 
-    doc.setTextColor(...black);
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text(c('RAPORT WIZYTY'), 190, 13, { align: 'right' });
+    doc.text(c('RAPORT WIZYTY'), 190, 15, { align: 'right' });
 
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...gray);
-    doc.text(new Date().toLocaleDateString('pl-PL'), 190, 20, { align: 'right' });
+    doc.setTextColor(255, 255, 255);
+    doc.text(new Date().toLocaleDateString('pl-PL'), 190, 23, { align: 'right' });
 
-    doc.setDrawColor(...gray);
-    doc.setLineWidth(0.2);
-    doc.line(15, 34, 195, 34);
+    doc.setDrawColor(...grayLight);
+    doc.setLineWidth(0.3);
+    doc.line(15, 36, 195, 36);
     
-    y = 42;
+    y = 48;
     doc.setTextColor(...black);
     
     // CLIENT SECTION
-    addSectionHeader('DANE KLIENTA');
-    addField('Klient', report.client_name);
-    addField('Adres', report.client_address);
-    addField('Telefon', report.client_phone);
-    addField('Data wizyty', report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : null);
+    addSectionHeader('CLIENT DATA');
+    addField('Client', report.client_name);
+    addField('Address', report.client_address);
+    addField('Phone', report.client_phone);
+    addField('Visit date', report.visit_date ? new Date(report.visit_date).toLocaleDateString('pl-PL') : null);
     
-    y += 5;
+    y += 3;
     
     // INSTALLATION SECTION
     if (report.installation_types?.length || report.contractor || report.launch_date) {
-      addSectionHeader('INSTALACJA');
-      addField('Typ instalacji', report.installation_types?.join(', '));
-      addField('Wykonawca', report.contractor);
-      addField('Data uruchomienia', report.launch_date);
-      y += 5;
+      addSectionHeader('INSTALLATION');
+      addField('Installation type', report.installation_types?.join(', '));
+      addField('Contractor', report.contractor);
+      addField('Launch date', report.launch_date);
+      y += 3;
     }
     
     // ENERGY SECTION
     if (report.annual_production_kwh || report.energy_imported_kwh || report.energy_exported_kwh) {
-      addSectionHeader('DANE ENERGETYCZNE');
-      addField('Roczna produkcja', report.annual_production_kwh ? `${report.annual_production_kwh} kWh` : null);
-      addField('Energia pobrana z sieci (1.8.0)', report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : null);
-      addField('Energia oddana do sieci (2.8.0)', report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : null);
-      y += 5;
+      addSectionHeader('ENERGY DATA');
+      addField('Annual production', report.annual_production_kwh ? `${report.annual_production_kwh} kWh` : null);
+      addField('Energy from grid (1.8.0)', report.energy_imported_kwh ? `${report.energy_imported_kwh} kWh` : null);
+      addField('Energy to grid (2.8.0)', report.energy_exported_kwh ? `${report.energy_exported_kwh} kWh` : null);
+      y += 3;
     }
     
     // AUTOCONSUMPTION
     if (report.autoconsumption_rating) {
-      addSectionHeader('OCENA AUTOKONSUMPCJI');
+      addSectionHeader('AUTOCONSUMPTION RATING');
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
@@ -164,17 +164,17 @@ Deno.serve(async (req) => {
     
     // TECHNICAL CHECKS
     const checks = [
-      ['Wizualna kontrola paneli/modulow (pekniecia, zabrudzenia):', report.panels_condition],
-      ['Kontrola mocowan i konstrukcji nosnej:', report.mounting_condition],
-      ['Wizualne sprawdzenie przewodow DC/AC, polaczen MC4:', report.cables_condition],
-      ['Wizualny stan zabezpieczen: SPD, RCD, wylaczniki:', report.protection_condition],
-      ['Odczyt falownika: bledy, produkcja, komunikacja:', report.inverter_reading],
-      ['Wizualna kontrola uziemienia i ciaglosci przewodow ochronnych:', report.grounding_condition],
-      ['Ocena mozliwosci rozbudowy: miejsce, przylacze, ograniczenia:', report.expansion_possibilities]
+      ['Visual inspection of panels/modules (cracks, dirt):', report.panels_condition],
+      ['Inspection of mounts and support structure:', report.mounting_condition],
+      ['Visual inspection of DC/AC wires, MC4 connections:', report.cables_condition],
+      ['Visual state of protection: SPD, RCD, switches:', report.protection_condition],
+      ['Inverter reading: errors, production, communication:', report.inverter_reading],
+      ['Visual inspection of grounding and protective wires:', report.grounding_condition],
+      ['Assessment of expansion possibilities: space, connection, limitations:', report.expansion_possibilities]
     ].filter(([_, v]) => v);
     
     if (checks.length > 0) {
-      addSectionHeader('KONTROLA TECHNICZNA');
+      addSectionHeader('TECHNICAL INSPECTION');
       
       checks.forEach(([question, answer], idx) => {
         if (y > 260) {
@@ -205,10 +205,10 @@ Deno.serve(async (req) => {
     if (report.recommendations) {
       if (y > 250) {
         doc.addPage();
-        y = 20;
+        y = 15;
       }
       
-      addSectionHeader('REKOMENDACJE');
+      addSectionHeader('RECOMMENDATIONS');
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
@@ -220,23 +220,23 @@ Deno.serve(async (req) => {
     
     // INTERVIEW SECTION
     const interviewQuestions = [
-      ['Jaki jest roczny koszt za energie elektryczna?', report.interview_annual_cost],
-      ['Ile osob zamieszkuje dom/mieszkanie?', report.interview_residents],
-      ['O ktorej godzinie domownicy wychodza do pracy/szkoly?', report.interview_work_schedule],
-      ['O ktorej godzinie zwykle wszyscy wracaja do domu?', report.interview_return_time],
-      ['Czy ktos jest w domu w godzinach 10:00-15:00?', report.interview_home_during_day],
-      ['O jakiej porze dnia zuzycie pradu jest najwieksze?', report.interview_peak_usage],
-      ['Kiedy najczesciej wlaczacie pralke, zmywarke i inne urzadzenia?', report.interview_appliance_usage],
-      ['Czym ogrzewana jest ciepla woda i kiedy z niej korzystacie?', report.interview_water_heating],
-      ['Jaki sprzet elektryczny jest w domu?', report.interview_equipment],
-      ['Jakie plany zakupowe dotyczace urzadzen energochlonnych?', report.interview_purchase_plans]
+      ['What is the annual cost of electricity?', report.interview_annual_cost],
+      ['How many people live in the house/flat?', report.interview_residents],
+      ['What time do residents leave for work/school?', report.interview_work_schedule],
+      ['What time do residents usually return home?', report.interview_return_time],
+      ['Is anyone home between 10:00-15:00?', report.interview_home_during_day],
+      ['When is electricity consumption highest?', report.interview_peak_usage],
+      ['When do you use washer, dishwasher and other appliances?', report.interview_appliance_usage],
+      ['How is hot water heated and when is it used?', report.interview_water_heating],
+      ['What electrical equipment is in the house?', report.interview_equipment],
+      ['What are your plans to purchase energy-consuming devices?', report.interview_purchase_plans]
     ].filter(([_, v]) => v);
     
     if (interviewQuestions.length > 0) {
       doc.addPage();
-      y = 20;
+      y = 15;
       
-      addSectionHeader('WYWIAD Z KLIENTEM');
+      addSectionHeader('CLIENT INTERVIEW');
       
       interviewQuestions.forEach(([question, answer]) => {
         if (y > 260) {
@@ -264,23 +264,23 @@ Deno.serve(async (req) => {
         if (report.client_signature) {
         if (y > 260) {
          doc.addPage();
-         y = 20;
+         y = 15;
         }
 
         y += 10;
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...gray);
-        doc.text(c('Podpis klienta:'), 20, y);
+        doc.setTextColor(...grayDark);
+        doc.text('Client signature:', 20, y);
 
         doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(...black);
         doc.text(c(report.client_signature), 20, y + 6);
 
         // Line under signature
-        doc.setDrawColor(...gray);
-        doc.setLineWidth(0.2);
+        doc.setDrawColor(...grayLight);
+        doc.setLineWidth(0.5);
         doc.line(20, y + 10, 100, y + 10);
         }
     }
@@ -291,16 +291,16 @@ Deno.serve(async (req) => {
       doc.setPage(i);
       
       // Footer line
-      doc.setDrawColor(...gray);
-      doc.setLineWidth(0.2);
-      doc.line(15, 278, 195, 278);
+      doc.setDrawColor(...grayLight);
+      doc.setLineWidth(0.5);
+      doc.line(15, 277, 195, 277);
       
       doc.setFontSize(7);
-      doc.setTextColor(...gray);
+      doc.setTextColor(...grayDark);
       doc.setFont('helvetica', 'normal');
-      doc.text(c(`Doradca: ${user.full_name || user.email}`), 20, 284);
-      doc.text(`Strona ${i}`, 190, 284, { align: 'right' });
-      doc.text('© 2026 4-ECO Green Energy', 105, 284, { align: 'center' });
+      doc.text(`Advisor: ${user.full_name || user.email}`, 20, 283);
+      doc.text(`Page ${i}`, 190, 283, { align: 'right' });
+      doc.text('(c) 2026 4-ECO Green Energy', 105, 283, { align: 'center' });
     }
 
     const pdfBytes = doc.output('arraybuffer');
