@@ -376,6 +376,8 @@ export default function Layout({ children, currentPageName }) {
         )}
       </AnimatePresence>
 
+      <OfflineBanner />
+
       {/* Main Content */}
       <main className="pt-14">
         <div className="max-w-5xl mx-auto px-3 md:px-4 py-6 md:py-8">
