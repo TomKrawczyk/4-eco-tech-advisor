@@ -70,6 +70,7 @@ export default function Meetings() {
   }, []);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
+  const hasAccess = !!currentUser; // wszyscy zalogowani mają dostęp
 
   const { data: groups = [] } = useQuery({
     queryKey: ["groups"],
@@ -80,7 +81,7 @@ export default function Meetings() {
   const { data: sheetMappings = [] } = useQuery({
     queryKey: ["sheetMappings"],
     queryFn: () => base44.entities.SheetGroupMapping.list(),
-    enabled: accessChecked && isLeaderOrAdmin,
+    enabled: accessChecked,
   });
 
   const { data: allAllowedUsers = [] } = useQuery({
@@ -92,7 +93,7 @@ export default function Meetings() {
   const { data: meetingAssignments = [] } = useQuery({
     queryKey: ["meetingAssignments"],
     queryFn: () => base44.entities.MeetingAssignment.list(),
-    enabled: accessChecked && isLeaderOrAdmin,
+    enabled: accessChecked,
   });
 
   const { data: meetingReports = [] } = useQuery({
@@ -104,7 +105,7 @@ export default function Meetings() {
   const { data: result, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["sheetMeetings"],
     queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data),
-    enabled: accessChecked && isLeaderOrAdmin,
+    enabled: accessChecked && isLeaderOrAdmin, // dane z arkusza pobiera tylko lider/admin (bo wymaga uprawnień)
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
   });
