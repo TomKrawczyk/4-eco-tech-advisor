@@ -254,11 +254,38 @@ export default function Meetings() {
     );
   }
 
+  // Zwykły użytkownik widzi tylko swoje przypisane spotkania
   if (!isLeaderOrAdmin) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
-        <AlertCircle className="w-12 h-12 text-red-400 mb-3" />
-        <p className="text-gray-700 font-medium">Brak dostępu – tylko dla liderów i administratorów</p>
+      <div className="space-y-6">
+        <PageHeader
+          title="Moje spotkania"
+          subtitle="Spotkania przypisane do Ciebie – najbliższe 3 dni"
+        />
+        {myAssignedMeetings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Table2 className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="font-semibold text-gray-800 mb-1">Brak przypisanych spotkań</h3>
+            <p className="text-sm text-gray-500">Nie masz żadnych spotkań w ciągu najbliższych 3 dni.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {myAssignedMeetings.map((a, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold text-gray-900 text-sm">{a.client_name}</span>
+                  <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{a.sheet}</Badge>
+                </div>
+                <div className="text-xs font-semibold text-green-700 bg-green-50 rounded-md px-2 py-1 w-fit mt-1">
+                  {a.meeting_calendar}
+                </div>
+                {a.notes && <p className="text-xs text-gray-500 mt-2">{a.notes}</p>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
