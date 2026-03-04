@@ -98,32 +98,29 @@ Deno.serve(async (req) => {
       y += lines.length * 5 + 3;
     };
     
-    // HEADER - Clean professional design
+    // HEADER
     doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, 210, 35, 'F');
-    
-    // Title and subtitle
+    doc.rect(0, 0, 210, 38, 'F');
+
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, 'PNG', 15, 5, 42, 22);
+    }
+
     doc.setTextColor(...black);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text(c('RAPORT WIZYTY'), 20, 15);
-    
+    doc.text(c('RAPORT WIZYTY'), 190, 13, { align: 'right' });
+
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...gray);
-    doc.text('4-ECO Green Energy • Doradztwo energetyczne', 20, 22);
-    
-    // Date in corner
-    doc.setFontSize(8);
-    doc.setTextColor(...gray);
     doc.text(new Date().toLocaleDateString('pl-PL'), 190, 20, { align: 'right' });
-    
-    // Subtle separator under header
+
     doc.setDrawColor(...gray);
     doc.setLineWidth(0.2);
-    doc.line(15, 32, 195, 32);
+    doc.line(15, 34, 195, 34);
     
-    y = 40;
+    y = 42;
     doc.setTextColor(...black);
     
     // CLIENT SECTION
