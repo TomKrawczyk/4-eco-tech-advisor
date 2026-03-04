@@ -1,6 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
-const SPREADSHEET_ID = Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID') || '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
+function extractSpreadsheetId(val) {
+  if (!val) return '';
+  // Extract ID from URL if full URL is provided
+  const match = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (match) return match[1];
+  return val;
+}
+
+const SPREADSHEET_ID = extractSpreadsheetId(Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID'));
 
 Deno.serve(async (req) => {
   try {
