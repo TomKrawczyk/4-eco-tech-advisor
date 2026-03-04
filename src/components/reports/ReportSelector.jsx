@@ -37,13 +37,13 @@ export default function ReportSelector({ onSelectReport, currentReport }) {
   const handleCreateNew = async () => {
     if (!newClientName.trim()) return;
     setCreating(true);
-    const newReport = await base44.entities.VisitReport.create({
+    const newReport = await smartCreate(base44.entities.VisitReport, "VisitReport", {
       client_name: newClientName,
       visit_date: new Date().toISOString().split("T")[0],
       status: "draft",
       author_name: currentUser?.displayName || currentUser?.full_name || currentUser?.email || "",
       author_email: currentUser?.email || "",
-    });
+    }, currentUser);
     setCreating(false);
     setShowDialog(false);
     setNewClientName("");
