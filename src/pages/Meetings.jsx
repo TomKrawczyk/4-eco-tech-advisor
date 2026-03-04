@@ -139,8 +139,11 @@ export default function Meetings() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
+        if (currentUser?.role === "admin") {
+          // Admin widzi wszystkich włącznie z innymi adminami
+          return true;
+        }
         if (role !== "user" && role !== "team_leader") return false;
-        if (currentUser?.role === "admin") return true;
         // Dla group_leader i team_leader: tylko użytkownicy z tej samej grupy
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
