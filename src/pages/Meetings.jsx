@@ -349,7 +349,7 @@ export default function Meetings() {
       <AnimatePresence>
         {showMappingPanel && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-            <SheetMappingPanel sheetTabs={allSheetTabs} groups={groups} onClose={() => setShowMappingPanel(false)} />
+            <SheetMappingPanel groups={groups} onClose={() => setShowMappingPanel(false)} />
           </motion.div>
         )}
       </AnimatePresence>
