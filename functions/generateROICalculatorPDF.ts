@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     // Parameters
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text('Parametry analizy', 20, 105);
+    doc.text('Parametry analizy', 20, 110);
 
     const params = [
       ['Koszt instalacji:', `${parseFloat(kosztInstalacji).toLocaleString()} zł`],
