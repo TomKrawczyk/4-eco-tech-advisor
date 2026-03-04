@@ -302,6 +302,52 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
               {assignment.assigned_user_name || assignment.assigned_user_email}
             </Badge>
           )}
+
+          {/* Przypisanie do grupy – tylko admin */}
+          {currentUserRole === "admin" && groups.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <Users className="w-4 h-4 text-gray-400 shrink-0" />
+              {assignment?.assigned_group_id ? (
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
+                    {assignment.assigned_group_name || assignment.assigned_group_id}
+                  </Badge>
+                  <button
+                    onClick={() => unassignGroupMutation.mutate()}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    usuń
+                  </button>
+                </div>
+              ) : (
+                <Select
+                  onValueChange={(val) => {
+                    const g = groups.find(g => g.id === val);
+                    assignGroupMutation.mutate({ groupId: val, groupName: g?.name || g?.data?.name || val });
+                  }}
+                >
+                  <SelectTrigger className="h-7 text-xs w-48">
+                    <SelectValue placeholder="Przypisz do grupy..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map(g => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.data?.name || g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
+          {/* Pokaż grupę dla liderów */}
+          {currentUserRole !== "admin" && assignment?.assigned_group_id && (
+            <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs mt-1">
+              <Users className="w-3 h-3 mr-1" />
+              {assignment.assigned_group_name}
+            </Badge>
+          )}
         </div>
         <button onClick={() => setShowDetail(true)} className="text-gray-400 hover:text-green-600 transition-colors self-start mt-1 shrink-0">
           <ChevronRight className="w-4 h-4" />
