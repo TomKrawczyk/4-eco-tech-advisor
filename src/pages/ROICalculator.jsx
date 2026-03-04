@@ -101,14 +101,8 @@ export default function ROICalculator() {
     
     setGeneratingPDF(true);
     try {
-      const res = await fetch(`/api/v1/functions/generateROICalculatorPDF`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ kosztInstalacji, rocznaProdukcja, cenaPradu, kosztUtrzymania, inflacjaEnergii, degradacjaPaneli, result })
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = new Blob([await res.arrayBuffer()], { type: 'application/pdf' });
+      const response = await base44.functions.invoke('generateROICalculatorPDF', { kosztInstalacji, rocznaProdukcja, cenaPradu, kosztUtrzymania, inflacjaEnergii, degradacjaPaneli, result }, { responseType: 'arraybuffer' });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
