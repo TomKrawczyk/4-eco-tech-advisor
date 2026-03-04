@@ -108,7 +108,7 @@ export default function Referrals() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Referral.update(id, {
+    mutationFn: ({ id, data }) => smartUpdate(base44.entities.Referral, "Referral", id, {
       ...data,
       last_action_date: new Date().toISOString()
     }),
