@@ -78,7 +78,7 @@ const navStructure = [
     ]
   },
   {
-    group: "Umówione",
+    group: "Kontakty DWS",
     items: [
       { name: "Meetings", label: "Spotkania" },
       { name: "PhoneContacts", label: "Kontakt telefoniczny" },
