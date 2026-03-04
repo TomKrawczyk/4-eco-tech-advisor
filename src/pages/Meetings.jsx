@@ -183,9 +183,18 @@ export default function Meetings() {
         matchGroup = mapping?.group_id === groupFilter;
       }
       const matchSheet = sheetFilter === "all" || m.sheet === sheetFilter;
-      return matchSearch && matchGroup && matchSheet;
+
+      // Dla group_leader: pokaż tylko spotkania przypisane do jego grupy
+      let matchLeaderGroup = true;
+      if (currentUser?.role === "group_leader" && currentUserGroupId) {
+        const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+        const assignment = meetingAssignments.find(a => a.meeting_key === key);
+        matchLeaderGroup = assignment?.assigned_group_id === currentUserGroupId;
+      }
+
+      return matchSearch && matchGroup && matchSheet && matchLeaderGroup;
     });
-  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings]);
+  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings, currentUser, currentUserGroupId, meetingAssignments]);
 
   // Grupuj po zakładce, potem po dacie
   const sheetGroups = useMemo(() => {
