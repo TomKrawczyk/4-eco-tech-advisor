@@ -1,6 +1,20 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { jsPDF } from 'npm:jspdf@4.0.0';
 
+const c = (t) => {
+  if (!t) return '';
+  return String(t)
+    .replace(/ą/g, 'a').replace(/Ą/g, 'A')
+    .replace(/ć/g, 'c').replace(/Ć/g, 'C')
+    .replace(/ę/g, 'e').replace(/Ę/g, 'E')
+    .replace(/ł/g, 'l').replace(/Ł/g, 'L')
+    .replace(/ń/g, 'n').replace(/Ń/g, 'N')
+    .replace(/ó/g, 'o').replace(/Ó/g, 'O')
+    .replace(/ś/g, 's').replace(/Ś/g, 'S')
+    .replace(/ź/g, 'z').replace(/Ź/g, 'Z')
+    .replace(/ż/g, 'z').replace(/Ż/g, 'Z');
+};
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -35,15 +49,15 @@ Deno.serve(async (req) => {
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
-    doc.text('KALKULATOR AUTOKONSUMPCJI', 190, 18, { align: 'right' });
+    doc.text('AUTOCONSUMPTION CALCULATOR', 190, 18, { align: 'right' });
     
     doc.setFontSize(9);
-    doc.text(`Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}`, 190, 27, { align: 'right' });
+    doc.text(`Generated: ${new Date().toLocaleDateString('pl-PL')}`, 190, 27, { align: 'right' });
 
     // Main result
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(16);
-    doc.text('WYNIK ANALIZY', 20, 60);
+    doc.text('ANALYSIS RESULT', 20, 60);
 
     const resultColor = result.color === 'green' ? [34, 197, 94] : 
                        result.color === 'yellow' ? [245, 158, 11] : [239, 68, 68];
@@ -59,16 +73,18 @@ Deno.serve(async (req) => {
     // Details
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(14);
-    doc.text('Szczegóły energetyczne', 20, 115);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Energy details', 20, 115);
 
     const details = [
-      ['Produkcja pradu:', `${parseFloat(produkcja).toFixed(1)} kWh`],
-      ['Autokonsumpcja:', `${result.auto.toFixed(1)} kWh`],
-      ['Eksport do sieci:', `${parseFloat(eksport).toFixed(1)} kWh (${result.pctExport}%)`]
+      ['Energy production:', `${parseFloat(produkcja).toFixed(1)} kWh`],
+      ['Autoconsumption:', `${result.auto.toFixed(1)} kWh`],
+      ['Export to grid:', `${parseFloat(eksport).toFixed(1)} kWh (${result.pctExport}%)`]
     ];
 
     let y = 125;
     doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
     details.forEach(([label, value]) => {
       doc.text(label, 25, y);
       doc.text(value, 180, y, { align: 'right' });
@@ -78,16 +94,18 @@ Deno.serve(async (req) => {
     if (result.pctOwn) {
       y += 10;
       doc.setFontSize(14);
-      doc.text('Analiza zużycia', 20, y);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Consumption analysis', 20, y);
       y += 10;
 
       const usage = [
-        ['Całkowite zużycie domu:', `${parseFloat(zuzycie).toFixed(1)} kWh`],
-        ['Import z sieci:', `${result.importFromGrid.toFixed(1)} kWh (${result.pctGrid}%)`],
-        ['Pokrycie własną energią:', `${result.pctOwn}%`]
+        ['Total home consumption:', `${parseFloat(zuzycie).toFixed(1)} kWh`],
+        ['Import from grid:', `${result.importFromGrid.toFixed(1)} kWh (${result.pctGrid}%)`],
+        ['Self-sufficiency:', `${result.pctOwn}%`]
       ];
 
       doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
       usage.forEach(([label, value]) => {
         doc.text(label, 25, y);
         doc.text(value, 180, y, { align: 'right' });
@@ -97,22 +115,28 @@ Deno.serve(async (req) => {
 
     // Recommendations
     y += 15;
-    doc.setFillColor(240, 240, 240);
-    doc.roundedRect(20, y, 170, 30, 2, 2, 'F');
+    doc.setFillColor(236, 253, 245);
+    doc.setDrawColor(34, 197, 94);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(20, y, 170, 30, 2, 2, 'S');
     
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text('Rekomendacja:', 25, y + 8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Recommendation:', 25, y + 8);
     doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
     doc.text(result.message, 25, y + 16, { maxWidth: 160 });
     doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(...resultColor);
     doc.text(result.recommendation, 25, y + 24);
 
     // Footer
     doc.setTextColor(150, 150, 150);
     doc.setFontSize(9);
-    doc.text('4-ECO Green Energy | Raport autokonsumpcji', 105, 285, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('4-ECO Green Energy | Autoconsumption Report', 105, 285, { align: 'center' });
 
     const pdfBytes = doc.output('arraybuffer');
 
