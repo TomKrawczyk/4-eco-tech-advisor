@@ -42,8 +42,9 @@ export default function VisitReports() {
 
   const { data: allReports = [], isLoading } = useQuery({
     queryKey: ["visitReports"],
-    queryFn: () => base44.entities.VisitReport.list("-created_date", 100),
+    queryFn: () => smartList(base44.entities.VisitReport, "VisitReport", "-created_date", 100),
     enabled: !!currentUser,
+    staleTime: 30000,
   });
 
   const { data: hierarchyData } = useQuery({
