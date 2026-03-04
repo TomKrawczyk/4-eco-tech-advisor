@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       stats.push(['Zwrot inwestycji:', `${result.rokZwrotu} lat`]);
     }
 
-    let y = 110;
+    let y = 115;
     doc.setFontSize(11);
     stats.forEach(([label, value]) => {
       doc.text(label, 25, y);
