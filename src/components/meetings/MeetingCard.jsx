@@ -42,13 +42,15 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
   const assignMutation = useMutation({
     mutationFn: async ({ userEmail, userName }) => {
       const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
+      let assignmentId = assignment?.id;
+
       if (assignment) {
         await base44.entities.MeetingAssignment.update(assignment.id, {
           assigned_user_email: userEmail,
           assigned_user_name: userName,
         });
       } else {
-        await base44.entities.MeetingAssignment.create({
+        const created = await base44.entities.MeetingAssignment.create({
           meeting_key: key,
           sheet: meeting.sheet,
           client_name: meeting.client_name,
@@ -57,12 +59,45 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           assigned_user_email: userEmail,
           assigned_user_name: userName,
         });
+        assignmentId = created.id;
+      }
+
+      // Synchronizuj z kalendarzem
+      const parsed = parseMeetingCalendar(meeting.meeting_calendar);
+      if (parsed) {
+        const title = `Spotkanie: ${meeting.client_name}`;
+        // Szukaj istniejącego eventu powiązanego z tym przypisaniem
+        const existingEvents = await base44.entities.CalendarEvent.filter({
+          meeting_assignment_id: key,
+        });
+
+        const eventData = {
+          title,
+          description: `Arkusz: ${meeting.sheet}${meeting.address ? `\nAdres: ${meeting.address}` : ""}${meeting.phone ? `\nTel: ${meeting.phone}` : ""}`,
+          event_date: parsed.date,
+          event_time: parsed.time,
+          event_type: "meeting",
+          status: "planned",
+          client_name: meeting.client_name,
+          client_phone: meeting.phone || "",
+          location: meeting.address || "",
+          owner_email: userEmail,
+          owner_name: userName,
+          source: "meeting_assignment",
+          meeting_assignment_id: key,
+        };
+
+        if (existingEvents.length > 0) {
+          await base44.entities.CalendarEvent.update(existingEvents[0].id, eventData);
+        } else {
+          await base44.entities.CalendarEvent.create(eventData);
+        }
       }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
-      toast.success("Przypisano handlowca");
-      // Wyślij powiadomienie
+      queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
+      toast.success("Przypisano handlowca i dodano do kalendarza");
       base44.functions.invoke("notifyMeetingAssigned", {
         assignedUserEmail: variables.userEmail,
         assignedUserName: variables.userName,
