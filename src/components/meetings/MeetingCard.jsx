@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, User, MapPin, Phone, Clock, UserCheck, ChevronRight, MessageSquare } from "lucide-react";
+import { Calendar, User, MapPin, Phone, Clock, UserCheck, ChevronRight, MessageSquare, Users } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
