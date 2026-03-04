@@ -30,7 +30,8 @@ export default function ReportSelector({ onSelectReport, currentReport }) {
 
   const { data: reports = [] } = useQuery({
     queryKey: ['visitReports'],
-    queryFn: () => base44.entities.VisitReport.list('-updated_date', 50),
+    queryFn: () => smartList(base44.entities.VisitReport, "VisitReport", "-updated_date", 50),
+    staleTime: 30000,
   });
 
   const handleCreateNew = async () => {
