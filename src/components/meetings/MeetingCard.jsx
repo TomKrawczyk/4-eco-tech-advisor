@@ -223,9 +223,12 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                   onValueChange={(val) => {
                     const sp = salespeople.find(s => s.email === val);
                     const count = getAssignmentsCountForUserOnDate(val, meeting.meeting_date);
-                    if (count >= 3) {
-                      toast.error(`${sp?.name || val} ma już 3 spotkania tego dnia (maksimum)`);
+                    if (count >= 5) {
+                      toast.error(`${sp?.name || val} ma już 5 spotkań tego dnia (maksimum)`);
                       return;
+                    }
+                    if (count >= 3) {
+                      toast.warning(`Uwaga: ${sp?.name || val} ma już ${count} spotkania tego dnia!`);
                     }
                     assignMutation.mutate({ userEmail: val, userName: sp?.name || val });
                   }}
