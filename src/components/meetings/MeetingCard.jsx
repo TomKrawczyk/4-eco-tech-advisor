@@ -87,11 +87,11 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           meeting_assignment_id: key,
         };
 
-        if (existingEvents.length > 0) {
-          await base44.entities.CalendarEvent.update(existingEvents[0].id, eventData);
-        } else {
-          await base44.entities.CalendarEvent.create(eventData);
+        // Usuń wszystkie stare eventy dla tego klucza i stwórz nowy
+        for (const ev of existingEvents) {
+          await base44.entities.CalendarEvent.delete(ev.id);
         }
+        await base44.entities.CalendarEvent.create(eventData);
       }
     },
     onSuccess: (_, variables) => {
