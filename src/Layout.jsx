@@ -81,7 +81,7 @@ const navStructure = [
     group: "Umówione",
     items: [
       { name: "Meetings", label: "Spotkania" },
-      { name: "PhoneContacts", label: "Kontakt telefoniczny", adminOnly: true },
+      { name: "PhoneContacts", label: "Kontakt telefoniczny" },
     ]
   },
   { name: "Education", label: "Szkolenia" },
