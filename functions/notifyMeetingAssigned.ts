@@ -1,4 +1,25 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+
+async function sendBrevoEmail({ to, toName, subject, text }) {
+  const apiKey = Deno.env.get("BREVO_API_KEY");
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": apiKey,
+    },
+    body: JSON.stringify({
+      sender: { name: "4-ECO Green Energy", email: "noreply@4-eco.pl" },
+      to: [{ email: to, name: toName || to }],
+      subject,
+      textContent: text,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Brevo error: ${err}`);
+  }
+}
 
 Deno.serve(async (req) => {
   try {
@@ -17,14 +38,17 @@ Deno.serve(async (req) => {
       is_read: false,
     });
 
-    // Wyślij email (tylko do użytkowników w aplikacji)
+    // Wyślij email przez Brevo
     try {
-      await base44.asServiceRole.integrations.Core.SendEmail({
+      await sendBrevoEmail({
         to: assignedUserEmail,
+        toName: assignedUserName,
         subject: `Nowe spotkanie: ${clientName} – ${meetingCalendar}`,
-        body: `Cześć ${assignedUserName}!\n\nZostało Ci przypisane nowe spotkanie:\n\nKlient: ${clientName}\nArkusz: ${sheet}\nData i godzina: ${meetingCalendar}\n\nPamiętaj, że po spotkaniu należy uzupełnić raport w aplikacji.\n\nPozdrawiamy,\n4-ECO Green Energy`,
+        text: `Cześć ${assignedUserName}!\n\nZostało Ci przypisane nowe spotkanie:\n\nKlient: ${clientName}\nArkusz: ${sheet}\nData i godzina: ${meetingCalendar}\n\nPamiętaj, że po spotkaniu należy uzupełnić raport w aplikacji.\n\nPozdrawiamy,\n4-ECO Green Energy`,
       });
-    } catch (_) { /* ignoruj błąd email */ }
+    } catch (emailErr) {
+      console.error("Błąd wysyłki email Brevo:", emailErr.message);
+    }
 
     return Response.json({ ok: true });
   } catch (error) {
