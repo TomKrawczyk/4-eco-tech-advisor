@@ -89,11 +89,11 @@ export default function Referrals() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Referral.create({
+    mutationFn: (data) => smartCreate(base44.entities.Referral, "Referral", {
       ...data,
       last_action_date: new Date().toISOString(),
       assigned_to: currentUser?.email
-    }),
+    }, currentUser),
     onSuccess: () => {
       queryClient.invalidateQueries(['referrals']);
       setShowAddDialog(false);
