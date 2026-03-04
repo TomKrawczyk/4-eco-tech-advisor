@@ -107,10 +107,12 @@ export default function ROICalculator() {
       const a = document.createElement('a');
       a.href = url;
       a.download = `analiza-roi-${new Date().toISOString().split('T')[0]}.pdf`;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
       toast.success('PDF wygenerowany');
     } catch (error) {
       console.error('Błąd generowania PDF:', error);
