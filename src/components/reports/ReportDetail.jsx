@@ -67,15 +67,8 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
   const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
-      const appId = (await base44.functions.invoke('getAppId')).data?.app_id || window.__APP_ID__;
-      const res = await fetch(`/api/v1/functions/generateReportPDF?app_id=${appId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await base44.auth.getToken()}` },
-        body: JSON.stringify({ reportId: report.id })
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const arrayBuffer = await res.arrayBuffer();
-      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+      const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id }, { responseType: 'arraybuffer' });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
