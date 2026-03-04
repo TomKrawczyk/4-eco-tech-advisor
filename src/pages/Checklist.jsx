@@ -112,7 +112,7 @@ export default function Checklist() {
     if (data.energy_imported_kwh) data.energy_imported_kwh = parseFloat(data.energy_imported_kwh);
     if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
     
-    await base44.entities.VisitReport.update(currentReport.id, data);
+    await smartUpdate(base44.entities.VisitReport, "VisitReport", currentReport.id, data);
     
     // Log activity
     base44.functions.invoke('logActivity', {
