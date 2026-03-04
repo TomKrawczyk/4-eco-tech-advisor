@@ -70,24 +70,26 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
       const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id }, { responseType: 'arraybuffer' });
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
+      const filename = `raport_${report.client_name?.replace(/\s+/g, '_') || 'wizyta'}.pdf`;
+      
+      // Mobile-friendly download
       const link = document.createElement('a');
       link.href = url;
-      link.download = `raport_${report.client_name?.replace(/\s+/g, '_') || 'wizyta'}.pdf`;
-      link.style.display = 'none';
+      link.download = filename;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       document.body.appendChild(link);
       link.click();
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-        document.body.removeChild(link);
-      }, 100);
+      document.body.removeChild(link);
       
-      // Log activity
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      
       base44.functions.invoke('logActivity', {
         action_type: 'report_export',
         page_name: 'VisitReports',
         report_id: report.id,
         details: { client_name: report.client_name, export_type: 'PDF' }
-      }).catch(err => console.error('Log error:', err));
+      }).catch(() => {});
     } catch (error) {
       console.error('Error downloading PDF:', error);
       alert('Błąd podczas pobierania PDF: ' + error.message);
