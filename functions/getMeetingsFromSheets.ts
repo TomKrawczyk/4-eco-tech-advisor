@@ -153,7 +153,16 @@ Deno.serve(async (req) => {
 
     const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
     const allTabs = await getAllSheetTabs(accessToken);
-    const results = await Promise.all(allTabs.map(tab => fetchLeadsFromSheet(accessToken, tab)));
+
+    // Pobierz konfigurację arkuszy – wyklucz wyłączone
+    const sheetMappings = await base44.asServiceRole.entities.SheetGroupMapping.list();
+    const activeTabs = allTabs.filter(tab => {
+      const mapping = sheetMappings.find(m => m.sheet_name === tab);
+      // Jeśli brak wpisu – domyślnie aktywny; jeśli is_active === false – pomijamy
+      return !mapping || mapping.is_active !== false;
+    });
+
+    const results = await Promise.all(activeTabs.map(tab => fetchLeadsFromSheet(accessToken, tab)));
 
     const meetings = results.flatMap(r => r.meetings);
     const phoneContacts = results.flatMap(r => r.phoneContacts);
