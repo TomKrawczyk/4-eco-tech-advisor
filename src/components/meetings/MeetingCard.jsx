@@ -239,11 +239,12 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                   <SelectContent>
                     {salespeople.map(sp => {
                       const count = getAssignmentsCountForUserOnDate(sp.email, meeting.meeting_date);
-                      const full = count >= 3;
+                      const full = count >= 5;
+                      const warn = count >= 3 && count < 5;
                       return (
                         <SelectItem key={sp.email} value={sp.email} disabled={full}>
-                          <span className={full ? "text-red-400" : ""}>
-                            {sp.name} {full ? `(max ${count}/3)` : count > 0 ? `(${count}/3)` : ""}
+                          <span className={full ? "text-red-400" : warn ? "text-orange-500" : ""}>
+                            {sp.name} {full ? `(max ${count}/5)` : count > 0 ? `(${count}/5)` : ""}
                           </span>
                         </SelectItem>
                       );
