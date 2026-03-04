@@ -43,25 +43,25 @@ Deno.serve(async (req) => {
     // Main result
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(16);
-    doc.text('REKOMENDOWANA INSTALACJA', 20, 55);
+    doc.text('REKOMENDOWANA INSTALACJA', 20, 60);
 
     doc.setFillColor(34, 197, 94);
-    doc.roundedRect(20, 60, 80, 25, 3, 3, 'F');
-    doc.roundedRect(110, 60, 80, 25, 3, 3, 'F');
+    doc.roundedRect(20, 65, 80, 25, 3, 3, 'F');
+    doc.roundedRect(110, 65, 80, 25, 3, 3, 'F');
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
-    doc.text(`${result.mocInstalacji} kWp`, 60, 75, { align: 'center' });
-    doc.text(`${result.rocznaProdukcja} kWh`, 150, 75, { align: 'center' });
+    doc.text(`${result.mocInstalacji} kWp`, 60, 80, { align: 'center' });
+    doc.text(`${result.rocznaProdukcja} kWh`, 150, 80, { align: 'center' });
     
     doc.setFontSize(9);
-    doc.text('Moc instalacji', 60, 82, { align: 'center' });
-    doc.text('Produkcja roczna', 150, 82, { align: 'center' });
+    doc.text('Moc instalacji', 60, 87, { align: 'center' });
+    doc.text('Produkcja roczna', 150, 87, { align: 'center' });
 
     // Key stats
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(14);
-    doc.text('Kluczowe parametry', 20, 100);
+    doc.text('Kluczowe parametry', 20, 105);
 
     const stats = [
       ['Liczba paneli:', `${result.liczbaPaneli} szt. (${result.mocPanela}Wp)`],
