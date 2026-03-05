@@ -33,8 +33,10 @@ Deno.serve(async (req) => {
     try {
       const logoRes = await fetch('https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6985025012ef2a10cfdedf68/dcc00b19d_4-eco-logo.png');
       const logoBuffer = await logoRes.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(logoBuffer)));
-      logoDataUrl = `data:image/png;base64,${base64}`;
+      const bytes = new Uint8Array(logoBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      logoDataUrl = `data:image/png;base64,${btoa(binary)}`;
     } catch (e) {
       console.warn('Could not load logo:', e.message);
     }
