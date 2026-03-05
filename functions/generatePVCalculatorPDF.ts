@@ -28,33 +28,16 @@ Deno.serve(async (req) => {
 
     const doc = new jsPDF();
 
-    // Load logo
-    let logoDataUrl = null;
-    try {
-      const logoRes = await fetch('https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6985025012ef2a10cfdedf68/dcc00b19d_4-eco-logo.png');
-      const logoBuffer = await logoRes.arrayBuffer();
-      const bytes = new Uint8Array(logoBuffer);
-      let binary = '';
-      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-      logoDataUrl = `data:image/png;base64,${btoa(binary)}`;
-    } catch (e) {
-      console.warn('Could not load logo:', e.message);
-    }
-
     // Header
     doc.setFillColor(34, 197, 94);
     doc.rect(0, 0, 210, 45, 'F');
 
-    if (logoDataUrl) {
-      doc.addImage(logoDataUrl, 'PNG', 12, 5, 40, 21);
-    }
-    
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
-    doc.text('PV INSTALLATION CALCULATOR', 190, 18, { align: 'right' });
+    doc.text('PV INSTALLATION CALCULATOR', 105, 18, { align: 'center' });
     
     doc.setFontSize(9);
-    doc.text(`Generated: ${new Date().toLocaleDateString('pl-PL')}`, 190, 27, { align: 'right' });
+    doc.text(`Generated: ${new Date().toLocaleDateString('pl-PL')}`, 105, 27, { align: 'center' });
 
     // Main result
     doc.setTextColor(0, 0, 0);
