@@ -73,18 +73,7 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
       
       if (!pdf_base64) throw new Error('Brak danych PDF');
       
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (isMobile) {
-        // Na mobilnych otwórz data URI bezpośrednio
-        window.open(pdf_base64, '_blank');
-      } else {
-        const link = document.createElement('a');
-        link.href = pdf_base64;
-        link.download = filename || `raport.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+      openOrDownloadPDF(pdf_base64, filename || `raport.pdf`);
       
       base44.functions.invoke('logActivity', {
         action_type: 'report_export',
