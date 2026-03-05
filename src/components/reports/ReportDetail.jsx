@@ -67,7 +67,7 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
   const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
-      const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id }, { responseType: 'arraybuffer' });
+      const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id }, { responseType: 'blob' });
       const pdfData = response.data;
       
       if (!pdfData) throw new Error('Brak danych PDF');
