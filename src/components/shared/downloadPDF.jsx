@@ -4,8 +4,9 @@
  * Konwertuje do Blob i używa <a download> — działa na Android, iOS, desktop.
  */
 export function openOrDownloadPDF(pdf_base64, filename = 'raport.pdf') {
-  // Wyodrębnij dane base64 z data URI (format: data:application/pdf;base64,XXXX)
-  const base64Data = pdf_base64.includes(',') ? pdf_base64.split(',')[1] : pdf_base64;
+  // Wyodrębnij dane base64 z data URI
+  // Format może być: data:application/pdf;base64,XXX lub data:application/pdf;filename=xxx.pdf;base64,XXX
+  const base64Data = pdf_base64.includes('base64,') ? pdf_base64.split('base64,')[1] : pdf_base64;
   const byteChars = atob(base64Data);
   const byteNumbers = new Uint8Array(byteChars.length);
   for (let i = 0; i < byteChars.length; i++) {
