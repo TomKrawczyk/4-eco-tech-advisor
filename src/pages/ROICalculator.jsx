@@ -101,21 +101,18 @@ export default function ROICalculator() {
     
     setGeneratingPDF(true);
     try {
-      const response = await base44.functions.invoke('generateROICalculatorPDF', { kosztInstalacji, rocznaProdukcja, cenaPradu, kosztUtrzymania, inflacjaEnergii, degradacjaPaneli, result }, { responseType: 'arraybuffer' });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
+      const response = await base44.functions.invoke('generateROICalculatorPDF', { kosztInstalacji, rocznaProdukcja, cenaPradu, kosztUtrzymania, inflacjaEnergii, degradacjaPaneli, result });
+      const { pdf_base64, filename } = response.data;
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       if (isMobile) {
-        window.open(url, '_blank');
-        setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+        window.open(pdf_base64, '_blank');
       } else {
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `analiza-roi-${new Date().toISOString().split('T')[0]}.pdf`;
+        a.href = pdf_base64;
+        a.download = filename || `analiza-roi-${new Date().toISOString().split('T')[0]}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
       }
       toast.success('PDF wygenerowany');
     } catch (error) {
