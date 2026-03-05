@@ -8,6 +8,7 @@ import PageHeader from "../components/shared/PageHeader";
 import AutoconsumptionPieChart from "../components/charts/AutoconsumptionPieChart";
 import { base44 } from "@/api/base44Client";
 import { toast } from "react-hot-toast";
+import { openOrDownloadPDF } from "../components/shared/downloadPDF";
 
 export default function AutoconsumptionCalc() {
   const [produkcja, setProdukcja] = useState("");
