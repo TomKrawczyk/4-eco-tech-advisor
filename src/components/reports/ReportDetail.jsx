@@ -68,13 +68,33 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
   const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
+      const filename = `raport_${report.client_name?.replace(/\s+/g, '_') || 'wizyta'}.pdf`;
       const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id });
-      const { pdf_base64, filename } = response.data;
-      
-      if (!pdf_base64) throw new Error('Brak danych PDF');
-      
-      openOrDownloadPDF(pdf_base64, filename || `raport.pdf`);
-      
+
+      // Backend może zwrócić JSON z base64 (stary format) lub ArrayBuffer (nowy)
+      let blob;
+      if (response.data && typeof response.data === 'object' && response.data.pdf_base64) {
+        // stary format base64
+        const b64 = response.data.pdf_base64;
+        const base64Data = b64.includes('base64,') ? b64.split('base64,')[1] : b64;
+        const byteChars = atob(base64Data);
+        const bytes = new Uint8Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+        blob = new Blob([bytes], { type: 'application/pdf' });
+      } else {
+        // nowy format — response.data to ArrayBuffer lub Blob
+        blob = new Blob([response.data], { type: 'application/pdf' });
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+
       base44.functions.invoke('logActivity', {
         action_type: 'report_export',
         page_name: 'VisitReports',
