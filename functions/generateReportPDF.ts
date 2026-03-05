@@ -185,14 +185,14 @@ Deno.serve(async (req) => {
         // Dash instead of bullet
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...gray);
+        doc.setTextColor(...grayDark);
         const qLines = doc.splitTextToSize(c(question), 165);
-        doc.text('–', 17, y);
+        doc.text('-', 17, y);
         doc.text(qLines, 22, y);
         y += qLines.length * 4;
         
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(...black);
         const aLines = doc.splitTextToSize(c(answer), 165);
         doc.text(aLines, 22, y);
@@ -247,9 +247,9 @@ Deno.serve(async (req) => {
         // Dash instead of bullet
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...gray);
+        doc.setTextColor(...grayDark);
         const qLines = doc.splitTextToSize(c(question), 165);
-        doc.text('–', 17, y);
+        doc.text('-', 17, y);
         doc.text(qLines, 22, y);
         y += qLines.length * 4;
 
