@@ -306,17 +306,10 @@ Deno.serve(async (req) => {
       doc.text('(c) 2026 4-ECO Green Energy', 105, 283, { align: 'center' });
     }
 
-    const pdfBytes = doc.output('arraybuffer');
-    console.log('PDF generated successfully, size:', pdfBytes.byteLength);
+    const pdfBase64 = doc.output('datauristring');
+    console.log('PDF generated successfully');
 
-    return new Response(pdfBytes, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="raport_${c(report.client_name)?.replace(/\s+/g, '_') || 'wizyta'}.pdf"`,
-        'Content-Length': pdfBytes.byteLength.toString()
-      }
-    });
+    return Response.json({ pdf_base64: pdfBase64, filename: `raport_${c(report.client_name)?.replace(/\s+/g, '_') || 'wizyta'}.pdf` });
 
   } catch (error) {
     console.error('PDF generation error:', error);
