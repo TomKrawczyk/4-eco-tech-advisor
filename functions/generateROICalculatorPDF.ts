@@ -156,15 +156,8 @@ Deno.serve(async (req) => {
     doc.setFont('helvetica', 'normal');
     doc.text('4-ECO Green Energy | PV Installation Profitability Analysis', 105, 285, { align: 'center' });
 
-    const pdfBytes = doc.output('arraybuffer');
-
-    return new Response(pdfBytes, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename=analiza-roi.pdf'
-      }
-    });
+    const pdfBase64 = doc.output('datauristring');
+    return Response.json({ pdf_base64: pdfBase64, filename: 'analiza-roi.pdf' });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

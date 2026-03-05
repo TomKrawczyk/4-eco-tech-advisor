@@ -150,15 +150,8 @@ Deno.serve(async (req) => {
     doc.setFont('helvetica', 'normal');
     doc.text('4-ECO Green Energy | PV Installation Calculator', 105, 285, { align: 'center' });
 
-    const pdfBytes = doc.output('arraybuffer');
-
-    return new Response(pdfBytes, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename=kalkulator-pv.pdf'
-      }
-    });
+    const pdfBase64 = doc.output('datauristring');
+    return Response.json({ pdf_base64: pdfBase64, filename: 'kalkulator-pv.pdf' });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
