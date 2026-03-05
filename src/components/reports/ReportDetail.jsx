@@ -67,31 +67,22 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
   const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
-      const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id }, { responseType: 'blob' });
-      const pdfData = response.data;
+      const response = await base44.functions.invoke('generateReportPDF', { reportId: report.id });
+      const { pdf_base64, filename } = response.data;
       
-      if (!pdfData) throw new Error('Brak danych PDF');
+      if (!pdf_base64) throw new Error('Brak danych PDF');
       
-      const blob = new Blob([pdfData], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const filename = `raport_${report.client_name?.replace(/\s+/g, '_') || 'wizyta'}.pdf`;
-      
-      // Obsługa mobile - otwórz w nowej karcie jeśli download nie działa
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       if (isMobile) {
-        window.open(url, '_blank');
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        // Na mobilnych otwórz data URI bezpośrednio
+        window.open(pdf_base64, '_blank');
       } else {
         const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.style.display = 'none';
+        link.href = pdf_base64;
+        link.download = filename || `raport.pdf`;
         document.body.appendChild(link);
         link.click();
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        }, 100);
+        document.body.removeChild(link);
       }
       
       base44.functions.invoke('logActivity', {
