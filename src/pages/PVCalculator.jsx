@@ -10,6 +10,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { base44 } from "@/api/base44Client";
 import { Cloud, TrendingUp, Download } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { openOrDownloadPDF } from "../components/shared/downloadPDF";
 
 export default function PVCalculator() {
   const [zuzycie, setZuzycie] = useState("");

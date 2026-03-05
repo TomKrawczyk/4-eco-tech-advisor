@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
+import { openOrDownloadPDF } from "../shared/downloadPDF";
 import ProductionChart from "../charts/ProductionChart";
 import AutoconsumptionPieChart from "../charts/AutoconsumptionPieChart";
 

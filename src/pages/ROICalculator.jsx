@@ -8,6 +8,7 @@ import { Download, TrendingUp, Calculator } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { base44 } from "@/api/base44Client";
 import { toast } from "react-hot-toast";
+import { openOrDownloadPDF } from "../components/shared/downloadPDF";
 
 export default function ROICalculator() {
   const [kosztInstalacji, setKosztInstalacji] = useState("");
