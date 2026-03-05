@@ -72,17 +72,7 @@ export default function AutoconsumptionCalc() {
     try {
       const response = await base44.functions.invoke('generateAutoconsumptionPDF', { produkcja, eksport, zuzycie, result });
       const { pdf_base64, filename } = response.data;
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (isMobile) {
-        window.open(pdf_base64, '_blank');
-      } else {
-        const a = document.createElement('a');
-        a.href = pdf_base64;
-        a.download = filename || `autokonsumpcja-${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      openOrDownloadPDF(pdf_base64, filename || `autokonsumpcja-${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success('PDF wygenerowany');
     } catch (error) {
       console.error('Błąd generowania PDF:', error);
