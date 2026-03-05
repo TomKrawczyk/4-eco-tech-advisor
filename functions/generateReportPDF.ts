@@ -91,13 +91,11 @@ Deno.serve(async (req) => {
     doc.setFillColor(...greenPrimary);
     doc.rect(0, 0, 210, 42, 'F');
 
-    if (logoDataUrl) {
-      doc.addImage(logoDataUrl, 'PNG', 15, 6, 40, 20);
-    }
-
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
+    doc.text('4-ECO Green Energy', 15, 18);
+    doc.setFontSize(18);
     doc.text(c('RAPORT WIZYTY'), 190, 15, { align: 'right' });
 
     doc.setFontSize(9);
