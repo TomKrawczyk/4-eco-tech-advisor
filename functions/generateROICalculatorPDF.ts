@@ -28,30 +28,15 @@ Deno.serve(async (req) => {
     const MARGIN = 20;
     const TEXT_W = PAGE_W - MARGIN * 2;
 
-    // Load logo
-    let logoDataUrl = null;
-    try {
-      const logoRes = await fetch('https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6985025012ef2a10cfdedf68/dcc00b19d_4-eco-logo.png');
-      const logoBuffer = await logoRes.arrayBuffer();
-      const bytes = new Uint8Array(logoBuffer);
-      let binary = '';
-      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-      logoDataUrl = `data:image/png;base64,${btoa(binary)}`;
-    } catch (e) {
-      console.warn('Could not load logo:', e.message);
-    }
-
     // Header
     doc.setFillColor(34, 197, 94);
     doc.rect(0, 0, PAGE_W, 45, 'F');
 
-    if (logoDataUrl) {
-      doc.addImage(logoDataUrl, 'PNG', MARGIN, 7, 35, 17);
-    }
-
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
+    doc.text('4-ECO Green Energy', MARGIN, 18);
+    doc.setFontSize(16);
     doc.text('ANALIZA OPLACALNOSCI (ROI)', PAGE_W - MARGIN, 16, { align: 'right' });
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
