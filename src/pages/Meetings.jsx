@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, AlertCircle, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2 } from "lucide-react";
+import { RefreshCw, Search, AlertCircle, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
 import { motion, AnimatePresence } from "framer-motion";
