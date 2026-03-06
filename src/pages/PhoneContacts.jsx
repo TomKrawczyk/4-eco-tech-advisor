@@ -78,6 +78,12 @@ export default function PhoneContacts() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
+  const { data: sheetMappings = [] } = useQuery({
+    queryKey: ["sheetMappings"],
+    queryFn: () => base44.entities.SheetGroupMapping.list(),
+    enabled: accessChecked && isLeaderOrAdmin,
+  });
+
   // Zawsze pobieramy przypisania z bazy - potrzebne dla każdej roli
   const { data: phoneContactsFromDB = [] } = useQuery({
     queryKey: ["phoneContactsDB"],
