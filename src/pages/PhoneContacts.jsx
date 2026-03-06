@@ -421,7 +421,7 @@ export default function PhoneContacts() {
                                           <span className="text-xs font-medium text-green-700">{contact.assigned_user_name || contact.assigned_user_email}</span>
                                           {(currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader") && (
                                             <button
-                                              onClick={() => assignMutation.mutate({ id: contact.id, email: "", name: "" })}
+                                              onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
                                               className="ml-1 text-gray-400 hover:text-red-500 text-xs"
                                             >×</button>
                                           )}
@@ -429,7 +429,7 @@ export default function PhoneContacts() {
                                       ) : (
                                         <Select onValueChange={(val) => {
                                           const sp = salespeople.find(s => s.email === val);
-                                          if (sp) assignMutation.mutate({ id: contact.id, email: sp.email, name: sp.name });
+                                          if (sp) assignMutation.mutate({ contact, email: sp.email, name: sp.name });
                                         }}>
                                           <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
                                             <SelectValue placeholder="Przypisz doradcę" />
