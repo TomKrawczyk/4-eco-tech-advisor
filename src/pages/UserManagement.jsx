@@ -15,6 +15,7 @@ import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
+import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
 import { format } from "date-fns";
 
 export default function UserManagement() {
