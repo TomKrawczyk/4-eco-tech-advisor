@@ -254,7 +254,7 @@ export default function PhoneContacts() {
 
   const toggleSheet = (sheet) => setExpandedSheets(prev => ({ ...prev, [sheet]: !prev[sheet] }));
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (sheetGroups.length > 0) {
       setExpandedSheets(prev => {
         if (Object.keys(prev).length === 0) return { [sheetGroups[0].sheet]: true };
