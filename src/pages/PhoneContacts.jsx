@@ -69,7 +69,7 @@ export default function PhoneContacts() {
   const { data: allAllowedUsers = [] } = useQuery({
     queryKey: ["allowedUsers"],
     queryFn: () => base44.entities.AllowedUser.list(),
-    enabled: accessChecked && isLeaderOrAdmin,
+    enabled: accessChecked,
   });
 
   const { data: groups = [] } = useQuery({
@@ -78,29 +78,47 @@ export default function PhoneContacts() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
-  // Pobierz przypisania z bazy dla zwykłego użytkownika
+  // Zawsze pobieramy przypisania z bazy - potrzebne dla każdej roli
   const { data: phoneContactsFromDB = [] } = useQuery({
     queryKey: ["phoneContactsDB"],
     queryFn: () => base44.entities.PhoneContact.list(),
-    enabled: accessChecked && !isLeaderOrAdmin,
+    enabled: accessChecked,
   });
 
-  const { data: contacts = [], isLoading, isFetching, refetch } = useQuery({
+  const { data: rawContacts = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ["phoneContacts"],
     queryFn: () => base44.functions.invoke('getMeetingsFromSheets'),
     select: (response) => {
       const all = response.data?.phoneContacts || [];
-      const filtered = all.filter(c => 
+      return all.filter(c => 
         !c.sheet?.toLowerCase().includes('spotkania') && 
         !c.sheet?.toLowerCase().includes('kontakt') && 
         !c.sheet?.toLowerCase().includes('ai bober')
       );
-      return filtered;
     },
     enabled: accessChecked && isLeaderOrAdmin,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
   });
+
+  // Scal dane z arkusza z przypisaniami z bazy
+  const contacts = useMemo(() => {
+    if (!isLeaderOrAdmin) return [];
+    return rawContacts.map(c => {
+      const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
+      if (dbRecord) {
+        return {
+          ...c,
+          id: dbRecord.id,
+          assigned_user_email: dbRecord.assigned_user_email || c.assigned_user_email,
+          assigned_user_name: dbRecord.assigned_user_name || c.assigned_user_name,
+          assigned_group_id: dbRecord.assigned_group_id || c.assigned_group_id,
+          assigned_group_name: dbRecord.assigned_group_name || c.assigned_group_name,
+        };
+      }
+      return c;
+    });
+  }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const assignMutation = useMutation({
     mutationFn: ({ id, email, name }) =>
