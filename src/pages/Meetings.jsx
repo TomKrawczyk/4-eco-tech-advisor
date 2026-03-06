@@ -314,7 +314,7 @@ export default function Meetings() {
           />
         </div>
 
-        {groups.length > 0 && (
+        {currentUser?.role === "admin" && groups.length > 0 && (
           <Select value={groupFilter} onValueChange={setGroupFilter}>
             <SelectTrigger className="w-48 h-11">
               <SelectValue placeholder="Wszystkie grupy" />
