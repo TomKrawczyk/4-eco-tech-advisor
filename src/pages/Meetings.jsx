@@ -98,6 +98,10 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
+  // Okno dat: dziś + 3 dni
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const maxDate = useMemo(() => addDays(today, 3), [today]);
+
   // Ustal groupId bieżącego użytkownika – zawsze z hooka (AllowedUser.group_id)
   const currentUserGroupId = useMemo(() => {
     if (!currentUser) return null;
