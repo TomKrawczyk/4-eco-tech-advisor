@@ -82,11 +82,11 @@ function UserCard({ user, meetings, contacts, groups, allUsers }) {
       {/* Expanded content */}
       {expanded && (
         <div className="border-t border-gray-100 p-4 space-y-4 bg-gray-50">
-          {/* Meetings */}
+          {/* Meetings przypisane do osoby */}
           <div>
             <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-green-500" />
-              Spotkania ({userMeetings.length})
+              Spotkania osobiste ({userMeetings.length})
             </h4>
             {userMeetings.length === 0 ? (
               <p className="text-xs text-gray-400 italic">Brak przypisanych spotkań</p>
@@ -95,21 +95,39 @@ function UserCard({ user, meetings, contacts, groups, allUsers }) {
                 {userMeetings.map((m, i) => (
                   <div key={m.id || i} className="flex items-start gap-2 text-xs bg-white rounded-lg px-3 py-2 border border-gray-200">
                     <div className="flex-1 min-w-0">
-                      <span className="font-medium text-gray-800">{m.client_name || m.data?.client_name}</span>
-                      {(m.meeting_calendar || m.data?.meeting_calendar) && (
-                        <span className="text-gray-400 ml-1">– {m.meeting_calendar || m.data?.meeting_calendar}</span>
-                      )}
+                      <span className="font-medium text-gray-800">{m.client_name}</span>
+                      {m.meeting_calendar && <span className="text-gray-400 ml-1">– {m.meeting_calendar}</span>}
                     </div>
-                    <Badge className="text-[9px] bg-blue-50 text-blue-600 border-blue-100 shrink-0">
-                      {m.sheet || m.data?.sheet}
-                    </Badge>
+                    <Badge className="text-[9px] bg-blue-50 text-blue-600 border-blue-100 shrink-0">{m.sheet}</Badge>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Phone Contacts */}
+          {/* Spotkania przypisane do grupy (dla group leaderów) */}
+          {groupMeetings.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-orange-500" />
+                Spotkania grupy do przypisania ({groupMeetings.length})
+              </h4>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {groupMeetings.map((m, i) => (
+                  <div key={m.id || i} className="flex items-start gap-2 text-xs bg-white rounded-lg px-3 py-2 border border-orange-100">
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-gray-800">{m.client_name}</span>
+                      {m.meeting_calendar && <span className="text-gray-400 ml-1">– {m.meeting_calendar}</span>}
+                      {m.assigned_group_name && <span className="text-orange-500 ml-1">({m.assigned_group_name})</span>}
+                    </div>
+                    <Badge className="text-[9px] bg-orange-50 text-orange-600 border-orange-100 shrink-0">{m.sheet}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Phone Contacts przypisane do osoby */}
           <div>
             <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <Phone className="w-3.5 h-3.5 text-blue-500" />
@@ -122,19 +140,37 @@ function UserCard({ user, meetings, contacts, groups, allUsers }) {
                 {userContacts.map((c, i) => (
                   <div key={c.id || i} className="flex items-start gap-2 text-xs bg-white rounded-lg px-3 py-2 border border-gray-200">
                     <div className="flex-1 min-w-0">
-                      <span className="font-medium text-gray-800">{c.client_name || c.data?.client_name}</span>
-                      {(c.phone || c.data?.phone) && (
-                        <span className="text-gray-400 ml-1">– {c.phone || c.data?.phone}</span>
-                      )}
+                      <span className="font-medium text-gray-800">{c.client_name}</span>
+                      {c.phone && <span className="text-gray-400 ml-1">– {c.phone}</span>}
                     </div>
-                    <Badge className="text-[9px] bg-green-50 text-green-600 border-green-100 shrink-0">
-                      {c.sheet || c.data?.sheet}
-                    </Badge>
+                    <Badge className="text-[9px] bg-green-50 text-green-600 border-green-100 shrink-0">{c.sheet}</Badge>
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Kontakty przypisane do grupy (dla group leaderów) */}
+          {groupContacts.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-orange-500" />
+                Kontakty grupy ({groupContacts.length})
+              </h4>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {groupContacts.map((c, i) => (
+                  <div key={c.id || i} className="flex items-start gap-2 text-xs bg-white rounded-lg px-3 py-2 border border-orange-100">
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-gray-800">{c.client_name}</span>
+                      {c.phone && <span className="text-gray-400 ml-1">– {c.phone}</span>}
+                      {c.assigned_group_name && <span className="text-orange-500 ml-1">({c.assigned_group_name})</span>}
+                    </div>
+                    <Badge className="text-[9px] bg-orange-50 text-orange-600 border-orange-100 shrink-0">{c.sheet}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
