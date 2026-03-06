@@ -115,7 +115,7 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
         meeting_calendar: calendarIdx >= 0 ? (row[calendarIdx] || '') : '',
         meeting_note: intVal,
       });
-    } else if (intVal.toLowerCase().includes('kontakt') || intVal.toLowerCase().includes('telefon') || intVal.toLowerCase().includes('doradc')) {
+    } else if (intVal.toLowerCase().includes('kontakt') || intVal.toLowerCase().includes('telefon') || intVal.toLowerCase().includes('doradc') || intVal.toLowerCase() === 'dws') {
       phoneContacts.push({
         ...base,
         contact_calendar: calendarIdx >= 0 ? (row[calendarIdx] || '') : '',
