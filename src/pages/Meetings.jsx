@@ -364,6 +364,25 @@ export default function Meetings() {
           </Button>
         )}
 
+        {(currentUser?.role === "admin" || currentUser?.role === "group_leader") && filtered.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 h-11 border-orange-200 text-orange-600 hover:bg-orange-50"
+            disabled={notifySending}
+            onClick={async () => {
+              setNotifySending(true);
+              const groupId = currentUser.role === "group_leader" ? currentUserGroupId : null;
+              await base44.functions.invoke("notifyGroupLeaderNewMeetings", groupId ? { groupId } : {});
+              setNotifySending(false);
+              alert("Powiadomienia zostały wysłane!");
+            }}
+          >
+            <Bell className={`w-4 h-4 ${notifySending ? "animate-pulse" : ""}`} />
+            {notifySending ? "Wysyłanie..." : "Wyślij powiadomienia"}
+          </Button>
+        )}
+
         <div className="flex flex-col items-end gap-1 shrink-0">
           <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
             <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />

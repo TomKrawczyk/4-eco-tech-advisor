@@ -350,6 +350,43 @@ export default function PhoneContacts() {
           Odśwież
         </Button>
 
+        {(currentUser?.role === "admin" || currentUser?.role === "group_leader") && filtered.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 h-11 border-orange-200 text-orange-600 hover:bg-orange-50"
+            disabled={notifySending}
+            onClick={async () => {
+              setNotifySending(true);
+              const groupId = currentUser.role === "group_leader" ? currentUser.groupId : null;
+              const groups_ = groups;
+              // Dla admina – wyślij dla wszystkich grup; dla group_leader – tylko jego grupa
+              if (groupId) {
+                const g = groups_.find(gr => gr.id === groupId);
+                await base44.functions.invoke("notifyGroupLeaderNewContacts", {
+                  groupId,
+                  groupName: g?.name || "",
+                  bulkMode: true,
+                });
+              } else {
+                // Admin: dla każdej grupy z osobna
+                for (const g of groups_) {
+                  await base44.functions.invoke("notifyGroupLeaderNewContacts", {
+                    groupId: g.id,
+                    groupName: g.name,
+                    bulkMode: true,
+                  });
+                }
+              }
+              setNotifySending(false);
+              alert("Powiadomienia zostały wysłane!");
+            }}
+          >
+            <Bell className={`w-4 h-4 ${notifySending ? "animate-pulse" : ""}`} />
+            {notifySending ? "Wysyłanie..." : "Wyślij powiadomienia"}
+          </Button>
+        )}
+
         {currentUser?.role === "admin" && (
           <Button
             variant={showStats ? "default" : "outline"}
