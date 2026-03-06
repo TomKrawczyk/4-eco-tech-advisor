@@ -147,8 +147,17 @@ export default function PhoneContacts() {
 
   const assignMutation = useMutation({
     mutationFn: ({ contact, email, name }) => upsertContact(contact, { assigned_user_email: email, assigned_user_name: name }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries(["phoneContactsDB"]);
+      if (variables.email) {
+        base44.functions.invoke("notifyContactAssigned", {
+          assignedUserEmail: variables.email,
+          assignedUserName: variables.name,
+          clientName: variables.contact.client_name,
+          phone: variables.contact.phone,
+          sheet: variables.contact.sheet,
+        }).catch(() => {});
+      }
     },
   });
 
