@@ -69,11 +69,11 @@ function UserCard({ user, meetings, contacts, groups, allUsers }) {
         <div className="flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-green-500" />
-            <span className="text-sm font-semibold text-green-700">{userMeetings.length}</span>
+            <span className="text-sm font-semibold text-green-700">{userMeetings.length + groupMeetings.length}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Phone className="w-3.5 h-3.5 text-blue-500" />
-            <span className="text-sm font-semibold text-blue-700">{userContacts.length}</span>
+            <span className="text-sm font-semibold text-blue-700">{userContacts.length + groupContacts.length}</span>
           </div>
           {expanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
         </div>
