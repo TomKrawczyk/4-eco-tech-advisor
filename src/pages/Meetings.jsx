@@ -113,11 +113,16 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
-  // Zwykły user widzi tylko swoje przypisane spotkania (z MeetingAssignment)
+  // Zwykły user widzi swoje przypisane spotkania LUB te przypisane do jego grupy
   const myAssignedMeetings = useMemo(() => {
     if (!currentUser || isLeaderOrAdmin) return [];
+    const myGroupId = currentUser.groupId;
     return meetingAssignments
-      .filter(a => a.assigned_user_email === currentUser.email && a.meeting_calendar && a.meeting_date)
+      .filter(a => {
+        const isMyMeeting = a.assigned_user_email === currentUser.email;
+        const isMyGroup = myGroupId && a.assigned_group_id === myGroupId;
+        return (isMyMeeting || isMyGroup) && a.meeting_calendar && a.meeting_date;
+      })
       .filter(a => {
         const d = parseMeetingDate(a.meeting_calendar);
         if (!d) return false;
