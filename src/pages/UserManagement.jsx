@@ -338,7 +338,7 @@ export default function UserManagement() {
       />
 
       <Tabs defaultValue="users" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="requests">
             Prośby
             {registrationRequests.length > 0 && (
@@ -346,6 +346,7 @@ export default function UserManagement() {
             )}
           </TabsTrigger>
           <TabsTrigger value="users">Użytkownicy</TabsTrigger>
+          <TabsTrigger value="profiles">Profile</TabsTrigger>
           <TabsTrigger value="groups">Grupy</TabsTrigger>
           <TabsTrigger value="activity"><Activity className="w-3 h-3 mr-1" />Aktywność</TabsTrigger>
         </TabsList>
