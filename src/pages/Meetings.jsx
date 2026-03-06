@@ -98,6 +98,17 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
+  // Okno dat: dziś + 3 dni — musi być przed useMemo które ich używa
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const maxDate = useMemo(() => addDays(today, 3), [today]);
+
+  // Ustal groupId bieżącego użytkownika – zawsze z hooka (AllowedUser.group_id)
+  const currentUserGroupId = useMemo(() => {
+    if (!currentUser) return null;
+    if (currentUser.role === "admin") return null;
+    return currentUser.groupId || null;
+  }, [currentUser]);
+
   // Zwykły user widzi swoje przypisane spotkania LUB te przypisane do jego grupy
   const myAssignedMeetings = useMemo(() => {
     if (!currentUser || isLeaderOrAdmin) return [];
@@ -114,14 +125,7 @@ export default function Meetings() {
         const day = startOfDay(d);
         return day >= today && day <= maxDate;
       });
-  }, [currentUser, isLeaderOrAdmin, meetingAssignments]);
-
-  // Ustal groupId bieżącego użytkownika – zawsze z hooka (AllowedUser.group_id)
-  const currentUserGroupId = useMemo(() => {
-    if (!currentUser) return null;
-    if (currentUser.role === "admin") return null;
-    return currentUser.groupId || null;
-  }, [currentUser]);
+  }, [currentUser, isLeaderOrAdmin, meetingAssignments, today, maxDate]);
 
   // Handlowcy do przypisania: filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
