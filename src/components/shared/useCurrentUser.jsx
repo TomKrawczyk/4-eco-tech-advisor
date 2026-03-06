@@ -23,12 +23,21 @@ export default function useCurrentUser() {
         user.displayName = ua.data?.name || ua.name;
         let groupId = ua.data?.group_id || ua.group_id;
         if (!groupId && (user.role === "group_leader" || user.role === "team_leader")) {
+          // Szukaj w group_leader_ids po id, email lub nazwisku
           const myGroup = groups.find(g => {
             const ids = g.data?.group_leader_ids || g.group_leader_ids || [];
-            return ids.includes(ua.id);
+            const legacyId = g.data?.group_leader_id || g.group_leader_id;
+            return (
+              ids.includes(ua.id) ||
+              ids.includes(ua.data?.email || ua.email) ||
+              ids.includes(ua.data?.name || ua.name) ||
+              legacyId === ua.id
+            );
           });
           groupId = myGroup?.id || null;
         }
+        // Dodatkowy log diagnostyczny
+        console.log(`[useCurrentUser] ${user.email} role=${user.role} groupId=${groupId} ua.id=${ua.id}`);
         user.groupId = groupId;
       }
       setCurrentUser(user);
