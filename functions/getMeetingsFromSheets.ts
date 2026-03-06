@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden – brak uprawnień' }, { status: 403 });
     }
 
-    const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
+    const { accessToken } = await base44.asServiceRole.connectors.getConnection('googlesheets');
     const allTabs = await getAllSheetTabs(accessToken);
 
     // Pobierz konfigurację arkuszy – wyklucz wyłączone
