@@ -144,10 +144,6 @@ export default function Meetings() {
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
-  // Okno dat: dziś + 3 dni — musi być przed useMemo które ich używa
-  const today = useMemo(() => startOfDay(new Date()), []);
-  const maxDate = useMemo(() => addDays(today, 3), [today]);
-
   // Filtruj: tylko z datą + w oknie 3 dni
   const meetingsWithDate = useMemo(() => {
     return allMeetings
