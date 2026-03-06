@@ -10,34 +10,35 @@ Deno.serve(async (req) => {
         }
 
         const allowedUsers = await base44.entities.AllowedUser.list();
-        const currentUserData = allowedUsers.find(u => u.email === user.email);
+        const currentUserData = allowedUsers.find(u => (u.data?.email || u.email) === user.email);
         
         if (!currentUserData) {
             return Response.json({ userEmails: [user.email] });
         }
 
-        const role = currentUserData.role || 'user';
+        const role = currentUserData.data?.role || currentUserData.role || 'user';
         let userEmails = [];
 
         if (role === 'admin') {
             // Admin widzi wszystkich
-            userEmails = allowedUsers.map(u => u.email);
+            userEmails = allowedUsers.map(u => u.data?.email || u.email);
         } else if (role === 'group_leader') {
             // Group leader widzi siebie, swoich team leaderów i ich użytkowników
             userEmails = [user.email];
             
-            const managedUsers = currentUserData.managed_users || [];
+            const managedUsers = currentUserData.data?.managed_users || currentUserData.managed_users || [];
             managedUsers.forEach(managedId => {
                 const managedUser = allowedUsers.find(u => u.id === managedId);
                 if (managedUser) {
-                    userEmails.push(managedUser.email);
+                    userEmails.push(managedUser.data?.email || managedUser.email);
                     
                     // Jeśli to team leader, dodaj jego użytkowników
-                    if (managedUser.role === 'team_leader') {
-                        const teamUsers = managedUser.managed_users || [];
+                    const mRole = managedUser.data?.role || managedUser.role;
+                    if (mRole === 'team_leader') {
+                        const teamUsers = managedUser.data?.managed_users || managedUser.managed_users || [];
                         teamUsers.forEach(teamUserId => {
                             const teamUser = allowedUsers.find(u => u.id === teamUserId);
-                            if (teamUser) userEmails.push(teamUser.email);
+                            if (teamUser) userEmails.push(teamUser.data?.email || teamUser.email);
                         });
                     }
                 }
@@ -46,10 +47,10 @@ Deno.serve(async (req) => {
             // Team leader widzi siebie i swoich użytkowników
             userEmails = [user.email];
             
-            const managedUsers = currentUserData.managed_users || [];
+            const managedUsers = currentUserData.data?.managed_users || currentUserData.managed_users || [];
             managedUsers.forEach(managedId => {
                 const managedUser = allowedUsers.find(u => u.id === managedId);
-                if (managedUser) userEmails.push(managedUser.email);
+                if (managedUser) userEmails.push(managedUser.data?.email || managedUser.email);
             });
         } else {
             // Zwykły użytkownik widzi tylko siebie
