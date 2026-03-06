@@ -147,8 +147,8 @@ Deno.serve(async (req) => {
     const ua = allowedUsers.find(a => (a.email || a.data?.email) === user.email);
     const role = ua?.role || ua?.data?.role;
 
-    if (role !== 'admin') {
-      return Response.json({ error: 'Forbidden – tylko dla administratora' }, { status: 403 });
+    if (role !== 'admin' && role !== 'group_leader' && role !== 'team_leader') {
+      return Response.json({ error: 'Forbidden – brak uprawnień' }, { status: 403 });
     }
 
     const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
