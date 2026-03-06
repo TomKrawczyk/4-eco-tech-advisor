@@ -116,27 +116,12 @@ export default function Meetings() {
       });
   }, [currentUser, isLeaderOrAdmin, meetingAssignments]);
 
-  // Ustal groupId bieżącego użytkownika (dla group_leader i team_leader)
+  // Ustal groupId bieżącego użytkownika – zawsze z hooka (AllowedUser.group_id)
   const currentUserGroupId = useMemo(() => {
     if (!currentUser) return null;
-    const role = currentUser.role;
-    if (role === "admin") return null; // admin widzi wszystko
-
-    // Najpierw sprawdź groupId z AllowedUser (najbardziej wiarygodne)
-    if (currentUser.groupId) return currentUser.groupId;
-
-    if (role === "group_leader") {
-      // Fallback: szukaj w grupach gdzie ten user jest liderem
-      const ua = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
-      const myGroup = groups.find(g => {
-        const ids = g.data?.group_leader_ids || g.group_leader_ids || [];
-        const legacyId = g.data?.group_leader_id || g.group_leader_id;
-        return ids.includes(ua?.id) || legacyId === ua?.id || ids.includes(currentUser.email) || ids.includes(ua?.email);
-      });
-      return myGroup?.id || null;
-    }
-    return null;
-  }, [currentUser, groups, allAllowedUsers]);
+    if (currentUser.role === "admin") return null;
+    return currentUser.groupId || null;
+  }, [currentUser]);
 
   // Handlowcy do przypisania: filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
