@@ -45,6 +45,7 @@ function formatDateLabel(dateStr) {
 export default function Meetings() {
   const { currentUser, accessChecked } = useCurrentUser();
   const [search, setSearch] = useState("");
+  const [notifySending, setNotifySending] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const hasAccess = !!currentUser; // wszyscy zalogowani mają dostęp

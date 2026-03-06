@@ -41,6 +41,7 @@ function formatDateLabel(str) {
 export default function PhoneContacts() {
   const { currentUser, accessChecked } = useCurrentUser();
   const [search, setSearch] = useState("");
+  const [notifySending, setNotifySending] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
 
