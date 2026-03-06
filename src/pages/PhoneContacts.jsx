@@ -171,22 +171,20 @@ export default function PhoneContacts() {
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
-  // Filtr hierarchiczny: group_leader i team_leader widzą tylko kontakty swojej grupy/podległych
+  // Filtr hierarchiczny: group_leader widzi kontakty z arkuszy przypisanych do jego grupy
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUser?.groupId;
-      const myUserIds = allAllowedUsers
-        .filter(u => {
-          const role = u.data?.role || u.role;
-          return u.data?.group_id === myGroupId || u.group_id === myGroupId || role === "user" || role === "team_leader";
-        })
-        .map(u => u.data?.email || u.email);
-      return contacts.filter(c =>
-        !c.assigned_group_id ||
-        c.assigned_group_id === myGroupId ||
-        myUserIds.includes(c.assigned_user_email)
-      );
+      // Kontakty z arkuszy przypisanych do grupy group_leadera
+      return contacts.filter(c => {
+        const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
+        if (sheetMapping) return sheetMapping.group_id === myGroupId;
+        // Fallback: kontakty bezpośrednio przypisane do grupy lub do użytkownika z grupy
+        const userGroupId = allAllowedUsers.find(u => (u.data?.email || u.email) === c.assigned_user_email);
+        const uGroupId = userGroupId?.data?.group_id || userGroupId?.group_id;
+        return c.assigned_group_id === myGroupId || uGroupId === myGroupId;
+      });
     }
     if (currentUser?.role === "team_leader") {
       const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser?.email);
@@ -195,13 +193,16 @@ export default function PhoneContacts() {
         .filter(u => managedIds.includes(u.id))
         .map(u => u.data?.email || u.email);
       managedEmails.push(currentUser.email);
-      return contacts.filter(c =>
-        !c.assigned_user_email ||
-        managedEmails.includes(c.assigned_user_email)
-      );
+      // Team leader widzi kontakty z arkuszy przypisanych do jego grupy LUB przypisane do jego podległych
+      const myGroupId = currentUser?.groupId;
+      return contacts.filter(c => {
+        const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
+        if (sheetMapping && myGroupId && sheetMapping.group_id === myGroupId) return true;
+        return !c.assigned_user_email || managedEmails.includes(c.assigned_user_email);
+      });
     }
     return contacts;
-  }, [contacts, currentUser, allAllowedUsers]);
+  }, [contacts, currentUser, allAllowedUsers, sheetMappings]);
 
   const filtered = useMemo(() => {
     return visibleContacts.filter(c => {
