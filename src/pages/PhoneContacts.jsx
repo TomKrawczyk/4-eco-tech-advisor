@@ -144,14 +144,46 @@ export default function PhoneContacts() {
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
+  // Filtr hierarchiczny: group_leader i team_leader widzą tylko kontakty swojej grupy/podległych
+  const visibleContacts = useMemo(() => {
+    if (currentUser?.role === "admin") return contacts;
+    if (currentUser?.role === "group_leader") {
+      const myGroupId = currentUser?.groupId;
+      const myUserIds = allAllowedUsers
+        .filter(u => {
+          const role = u.data?.role || u.role;
+          return u.data?.group_id === myGroupId || u.group_id === myGroupId || role === "user" || role === "team_leader";
+        })
+        .map(u => u.data?.email || u.email);
+      return contacts.filter(c =>
+        !c.assigned_group_id ||
+        c.assigned_group_id === myGroupId ||
+        myUserIds.includes(c.assigned_user_email)
+      );
+    }
+    if (currentUser?.role === "team_leader") {
+      const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser?.email);
+      const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
+      const managedEmails = allAllowedUsers
+        .filter(u => managedIds.includes(u.id))
+        .map(u => u.data?.email || u.email);
+      managedEmails.push(currentUser.email);
+      return contacts.filter(c =>
+        !c.assigned_user_email ||
+        managedEmails.includes(c.assigned_user_email)
+      );
+    }
+    return contacts;
+  }, [contacts, currentUser, allAllowedUsers]);
+
   const filtered = useMemo(() => {
-    return contacts.filter(c => {
+    return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
       const matchStatus = c.status === "Kontakt do doradcy";
       return matchSearch && matchSheet && matchStatus;
     });
-  }, [contacts, search, sheetFilter]);
+  }, [visibleContacts, search, sheetFilter]);
 
   // Grupuj po zakładce, potem po dacie
   const sheetGroups = useMemo(() => {
