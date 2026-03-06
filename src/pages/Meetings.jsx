@@ -186,15 +186,18 @@ export default function Meetings() {
 
       // Dla group_leader i team_leader: pokaż spotkania z arkuszy przypisanych do jego grupy
       // LUB spotkania bezpośrednio przypisane do jego grupy (przez MeetingAssignment)
+      // Jeśli lider nie ma jeszcze przypisanej grupy (np. po awansie) – pokaż wszystkie
       let matchLeaderGroup = true;
-      if ((currentUser?.role === "group_leader" || currentUser?.role === "team_leader") && currentUserGroupId) {
-        const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
-        const isSheetInMyGroup = sheetMapping?.group_id === currentUserGroupId;
-        // Sprawdź też bezpośrednie przypisanie do grupy w MeetingAssignment
-        const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-        const assignment = meetingAssignments.find(a => a.meeting_key === key);
-        const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
-        matchLeaderGroup = isSheetInMyGroup || isAssignedToMyGroup;
+      if (currentUser?.role === "group_leader" || currentUser?.role === "team_leader") {
+        if (currentUserGroupId) {
+          const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
+          const isSheetInMyGroup = sheetMapping?.group_id === currentUserGroupId;
+          const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+          const assignment = meetingAssignments.find(a => a.meeting_key === key);
+          const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
+          matchLeaderGroup = isSheetInMyGroup || isAssignedToMyGroup;
+        }
+        // Brak grupy = lider widzi wszystko (np. po świeżym awansie)
       }
 
       return matchSearch && matchGroup && matchSheet && matchLeaderGroup;
