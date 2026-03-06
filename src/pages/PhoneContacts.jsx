@@ -188,9 +188,13 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi tylko swoje przypisane kontakty
+  // Zwykły użytkownik widzi swoje przypisane kontakty lub te przypisane do jego grupy
   if (!isLeaderOrAdmin) {
-    const myContacts = phoneContactsFromDB.filter(c => c.assigned_user_email === currentUser?.email);
+    const myGroupId = currentUser?.groupId;
+    const myContacts = phoneContactsFromDB.filter(c =>
+      c.assigned_user_email === currentUser?.email ||
+      (myGroupId && c.assigned_group_id === myGroupId)
+    );
     return (
       <div className="space-y-6">
         <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
