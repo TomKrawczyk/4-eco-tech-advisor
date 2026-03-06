@@ -628,6 +628,13 @@ export default function UserManagement() {
       </div>
       </TabsContent>
 
+      <TabsContent value="profiles">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+          <h3 className="text-base md:text-lg font-semibold mb-4">Podgląd profili użytkowników</h3>
+          <UserProfilesPreview allowedUsers={allowedUsers} groups={groups} />
+        </div>
+      </TabsContent>
+
       <TabsContent value="groups">
         <GroupManagement allowedUsers={allowedUsers} />
       </TabsContent>
