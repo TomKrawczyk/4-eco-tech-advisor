@@ -40,7 +40,13 @@ function formatDateLabel(str) {
 
 export default function PhoneContacts() {
   const { currentUser, accessChecked } = useCurrentUser();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [sheetFilter, setSheetFilter] = useState("all");
+  const [expandedSheets, setExpandedSheets] = useState({});
+  const [showStats, setShowStats] = useState(false);
+  const [selectedDetails, setSelectedDetails] = useState(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
