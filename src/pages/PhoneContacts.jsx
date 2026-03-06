@@ -315,7 +315,20 @@ export default function PhoneContacts() {
                   </a>
                 )}
                 {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
-                {c.sheet && <Badge className="mt-1 bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{c.sheet}</Badge>}
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {c.sheet && <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{c.sheet}</Badge>}
+                  {c.assigned_group_name && !c.assigned_user_email && (
+                    <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
+                  )}
+                </div>
+                {(c.comments || c.agent) && (
+                  <button
+                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                  >
+                    Szczegóły
+                  </button>
+                )}
               </div>
             ))}
           </div>
