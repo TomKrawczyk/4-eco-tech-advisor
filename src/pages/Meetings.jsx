@@ -136,19 +136,19 @@ export default function Meetings() {
     if (!currentUser) return null;
     const role = currentUser.role;
     if (role === "admin") return null; // admin widzi wszystko
+
+    // Najpierw sprawdź groupId z AllowedUser (najbardziej wiarygodne)
+    if (currentUser.groupId) return currentUser.groupId;
+
     if (role === "group_leader") {
-      // Sprawdź czy jest group_leader_ids w którejś grupie
+      // Fallback: szukaj w grupach gdzie ten user jest liderem
+      const ua = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
       const myGroup = groups.find(g => {
         const ids = g.data?.group_leader_ids || g.group_leader_ids || [];
         const legacyId = g.data?.group_leader_id || g.group_leader_id;
-        // Porównaj po email lub id
-        const ua = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
-        return ids.includes(ua?.id) || legacyId === ua?.id || ids.includes(currentUser.email);
+        return ids.includes(ua?.id) || legacyId === ua?.id || ids.includes(currentUser.email) || ids.includes(ua?.email);
       });
-      return myGroup?.id || currentUser.groupId || null;
-    }
-    if (role === "team_leader") {
-      return currentUser.groupId || null;
+      return myGroup?.id || null;
     }
     return null;
   }, [currentUser, groups, allAllowedUsers]);
