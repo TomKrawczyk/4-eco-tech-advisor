@@ -631,7 +631,14 @@ export default function UserManagement() {
       <TabsContent value="profiles">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <h3 className="text-base md:text-lg font-semibold mb-4">Podgląd profili użytkowników</h3>
-          <UserProfilesPreview allowedUsers={allowedUsers} groups={groups} />
+          {currentUser?.role === "admin" ? (
+            <UserProfilesPreview allowedUsers={allowedUsers} groups={groups} />
+          ) : (
+            <div className="text-center py-12">
+              <Shield className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">Tylko administratorzy mają dostęp do podglądu profili.</p>
+            </div>
+          )}
         </div>
       </TabsContent>
 
