@@ -448,14 +448,14 @@ export default function PhoneContacts() {
                                             <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
                                               <span className="text-xs font-medium text-blue-700">{contact.assigned_group_name}</span>
                                               <button
-                                                onClick={() => assignGroupMutation.mutate({ id: contact.id, groupId: "", groupName: "" })}
+                                                onClick={() => assignGroupMutation.mutate({ contact, groupId: "", groupName: "" })}
                                                 className="ml-1 text-gray-400 hover:text-red-500 text-xs"
                                               >×</button>
                                             </div>
                                           ) : (
                                             <Select onValueChange={(val) => {
                                               const g = groups.find(gr => gr.id === val);
-                                              if (g) assignGroupMutation.mutate({ id: contact.id, groupId: g.id, groupName: g.name });
+                                              if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
                                             }}>
                                               <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
                                                 <SelectValue placeholder="Przypisz grupę" />
