@@ -26,9 +26,16 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // Pobierz wszystkich group leaderów
+    // Opcjonalny parametr: wysyłka tylko do konkretnej grupy
+    let filterGroupId = null;
+    try {
+      const body = await req.clone().json();
+      filterGroupId = body?.groupId || null;
+    } catch (_) {}
+
     const allowedUsers = await base44.asServiceRole.entities.AllowedUser.list();
-    const groups = await base44.asServiceRole.entities.Group.list();
+    const allGroups = await base44.asServiceRole.entities.Group.list();
+    const groups = filterGroupId ? allGroups.filter(g => g.id === filterGroupId) : allGroups;
     const sheetMappings = await base44.asServiceRole.entities.SheetGroupMapping.list();
 
     // Pobierz spotkania z arkusza (potrzebujemy danych)

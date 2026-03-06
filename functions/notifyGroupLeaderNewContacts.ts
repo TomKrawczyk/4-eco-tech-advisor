@@ -28,7 +28,9 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { groupId, groupName, clientName, phone, sheet } = await req.json();
+    let body = {};
+    try { body = await req.json(); } catch (_) {}
+    const { groupId, groupName, clientName, phone, sheet, bulkMode } = body;
 
     if (!groupId) return Response.json({ ok: true, message: 'Brak groupId' });
 
