@@ -118,15 +118,25 @@ export default function Meetings() {
       .filter(a => {
         const isMyMeeting = a.assigned_user_email === currentUser.email;
         const isMyGroup = myGroupId && a.assigned_group_id === myGroupId;
-        return (isMyMeeting || isMyGroup) && a.meeting_calendar && a.meeting_date;
+        return isMyMeeting || isMyGroup;
       })
       .filter(a => {
+        // Filtruj po dacie jeśli dostępna, inaczej pokaż
+        if (!a.meeting_calendar) return true;
         const d = parseMeetingDate(a.meeting_calendar);
-        if (!d) return false;
+        if (!d) return true;
         const day = startOfDay(d);
-        return day >= today && day <= maxDate;
+        return day >= today && day <= maxDateUser;
+      })
+      .sort((a, b) => {
+        const da = parseMeetingDate(a.meeting_calendar);
+        const db = parseMeetingDate(b.meeting_calendar);
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return da - db;
       });
-  }, [currentUser, isLeaderOrAdmin, meetingAssignments, today, maxDate]);
+  }, [currentUser, isLeaderOrAdmin, meetingAssignments, today, maxDateUser]);
 
   // Handlowcy do przypisania: filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
