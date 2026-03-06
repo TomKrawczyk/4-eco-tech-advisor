@@ -149,8 +149,17 @@ export default function PhoneContacts() {
 
   const assignMutation = useMutation({
     mutationFn: ({ contact, email, name }) => upsertContact(contact, { assigned_user_email: email, assigned_user_name: name }),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(["phoneContactsDB"]);
+    onSuccess: (savedRecord, variables) => {
+      queryClient.setQueryData(["phoneContactsDB"], (old = []) => {
+        const exists = old.find(db => db.contact_key === variables.contact.contact_key);
+        if (exists) {
+          return old.map(db => db.contact_key === variables.contact.contact_key
+            ? { ...db, assigned_user_email: variables.email, assigned_user_name: variables.name }
+            : db
+          );
+        }
+        return [...old, { ...savedRecord, contact_key: variables.contact.contact_key }];
+      });
       if (variables.email) {
         base44.functions.invoke("notifyContactAssigned", {
           assignedUserEmail: variables.email,
@@ -165,8 +174,17 @@ export default function PhoneContacts() {
 
   const assignGroupMutation = useMutation({
     mutationFn: ({ contact, groupId, groupName }) => upsertContact(contact, { assigned_group_id: groupId, assigned_group_name: groupName }),
-    onSuccess: () => {
-      queryClient.invalidateQueries(["phoneContactsDB"]);
+    onSuccess: (savedRecord, variables) => {
+      queryClient.setQueryData(["phoneContactsDB"], (old = []) => {
+        const exists = old.find(db => db.contact_key === variables.contact.contact_key);
+        if (exists) {
+          return old.map(db => db.contact_key === variables.contact.contact_key
+            ? { ...db, assigned_group_id: variables.groupId, assigned_group_name: variables.groupName }
+            : db
+          );
+        }
+        return [...old, { ...savedRecord, contact_key: variables.contact.contact_key }];
+      });
     },
   });
 
