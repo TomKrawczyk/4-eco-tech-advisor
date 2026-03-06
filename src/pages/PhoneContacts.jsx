@@ -120,16 +120,37 @@ export default function PhoneContacts() {
     });
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
+  const upsertContact = async (contact, patch) => {
+    const existing = phoneContactsFromDB.find(db => db.contact_key === contact.contact_key);
+    if (existing) {
+      return base44.entities.PhoneContact.update(existing.id, patch);
+    } else {
+      return base44.entities.PhoneContact.create({
+        contact_key: contact.contact_key,
+        sheet: contact.sheet,
+        client_name: contact.client_name,
+        phone: contact.phone,
+        address: contact.address,
+        date: contact.date,
+        agent: contact.agent,
+        contact_date: contact.contact_date,
+        ...patch,
+      });
+    }
+  };
+
   const assignMutation = useMutation({
-    mutationFn: ({ id, email, name }) =>
-      base44.entities.PhoneContact.update(id, { assigned_user_email: email, assigned_user_name: name }),
-    onSuccess: () => queryClient.invalidateQueries(["phoneContacts"]),
+    mutationFn: ({ contact, email, name }) => upsertContact(contact, { assigned_user_email: email, assigned_user_name: name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["phoneContactsDB"]);
+    },
   });
 
   const assignGroupMutation = useMutation({
-    mutationFn: ({ id, groupId, groupName }) =>
-      base44.entities.PhoneContact.update(id, { assigned_group_id: groupId, assigned_group_name: groupName }),
-    onSuccess: () => queryClient.invalidateQueries(["phoneContacts"]),
+    mutationFn: ({ contact, groupId, groupName }) => upsertContact(contact, { assigned_group_id: groupId, assigned_group_name: groupName }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["phoneContactsDB"]);
+    },
   });
 
   // Handlowcy do przypisania
