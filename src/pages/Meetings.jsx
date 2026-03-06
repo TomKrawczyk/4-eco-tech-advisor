@@ -203,11 +203,17 @@ export default function Meetings() {
       }
       const matchSheet = sheetFilter === "all" || m.sheet === sheetFilter;
 
-      // Dla group_leader: pokaż tylko spotkania z arkuszy przypisanych do jego grupy
+      // Dla group_leader i team_leader: pokaż spotkania z arkuszy przypisanych do jego grupy
+      // LUB spotkania bezpośrednio przypisane do jego grupy (przez MeetingAssignment)
       let matchLeaderGroup = true;
-      if (currentUser?.role === "group_leader" && currentUserGroupId) {
+      if ((currentUser?.role === "group_leader" || currentUser?.role === "team_leader") && currentUserGroupId) {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
-        matchLeaderGroup = sheetMapping?.group_id === currentUserGroupId;
+        const isSheetInMyGroup = sheetMapping?.group_id === currentUserGroupId;
+        // Sprawdź też bezpośrednie przypisanie do grupy w MeetingAssignment
+        const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+        const assignment = meetingAssignments.find(a => a.meeting_key === key);
+        const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
+        matchLeaderGroup = isSheetInMyGroup || isAssignedToMyGroup;
       }
 
       return matchSearch && matchGroup && matchSheet && matchLeaderGroup;
