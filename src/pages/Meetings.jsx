@@ -43,44 +43,8 @@ function formatDateLabel(dateStr) {
 }
 
 export default function Meetings() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [accessChecked, setAccessChecked] = useState(false);
+  const { currentUser, accessChecked } = useCurrentUser();
   const [search, setSearch] = useState("");
-  const [groupFilter, setGroupFilter] = useState("all");
-  const [expandedSheets, setExpandedSheets] = useState({});
-  const [showMappingPanel, setShowMappingPanel] = useState(false);
-  const [showStats, setShowStats] = useState(false);
-  const [sheetFilter, setSheetFilter] = useState("all");
-  const [selectedDetails, setSelectedDetails] = useState(null);
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-
-  React.useEffect(() => {
-    const fetchUser = async () => {
-      const user = await base44.auth.me();
-      const [allowedUsers, groups] = await Promise.all([
-        base44.entities.AllowedUser.list(),
-        base44.entities.Group.list(),
-      ]);
-      const ua = allowedUsers.find(a => (a.data?.email || a.email) === user.email);
-      if (ua) {
-        user.role = ua.data?.role || ua.role;
-        user.displayName = ua.data?.name || ua.name;
-        // Pobierz group_id z AllowedUser, a jeśli brak – szukaj w Group.group_leader_ids
-        let groupId = ua.data?.group_id || ua.group_id;
-        if (!groupId && (user.role === "group_leader" || user.role === "team_leader")) {
-          const myGroup = groups.find(g => {
-            const ids = g.data?.group_leader_ids || g.group_leader_ids || [];
-            return ids.includes(ua.id);
-          });
-          groupId = myGroup?.id || null;
-        }
-        user.groupId = groupId;
-      }
-      setCurrentUser(user);
-      setAccessChecked(true);
-    };
-    fetchUser();
-  }, []);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const hasAccess = !!currentUser; // wszyscy zalogowani mają dostęp
