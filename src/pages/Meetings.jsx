@@ -158,7 +158,7 @@ export default function Meetings() {
         ...m,
         meeting_date: format(startOfDay(parseMeetingDate(m.meeting_calendar)), "yyyy-MM-dd"),
       }));
-  }, [allMeetings]);
+  }, [allMeetings, today, maxDate]);
 
   // Filtr wyszukiwania + grupy + arkusz
   const filtered = useMemo(() => {
