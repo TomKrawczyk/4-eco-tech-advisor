@@ -140,6 +140,8 @@ export default function PhoneContacts() {
         date: contact.date,
         agent: contact.agent,
         contact_date: contact.contact_date,
+        status: contact.status,
+        comments: contact.comments,
         ...patch,
       });
     }
