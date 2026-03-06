@@ -4,7 +4,8 @@ import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Phone, Users, User, ChevronDown, ChevronRight, Search, Shield, Crown } from "lucide-react";
+import { Calendar, Phone, Users, User, ChevronRight, Search, Shield, Crown, Bell } from "lucide-react";
+import UserLiveProfile from "./UserLiveProfile";
 
 const roleConfig = {
   admin: { label: "Admin", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Shield },
@@ -13,8 +14,7 @@ const roleConfig = {
   user: { label: "Handlowiec", color: "bg-gray-100 text-gray-700 border-gray-200", icon: User },
 };
 
-function UserCard({ user, meetings, contacts, groups, allUsers }) {
-  const [expanded, setExpanded] = useState(false);
+function UserRow({ user, meetings, contacts, notifications, groups, onClick }) {
   const email = user.data?.email || user.email;
   const name = user.data?.name || user.name;
   const role = user.data?.role || user.role;
@@ -24,13 +24,9 @@ function UserCard({ user, meetings, contacts, groups, allUsers }) {
   const rc = roleConfig[role] || roleConfig.user;
   const Icon = rc.icon;
 
-  const userMeetings = meetings.filter(m => m.assigned_user_email === email);
-  const userContacts = contacts.filter(c => c.assigned_user_email === email);
-
   const group = groups.find(g => g.id === groupId);
   const groupName = group?.data?.name || group?.name;
 
-  // Dla group leadera: znajdź grupy którymi zarządza i spotkania przypisane do tych grup
   const managedGroups = role === "group_leader"
     ? groups.filter(g => {
         const leaderIds = g.data?.group_leader_ids || g.group_leader_ids || [];
@@ -39,147 +35,70 @@ function UserCard({ user, meetings, contacts, groups, allUsers }) {
       })
     : [];
   const managedGroupIds = managedGroups.map(g => g.id);
+
+  const userMeetings = meetings.filter(m => m.assigned_user_email === email);
   const groupMeetings = managedGroupIds.length > 0
     ? meetings.filter(m => m.assigned_group_id && managedGroupIds.includes(m.assigned_group_id))
     : [];
+
+  const userContacts = contacts.filter(c => c.assigned_user_email === email);
   const groupContacts = managedGroupIds.length > 0
     ? contacts.filter(c => c.assigned_group_id && managedGroupIds.includes(c.assigned_group_id))
     : [];
 
+  const unreadNotifs = notifications.filter(n => n.user_email === email && !n.is_read);
+
+  const totalMeetings = userMeetings.length + groupMeetings.length;
+  const totalContacts = userContacts.length + groupContacts.length;
+
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-green-200 transition-colors">
-      {/* Header */}
-      <button
-        className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 transition-colors"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${rc.color}`}>
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-gray-900 text-sm">{name}</span>
-            <Badge className={`text-[10px] border ${rc.color}`}>{rc.label}</Badge>
-            {groupName && (
-              <Badge className="text-[10px] bg-orange-50 text-orange-700 border-orange-200">{groupName}</Badge>
-            )}
-          </div>
-          <div className="text-xs text-gray-500 truncate mt-0.5">{email}</div>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-green-500" />
-            <span className="text-sm font-semibold text-green-700">{userMeetings.length + groupMeetings.length}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Phone className="w-3.5 h-3.5 text-blue-500" />
-            <span className="text-sm font-semibold text-blue-700">{userContacts.length + groupContacts.length}</span>
-          </div>
-          {expanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-        </div>
-      </button>
-
-      {/* Expanded content */}
-      {expanded && (
-        <div className="border-t border-gray-100 p-4 space-y-4 bg-gray-50">
-          {/* Meetings przypisane do osoby */}
-          <div>
-            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-green-500" />
-              Spotkania osobiste ({userMeetings.length})
-            </h4>
-            {userMeetings.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">Brak przypisanych spotkań</p>
-            ) : (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {userMeetings.map((m, i) => (
-                  <div key={m.id || i} className="flex items-start gap-2 text-xs bg-white rounded-lg px-3 py-2 border border-gray-200">
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-gray-800">{m.client_name}</span>
-                      {m.meeting_calendar && <span className="text-gray-400 ml-1">– {m.meeting_calendar}</span>}
-                    </div>
-                    <Badge className="text-[9px] bg-blue-50 text-blue-600 border-blue-100 shrink-0">{m.sheet}</Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Spotkania przypisane do grupy (dla group leaderów) */}
-          {groupMeetings.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-orange-500" />
-                Spotkania grupy do przypisania ({groupMeetings.length})
-              </h4>
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {groupMeetings.map((m, i) => (
-                  <div key={m.id || i} className="flex items-start gap-2 text-xs bg-white rounded-lg px-3 py-2 border border-orange-100">
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-gray-800">{m.client_name}</span>
-                      {m.meeting_calendar && <span className="text-gray-400 ml-1">– {m.meeting_calendar}</span>}
-                      {m.assigned_group_name && <span className="text-orange-500 ml-1">({m.assigned_group_name})</span>}
-                    </div>
-                    <Badge className="text-[9px] bg-orange-50 text-orange-600 border-orange-100 shrink-0">{m.sheet}</Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
+    <button
+      className="w-full bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-green-300 hover:shadow-sm transition-all flex items-center gap-3"
+      onClick={() => onClick(user)}
+    >
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${rc.color}`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-gray-900 text-sm">{name}</span>
+          <Badge className={`text-[10px] border ${rc.color}`}>{rc.label}</Badge>
+          {groupName && (
+            <Badge className="text-[10px] bg-orange-50 text-orange-700 border-orange-200">{groupName}</Badge>
           )}
-
-          {/* Phone Contacts przypisane do osoby */}
-          <div>
-            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-blue-500" />
-              Kontakty telefoniczne ({userContacts.length})
-            </h4>
-            {userContacts.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">Brak przypisanych kontaktów</p>
-            ) : (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {userContacts.map((c, i) => (
-                  <div key={c.id || i} className="flex items-start gap-2 text-xs bg-white rounded-lg px-3 py-2 border border-gray-200">
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-gray-800">{c.client_name}</span>
-                      {c.phone && <span className="text-gray-400 ml-1">– {c.phone}</span>}
-                    </div>
-                    <Badge className="text-[9px] bg-green-50 text-green-600 border-green-100 shrink-0">{c.sheet}</Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Kontakty przypisane do grupy (dla group leaderów) */}
-          {groupContacts.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-orange-500" />
-                Kontakty grupy ({groupContacts.length})
-              </h4>
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {groupContacts.map((c, i) => (
-                  <div key={c.id || i} className="flex items-start gap-2 text-xs bg-white rounded-lg px-3 py-2 border border-orange-100">
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-gray-800">{c.client_name}</span>
-                      {c.phone && <span className="text-gray-400 ml-1">– {c.phone}</span>}
-                      {c.assigned_group_name && <span className="text-orange-500 ml-1">({c.assigned_group_name})</span>}
-                    </div>
-                    <Badge className="text-[9px] bg-orange-50 text-orange-600 border-orange-100 shrink-0">{c.sheet}</Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {managedGroups.map(g => (
+            <Badge key={g.id} className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+              {g.data?.name || g.name}
+            </Badge>
+          ))}
         </div>
-      )}
-    </div>
+        <div className="text-xs text-gray-400 truncate mt-0.5">{email}</div>
+      </div>
+      <div className="flex items-center gap-3 shrink-0">
+        {unreadNotifs.length > 0 && (
+          <div className="flex items-center gap-1">
+            <Bell className="w-3.5 h-3.5 text-yellow-500" />
+            <span className="text-xs font-semibold text-yellow-600">{unreadNotifs.length}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-1">
+          <Calendar className="w-3.5 h-3.5 text-green-500" />
+          <span className="text-sm font-semibold text-green-700">{totalMeetings}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Phone className="w-3.5 h-3.5 text-blue-500" />
+          <span className="text-sm font-semibold text-blue-700">{totalContacts}</span>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-400" />
+      </div>
+    </button>
   );
 }
 
 export default function UserProfilesPreview({ allowedUsers, groups }) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [selectedUser, setSelectedUser] = useState(null);
 
   const { data: meetings = [] } = useQuery({
     queryKey: ["meetingAssignments"],
@@ -191,6 +110,17 @@ export default function UserProfilesPreview({ allowedUsers, groups }) {
     queryFn: () => base44.entities.PhoneContact.list(),
   });
 
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["allNotifications"],
+    queryFn: () => base44.entities.Notification.list(),
+  });
+
+  // Normalize
+  const norm = (x) => ({ ...x, ...(x.data || {}) });
+  const normalizedMeetings = meetings.map(norm);
+  const normalizedContacts = contacts.map(norm);
+  const normalizedNotifications = notifications.map(norm);
+
   const filtered = allowedUsers.filter(u => {
     const name = (u.data?.name || u.name || "").toLowerCase();
     const email = (u.data?.email || u.email || "").toLowerCase();
@@ -200,26 +130,20 @@ export default function UserProfilesPreview({ allowedUsers, groups }) {
     return matchSearch && matchRole;
   });
 
-  // Normalize meetings/contacts data
-  const normalizedMeetings = meetings.map(m => ({
-    id: m.id,
-    assigned_user_email: m.data?.assigned_user_email || m.assigned_user_email,
-    client_name: m.data?.client_name || m.client_name,
-    meeting_calendar: m.data?.meeting_calendar || m.meeting_calendar,
-    sheet: m.data?.sheet || m.sheet,
-  })).filter(m => m.assigned_user_email);
+  if (selectedUser) {
+    return (
+      <UserLiveProfile
+        user={selectedUser}
+        groups={groups}
+        allUsers={allowedUsers}
+        onBack={() => setSelectedUser(null)}
+      />
+    );
+  }
 
-  const normalizedContacts = contacts.map(c => ({
-    id: c.id,
-    assigned_user_email: c.data?.assigned_user_email || c.assigned_user_email,
-    client_name: c.data?.client_name || c.client_name,
-    phone: c.data?.phone || c.phone,
-    sheet: c.data?.sheet || c.sheet,
-  })).filter(c => c.assigned_user_email);
-
-  const totalMeetings = normalizedMeetings.length;
-  const totalContacts = normalizedContacts.length;
-  const assignedMeetings = new Set(normalizedMeetings.map(m => m.assigned_user_email)).size;
+  const totalMeetings = normalizedMeetings.filter(m => m.assigned_user_email).length;
+  const totalContacts = normalizedContacts.filter(c => c.assigned_user_email).length;
+  const totalUnread = normalizedNotifications.filter(n => !n.is_read).length;
 
   return (
     <div className="space-y-4">
@@ -234,8 +158,8 @@ export default function UserProfilesPreview({ allowedUsers, groups }) {
           <div className="text-xs text-gray-500 mt-0.5">Przypisanych kontaktów</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold text-purple-600">{assignedMeetings}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Handlowców z zadaniami</div>
+          <div className="text-2xl font-bold text-yellow-500">{totalUnread}</div>
+          <div className="text-xs text-gray-500 mt-0.5">Nieprzeczytanych powd.</div>
         </div>
       </div>
 
@@ -264,19 +188,22 @@ export default function UserProfilesPreview({ allowedUsers, groups }) {
         </Select>
       </div>
 
-      {/* User cards */}
+      <p className="text-xs text-gray-400">Kliknij na użytkownika, aby zobaczyć jego profil na żywo</p>
+
+      {/* User rows */}
       <div className="space-y-2">
         {filtered.length === 0 ? (
           <p className="text-gray-400 text-sm text-center py-8">Brak użytkowników</p>
         ) : (
           filtered.map(user => (
-            <UserCard
+            <UserRow
               key={user.id}
               user={user}
               meetings={normalizedMeetings}
               contacts={normalizedContacts}
+              notifications={normalizedNotifications}
               groups={groups}
-              allUsers={allowedUsers}
+              onClick={setSelectedUser}
             />
           ))
         )}
