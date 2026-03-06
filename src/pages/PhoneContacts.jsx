@@ -185,6 +185,15 @@ export default function PhoneContacts() {
         }
         return [...old, { ...savedRecord, contact_key: variables.contact.contact_key }];
       });
+      if (variables.groupId) {
+        base44.functions.invoke("notifyGroupLeaderNewContacts", {
+          groupId: variables.groupId,
+          groupName: variables.groupName,
+          clientName: variables.contact.client_name,
+          phone: variables.contact.phone,
+          sheet: variables.contact.sheet,
+        }).catch(() => {});
+      }
     },
   });
 
