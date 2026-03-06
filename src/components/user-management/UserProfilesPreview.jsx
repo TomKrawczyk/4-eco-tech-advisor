@@ -19,6 +19,7 @@ function UserCard({ user, meetings, contacts, groups, allUsers }) {
   const name = user.data?.name || user.name;
   const role = user.data?.role || user.role;
   const groupId = user.data?.group_id || user.group_id;
+  const userId = user.id;
 
   const rc = roleConfig[role] || roleConfig.user;
   const Icon = rc.icon;
@@ -28,6 +29,22 @@ function UserCard({ user, meetings, contacts, groups, allUsers }) {
 
   const group = groups.find(g => g.id === groupId);
   const groupName = group?.data?.name || group?.name;
+
+  // Dla group leadera: znajdź grupy którymi zarządza i spotkania przypisane do tych grup
+  const managedGroups = role === "group_leader"
+    ? groups.filter(g => {
+        const leaderIds = g.data?.group_leader_ids || g.group_leader_ids || [];
+        const legacyId = g.data?.group_leader_id || g.group_leader_id;
+        return leaderIds.includes(userId) || legacyId === userId;
+      })
+    : [];
+  const managedGroupIds = managedGroups.map(g => g.id);
+  const groupMeetings = managedGroupIds.length > 0
+    ? meetings.filter(m => m.assigned_group_id && managedGroupIds.includes(m.assigned_group_id))
+    : [];
+  const groupContacts = managedGroupIds.length > 0
+    ? contacts.filter(c => c.assigned_group_id && managedGroupIds.includes(c.assigned_group_id))
+    : [];
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-green-200 transition-colors">
