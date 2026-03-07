@@ -78,7 +78,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
     <div className="space-y-6">
       <PageHeader
         title="Moje spotkania"
-        subtitle="Spotkania przypisane do Ciebie – najbliższe 14 dni"
+        subtitle="Wszystkie spotkania przypisane do Ciebie"
       />
       {myAssignedMeetings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -86,7 +86,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
             <Table2 className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="font-semibold text-gray-800 mb-1">Brak przypisanych spotkań</h3>
-          <p className="text-sm text-gray-500">Nie masz żadnych spotkań w ciągu najbliższych 14 dni.</p>
+          <p className="text-sm text-gray-500">Nie masz jeszcze żadnych przypisanych spotkań.</p>
         </div>
       ) : (
         <div className="space-y-5">
