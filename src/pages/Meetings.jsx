@@ -271,10 +271,9 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
-  // Okno dat: dziś + 14 dni dla wszystkich (zwiększone z 3)
+  // Okno dat dla widoku admina/lidera: dziś + 14 dni
   const today = useMemo(() => startOfDay(new Date()), []);
   const maxDate = useMemo(() => addDays(today, 14), [today]);
-  const maxDateUser = useMemo(() => addDays(today, 14), [today]);
 
   // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
@@ -283,30 +282,26 @@ export default function Meetings() {
     return currentUser.groupId || null;
   }, [currentUser]);
 
-  // Ustal emaile zespołu team_leadera
+  // Ustal emaile zespołu team_leadera (siebie + zarządzanych)
   const teamMemberEmails = useMemo(() => {
-    if (!currentUser || currentUser.role !== "team_leader") return [];
-    const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
-    const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
-    const emails = allAllowedUsers
-      .filter(u => managedIds.includes(u.id))
-      .map(u => u.data?.email || u.email);
-    emails.push(currentUser.email);
-    return emails;
+    if (!currentUser) return [];
+    if (currentUser.role === "team_leader") {
+      const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+      const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
+      const emails = allAllowedUsers
+        .filter(u => managedIds.includes(u.id))
+        .map(u => u.data?.email || u.email);
+      emails.push(currentUser.email);
+      return emails;
+    }
+    return [currentUser.email];
   }, [currentUser, allAllowedUsers]);
 
-  // Zwykły user widzi swoje przypisane spotkania
+  // Zwykły user widzi WSZYSTKIE swoje przypisane spotkania (bez limitu dat)
   const myAssignedMeetings = useMemo(() => {
     if (!currentUser || isLeaderOrAdmin) return [];
     return meetingAssignments
       .filter(a => a.assigned_user_email === currentUser.email)
-      .filter(a => {
-        if (!a.meeting_calendar) return true;
-        const d = parseMeetingDate(a.meeting_calendar);
-        if (!d) return true;
-        const day = startOfDay(d);
-        return day >= today && day <= maxDateUser;
-      })
       .sort((a, b) => {
         const da = parseMeetingDate(a.meeting_calendar);
         const db = parseMeetingDate(b.meeting_calendar);
@@ -315,7 +310,7 @@ export default function Meetings() {
         if (!db) return -1;
         return da - db;
       });
-  }, [currentUser, isLeaderOrAdmin, meetingAssignments, today, maxDateUser]);
+  }, [currentUser, isLeaderOrAdmin, meetingAssignments]);
 
   // Handlowcy do przypisania: filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
