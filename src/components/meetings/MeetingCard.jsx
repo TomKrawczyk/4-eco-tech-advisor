@@ -92,6 +92,11 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
         await base44.entities.MeetingAssignment.update(assignment.id, {
           assigned_user_email: userEmail,
           assigned_user_name: userName,
+          // Aktualizuj też dane kontaktowe żeby user widział je w swoim widoku
+          client_phone: meeting.phone || assignment.client_phone || "",
+          client_address: meeting.address || assignment.client_address || "",
+          agent: meeting.agent || assignment.agent || "",
+          comments: meeting.comments || assignment.comments || "",
         });
       } else {
         await base44.entities.MeetingAssignment.create({
@@ -102,6 +107,11 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           meeting_date: meeting.meeting_date,
           assigned_user_email: userEmail,
           assigned_user_name: userName,
+          // Zapisz dane kontaktowe żeby user widział je w swoim widoku
+          client_phone: meeting.phone || "",
+          client_address: meeting.address || "",
+          agent: meeting.agent || "",
+          comments: meeting.comments || "",
         });
       }
 
