@@ -224,24 +224,26 @@ export default function PhoneContacts() {
 
   // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
-    if (currentUser?.role === "admin") return contacts;
+    if (currentUser?.role === "admin") {
+      // Admin widzi WSZYSTKO
+      return contacts;
+    }
     if (currentUser?.role === "group_leader") {
-      const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
+      // Group leader: kontakty z arkuszy jego grupy + przypisane do jego grupy
+      if (!currentUserGroupId) return contacts; // brak grupy = widzi wszystko
       return contacts.filter(c => {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
-        if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
-        // Fallback: kontakty przypisane do grupy
-        if (c.assigned_group_id === myGroupId) return true;
+        if (sheetMapping?.group_id === currentUserGroupId) return true;
+        if (c.assigned_group_id === currentUserGroupId) return true;
         return false;
       });
     }
     if (currentUser?.role === "team_leader") {
-      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
+      // Team leader: kontakty przypisane do niego LUB do jego team memberów
       return contacts.filter(c => {
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
-        if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
-        // Nieprzypisane kontakty z arkuszy grupy
+        if (c.assigned_group_id && currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
+        // Nieprzypisane – tylko jeśli arkusz należy do jego grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
           return sheetMapping?.group_id === currentUserGroupId;
