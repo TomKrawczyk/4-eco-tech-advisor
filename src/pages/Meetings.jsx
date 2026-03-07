@@ -327,7 +327,7 @@ export default function Meetings() {
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
-  // Filtruj: tylko z datą + w oknie 14 dni
+  // Filtruj spotkania z arkusza z datą + okno 14 dni (dla widoku admina/lidera)
   const meetingsWithDate = useMemo(() => {
     return allMeetings
       .filter(m => {
@@ -343,7 +343,7 @@ export default function Meetings() {
       }));
   }, [allMeetings, today, maxDate]);
 
-  // Filtr wyszukiwania + grupy + arkusz + rola
+  // Filtr wg roli + wyszukiwanie + grupy + arkusz
   const filtered = useMemo(() => {
     return meetingsWithDate.filter(m => {
       const matchSearch = !search || Object.values(m).some(v =>
@@ -359,37 +359,31 @@ export default function Meetings() {
       // Filtr wg roli
       let matchRole = true;
       if (currentUser?.role === "admin") {
-        // Admin widzi WSZYSTKO
+        // Admin widzi WSZYSTKO z arkusza
         matchRole = true;
       } else if (currentUser?.role === "group_leader") {
-        // Group leader widzi spotkania z arkuszy przypisanych do jego grupy
+        // Group leader widzi: arkusze przypisane do jego grupy + spotkania przypisane do jego grupy
         if (currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
           const isSheetInMyGroup = sheetMapping?.group_id === currentUserGroupId;
-          // Lub spotkania przypisane do jego grupy (przez MeetingAssignment)
           const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
           const assignment = meetingAssignments.find(a => a.meeting_key === key);
           const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
           matchRole = isSheetInMyGroup || isAssignedToMyGroup;
         }
-        // Brak grupy = lider widzi wszystko (np. po świeżym awansie)
+        // Brak grupy = lider widzi wszystko (świeży awans)
       } else if (currentUser?.role === "team_leader") {
-        // Team leader widzi spotkania przypisane bezpośrednio do niego lub do członków jego zespołu
+        // Team leader widzi: przypisane do niego LUB do jego team memberów
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
         const assignment = meetingAssignments.find(a => a.meeting_key === key);
-        if (assignment) {
-          const isAssignedToMe = assignment.assigned_user_email === currentUser.email;
-          const isAssignedToMyTeam = teamMemberEmails.includes(assignment.assigned_user_email);
-          const isAssignedToMyGroup = currentUserGroupId && assignment.assigned_group_id === currentUserGroupId;
-          matchRole = isAssignedToMe || isAssignedToMyTeam || isAssignedToMyGroup;
+        if (assignment?.assigned_user_email) {
+          matchRole = teamMemberEmails.includes(assignment.assigned_user_email);
+        } else if (assignment?.assigned_group_id && currentUserGroupId) {
+          matchRole = assignment.assigned_group_id === currentUserGroupId;
         } else {
-          // Nieprzypisane spotkanie – team leader widzi je jeśli arkusz jest przypisany do jego grupy
-          if (currentUserGroupId) {
-            const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
-            matchRole = sheetMapping?.group_id === currentUserGroupId;
-          } else {
-            matchRole = false;
-          }
+          // Nieprzypisane – pokaż jeśli arkusz należy do grupy team leadera
+          const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
+          matchRole = currentUserGroupId ? sheetMapping?.group_id === currentUserGroupId : false;
         }
       }
 
