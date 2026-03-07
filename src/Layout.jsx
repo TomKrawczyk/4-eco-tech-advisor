@@ -377,6 +377,11 @@ export default function Layout({ children, currentPageName }) {
       </AnimatePresence>
 
       <OfflineBanner />
+      {currentUser && currentUser.role === "user" && (
+        <div className="fixed top-14 left-0 right-0 z-40">
+          <MissingReportsBanner currentUser={currentUser} />
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="pt-14">
