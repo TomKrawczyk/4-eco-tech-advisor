@@ -1,5 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
+// Dni opóźnienia po których następuje blokada
+const BLOCK_AFTER_DAYS = 7;
+
 const emailTemplate = (clientName, meetingDate, daysAgo) => `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
   <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 24px 30px; text-align: center;">
@@ -15,7 +18,8 @@ const emailTemplate = (clientName, meetingDate, daysAgo) => `
       <p style="margin: 0; color: #ef4444;"><strong>Opóźnienie:</strong> ${daysAgo} ${daysAgo === 1 ? 'dzień' : 'dni'}</p>
     </div>
     <p style="color: #4b5563; line-height: 1.7; margin: 0 0 20px 0;">
-      Prosimy o niezwłoczne uzupełnienie raportu w aplikacji. Brak raportu może skutkować blokadą konta.
+      Prosimy o niezwłoczne uzupełnienie raportu w aplikacji.
+      ${daysAgo >= BLOCK_AFTER_DAYS ? '<strong style="color:#ef4444;">Twoje konto zostało zablokowane z powodu braku raportowania.</strong>' : `Brak raportu przez ${BLOCK_AFTER_DAYS} dni skutkuje blokadą konta.`}
     </p>
     <div style="margin-top: 24px;">
       <a href="https://app.base44.com" style="display: inline-block; background: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
@@ -29,7 +33,6 @@ const emailTemplate = (clientName, meetingDate, daysAgo) => `
 </div>
 `;
 
-// Parsuje datę w formacie "YYYY-MM-DD" lub "DD.MM.YYYY"
 function parseDate(str) {
   if (!str) return null;
   const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -46,15 +49,18 @@ Deno.serve(async (req) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const pastLimit = new Date(today);
-    pastLimit.setDate(pastLimit.getDate() - 30); // max 30 dni wstecz
+    pastLimit.setDate(pastLimit.getDate() - 30);
+    const todayStr = today.toISOString().split('T')[0];
 
-    const [assignments, meetingReports, notifications] = await Promise.all([
+    const [assignments, meetingReports, notifications, allowedUsers] = await Promise.all([
       base44.asServiceRole.entities.MeetingAssignment.list(),
       base44.asServiceRole.entities.MeetingReport.list(),
       base44.asServiceRole.entities.Notification.list(),
+      base44.asServiceRole.entities.AllowedUser.list(),
     ]);
 
-    let sent = 0;
+    // Grupuj brakujące raporty wg użytkownika
+    const missingByUser = {}; // email -> [{assignment, diffDays}]
 
     for (const assignment of assignments) {
       if (!assignment.meeting_date || !assignment.assigned_user_email) continue;
@@ -62,11 +68,9 @@ Deno.serve(async (req) => {
       const meetingDay = parseDate(assignment.meeting_date);
       if (!meetingDay) continue;
 
-      // Tylko przeszłe spotkania (do 30 dni wstecz), nie dzisiejsze
       const diffDays = Math.floor((today - meetingDay) / 86400000);
       if (diffDays <= 0 || diffDays > 30) continue;
 
-      // Sprawdź czy raport już istnieje
       const reportExists = meetingReports.some(r => {
         const nameMatch = (r.client_name || '').toLowerCase().trim() === (assignment.client_name || '').toLowerCase().trim();
         const authorMatch = r.author_email === assignment.assigned_user_email || r.created_by === assignment.assigned_user_email;
@@ -75,40 +79,97 @@ Deno.serve(async (req) => {
 
       if (reportExists) continue;
 
-      // Sprawdź czy dziś już wysłano powiadomienie dla tego spotkania
-      const todayStr = today.toISOString().split('T')[0];
-      const alreadySentToday = notifications.some(n =>
-        n.user_email === assignment.assigned_user_email &&
-        n.type === 'system_error' &&
-        n.message?.includes(assignment.client_name) &&
-        n.message?.includes(assignment.meeting_date) &&
-        n.created_date?.startsWith(todayStr)
-      );
-
-      if (alreadySentToday) continue;
-
-      // Utwórz powiadomienie w aplikacji
-      await base44.asServiceRole.entities.Notification.create({
-        user_email: assignment.assigned_user_email,
-        type: 'system_error',
-        title: '⚠️ Brak raportu po spotkaniu',
-        message: `Nie uzupełniono raportu po spotkaniu z klientem ${assignment.client_name} (${assignment.meeting_date}). Opóźnienie: ${diffDays} ${diffDays === 1 ? 'dzień' : 'dni'}. Uzupełnij raport natychmiast!`,
-        is_read: false,
-      });
-
-      // Wyślij email
-      try {
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          to: assignment.assigned_user_email,
-          subject: `⚠️ Brak raportu po spotkaniu – ${assignment.client_name} (${diffDays} ${diffDays === 1 ? 'dzień' : 'dni'} opóźnienia)`,
-          body: emailTemplate(assignment.client_name, assignment.meeting_date, diffDays),
-        });
-      } catch (_) { /* ignoruj błąd email */ }
-
-      sent++;
+      const email = assignment.assigned_user_email;
+      if (!missingByUser[email]) missingByUser[email] = [];
+      missingByUser[email].push({ assignment, diffDays });
     }
 
-    return Response.json({ ok: true, checked: assignments.length, sent });
+    let notifsSent = 0;
+    let usersBlocked = 0;
+    let usersUnblocked = 0;
+
+    // Przetwarzaj każdego użytkownika z brakującymi raportami
+    for (const [email, missing] of Object.entries(missingByUser)) {
+      const maxDays = Math.max(...missing.map(m => m.diffDays));
+      const shouldBlock = maxDays >= BLOCK_AFTER_DAYS;
+
+      // Zaktualizuj flagę blokady w AllowedUser
+      const ua = allowedUsers.find(u => (u.data?.email || u.email) === email);
+      if (ua) {
+        const currentlyBlocked = ua.data?.is_blocked || ua.is_blocked || false;
+        if (shouldBlock && !currentlyBlocked) {
+          await base44.asServiceRole.entities.AllowedUser.update(ua.id, {
+            is_blocked: true,
+            blocked_reason: `Brak raportów po ${missing.length} spotkaniach (max opóźnienie: ${maxDays} dni)`,
+            missing_reports_count: missing.length,
+          });
+          usersBlocked++;
+        } else if (!shouldBlock && currentlyBlocked) {
+          // Odblokuj jeśli wszystkie raporty zostały złożone (nie powinno tu wejść, ale na wszelki wypadek)
+          await base44.asServiceRole.entities.AllowedUser.update(ua.id, {
+            is_blocked: false,
+            blocked_reason: '',
+            missing_reports_count: missing.length,
+          });
+          usersUnblocked++;
+        } else {
+          // Aktualizuj tylko licznik
+          await base44.asServiceRole.entities.AllowedUser.update(ua.id, {
+            missing_reports_count: missing.length,
+          });
+        }
+      }
+
+      // Wyślij powiadomienie dla każdego brakującego raportu (raz dziennie)
+      for (const { assignment, diffDays } of missing) {
+        const alreadySentToday = notifications.some(n =>
+          n.user_email === email &&
+          n.type === 'system_error' &&
+          n.message?.includes(assignment.client_name) &&
+          n.message?.includes(assignment.meeting_date) &&
+          n.created_date?.startsWith(todayStr)
+        );
+
+        if (alreadySentToday) continue;
+
+        const blockedInfo = shouldBlock ? ' 🔒 KONTO ZABLOKOWANE.' : ` Blokada nastąpi po ${BLOCK_AFTER_DAYS} dniach.`;
+
+        await base44.asServiceRole.entities.Notification.create({
+          user_email: email,
+          type: 'system_error',
+          title: shouldBlock ? '🔒 Konto zablokowane – brak raportu' : '⚠️ Brak raportu po spotkaniu',
+          message: `Brak raportu po spotkaniu z klientem ${assignment.client_name} (${assignment.meeting_date}). Opóźnienie: ${diffDays} ${diffDays === 1 ? 'dzień' : 'dni'}.${blockedInfo}`,
+          is_read: false,
+        });
+
+        try {
+          await base44.asServiceRole.integrations.Core.SendEmail({
+            to: email,
+            subject: `${shouldBlock ? '🔒 Konto zablokowane' : '⚠️ Brak raportu'} – ${assignment.client_name} (${diffDays} dni opóźnienia)`,
+            body: emailTemplate(assignment.client_name, assignment.meeting_date, diffDays),
+          });
+        } catch (_) {}
+
+        notifsSent++;
+      }
+    }
+
+    // Odblokuj użytkowników którzy już złożyli wszystkie raporty
+    for (const ua of allowedUsers) {
+      const email = ua.data?.email || ua.email;
+      const currentlyBlocked = ua.data?.is_blocked || ua.is_blocked || false;
+      if (!currentlyBlocked) continue;
+      if (missingByUser[email]) continue; // nadal ma braki
+
+      await base44.asServiceRole.entities.AllowedUser.update(ua.id, {
+        is_blocked: false,
+        blocked_reason: '',
+        missing_reports_count: 0,
+      });
+      usersUnblocked++;
+    }
+
+    return Response.json({ ok: true, checked: assignments.length, notifsSent, usersBlocked, usersUnblocked });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
