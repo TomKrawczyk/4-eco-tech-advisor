@@ -7,6 +7,7 @@ import { ShieldAlert, User, LogOut, Shield, Menu, X, ChevronDown } from "lucide-
 import NotificationPanel from "@/components/notifications/NotificationPanel";
 import RequiredTrainingGate from "@/components/training/RequiredTrainingGate";
 import OfflineBanner from "@/components/offline/OfflineBanner";
+import MissingReportsBanner from "@/components/shared/MissingReportsBanner";
 
 // Dropdown dla desktop
 function DesktopDropdown({ label, items, isGroupActive, currentPageName }) {
