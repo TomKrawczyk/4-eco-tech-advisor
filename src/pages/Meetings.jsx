@@ -271,10 +271,11 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
-  // Okno dat: dziś + 60 dni
+  // Okno dat: dziś + 14 dni dla wszystkich (zwiększone z 3)
   const today = useMemo(() => startOfDay(new Date()), []);
-  const maxDate = useMemo(() => addDays(today, 60), [today]);
-  const maxDateUser = useMemo(() => addDays(today, 60), [today]);
+  // Admin widzi 60 dni, liderzy i zwykli userzy tylko 3 dni (dyscyplina)
+  const maxDate = useMemo(() => addDays(today, currentUser?.role === "admin" ? 60 : 3), [today, currentUser]);
+  const maxDateUser = useMemo(() => addDays(today, 3), [today]);
 
   // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
