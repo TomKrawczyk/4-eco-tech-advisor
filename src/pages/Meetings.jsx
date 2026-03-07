@@ -20,7 +20,6 @@ import { createPageUrl } from "@/utils";
 // Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
 function parseMeetingDate(str) {
   if (!str) return null;
-  // Try DD.MM.YYYY HH:MM or DD.MM.YYYY
   const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
   if (match) {
     const [, d, m, y] = match;
@@ -52,7 +51,6 @@ function extractTime(calStr) {
 
 // Widok spotkań dla zwykłego użytkownika – z pełnymi szczegółami i akcjami
 function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen }) {
-  // Grupuj spotkania po dacie
   const groupedByDate = useMemo(() => {
     const groups = {};
     myAssignedMeetings.forEach(a => {
@@ -89,7 +87,6 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
         <div className="space-y-5">
           {groupedByDate.map(([dateKey, meetings]) => (
             <div key={dateKey}>
-              {/* Nagłówek dnia */}
               <div className="flex items-center gap-2 mb-3 px-1">
                 <Calendar className="w-4 h-4 text-green-600" />
                 <span className="text-sm font-semibold text-gray-700">
@@ -117,7 +114,6 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                   return (
                     <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
                       <div className="space-y-2">
-                        {/* Nazwa klienta + arkusz */}
                         <div className="flex items-center gap-2 flex-wrap">
                           <User className="w-4 h-4 text-gray-400 shrink-0" />
                           <span className="font-semibold text-gray-900 text-sm">{a.client_name}</span>
@@ -129,13 +125,11 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                           )}
                         </div>
 
-                        {/* Data i godzina */}
                         <div className="flex items-center gap-2 text-xs font-semibold text-green-700 bg-green-50 rounded-md px-2 py-1.5 w-fit">
                           <Calendar className="w-3.5 h-3.5 shrink-0" />
                           {a.meeting_calendar}
                         </div>
 
-                        {/* Adres */}
                         {(a.client_address || a.address) && (
                           <div className="flex items-center gap-2 text-xs text-gray-600">
                             <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -143,7 +137,6 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                           </div>
                         )}
 
-                        {/* Telefon */}
                         {(a.client_phone || a.phone) && (
                           <div className="flex items-center gap-2 text-xs text-gray-600">
                             <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -153,7 +146,6 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                           </div>
                         )}
 
-                        {/* Agent */}
                         {a.agent && (
                           <div className="flex items-center gap-2 text-xs text-gray-500">
                             <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -161,12 +153,10 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                           </div>
                         )}
 
-                        {/* Notatki */}
                         {a.notes && (
                           <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">{a.notes}</p>
                         )}
 
-                        {/* Przycisk szczegółów */}
                         {hasDetails && (
                           <button
                             onClick={() => {
@@ -185,7 +175,6 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                           </button>
                         )}
 
-                        {/* Akcje – utwórz dokumenty */}
                         <div className="pt-2 border-t border-gray-100 mt-2">
                           <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">Utwórz dokument</p>
                           <div className="grid grid-cols-2 gap-2">
@@ -238,7 +227,7 @@ export default function Meetings() {
   const [notifySending, setNotifySending] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
-  const hasAccess = !!currentUser; // wszyscy zalogowani mają dostęp
+  const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
 
   const { data: groups = [] } = useQuery({
     queryKey: ["groups"],
@@ -255,7 +244,7 @@ export default function Meetings() {
   const { data: allAllowedUsers = [] } = useQuery({
     queryKey: ["allowedUsers"],
     queryFn: () => base44.entities.AllowedUser.list(),
-    enabled: accessChecked && isLeaderOrAdmin,
+    enabled: accessChecked,
   });
 
   const { data: meetingAssignments = [] } = useQuery({
@@ -270,10 +259,11 @@ export default function Meetings() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
+  // Dane z arkusza – pobiera admin, group_leader i team_leader (backend wymaga tych ról)
   const { data: result, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["sheetMeetings"],
     queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data),
-    enabled: accessChecked && isLeaderOrAdmin, // dane z arkusza pobiera tylko lider/admin (bo wymaga uprawnień)
+    enabled: accessChecked && isLeaderOrAdmin,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
   });
@@ -281,30 +271,36 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
-  // Okno dat: dziś + 3 dni (dla liderów/admin); dla zwykłych userów 14 dni
+  // Okno dat: dziś + 14 dni dla wszystkich (zwiększone z 3)
   const today = useMemo(() => startOfDay(new Date()), []);
-  const maxDate = useMemo(() => addDays(today, 3), [today]);
+  const maxDate = useMemo(() => addDays(today, 14), [today]);
   const maxDateUser = useMemo(() => addDays(today, 14), [today]);
 
-  // Ustal groupId bieżącego użytkownika – zawsze z hooka (AllowedUser.group_id)
+  // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
     if (!currentUser) return null;
     if (currentUser.role === "admin") return null;
     return currentUser.groupId || null;
   }, [currentUser]);
 
-  // Zwykły user widzi swoje przypisane spotkania LUB te przypisane do jego grupy
+  // Ustal emaile zespołu team_leadera
+  const teamMemberEmails = useMemo(() => {
+    if (!currentUser || currentUser.role !== "team_leader") return [];
+    const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+    const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
+    const emails = allAllowedUsers
+      .filter(u => managedIds.includes(u.id))
+      .map(u => u.data?.email || u.email);
+    emails.push(currentUser.email);
+    return emails;
+  }, [currentUser, allAllowedUsers]);
+
+  // Zwykły user widzi swoje przypisane spotkania
   const myAssignedMeetings = useMemo(() => {
     if (!currentUser || isLeaderOrAdmin) return [];
-    const myGroupId = currentUser.groupId;
     return meetingAssignments
+      .filter(a => a.assigned_user_email === currentUser.email)
       .filter(a => {
-        const isMyMeeting = a.assigned_user_email === currentUser.email;
-        const isMyGroup = myGroupId && a.assigned_group_id === myGroupId;
-        return isMyMeeting || isMyGroup;
-      })
-      .filter(a => {
-        // Filtruj po dacie jeśli dostępna, inaczej pokaż
         if (!a.meeting_calendar) return true;
         const d = parseMeetingDate(a.meeting_calendar);
         if (!d) return true;
@@ -327,18 +323,16 @@ export default function Meetings() {
       .filter(u => {
         const role = u.data?.role || u.role;
         if (currentUser?.role === "admin") {
-          // Admin widzi wszystkich włącznie z innymi adminami
           return true;
         }
         if (role !== "user" && role !== "team_leader") return false;
-        // Dla group_leader i team_leader: tylko użytkownicy z tej samej grupy
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
-  // Filtruj: tylko z datą + w oknie 3 dni
+  // Filtruj: tylko z datą + w oknie 14 dni
   const meetingsWithDate = useMemo(() => {
     return allMeetings
       .filter(m => {
@@ -354,7 +348,7 @@ export default function Meetings() {
       }));
   }, [allMeetings, today, maxDate]);
 
-  // Filtr wyszukiwania + grupy + arkusz
+  // Filtr wyszukiwania + grupy + arkusz + rola
   const filtered = useMemo(() => {
     return meetingsWithDate.filter(m => {
       const matchSearch = !search || Object.values(m).some(v =>
@@ -367,25 +361,46 @@ export default function Meetings() {
       }
       const matchSheet = sheetFilter === "all" || m.sheet === sheetFilter;
 
-      // Dla group_leader i team_leader: pokaż spotkania z arkuszy przypisanych do jego grupy
-      // LUB spotkania bezpośrednio przypisane do jego grupy (przez MeetingAssignment)
-      // Jeśli lider nie ma jeszcze przypisanej grupy (np. po awansie) – pokaż wszystkie
-      let matchLeaderGroup = true;
-      if (currentUser?.role === "group_leader" || currentUser?.role === "team_leader") {
+      // Filtr wg roli
+      let matchRole = true;
+      if (currentUser?.role === "admin") {
+        // Admin widzi WSZYSTKO
+        matchRole = true;
+      } else if (currentUser?.role === "group_leader") {
+        // Group leader widzi spotkania z arkuszy przypisanych do jego grupy
         if (currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
           const isSheetInMyGroup = sheetMapping?.group_id === currentUserGroupId;
+          // Lub spotkania przypisane do jego grupy (przez MeetingAssignment)
           const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
           const assignment = meetingAssignments.find(a => a.meeting_key === key);
           const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
-          matchLeaderGroup = isSheetInMyGroup || isAssignedToMyGroup;
+          matchRole = isSheetInMyGroup || isAssignedToMyGroup;
         }
         // Brak grupy = lider widzi wszystko (np. po świeżym awansie)
+      } else if (currentUser?.role === "team_leader") {
+        // Team leader widzi spotkania przypisane bezpośrednio do niego lub do członków jego zespołu
+        const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+        const assignment = meetingAssignments.find(a => a.meeting_key === key);
+        if (assignment) {
+          const isAssignedToMe = assignment.assigned_user_email === currentUser.email;
+          const isAssignedToMyTeam = teamMemberEmails.includes(assignment.assigned_user_email);
+          const isAssignedToMyGroup = currentUserGroupId && assignment.assigned_group_id === currentUserGroupId;
+          matchRole = isAssignedToMe || isAssignedToMyTeam || isAssignedToMyGroup;
+        } else {
+          // Nieprzypisane spotkanie – team leader widzi je jeśli arkusz jest przypisany do jego grupy
+          if (currentUserGroupId) {
+            const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
+            matchRole = sheetMapping?.group_id === currentUserGroupId;
+          } else {
+            matchRole = false;
+          }
+        }
       }
 
-      return matchSearch && matchGroup && matchSheet && matchLeaderGroup;
+      return matchSearch && matchGroup && matchSheet && matchRole;
     });
-  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings, currentUser, currentUserGroupId, meetingAssignments]);
+  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings, currentUser, currentUserGroupId, meetingAssignments, teamMemberEmails]);
 
   // Grupuj po zakładce, potem po dacie
   const sheetGroups = useMemo(() => {
@@ -395,12 +410,10 @@ export default function Meetings() {
       if (!bySheet[m.sheet][m.meeting_date]) bySheet[m.sheet][m.meeting_date] = [];
       bySheet[m.sheet][m.meeting_date].push(m);
     });
-    // Posortuj daty wewnątrz każdego arkusza
-    const result = Object.entries(bySheet).sort(([a], [b]) => a.localeCompare(b)).map(([sheet, byDate]) => ({
+    return Object.entries(bySheet).sort(([a], [b]) => a.localeCompare(b)).map(([sheet, byDate]) => ({
       sheet,
       dates: Object.entries(byDate).sort(([a], [b]) => a.localeCompare(b)).map(([date, meetings]) => ({ date, meetings })),
     }));
-    return result;
   }, [filtered]);
 
   const toggleSheet = (sheet) => {
@@ -449,7 +462,7 @@ export default function Meetings() {
     <div className="space-y-6">
       <PageHeader
         title="Spotkania"
-        subtitle={`Spotkania z datą – najbliższe 3 dni`}
+        subtitle={`Spotkania z datą – najbliższe 14 dni`}
       />
 
       {/* Statystyki przypisań – tylko admin */}
@@ -485,7 +498,7 @@ export default function Meetings() {
           </Select>
         )}
 
-        {currentUser?.role === "admin" && allSheetTabs.length > 0 && (
+        {isAdminOrGroupLeader && allSheetTabs.length > 0 && (
           <Select value={sheetFilter} onValueChange={setSheetFilter}>
             <SelectTrigger className="w-52 h-11">
               <SelectValue placeholder="Wszystkie arkusze" />
@@ -530,7 +543,7 @@ export default function Meetings() {
           </Button>
         )}
 
-        {(currentUser?.role === "admin" || currentUser?.role === "group_leader") && filtered.length > 0 && (
+        {isAdminOrGroupLeader && filtered.length > 0 && (
           <Button
             variant="outline"
             size="sm"
@@ -572,7 +585,7 @@ export default function Meetings() {
       {/* Licznik */}
       {!isLoading && (
         <div className="text-sm text-gray-500">
-          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (maks. +3 dni od dziś)
+          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (maks. +14 dni od dziś)
           {allMeetings.length > 0 && <span className="ml-1 text-gray-400">z {allMeetings.length} wszystkich</span>}
         </div>
       )}
@@ -594,7 +607,7 @@ export default function Meetings() {
           </div>
           <h3 className="font-semibold text-gray-800 mb-1">Brak spotkań</h3>
           <p className="text-sm text-gray-500 max-w-sm">
-            Nie ma żadnych spotkań z wypełnioną datą w ciągu najbliższych 3 dni.
+            Nie ma żadnych spotkań z wypełnioną datą w ciągu najbliższych 14 dni.
           </p>
         </div>
       ) : (
@@ -640,7 +653,6 @@ export default function Meetings() {
                       <div className="p-3 space-y-4">
                         {dates.map(({ date, meetings }) => (
                           <div key={date}>
-                            {/* Nagłówek dnia */}
                             <div className="flex items-center gap-2 mb-2 px-1">
                               <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                 {formatDateLabel(meetings[0].meeting_calendar)}

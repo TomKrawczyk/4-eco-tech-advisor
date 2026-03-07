@@ -11,13 +11,11 @@ import DetailsModal from "@/components/shared/DetailsModal";
 // Parsuje "DD.MM.YYYY HH:MM" lub "YYYY-MM-DD HH:MM" -> { date: "YYYY-MM-DD", time: "HH:MM" }
 function parseMeetingCalendar(str) {
   if (!str) return null;
-  // Format DD.MM.YYYY HH:MM
   const match1 = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}:\d{2})/);
   if (match1) {
     const [, d, m, y, t] = match1;
     return { date: `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`, time: t };
   }
-  // Format YYYY-MM-DD HH:MM
   const match2 = str.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}:\d{2})/);
   if (match2) {
     const [, y, m, d, t] = match2;
@@ -32,17 +30,18 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  // Policz ile przypisań ma dany handlowiec w tym dniu
   const getAssignmentsCountForUserOnDate = (userEmail, date) => {
     return assignmentsForDate.filter(a => a.assigned_user_email === userEmail && a.meeting_date === date).length;
   };
 
-  // Sprawdź czy raport po spotkaniu istnieje
   const existingReport = meetingReports.find(r => {
     const nameMatch = (r.client_name || '').toLowerCase().trim() === (meeting.client_name || '').toLowerCase().trim();
     const authorMatch = !assignment || r.author_email === assignment.assigned_user_email || r.created_by === assignment.assigned_user_email;
     return nameMatch && authorMatch;
   });
+
+  const canAssign = currentUserRole === "admin" || currentUserRole === "group_leader" || currentUserRole === "team_leader";
+  const canManageGroups = currentUserRole === "admin" || currentUserRole === "group_leader";
 
   const assignGroupMutation = useMutation({
     mutationFn: async ({ groupId, groupName }) => {
@@ -88,7 +87,6 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
   const assignMutation = useMutation({
     mutationFn: async ({ userEmail, userName }) => {
       const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
-      let assignmentId = assignment?.id;
 
       if (assignment) {
         await base44.entities.MeetingAssignment.update(assignment.id, {
@@ -96,7 +94,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           assigned_user_name: userName,
         });
       } else {
-        const created = await base44.entities.MeetingAssignment.create({
+        await base44.entities.MeetingAssignment.create({
           meeting_key: key,
           sheet: meeting.sheet,
           client_name: meeting.client_name,
@@ -105,14 +103,12 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           assigned_user_email: userEmail,
           assigned_user_name: userName,
         });
-        assignmentId = created.id;
       }
 
       // Synchronizuj z kalendarzem
       const parsed = parseMeetingCalendar(meeting.meeting_calendar);
       if (parsed) {
         const title = `Spotkanie: ${meeting.client_name}`;
-        // Szukaj istniejącego eventu powiązanego z tym przypisaniem
         const existingEvents = await base44.entities.CalendarEvent.filter({
           meeting_assignment_id: key,
         });
@@ -133,7 +129,6 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           meeting_assignment_id: key,
         };
 
-        // Usuń wszystkie stare eventy dla tego klucza i stwórz nowy
         for (const ev of existingEvents) {
           await base44.entities.CalendarEvent.delete(ev.id);
         }
@@ -159,7 +154,6 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
     mutationFn: async () => {
       if (!assignment) return;
       await base44.entities.MeetingAssignment.delete(assignment.id);
-      // Usuń powiązany event z kalendarza
       const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
       const existingEvents = await base44.entities.CalendarEvent.filter({ meeting_assignment_id: key });
       for (const ev of existingEvents) {
@@ -172,8 +166,6 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
       toast.success("Usunięto przypisanie i wydarzenie z kalendarza");
     },
   });
-
-  const canAssign = currentUserRole === "admin" || currentUserRole === "group_leader" || currentUserRole === "team_leader";
 
   return (
     <>
@@ -252,7 +244,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           {canAssign && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <UserCheck className="w-4 h-4 text-gray-400 shrink-0" />
-              {assignment ? (
+              {assignment?.assigned_user_email ? (
                 <div className="flex items-center gap-2">
                   <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-xs">
                     {assignment.assigned_user_name || assignment.assigned_user_email}
@@ -301,7 +293,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
             </div>
           )}
 
-          {!canAssign && assignment && (
+          {!canAssign && assignment?.assigned_user_email && (
             <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-xs mt-1">
               <UserCheck className="w-3 h-3 mr-1" />
               {assignment.assigned_user_name || assignment.assigned_user_email}
@@ -309,7 +301,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           )}
 
           {/* Przypisanie do grupy – admin i group_leader */}
-          {(currentUserRole === "admin" || currentUserRole === "group_leader") && groups.length > 0 && (
+          {canManageGroups && groups.length > 0 && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <Users className="w-4 h-4 text-gray-400 shrink-0" />
               {assignment?.assigned_group_id ? (
@@ -317,19 +309,17 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                   <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
                     {assignment.assigned_group_name || assignment.assigned_group_id}
                   </Badge>
-                  {currentUserRole === "admin" && (
-                    <button
-                      onClick={() => unassignGroupMutation.mutate()}
-                      className="text-xs text-red-500 hover:underline"
-                    >
-                      usuń
-                    </button>
-                  )}
+                  <button
+                    onClick={() => unassignGroupMutation.mutate()}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    usuń
+                  </button>
                 </div>
-              ) : currentUserRole === "admin" ? (
+              ) : (
                 <Select
                   onValueChange={(val) => {
-                    const g = groups.find(g => g.id === val);
+                    const g = groups.find(gr => gr.id === val);
                     assignGroupMutation.mutate({ groupId: val, groupName: g?.name || g?.data?.name || val });
                   }}
                 >
@@ -344,8 +334,6 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                     ))}
                   </SelectContent>
                 </Select>
-              ) : (
-                <span className="text-xs text-gray-400">Brak przypisanej grupy</span>
               )}
             </div>
           )}

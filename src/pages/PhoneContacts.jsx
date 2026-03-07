@@ -50,6 +50,9 @@ export default function PhoneContacts() {
   const [notifySending, setNotifySending] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
+  const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
+  const canAssign = isLeaderOrAdmin;
+  const canManageGroups = isAdminOrGroupLeader;
 
   const { data: allAllowedUsers = [] } = useQuery({
     queryKey: ["allowedUsers"],
@@ -81,9 +84,9 @@ export default function PhoneContacts() {
     queryFn: () => base44.functions.invoke('getMeetingsFromSheets'),
     select: (response) => {
       const all = response.data?.phoneContacts || [];
-      return all.filter(c => 
-        !c.sheet?.toLowerCase().includes('spotkania') && 
-        !c.sheet?.toLowerCase().includes('kontakt') && 
+      return all.filter(c =>
+        !c.sheet?.toLowerCase().includes('spotkania') &&
+        !c.sheet?.toLowerCase().includes('kontakt') &&
         !c.sheet?.toLowerCase().includes('ai bober')
       );
     },
@@ -91,6 +94,25 @@ export default function PhoneContacts() {
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
   });
+
+  // Ustal groupId bieżącego użytkownika
+  const currentUserGroupId = useMemo(() => {
+    if (!currentUser) return null;
+    if (currentUser.role === "admin") return null;
+    return currentUser.groupId || null;
+  }, [currentUser]);
+
+  // Ustal emaile zespołu team_leadera
+  const teamMemberEmails = useMemo(() => {
+    if (!currentUser || currentUser.role !== "team_leader") return [];
+    const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+    const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
+    const emails = allAllowedUsers
+      .filter(u => managedIds.includes(u.id))
+      .map(u => u.data?.email || u.email);
+    emails.push(currentUser.email);
+    return emails;
+  }, [currentUser, allAllowedUsers]);
 
   // Scal dane z arkusza z przypisaniami z bazy
   const contacts = useMemo(() => {
@@ -182,50 +204,50 @@ export default function PhoneContacts() {
     },
   });
 
-  // Handlowcy do przypisania
+  // Handlowcy do przypisania – filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        return role === "user" || role === "team_leader";
+        if (currentUser?.role === "admin") return true;
+        if (role !== "user" && role !== "team_leader") return false;
+        const uGroupId = u.data?.group_id || u.group_id;
+        return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
-  }, [allAllowedUsers]);
+  }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
-  // Filtr hierarchiczny: group_leader widzi kontakty z arkuszy przypisanych do jego grupy
+  // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
-      const myGroupId = currentUser?.groupId;
-      // Kontakty z arkuszy przypisanych do grupy group_leadera
+      const myGroupId = currentUserGroupId;
+      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
       return contacts.filter(c => {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
-        if (sheetMapping) return sheetMapping.group_id === myGroupId;
-        // Fallback: kontakty bezpośrednio przypisane do grupy lub do użytkownika z grupy
-        const userGroupId = allAllowedUsers.find(u => (u.data?.email || u.email) === c.assigned_user_email);
-        const uGroupId = userGroupId?.data?.group_id || userGroupId?.group_id;
-        return c.assigned_group_id === myGroupId || uGroupId === myGroupId;
+        if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
+        // Fallback: kontakty przypisane do grupy
+        if (c.assigned_group_id === myGroupId) return true;
+        return false;
       });
     }
     if (currentUser?.role === "team_leader") {
-      const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser?.email);
-      const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
-      const managedEmails = allAllowedUsers
-        .filter(u => managedIds.includes(u.id))
-        .map(u => u.data?.email || u.email);
-      managedEmails.push(currentUser.email);
-      // Team leader widzi kontakty z arkuszy przypisanych do jego grupy LUB przypisane do jego podległych
-      const myGroupId = currentUser?.groupId;
+      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
       return contacts.filter(c => {
-        const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
-        if (sheetMapping && myGroupId && sheetMapping.group_id === myGroupId) return true;
-        return !c.assigned_user_email || managedEmails.includes(c.assigned_user_email);
+        if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
+        if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
+        // Nieprzypisane kontakty z arkuszy grupy
+        if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
+          const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
+          return sheetMapping?.group_id === currentUserGroupId;
+        }
+        return false;
       });
     }
     return contacts;
-  }, [contacts, currentUser, allAllowedUsers, sheetMappings]);
+  }, [contacts, currentUser, currentUserGroupId, sheetMappings, teamMemberEmails]);
 
   const filtered = useMemo(() => {
     return visibleContacts.filter(c => {
@@ -271,12 +293,10 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi swoje przypisane kontakty lub te przypisane do jego grupy
+  // Zwykły użytkownik widzi swoje przypisane kontakty
   if (!isLeaderOrAdmin) {
-    const myGroupId = currentUser?.groupId;
     const myContacts = phoneContactsFromDB.filter(c =>
-      c.assigned_user_email === currentUser?.email ||
-      (myGroupId && c.assigned_group_id === myGroupId)
+      c.assigned_user_email === currentUser?.email
     );
     return (
       <div className="space-y-6">
@@ -302,7 +322,7 @@ export default function PhoneContacts() {
                 {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
                 <div className="flex flex-wrap gap-1 mt-1">
                   {c.sheet && <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{c.sheet}</Badge>}
-                  {c.assigned_group_name && !c.assigned_user_email && (
+                  {c.assigned_group_name && (
                     <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
                   )}
                 </div>
@@ -356,7 +376,7 @@ export default function PhoneContacts() {
           Odśwież
         </Button>
 
-        {(currentUser?.role === "admin" || currentUser?.role === "group_leader") && filtered.length > 0 && (
+        {isAdminOrGroupLeader && filtered.length > 0 && (
           <Button
             variant="outline"
             size="sm"
@@ -364,19 +384,16 @@ export default function PhoneContacts() {
             disabled={notifySending}
             onClick={async () => {
               setNotifySending(true);
-              const groupId = currentUser.role === "group_leader" ? currentUser.groupId : null;
-              const groups_ = groups;
-              // Dla admina – wyślij dla wszystkich grup; dla group_leader – tylko jego grupa
+              const groupId = currentUser.role === "group_leader" ? currentUserGroupId : null;
               if (groupId) {
-                const g = groups_.find(gr => gr.id === groupId);
+                const g = groups.find(gr => gr.id === groupId);
                 await base44.functions.invoke("notifyGroupLeaderNewContacts", {
                   groupId,
                   groupName: g?.name || "",
                   bulkMode: true,
                 });
               } else {
-                // Admin: dla każdej grupy z osobna
-                for (const g of groups_) {
+                for (const g of groups) {
                   await base44.functions.invoke("notifyGroupLeaderNewContacts", {
                     groupId: g.id,
                     groupName: g.name,
@@ -499,7 +516,7 @@ export default function PhoneContacts() {
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
                                           <User className="w-3 h-3 text-green-600" />
                                           <span className="text-xs font-medium text-green-700">{contact.assigned_user_name || contact.assigned_user_email}</span>
-                                          {(currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader") && (
+                                          {canAssign && (
                                             <button
                                               onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
                                               className="ml-1 text-gray-400 hover:text-red-500 text-xs"
@@ -507,22 +524,24 @@ export default function PhoneContacts() {
                                           )}
                                         </div>
                                       ) : (
-                                        <Select onValueChange={(val) => {
-                                          const sp = salespeople.find(s => s.email === val);
-                                          if (sp) assignMutation.mutate({ contact, email: sp.email, name: sp.name });
-                                        }}>
-                                          <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
-                                            <SelectValue placeholder="Przypisz doradcę" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {salespeople.map(sp => (
-                                              <SelectItem key={sp.email} value={sp.email}>{sp.name}</SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
+                                        canAssign && (
+                                          <Select onValueChange={(val) => {
+                                            const sp = salespeople.find(s => s.email === val);
+                                            if (sp) assignMutation.mutate({ contact, email: sp.email, name: sp.name });
+                                          }}>
+                                            <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
+                                              <SelectValue placeholder="Przypisz doradcę" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {salespeople.map(sp => (
+                                                <SelectItem key={sp.email} value={sp.email}>{sp.name}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        )
                                       )}
 
-                                      {(currentUser?.role === "group_leader" || currentUser?.role === "team_leader" || currentUser?.role === "admin") && (
+                                      {canManageGroups && (
                                         <>
                                           {contact.assigned_group_id ? (
                                             <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
