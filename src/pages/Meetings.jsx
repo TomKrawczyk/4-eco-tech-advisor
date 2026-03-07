@@ -607,7 +607,7 @@ export default function Meetings() {
           </div>
           <h3 className="font-semibold text-gray-800 mb-1">Brak spotkań</h3>
           <p className="text-sm text-gray-500 max-w-sm">
-            Nie ma żadnych spotkań z wypełnioną datą w ciągu najbliższych 14 dni.
+            Nie ma żadnych spotkań z wypełnioną datą w ciągu najbliższych {currentUser?.role === "admin" ? 60 : 3} dni.
           </p>
         </div>
       ) : (
