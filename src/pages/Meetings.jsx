@@ -17,12 +17,20 @@ import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-// Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
+// Parsuje daty w różnych formatach: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", "YYYY-MM-DD HH:MM", "YYYY-MM-DD"
 function parseMeetingDate(str) {
   if (!str) return null;
-  const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (match) {
-    const [, d, m, y] = match;
+  // Format polski: DD.MM.YYYY
+  const matchPL = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (matchPL) {
+    const [, d, m, y] = matchPL;
+    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    if (isValid(date)) return date;
+  }
+  // Format ISO: YYYY-MM-DD (opcjonalnie z HH:MM)
+  const matchISO = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (matchISO) {
+    const [, y, m, d] = matchISO;
     const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     if (isValid(date)) return date;
   }
