@@ -102,16 +102,19 @@ export default function PhoneContacts() {
     return currentUser.groupId || null;
   }, [currentUser]);
 
-  // Ustal emaile zespołu team_leadera
+  // Ustal emaile zespołu team_leadera (siebie + zarządzanych)
   const teamMemberEmails = useMemo(() => {
-    if (!currentUser || currentUser.role !== "team_leader") return [];
-    const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
-    const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
-    const emails = allAllowedUsers
-      .filter(u => managedIds.includes(u.id))
-      .map(u => u.data?.email || u.email);
-    emails.push(currentUser.email);
-    return emails;
+    if (!currentUser) return [];
+    if (currentUser.role === "team_leader") {
+      const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+      const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
+      const emails = allAllowedUsers
+        .filter(u => managedIds.includes(u.id))
+        .map(u => u.data?.email || u.email);
+      emails.push(currentUser.email);
+      return emails;
+    }
+    return [currentUser.email];
   }, [currentUser, allAllowedUsers]);
 
   // Scal dane z arkusza z przypisaniami z bazy
