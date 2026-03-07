@@ -56,6 +56,8 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           meeting_key: key,
           sheet: meeting.sheet,
           client_name: meeting.client_name,
+          client_phone: meeting.phone || "",
+          client_address: meeting.address || "",
           meeting_calendar: meeting.meeting_calendar,
           meeting_date: meeting.meeting_date,
           assigned_group_id: groupId,
