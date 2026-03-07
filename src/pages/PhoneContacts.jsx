@@ -298,7 +298,7 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi swoje przypisane kontakty
+  // Zwykły użytkownik widzi swoje przypisane kontakty (z bazy danych – bez ograniczeń czasowych)
   if (!isLeaderOrAdmin) {
     const myContacts = phoneContactsFromDB.filter(c =>
       c.assigned_user_email === currentUser?.email
