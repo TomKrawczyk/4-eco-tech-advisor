@@ -28,7 +28,14 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   // Mapowanie kolumn na podstawie dokładnych nagłówków
   const columnMap = {
     nameIdx: headers.findIndex(h => h.includes('Imię i nazwisko')),
-    phoneIdx: headers.findIndex(h => h.includes('Numer telefonu')),
+    phoneIdx: headers.findIndex(h =>
+      h.includes('Numer telefonu') ||
+      h.toLowerCase().includes('telefon') ||
+      h.toLowerCase().includes('tel.') ||
+      h.toLowerCase() === 'tel' ||
+      h.toLowerCase().includes('phone') ||
+      h.toLowerCase().includes('kontakt') && h.toLowerCase().includes('nr')
+    ),
     addressIdx: headers.findIndex(h => h === 'Adres'),
     dateIdx: headers.findIndex(h => h === 'Data kontaktu'),
     agentIdx: headers.findIndex(h => h === 'Agent dzwoniący'),
