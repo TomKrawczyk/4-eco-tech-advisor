@@ -81,7 +81,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
             <Table2 className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="font-semibold text-gray-800 mb-1">Brak przypisanych spotkań</h3>
-          <p className="text-sm text-gray-500">Nie masz żadnych spotkań w ciągu najbliższych 14 dni.</p>
+          <p className="text-sm text-gray-500">Nie masz żadnych przypisanych spotkań w ciągu najbliższych 3 dni.</p>
         </div>
       ) : (
         <div className="space-y-5">
