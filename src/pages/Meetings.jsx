@@ -463,7 +463,7 @@ export default function Meetings() {
     <div className="space-y-6">
       <PageHeader
         title="Spotkania"
-        subtitle={`Spotkania z datą – najbliższe 14 dni`}
+        subtitle={currentUser?.role === "admin" ? "Spotkania z datą – najbliższe 60 dni" : "Spotkania z datą – najbliższe 3 dni"}
       />
 
       {/* Statystyki przypisań – tylko admin */}
