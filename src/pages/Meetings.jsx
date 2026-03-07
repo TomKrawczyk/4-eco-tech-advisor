@@ -17,20 +17,12 @@ import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-// Parsuje daty w różnych formatach: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", "YYYY-MM-DD HH:MM", "YYYY-MM-DD"
+// Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
 function parseMeetingDate(str) {
   if (!str) return null;
-  // Format polski: DD.MM.YYYY
-  const matchPL = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (matchPL) {
-    const [, d, m, y] = matchPL;
-    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-    if (isValid(date)) return date;
-  }
-  // Format ISO: YYYY-MM-DD (opcjonalnie z HH:MM)
-  const matchISO = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (matchISO) {
-    const [, y, m, d] = matchISO;
+  const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (match) {
+    const [, d, m, y] = match;
     const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     if (isValid(date)) return date;
   }
@@ -81,7 +73,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
     <div className="space-y-6">
       <PageHeader
         title="Moje spotkania"
-        subtitle="Spotkania przypisane do Ciebie – najbliższe 3 dni od dziś"
+        subtitle="Spotkania przypisane do Ciebie – najbliższe 14 dni"
       />
       {myAssignedMeetings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -89,7 +81,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
             <Table2 className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="font-semibold text-gray-800 mb-1">Brak przypisanych spotkań</h3>
-          <p className="text-sm text-gray-500">Nie masz żadnych przypisanych spotkań w ciągu najbliższych 3 dni.</p>
+          <p className="text-sm text-gray-500">Nie masz żadnych spotkań w ciągu najbliższych 14 dni.</p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -279,10 +271,10 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
+  // Okno dat: dziś + 14 dni dla wszystkich (zwiększone z 3)
   const today = useMemo(() => startOfDay(new Date()), []);
-  // Admin widzi 60 dni, liderzy i zwykli userzy tylko 3 dni
-  const maxDate = useMemo(() => addDays(today, currentUser?.role === "admin" ? 60 : 3), [today, currentUser]);
-  const maxDateUser = useMemo(() => addDays(today, 3), [today]);
+  const maxDate = useMemo(() => addDays(today, 14), [today]);
+  const maxDateUser = useMemo(() => addDays(today, 14), [today]);
 
   // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
@@ -303,9 +295,12 @@ export default function Meetings() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Zwykły user widzi swoje przypisane spotkania
+  // Zwykły user widzi swoje przypisane spotkania:
+  // - przeszłe (do 30 dni wstecz) — żeby widzieć co wymaga raportu
+  // - przyszłe (do 14 dni wprzód)
   const myAssignedMeetings = useMemo(() => {
     if (!currentUser || isLeaderOrAdmin) return [];
+    const pastLimit = addDays(today, -30);
     return meetingAssignments
       .filter(a => a.assigned_user_email === currentUser.email)
       .filter(a => {
@@ -313,7 +308,7 @@ export default function Meetings() {
         const d = parseMeetingDate(a.meeting_calendar);
         if (!d) return true;
         const day = startOfDay(d);
-        return day >= today && day <= maxDateUser;
+        return day >= pastLimit && day <= maxDateUser;
       })
       .sort((a, b) => {
         const da = parseMeetingDate(a.meeting_calendar);
@@ -470,7 +465,7 @@ export default function Meetings() {
     <div className="space-y-6">
       <PageHeader
         title="Spotkania"
-        subtitle={currentUser?.role === "admin" ? "Spotkania z datą – najbliższe 60 dni" : "Spotkania z datą – najbliższe 3 dni"}
+        subtitle={`Spotkania z datą – najbliższe 14 dni`}
       />
 
       {/* Statystyki przypisań – tylko admin */}
@@ -593,7 +588,7 @@ export default function Meetings() {
       {/* Licznik */}
       {!isLoading && (
         <div className="text-sm text-gray-500">
-          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (maks. +{currentUser?.role === "admin" ? 60 : 3} dni od dziś)
+          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (maks. +14 dni od dziś)
           {allMeetings.length > 0 && <span className="ml-1 text-gray-400">z {allMeetings.length} wszystkich</span>}
         </div>
       )}
@@ -615,7 +610,7 @@ export default function Meetings() {
           </div>
           <h3 className="font-semibold text-gray-800 mb-1">Brak spotkań</h3>
           <p className="text-sm text-gray-500 max-w-sm">
-            Nie ma żadnych spotkań z wypełnioną datą w ciągu najbliższych {currentUser?.role === "admin" ? 60 : 3} dni.
+            Nie ma żadnych spotkań z wypełnioną datą w ciągu najbliższych 14 dni.
           </p>
         </div>
       ) : (
