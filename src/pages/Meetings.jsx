@@ -114,16 +114,22 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                   return (
                     <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <User className="w-4 h-4 text-gray-400 shrink-0" />
-                          <span className="font-semibold text-gray-900 text-sm">{a.client_name}</span>
-                          <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{a.sheet}</Badge>
-                          {a.assigned_user_email && (
-                            <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-[10px]">
-                              Przypisane do Ciebie
-                            </Badge>
-                          )}
-                        </div>
+                        {(() => {
+                          const d = parseMeetingDate(a.meeting_calendar);
+                          const isPast = d && startOfDay(d) < today;
+                          return (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <User className="w-4 h-4 text-gray-400 shrink-0" />
+                              <span className="font-semibold text-gray-900 text-sm">{a.client_name}</span>
+                              <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{a.sheet}</Badge>
+                              {isPast && (
+                                <Badge className="bg-red-50 text-red-700 border border-red-200 text-[10px] animate-pulse">
+                                  ⚠️ Wymagany raport
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         <div className="flex items-center gap-2 text-xs font-semibold text-green-700 bg-green-50 rounded-md px-2 py-1.5 w-fit">
                           <Calendar className="w-3.5 h-3.5 shrink-0" />
