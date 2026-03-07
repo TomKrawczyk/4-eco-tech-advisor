@@ -107,6 +107,7 @@ export default function Layout({ children, currentPageName }) {
         if (userAccess) {
           user.role = userAccess.data?.role || userAccess.role;
           user.displayName = userAccess.data?.name || userAccess.name;
+          user.is_blocked = (userAccess.data?.is_blocked || userAccess.is_blocked) === true;
           setCurrentUser(user);
           setHasAccess(true);
 
