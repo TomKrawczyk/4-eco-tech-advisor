@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
@@ -55,16 +55,11 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
     const groups = {};
     myAssignedMeetings.forEach(a => {
       const d = parseMeetingDate(a.meeting_calendar);
-      const dateKey = d ? format(startOfDay(d), "yyyy-MM-dd") : "brak-daty";
+      const dateKey = d ? format(startOfDay(d), "yyyy-MM-dd") : "unknown";
       if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(a);
     });
-    // Sortuj: znane daty najpierw, "brak-daty" na końcu
-    return Object.entries(groups).sort(([a], [b]) => {
-      if (a === "brak-daty") return 1;
-      if (b === "brak-daty") return -1;
-      return a.localeCompare(b);
-    });
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [myAssignedMeetings]);
 
   const actions = [
@@ -78,7 +73,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
     <div className="space-y-6">
       <PageHeader
         title="Moje spotkania"
-        subtitle="Wszystkie spotkania przypisane do Ciebie"
+        subtitle="Spotkania przypisane do Ciebie – najbliższe 14 dni"
       />
       {myAssignedMeetings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -86,7 +81,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
             <Table2 className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="font-semibold text-gray-800 mb-1">Brak przypisanych spotkań</h3>
-          <p className="text-sm text-gray-500">Nie masz jeszcze żadnych przypisanych spotkań.</p>
+          <p className="text-sm text-gray-500">Nie masz żadnych spotkań w ciągu najbliższych 14 dni.</p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -95,7 +90,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
               <div className="flex items-center gap-2 mb-3 px-1">
                 <Calendar className="w-4 h-4 text-green-600" />
                 <span className="text-sm font-semibold text-gray-700">
-                  {dateKey === "brak-daty" ? "Brak daty spotkania" : formatDateLabel(meetings[0].meeting_calendar)}
+                  {formatDateLabel(meetings[0].meeting_calendar)}
                 </span>
                 <div className="flex-1 h-px bg-gray-200" />
                 <Badge variant="outline" className="text-[10px] text-gray-500">
@@ -276,9 +271,10 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
-  // Okno dat dla widoku admina/lidera: dziś + 14 dni
+  // Okno dat: dziś + 60 dni
   const today = useMemo(() => startOfDay(new Date()), []);
-  const maxDate = useMemo(() => addDays(today, 14), [today]);
+  const maxDate = useMemo(() => addDays(today, 60), [today]);
+  const maxDateUser = useMemo(() => addDays(today, 60), [today]);
 
   // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
@@ -287,26 +283,30 @@ export default function Meetings() {
     return currentUser.groupId || null;
   }, [currentUser]);
 
-  // Ustal emaile zespołu team_leadera (siebie + zarządzanych)
+  // Ustal emaile zespołu team_leadera
   const teamMemberEmails = useMemo(() => {
-    if (!currentUser) return [];
-    if (currentUser.role === "team_leader") {
-      const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
-      const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
-      const emails = allAllowedUsers
-        .filter(u => managedIds.includes(u.id))
-        .map(u => u.data?.email || u.email);
-      emails.push(currentUser.email);
-      return emails;
-    }
-    return [currentUser.email];
+    if (!currentUser || currentUser.role !== "team_leader") return [];
+    const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+    const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
+    const emails = allAllowedUsers
+      .filter(u => managedIds.includes(u.id))
+      .map(u => u.data?.email || u.email);
+    emails.push(currentUser.email);
+    return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Zwykły user widzi WSZYSTKIE swoje przypisane spotkania (bez limitu dat)
+  // Zwykły user widzi swoje przypisane spotkania
   const myAssignedMeetings = useMemo(() => {
     if (!currentUser || isLeaderOrAdmin) return [];
     return meetingAssignments
       .filter(a => a.assigned_user_email === currentUser.email)
+      .filter(a => {
+        if (!a.meeting_calendar) return true;
+        const d = parseMeetingDate(a.meeting_calendar);
+        if (!d) return true;
+        const day = startOfDay(d);
+        return day >= today && day <= maxDateUser;
+      })
       .sort((a, b) => {
         const da = parseMeetingDate(a.meeting_calendar);
         const db = parseMeetingDate(b.meeting_calendar);
@@ -315,7 +315,7 @@ export default function Meetings() {
         if (!db) return -1;
         return da - db;
       });
-  }, [currentUser, isLeaderOrAdmin, meetingAssignments]);
+  }, [currentUser, isLeaderOrAdmin, meetingAssignments, today, maxDateUser]);
 
   // Handlowcy do przypisania: filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
@@ -332,7 +332,7 @@ export default function Meetings() {
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
-  // Filtruj spotkania z arkusza z datą + okno 14 dni (dla widoku admina/lidera)
+  // Filtruj: tylko z datą + w oknie 14 dni
   const meetingsWithDate = useMemo(() => {
     return allMeetings
       .filter(m => {
@@ -348,7 +348,7 @@ export default function Meetings() {
       }));
   }, [allMeetings, today, maxDate]);
 
-  // Filtr wg roli + wyszukiwanie + grupy + arkusz
+  // Filtr wyszukiwania + grupy + arkusz + rola
   const filtered = useMemo(() => {
     return meetingsWithDate.filter(m => {
       const matchSearch = !search || Object.values(m).some(v =>
@@ -364,31 +364,37 @@ export default function Meetings() {
       // Filtr wg roli
       let matchRole = true;
       if (currentUser?.role === "admin") {
-        // Admin widzi WSZYSTKO z arkusza
+        // Admin widzi WSZYSTKO
         matchRole = true;
       } else if (currentUser?.role === "group_leader") {
-        // Group leader widzi: arkusze przypisane do jego grupy + spotkania przypisane do jego grupy
+        // Group leader widzi spotkania z arkuszy przypisanych do jego grupy
         if (currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
           const isSheetInMyGroup = sheetMapping?.group_id === currentUserGroupId;
+          // Lub spotkania przypisane do jego grupy (przez MeetingAssignment)
           const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
           const assignment = meetingAssignments.find(a => a.meeting_key === key);
           const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
           matchRole = isSheetInMyGroup || isAssignedToMyGroup;
         }
-        // Brak grupy = lider widzi wszystko (świeży awans)
+        // Brak grupy = lider widzi wszystko (np. po świeżym awansie)
       } else if (currentUser?.role === "team_leader") {
-        // Team leader widzi: przypisane do niego LUB do jego team memberów
+        // Team leader widzi spotkania przypisane bezpośrednio do niego lub do członków jego zespołu
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
         const assignment = meetingAssignments.find(a => a.meeting_key === key);
-        if (assignment?.assigned_user_email) {
-          matchRole = teamMemberEmails.includes(assignment.assigned_user_email);
-        } else if (assignment?.assigned_group_id && currentUserGroupId) {
-          matchRole = assignment.assigned_group_id === currentUserGroupId;
+        if (assignment) {
+          const isAssignedToMe = assignment.assigned_user_email === currentUser.email;
+          const isAssignedToMyTeam = teamMemberEmails.includes(assignment.assigned_user_email);
+          const isAssignedToMyGroup = currentUserGroupId && assignment.assigned_group_id === currentUserGroupId;
+          matchRole = isAssignedToMe || isAssignedToMyTeam || isAssignedToMyGroup;
         } else {
-          // Nieprzypisane – pokaż jeśli arkusz należy do grupy team leadera
-          const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
-          matchRole = currentUserGroupId ? sheetMapping?.group_id === currentUserGroupId : false;
+          // Nieprzypisane spotkanie – team leader widzi je jeśli arkusz jest przypisany do jego grupy
+          if (currentUserGroupId) {
+            const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
+            matchRole = sheetMapping?.group_id === currentUserGroupId;
+          } else {
+            matchRole = false;
+          }
         }
       }
 
@@ -492,7 +498,7 @@ export default function Meetings() {
           </Select>
         )}
 
-        {isLeaderOrAdmin && allSheetTabs.length > 0 && (
+        {isAdminOrGroupLeader && allSheetTabs.length > 0 && (
           <Select value={sheetFilter} onValueChange={setSheetFilter}>
             <SelectTrigger className="w-52 h-11">
               <SelectValue placeholder="Wszystkie arkusze" />
