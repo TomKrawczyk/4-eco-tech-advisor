@@ -102,19 +102,16 @@ export default function PhoneContacts() {
     return currentUser.groupId || null;
   }, [currentUser]);
 
-  // Ustal emaile zespołu team_leadera (siebie + zarządzanych)
+  // Ustal emaile zespołu team_leadera
   const teamMemberEmails = useMemo(() => {
-    if (!currentUser) return [];
-    if (currentUser.role === "team_leader") {
-      const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
-      const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
-      const emails = allAllowedUsers
-        .filter(u => managedIds.includes(u.id))
-        .map(u => u.data?.email || u.email);
-      emails.push(currentUser.email);
-      return emails;
-    }
-    return [currentUser.email];
+    if (!currentUser || currentUser.role !== "team_leader") return [];
+    const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+    const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
+    const emails = allAllowedUsers
+      .filter(u => managedIds.includes(u.id))
+      .map(u => u.data?.email || u.email);
+    emails.push(currentUser.email);
+    return emails;
   }, [currentUser, allAllowedUsers]);
 
   // Scal dane z arkusza z przypisaniami z bazy
@@ -224,26 +221,24 @@ export default function PhoneContacts() {
 
   // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
-    if (currentUser?.role === "admin") {
-      // Admin widzi WSZYSTKO
-      return contacts;
-    }
+    if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
-      // Group leader: kontakty z arkuszy jego grupy + przypisane do jego grupy
-      if (!currentUserGroupId) return contacts; // brak grupy = widzi wszystko
+      const myGroupId = currentUserGroupId;
+      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
       return contacts.filter(c => {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
-        if (sheetMapping?.group_id === currentUserGroupId) return true;
-        if (c.assigned_group_id === currentUserGroupId) return true;
+        if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
+        // Fallback: kontakty przypisane do grupy
+        if (c.assigned_group_id === myGroupId) return true;
         return false;
       });
     }
     if (currentUser?.role === "team_leader") {
-      // Team leader: kontakty przypisane do niego LUB do jego team memberów
+      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
       return contacts.filter(c => {
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
-        if (c.assigned_group_id && currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
-        // Nieprzypisane – tylko jeśli arkusz należy do jego grupy
+        if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
+        // Nieprzypisane kontakty z arkuszy grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
           return sheetMapping?.group_id === currentUserGroupId;
@@ -298,7 +293,7 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi swoje przypisane kontakty (z bazy danych – bez ograniczeń czasowych)
+  // Zwykły użytkownik widzi swoje przypisane kontakty
   if (!isLeaderOrAdmin) {
     const myContacts = phoneContactsFromDB.filter(c =>
       c.assigned_user_email === currentUser?.email
@@ -319,11 +314,11 @@ export default function PhoneContacts() {
             {myContacts.map((c, i) => (
               <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
-                {c.phone && (
-                  <a href={`tel:${c.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
-                    <Phone className="w-3 h-3" /> {c.phone}
-                  </a>
-                )}
+                 {(c.phone || c.client_phone) && (
+                   <a href={`tel:${c.phone || c.client_phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
+                     <Phone className="w-3 h-3" /> {c.phone || c.client_phone}
+                   </a>
+                 )}
                 {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
                 <div className="flex flex-wrap gap-1 mt-1">
                   {c.sheet && <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{c.sheet}</Badge>}
