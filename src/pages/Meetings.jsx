@@ -492,7 +492,7 @@ export default function Meetings() {
           </Select>
         )}
 
-        {isAdminOrGroupLeader && allSheetTabs.length > 0 && (
+        {isLeaderOrAdmin && allSheetTabs.length > 0 && (
           <Select value={sheetFilter} onValueChange={setSheetFilter}>
             <SelectTrigger className="w-52 h-11">
               <SelectValue placeholder="Wszystkie arkusze" />
