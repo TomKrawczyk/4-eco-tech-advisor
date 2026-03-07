@@ -95,7 +95,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
               <div className="flex items-center gap-2 mb-3 px-1">
                 <Calendar className="w-4 h-4 text-green-600" />
                 <span className="text-sm font-semibold text-gray-700">
-                  {formatDateLabel(meetings[0].meeting_calendar)}
+                  {dateKey === "brak-daty" ? "Brak daty spotkania" : formatDateLabel(meetings[0].meeting_calendar)}
                 </span>
                 <div className="flex-1 h-px bg-gray-200" />
                 <Badge variant="outline" className="text-[10px] text-gray-500">
