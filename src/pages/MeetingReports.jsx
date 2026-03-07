@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, Search, Calendar, Phone, MapPin, User, Clock, CheckCircle2, XCircle, ChevronRight, ArrowLeft, Trash2, Upload, X, Image, Loader2, FileText } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 

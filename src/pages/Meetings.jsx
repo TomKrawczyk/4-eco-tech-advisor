@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, AlertCircle, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell } from "lucide-react";
+import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
 import { motion, AnimatePresence } from "framer-motion";
 import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 import MeetingCard from "@/components/meetings/MeetingCard";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
-import { format, addDays, parseISO, isValid, startOfDay } from "date-fns";
+import { format, addDays, isValid, startOfDay } from "date-fns";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 // Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
 function parseMeetingDate(str) {
@@ -40,6 +42,187 @@ function formatDateLabel(dateStr) {
   if (diff === 0) return `Dziś (${dateFormatted})`;
   if (diff === 1) return `Jutro (${dateFormatted})`;
   return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} (${dateFormatted})`;
+}
+
+function extractTime(calStr) {
+  if (!calStr) return "";
+  const match = calStr.match(/(\d{1,2}):(\d{2})/);
+  return match ? `${match[1].padStart(2, "0")}:${match[2]}` : "";
+}
+
+// Widok spotkań dla zwykłego użytkownika – z pełnymi szczegółami i akcjami
+function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen }) {
+  // Grupuj spotkania po dacie
+  const groupedByDate = useMemo(() => {
+    const groups = {};
+    myAssignedMeetings.forEach(a => {
+      const d = parseMeetingDate(a.meeting_calendar);
+      const dateKey = d ? format(startOfDay(d), "yyyy-MM-dd") : "unknown";
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(a);
+    });
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [myAssignedMeetings]);
+
+  const actions = [
+    { label: "Raport po spotkaniu", icon: FileText, color: "bg-green-600", page: "MeetingReports", desc: "Utwórz raport ze spotkania" },
+    { label: "Checklista techniczna", icon: CheckSquare, color: "bg-blue-600", page: "Checklist", desc: "Uzupełnij checklistę" },
+    { label: "Wywiad z klientem", icon: MessageSquare, color: "bg-violet-600", page: "Interview", desc: "Przeprowadź wywiad" },
+    { label: "Raport wizyty", icon: ClipboardList, color: "bg-orange-600", page: "VisitReports", desc: "Szczegółowy raport wizyty" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Moje spotkania"
+        subtitle="Spotkania przypisane do Ciebie – najbliższe 14 dni"
+      />
+      {myAssignedMeetings.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <Table2 className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="font-semibold text-gray-800 mb-1">Brak przypisanych spotkań</h3>
+          <p className="text-sm text-gray-500">Nie masz żadnych spotkań w ciągu najbliższych 14 dni.</p>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {groupedByDate.map(([dateKey, meetings]) => (
+            <div key={dateKey}>
+              {/* Nagłówek dnia */}
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <Calendar className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-semibold text-gray-700">
+                  {formatDateLabel(meetings[0].meeting_calendar)}
+                </span>
+                <div className="flex-1 h-px bg-gray-200" />
+                <Badge variant="outline" className="text-[10px] text-gray-500">
+                  {meetings.length} {meetings.length === 1 ? "spotkanie" : "spotkań"}
+                </Badge>
+              </div>
+
+              <div className="space-y-3">
+                {meetings.map((a, i) => {
+                  const clientParams = new URLSearchParams({
+                    prefill_client_name: a.client_name || "",
+                    prefill_client_phone: a.client_phone || a.phone || "",
+                    prefill_client_address: a.client_address || a.address || "",
+                    prefill_meeting_date: a.meeting_date || "",
+                    prefill_meeting_time: extractTime(a.meeting_calendar) || "",
+                    from_meeting: "1",
+                  }).toString();
+
+                  const hasDetails = a.agent || a.comments || a.notes || a.interview_data;
+
+                  return (
+                    <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
+                      <div className="space-y-2">
+                        {/* Nazwa klienta + arkusz */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <User className="w-4 h-4 text-gray-400 shrink-0" />
+                          <span className="font-semibold text-gray-900 text-sm">{a.client_name}</span>
+                          <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{a.sheet}</Badge>
+                          {a.assigned_user_email && (
+                            <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-[10px]">
+                              Przypisane do Ciebie
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Data i godzina */}
+                        <div className="flex items-center gap-2 text-xs font-semibold text-green-700 bg-green-50 rounded-md px-2 py-1.5 w-fit">
+                          <Calendar className="w-3.5 h-3.5 shrink-0" />
+                          {a.meeting_calendar}
+                        </div>
+
+                        {/* Adres */}
+                        {(a.client_address || a.address) && (
+                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                            {a.client_address || a.address}
+                          </div>
+                        )}
+
+                        {/* Telefon */}
+                        {(a.client_phone || a.phone) && (
+                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                            <a href={`tel:${a.client_phone || a.phone}`} className="hover:text-green-600 transition-colors font-medium">
+                              {a.client_phone || a.phone}
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Agent */}
+                        {a.agent && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                            Agent: {a.agent}
+                          </div>
+                        )}
+
+                        {/* Notatki */}
+                        {a.notes && (
+                          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">{a.notes}</p>
+                        )}
+
+                        {/* Przycisk szczegółów */}
+                        {hasDetails && (
+                          <button
+                            onClick={() => {
+                              setSelectedDetails({
+                                phone: a.client_phone || a.phone,
+                                agent: a.agent,
+                                comments: a.comments || a.notes,
+                                interview_data: a.interview_data || {}
+                              });
+                              setDetailsModalOpen(true);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                          >
+                            <MessageSquare className="w-3 h-3" />
+                            Szczegóły kontaktu
+                          </button>
+                        )}
+
+                        {/* Akcje – utwórz dokumenty */}
+                        <div className="pt-2 border-t border-gray-100 mt-2">
+                          <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">Utwórz dokument</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {actions.map(({ label, icon: Icon, color, page, desc }) => (
+                              <Link
+                                key={page}
+                                to={`${createPageUrl(page)}?${clientParams}`}
+                                className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all"
+                              >
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${color} shrink-0`}>
+                                  <Icon className="w-3.5 h-3.5 text-white" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs font-medium text-gray-800 truncate">{label}</div>
+                                  <div className="text-[10px] text-gray-400 truncate">{desc}</div>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <DetailsModal
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        data={selectedDetails}
+      />
+    </div>
+  );
 }
 
 export default function Meetings() {
@@ -249,39 +432,16 @@ export default function Meetings() {
     );
   }
 
-  // Zwykły użytkownik widzi tylko swoje przypisane spotkania
+  // Zwykły użytkownik widzi tylko swoje przypisane spotkania – z pełnymi szczegółami
   if (!isLeaderOrAdmin) {
     return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Moje spotkania"
-          subtitle="Spotkania przypisane do Ciebie – najbliższe 3 dni"
-        />
-        {myAssignedMeetings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Table2 className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="font-semibold text-gray-800 mb-1">Brak przypisanych spotkań</h3>
-            <p className="text-sm text-gray-500">Nie masz żadnych spotkań w ciągu najbliższych 3 dni.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {myAssignedMeetings.map((a, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-gray-900 text-sm">{a.client_name}</span>
-                  <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{a.sheet}</Badge>
-                </div>
-                <div className="text-xs font-semibold text-green-700 bg-green-50 rounded-md px-2 py-1 w-fit mt-1">
-                  {a.meeting_calendar}
-                </div>
-                {a.notes && <p className="text-xs text-gray-500 mt-2">{a.notes}</p>}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <UserMeetingsView
+        myAssignedMeetings={myAssignedMeetings}
+        selectedDetails={selectedDetails}
+        setSelectedDetails={setSelectedDetails}
+        detailsModalOpen={detailsModalOpen}
+        setDetailsModalOpen={setDetailsModalOpen}
+      />
     );
   }
 

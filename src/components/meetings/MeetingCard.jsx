@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, User, MapPin, Phone, Clock, UserCheck, ChevronRight, MessageSquare, Users } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -309,8 +308,8 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
             </Badge>
           )}
 
-          {/* Przypisanie do grupy – tylko admin */}
-          {currentUserRole === "admin" && groups.length > 0 && (
+          {/* Przypisanie do grupy – admin i group_leader */}
+          {(currentUserRole === "admin" || currentUserRole === "group_leader") && groups.length > 0 && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <Users className="w-4 h-4 text-gray-400 shrink-0" />
               {assignment?.assigned_group_id ? (
@@ -318,14 +317,16 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                   <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
                     {assignment.assigned_group_name || assignment.assigned_group_id}
                   </Badge>
-                  <button
-                    onClick={() => unassignGroupMutation.mutate()}
-                    className="text-xs text-red-500 hover:underline"
-                  >
-                    usuń
-                  </button>
+                  {currentUserRole === "admin" && (
+                    <button
+                      onClick={() => unassignGroupMutation.mutate()}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      usuń
+                    </button>
+                  )}
                 </div>
-              ) : (
+              ) : currentUserRole === "admin" ? (
                 <Select
                   onValueChange={(val) => {
                     const g = groups.find(g => g.id === val);
@@ -343,12 +344,14 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                     ))}
                   </SelectContent>
                 </Select>
+              ) : (
+                <span className="text-xs text-gray-400">Brak przypisanej grupy</span>
               )}
             </div>
           )}
 
-          {/* Pokaż grupę dla liderów */}
-          {currentUserRole !== "admin" && assignment?.assigned_group_id && (
+          {/* Pokaż grupę dla team_leader */}
+          {currentUserRole === "team_leader" && assignment?.assigned_group_id && (
             <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs mt-1">
               <Users className="w-3 h-3 mr-1" />
               {assignment.assigned_group_name}

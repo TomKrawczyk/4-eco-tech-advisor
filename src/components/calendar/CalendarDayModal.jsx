@@ -2,9 +2,9 @@ import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Plus, Pencil, Trash2, MapPin, Phone, Clock, User } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Clock, User } from "lucide-react";
 
 const typeLabels = { meeting: "Spotkanie", task: "Zadanie", reminder: "Przypomnienie", other: "Inne" };
 const typeColors = {

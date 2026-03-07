@@ -3,12 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/shared/PageHeader";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { base44 } from "@/api/base44Client";
-import { Cloud, TrendingUp, Download } from "lucide-react";
+import { Cloud, Download } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { openOrDownloadPDF } from "../components/shared/downloadPDF";
 

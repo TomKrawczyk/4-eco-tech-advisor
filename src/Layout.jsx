@@ -4,7 +4,6 @@ import { createPageUrl } from "./utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { ShieldAlert, User, LogOut, Shield, Menu, X, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import NotificationPanel from "@/components/notifications/NotificationPanel";
 import RequiredTrainingGate from "@/components/training/RequiredTrainingGate";
 import OfflineBanner from "@/components/offline/OfflineBanner";

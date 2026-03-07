@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { WifiOff, Wifi, RefreshCw, AlertCircle } from "lucide-react";
-import { getQueue, syncQueue, isOnline } from "./offlineSync";
+import { getQueue, syncQueue } from "./offlineSync";
 import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
 

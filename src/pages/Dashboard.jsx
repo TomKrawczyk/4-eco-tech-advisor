@@ -3,12 +3,11 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   Users, FileText, Calculator, TrendingUp, 
-  CheckSquare, MessageSquare, BookOpen, Settings,
-  Activity, ArrowRight, BarChart3, Zap
+  CheckSquare, MessageSquare, BookOpen, ArrowRight, BarChart3, Zap
 } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { motion } from "framer-motion";
