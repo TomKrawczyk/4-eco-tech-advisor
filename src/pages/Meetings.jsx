@@ -55,11 +55,16 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
     const groups = {};
     myAssignedMeetings.forEach(a => {
       const d = parseMeetingDate(a.meeting_calendar);
-      const dateKey = d ? format(startOfDay(d), "yyyy-MM-dd") : "unknown";
+      const dateKey = d ? format(startOfDay(d), "yyyy-MM-dd") : "brak-daty";
       if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(a);
     });
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+    // Sortuj: znane daty najpierw, "brak-daty" na końcu
+    return Object.entries(groups).sort(([a], [b]) => {
+      if (a === "brak-daty") return 1;
+      if (b === "brak-daty") return -1;
+      return a.localeCompare(b);
+    });
   }, [myAssignedMeetings]);
 
   const actions = [
