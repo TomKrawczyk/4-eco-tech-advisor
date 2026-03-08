@@ -371,7 +371,7 @@ export default function PhoneContacts() {
           </Select>
         )}
 
-        <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
+        <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11 w-full sm:w-auto" disabled={isFetching}>
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           Odśwież
         </Button>
@@ -380,7 +380,7 @@ export default function PhoneContacts() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 h-11 border-orange-200 text-orange-600 hover:bg-orange-50"
+            className="gap-2 h-11 w-full sm:w-auto border-orange-200 text-orange-600 hover:bg-orange-50"
             disabled={notifySending}
             onClick={async () => {
               setNotifySending(true);
