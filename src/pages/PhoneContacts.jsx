@@ -351,15 +351,15 @@ export default function PhoneContacts() {
         <AssignmentStats onClose={() => setShowStats(false)} />
       )}
 
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="relative flex-1 min-w-[180px]">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Szukaj klienta, telefonu, adresu..." className="pl-10 h-11" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Szukaj klienta, telefonu, adresu..." className="pl-10 h-11 w-full" />
         </div>
 
         {allSheetTabs.length > 0 && (
           <Select value={sheetFilter} onValueChange={setSheetFilter}>
-            <SelectTrigger className="w-52 h-11">
+            <SelectTrigger className="w-full sm:w-52 h-11">
               <SelectValue placeholder="Wszystkie arkusze" />
             </SelectTrigger>
             <SelectContent>
