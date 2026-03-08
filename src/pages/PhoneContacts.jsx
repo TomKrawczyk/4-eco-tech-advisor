@@ -414,7 +414,7 @@ export default function PhoneContacts() {
           <Button
             variant={showStats ? "default" : "outline"}
             size="sm"
-            className="gap-2 h-11"
+            className="gap-2 h-11 w-full sm:w-auto"
             onClick={() => setShowStats(p => !p)}
           >
             <BarChart2 className="w-4 h-4" />
