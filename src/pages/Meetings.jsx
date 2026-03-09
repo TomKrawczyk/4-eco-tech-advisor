@@ -247,7 +247,7 @@ export default function Meetings() {
     enabled: accessChecked,
   });
 
-  const { data: meetingAssignments = [] } = useQuery({
+  const { data: meetingAssignments = [], isLoading: assignmentsLoading } = useQuery({
     queryKey: ["meetingAssignments"],
     queryFn: () => base44.entities.MeetingAssignment.list(),
     enabled: accessChecked,
@@ -325,12 +325,8 @@ export default function Meetings() {
         if (currentUser?.role === "admin") {
           return true;
         }
-        // Group leader może przypisać siebie lub członków swojej grupy (user, team_leader, group_leader)
-        if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
+        if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
-        const uEmail = u.data?.email || u.email;
-        // Siebie zawsze można przypisać
-        if (uEmail === currentUser?.email) return true;
         return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
