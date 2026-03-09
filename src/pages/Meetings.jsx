@@ -17,12 +17,20 @@ import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-// Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
+// Parsuje daty w różnych formatach: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", "YYYY-MM-DD HH:MM", "YYYY-MM-DD"
 function parseMeetingDate(str) {
   if (!str) return null;
-  const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (match) {
-    const [, d, m, y] = match;
+  // Format DD.MM.YYYY
+  const matchPL = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (matchPL) {
+    const [, d, m, y] = matchPL;
+    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    if (isValid(date)) return date;
+  }
+  // Format YYYY-MM-DD (z opcjonalnym HH:MM)
+  const matchISO = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (matchISO) {
+    const [, y, m, d] = matchISO;
     const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     if (isValid(date)) return date;
   }
@@ -247,7 +255,7 @@ export default function Meetings() {
     enabled: accessChecked,
   });
 
-  const { data: meetingAssignments = [], isLoading: assignmentsLoading } = useQuery({
+  const { data: meetingAssignments = [] } = useQuery({
     queryKey: ["meetingAssignments"],
     queryFn: () => base44.entities.MeetingAssignment.list(),
     enabled: accessChecked,
@@ -447,13 +455,6 @@ export default function Meetings() {
 
   // Zwykły użytkownik widzi tylko swoje przypisane spotkania – z pełnymi szczegółami
   if (!isLeaderOrAdmin) {
-    if (assignmentsLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="w-7 h-7 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      );
-    }
     return (
       <UserMeetingsView
         myAssignedMeetings={myAssignedMeetings}
