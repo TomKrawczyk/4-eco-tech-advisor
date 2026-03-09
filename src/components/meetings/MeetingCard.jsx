@@ -89,44 +89,41 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
   const assignMutation = useMutation({
     mutationFn: async ({ userEmail, userName }) => {
       const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
+      const contactData = {
+        client_phone: meeting.phone || assignment?.client_phone || "",
+        client_address: meeting.address || assignment?.client_address || "",
+        agent: meeting.agent || assignment?.agent || "",
+        comments: meeting.comments || assignment?.comments || "",
+      };
 
-      if (assignment) {
-        await base44.entities.MeetingAssignment.update(assignment.id, {
-          assigned_user_email: userEmail,
-          assigned_user_name: userName,
-          // Aktualizuj też dane kontaktowe żeby user widział je w swoim widoku
-          client_phone: meeting.phone || assignment.client_phone || "",
-          client_address: meeting.address || assignment.client_address || "",
-          agent: meeting.agent || assignment.agent || "",
-          comments: meeting.comments || assignment.comments || "",
-        });
-      } else {
-        await base44.entities.MeetingAssignment.create({
-          meeting_key: key,
-          sheet: meeting.sheet,
-          client_name: meeting.client_name,
-          meeting_calendar: meeting.meeting_calendar,
-          meeting_date: meeting.meeting_date,
-          assigned_user_email: userEmail,
-          assigned_user_name: userName,
-          // Zapisz dane kontaktowe żeby user widział je w swoim widoku
-          client_phone: meeting.phone || "",
-          client_address: meeting.address || "",
-          agent: meeting.agent || "",
-          comments: meeting.comments || "",
-        });
-      }
-
-      // Synchronizuj z kalendarzem
+      // Zapis przypisania i synchronizacja kalendarza – równolegle
       const parsed = parseMeetingCalendar(meeting.meeting_calendar);
-      if (parsed) {
-        const title = `Spotkanie: ${meeting.client_name}`;
-        const existingEvents = await base44.entities.CalendarEvent.filter({
-          meeting_assignment_id: key,
-        });
 
+      const [, existingEvents] = await Promise.all([
+        assignment
+          ? base44.entities.MeetingAssignment.update(assignment.id, {
+              assigned_user_email: userEmail,
+              assigned_user_name: userName,
+              ...contactData,
+            })
+          : base44.entities.MeetingAssignment.create({
+              meeting_key: key,
+              sheet: meeting.sheet,
+              client_name: meeting.client_name,
+              meeting_calendar: meeting.meeting_calendar,
+              meeting_date: meeting.meeting_date,
+              assigned_user_email: userEmail,
+              assigned_user_name: userName,
+              ...contactData,
+            }),
+        parsed
+          ? base44.entities.CalendarEvent.filter({ meeting_assignment_id: key })
+          : Promise.resolve([]),
+      ]);
+
+      if (parsed) {
         const eventData = {
-          title,
+          title: `Spotkanie: ${meeting.client_name}`,
           description: `Arkusz: ${meeting.sheet}${meeting.address ? `\nAdres: ${meeting.address}` : ""}${meeting.phone ? `\nTel: ${meeting.phone}` : ""}`,
           event_date: parsed.date,
           event_time: parsed.time,
@@ -140,11 +137,11 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           source: "meeting_assignment",
           meeting_assignment_id: key,
         };
-
-        for (const ev of existingEvents) {
-          await base44.entities.CalendarEvent.delete(ev.id);
-        }
-        await base44.entities.CalendarEvent.create(eventData);
+        // Usuń stare i stwórz nowe równolegle
+        await Promise.all([
+          ...existingEvents.map(ev => base44.entities.CalendarEvent.delete(ev.id)),
+          base44.entities.CalendarEvent.create(eventData),
+        ]);
       }
     },
     onSuccess: (_, variables) => {
