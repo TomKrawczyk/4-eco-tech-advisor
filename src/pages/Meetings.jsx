@@ -17,7 +17,7 @@ import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-// Parsuje daty w różnych formatach: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", "YYYY-MM-DD HH:MM", "YYYY-MM-DD"
+// Parsuje daty w różnych formatach: "DD.MM.YYYY HH:MM", "YYYY-MM-DD HH:MM", "YYYY-MM-DD", itp.
 function parseMeetingDate(str) {
   if (!str) return null;
   // Format DD.MM.YYYY
@@ -27,7 +27,7 @@ function parseMeetingDate(str) {
     const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     if (isValid(date)) return date;
   }
-  // Format YYYY-MM-DD (z opcjonalnym HH:MM)
+  // Format YYYY-MM-DD (ISO, z opcjonalnym HH:MM)
   const matchISO = str.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (matchISO) {
     const [, y, m, d] = matchISO;
