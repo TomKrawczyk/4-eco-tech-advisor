@@ -247,10 +247,12 @@ export default function Meetings() {
     enabled: accessChecked,
   });
 
-  const { data: meetingAssignments = [] } = useQuery({
+  const { data: meetingAssignments = [], isLoading: assignmentsLoading } = useQuery({
     queryKey: ["meetingAssignments"],
     queryFn: () => base44.entities.MeetingAssignment.list(),
     enabled: accessChecked,
+    staleTime: 2 * 60 * 1000,
+    keepPreviousData: true,
   });
 
   const { data: meetingReports = [] } = useQuery({
