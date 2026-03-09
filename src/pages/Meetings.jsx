@@ -17,20 +17,12 @@ import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-// Parsuje daty w różnych formatach: "DD.MM.YYYY HH:MM", "YYYY-MM-DD HH:MM", "YYYY-MM-DD", itp.
+// Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
 function parseMeetingDate(str) {
   if (!str) return null;
-  // Format DD.MM.YYYY
-  const matchPL = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (matchPL) {
-    const [, d, m, y] = matchPL;
-    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-    if (isValid(date)) return date;
-  }
-  // Format YYYY-MM-DD (ISO, z opcjonalnym HH:MM)
-  const matchISO = str.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (matchISO) {
-    const [, y, m, d] = matchISO;
+  const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (match) {
+    const [, d, m, y] = match;
     const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     if (isValid(date)) return date;
   }
@@ -445,7 +437,9 @@ export default function Meetings() {
     return [...new Set(allMeetings.map(m => m.sheet).filter(Boolean))].sort();
   }, [allMeetings]);
 
-  if (!accessChecked) {
+  const { isFetching: assignmentsFetching } = useQuery({ queryKey: ["meetingAssignments"] });
+
+  if (!accessChecked || !currentUser) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <div className="w-7 h-7 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
@@ -455,6 +449,13 @@ export default function Meetings() {
 
   // Zwykły użytkownik widzi tylko swoje przypisane spotkania – z pełnymi szczegółami
   if (!isLeaderOrAdmin) {
+    if (assignmentsFetching && meetingAssignments.length === 0) {
+      return (
+        <div className="flex items-center justify-center min-h-[40vh]">
+          <div className="w-7 h-7 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
     return (
       <UserMeetingsView
         myAssignedMeetings={myAssignedMeetings}
