@@ -593,6 +593,13 @@ export default function Meetings() {
         )}
       </AnimatePresence>
 
+      {/* Pasek odświeżania – zamiast blankowania widoku */}
+      {isFetching && allMeetings.length > 0 && (
+        <div className="h-0.5 w-full bg-gray-100 rounded overflow-hidden">
+          <div className="h-full bg-green-400 animate-pulse w-full" />
+        </div>
+      )}
+
       {/* Licznik */}
       {!isLoading && (
         <div className="text-sm text-gray-500">
