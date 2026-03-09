@@ -22,7 +22,7 @@ const emailTemplate = (clientName, meetingDate, daysAgo) => `
       ${daysAgo >= BLOCK_AFTER_DAYS ? '<strong style="color:#ef4444;">Twoje konto zostało zablokowane z powodu braku raportowania.</strong>' : `Brak raportu przez ${BLOCK_AFTER_DAYS} dni skutkuje blokadą konta.`}
     </p>
     <div style="margin-top: 24px;">
-      <a href="https://app.base44.com" style="display: inline-block; background: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+      <a href="https://4-ecodoradca.base44.app/MeetingReports" style="display: inline-block; background: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
         Uzupełnij raport →
       </a>
     </div>
