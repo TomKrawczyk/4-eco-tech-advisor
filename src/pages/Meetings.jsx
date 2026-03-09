@@ -247,12 +247,10 @@ export default function Meetings() {
     enabled: accessChecked,
   });
 
-  const { data: meetingAssignments = [], isLoading: assignmentsLoading } = useQuery({
+  const { data: meetingAssignments = [] } = useQuery({
     queryKey: ["meetingAssignments"],
     queryFn: () => base44.entities.MeetingAssignment.list(),
     enabled: accessChecked,
-    staleTime: 2 * 60 * 1000,
-    keepPreviousData: true,
   });
 
   const { data: meetingReports = [] } = useQuery({
@@ -268,8 +266,6 @@ export default function Meetings() {
     enabled: accessChecked && isLeaderOrAdmin,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
-    // Nie wyrzucaj starych danych podczas re-fetchu – zapobiega białemu ekranowi
-    keepPreviousData: true,
   });
 
   const allMeetings = result?.meetings || [];
@@ -329,8 +325,12 @@ export default function Meetings() {
         if (currentUser?.role === "admin") {
           return true;
         }
-        if (role !== "user" && role !== "team_leader") return false;
+        // Group leader może przypisać siebie lub członków swojej grupy (user, team_leader, group_leader)
+        if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
+        const uEmail = u.data?.email || u.email;
+        // Siebie zawsze można przypisać
+        if (uEmail === currentUser?.email) return true;
         return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
@@ -451,13 +451,6 @@ export default function Meetings() {
 
   // Zwykły użytkownik widzi tylko swoje przypisane spotkania – z pełnymi szczegółami
   if (!isLeaderOrAdmin) {
-    if (assignmentsLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="w-7 h-7 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      );
-    }
     return (
       <UserMeetingsView
         myAssignedMeetings={myAssignedMeetings}
@@ -593,13 +586,6 @@ export default function Meetings() {
         )}
       </AnimatePresence>
 
-      {/* Pasek odświeżania – zamiast blankowania widoku */}
-      {isFetching && allMeetings.length > 0 && (
-        <div className="h-0.5 w-full bg-gray-100 rounded overflow-hidden">
-          <div className="h-full bg-green-400 animate-pulse w-full" />
-        </div>
-      )}
-
       {/* Licznik */}
       {!isLoading && (
         <div className="text-sm text-gray-500">
@@ -609,7 +595,7 @@ export default function Meetings() {
       )}
 
       {/* Zawartość */}
-      {isLoading && allMeetings.length === 0 ? (
+      {isLoading || (isFetching && allMeetings.length === 0) ? (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
             <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
