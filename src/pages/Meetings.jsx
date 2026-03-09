@@ -437,8 +437,6 @@ export default function Meetings() {
     return [...new Set(allMeetings.map(m => m.sheet).filter(Boolean))].sort();
   }, [allMeetings]);
 
-  const { isFetching: assignmentsFetching } = useQuery({ queryKey: ["meetingAssignments"] });
-
   if (!accessChecked || !currentUser) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
@@ -449,13 +447,6 @@ export default function Meetings() {
 
   // Zwykły użytkownik widzi tylko swoje przypisane spotkania – z pełnymi szczegółami
   if (!isLeaderOrAdmin) {
-    if (assignmentsFetching && meetingAssignments.length === 0) {
-      return (
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="w-7 h-7 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      );
-    }
     return (
       <UserMeetingsView
         myAssignedMeetings={myAssignedMeetings}
