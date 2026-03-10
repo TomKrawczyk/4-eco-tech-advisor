@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
         const authorMatch = r.author_email === assignment.assigned_user_email;
         if (!authorMatch) return false;
         // Normalizuj imiona — lowercase, trim, usuń wielokrotne spacje
-        const normalize = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+        const normalize = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/\s*-\s*/g, '-');
         const rName = normalize(r.client_name);
         const aName = normalize(assignment.client_name);
         // Pełne dopasowanie LUB jedno zaczyna się od drugiego (różne pisownie)
