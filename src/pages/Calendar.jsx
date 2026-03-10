@@ -105,6 +105,36 @@ export default function Calendar() {
     return emails;
   }, [allUsers, currentUser]);
 
+  // Spotkania przypisane do zwykłego usera — widoczne w jego kalendarzu
+  const myAssignmentEvents = useMemo(() => {
+    if (!currentUser || isLeaderOrAdmin) return [];
+    return meetingAssignments
+      .filter(a => a.assigned_user_email === currentUser.email && a.meeting_calendar)
+      .map(a => {
+        const d = parseMeetingDate(a.meeting_calendar);
+        if (!d) return null;
+        const timeMatch = a.meeting_calendar?.match(/(\d{1,2}):(\d{2})/);
+        const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : "";
+        return {
+          id: `assignment_${a.id}`,
+          title: `📋 ${a.client_name}`,
+          description: `Arkusz: ${a.sheet}${a.comments ? `\n${a.comments}` : ""}`,
+          event_date: format(d, "yyyy-MM-dd"),
+          event_time: time,
+          event_type: "meeting",
+          status: "planned",
+          client_name: a.client_name,
+          client_phone: a.client_phone || "",
+          location: a.client_address || "",
+          owner_email: a.assigned_user_email,
+          owner_name: a.assigned_user_name || "",
+          source: "meeting_assignment",
+          is_sheet_meeting: true,
+        };
+      })
+      .filter(Boolean);
+  }, [meetingAssignments, currentUser, isLeaderOrAdmin]);
+
   // Konwertuj spotkania z arkuszy na pseudo-eventy kalendarza (dla wyświetlania)
   const sheetMeetingEvents = useMemo(() => {
     if (!currentUser || !isLeaderOrAdmin) return [];
