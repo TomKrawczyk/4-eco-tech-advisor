@@ -24,38 +24,47 @@ export default function MissingReportsBanner({ currentUser }) {
 
     const check = async () => {
       const today = startOfDay(new Date());
-      const pastLimit = addDays(today, -30);
 
-      const [assignments, reports, allowedUsers] = await Promise.all([
+      const [assignments, reports, visitReports, allowedUsers] = await Promise.all([
         base44.entities.MeetingAssignment.filter({ assigned_user_email: currentUser.email }),
         base44.entities.MeetingReport.filter({ author_email: currentUser.email }),
+        base44.entities.VisitReport.filter({ author_email: currentUser.email }),
         base44.entities.AllowedUser.list(),
       ]);
 
       const ua = allowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
       setIsBlocked(ua?.data?.is_blocked || ua?.is_blocked || false);
 
+      const normalize = s => (s || "").toLowerCase().trim().replace(/\s+/g, " ").replace(/\s*-\s*/g, "-");
+      const normalizePhone = p => (p || "").replace(/\s+/g, "").replace(/[^\d]/g, "");
+
+      // Łączymy MeetingReports i VisitReports jako dowód spotkania
+      const allReports = [
+        ...reports.map(r => ({ ...r, _source: "meeting" })),
+        ...visitReports.map(r => ({ ...r, client_phone: r.client_phone, _source: "visit" })),
+      ];
+
       const missing = assignments.filter(a => {
         const meetingDay = parseMeetingDate(a.meeting_calendar || a.meeting_date);
         if (!meetingDay) return false;
         const day = startOfDay(meetingDay);
-        if (day >= today || day < pastLimit) return false; // tylko przeszłe w oknie 30 dni
+        if (day >= today) return false; // tylko przeszłe spotkania (bez limitu wstecznego)
 
-        const reportExists = reports.some(r => {
-          // Raport musi być od tego samego autora LUB nie mieć autora (stare raporty)
+        const aPhone = normalizePhone(a.client_phone);
+        const aName = normalize(a.client_name);
+
+        const reportExists = allReports.some(r => {
           const authorMatch = !r.author_email || r.author_email === currentUser.email;
           if (!authorMatch) return false;
-          // Normalizuj imiona — lowercase, trim, usuń wielokrotne spacje
-          const normalize = s => (s || "").toLowerCase().trim().replace(/\s+/g, " ").replace(/\s*-\s*/g, "-");
+
           const rName = normalize(r.client_name);
-          const aName = normalize(a.client_name);
-          // Pełne dopasowanie LUB pierwsze słowo (imię) się zgadza
+          const rPhone = normalizePhone(r.client_phone);
+
+          // Dopasowanie po telefonie (jeśli oba nie są puste) LUB po nazwie
+          const phoneMatch = aPhone.length >= 7 && rPhone.length >= 7 && aPhone === rPhone;
           const nameMatch = rName === aName || (rName.length > 2 && aName.startsWith(rName)) || (aName.length > 2 && rName.startsWith(aName));
-          if (!nameMatch) return false;
-          // Data raportu blisko daty spotkania (±5 dni) lub brak daty raportu
-          const reportDay = parseMeetingDate(r.meeting_date);
-          const dateClose = !reportDay || Math.abs(startOfDay(reportDay) - day) <= 5 * 86400000;
-          return dateClose;
+
+          return phoneMatch || nameMatch;
         });
         return !reportExists;
       });
