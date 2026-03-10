@@ -36,16 +36,19 @@ export default function MissingReportsBanner({ currentUser }) {
       setIsBlocked(ua?.data?.is_blocked || ua?.is_blocked || false);
 
       const missing = assignments.filter(a => {
-        if (!a.meeting_calendar) return false;
-        const d = parseMeetingDate(a.meeting_calendar || a.meeting_date);
-        if (!d) return false;
-        const day = startOfDay(d);
-        if (day >= today || day < pastLimit) return false; // tylko przeszłe
+        const meetingDay = parseMeetingDate(a.meeting_calendar || a.meeting_date);
+        if (!meetingDay) return false;
+        const day = startOfDay(meetingDay);
+        if (day >= today || day < pastLimit) return false; // tylko przeszłe w oknie 30 dni
 
         const reportExists = reports.some(r => {
           const nameMatch = (r.client_name || "").toLowerCase().trim() === (a.client_name || "").toLowerCase().trim();
+          // Raport musi być od tego samego autora LUB nie mieć autora (stare raporty)
           const authorMatch = !r.author_email || r.author_email === currentUser.email;
-          return nameMatch && authorMatch;
+          // Data raportu blisko daty spotkania (±3 dni) lub brak daty raportu
+          const reportDay = parseMeetingDate(r.meeting_date);
+          const dateClose = !reportDay || Math.abs(startOfDay(reportDay) - day) <= 3 * 86400000;
+          return nameMatch && authorMatch && dateClose;
         });
         return !reportExists;
       });
