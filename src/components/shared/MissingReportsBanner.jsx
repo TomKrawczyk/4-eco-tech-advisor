@@ -46,7 +46,7 @@ export default function MissingReportsBanner({ currentUser }) {
           const authorMatch = !r.author_email || r.author_email === currentUser.email;
           if (!authorMatch) return false;
           // Normalizuj imiona — lowercase, trim, usuń wielokrotne spacje
-          const normalize = s => (s || "").toLowerCase().trim().replace(/\s+/g, " ");
+          const normalize = s => (s || "").toLowerCase().trim().replace(/\s+/g, " ").replace(/\s*-\s*/g, "-");
           const rName = normalize(r.client_name);
           const aName = normalize(a.client_name);
           // Pełne dopasowanie LUB pierwsze słowo (imię) się zgadza
