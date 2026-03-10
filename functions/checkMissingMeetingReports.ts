@@ -72,15 +72,20 @@ Deno.serve(async (req) => {
       if (diffDays <= 0 || diffDays > 30) continue;
 
       const reportExists = meetingReports.some(r => {
-        const nameMatch = (r.client_name || '').toLowerCase().trim() === (assignment.client_name || '').toLowerCase().trim();
         const authorMatch = r.author_email === assignment.assigned_user_email;
-        // Sprawdź czy data raportu jest w oknie ±3 dni od daty spotkania
+        if (!authorMatch) return false;
+        // Normalizuj imiona — lowercase, trim, usuń wielokrotne spacje
+        const normalize = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+        const rName = normalize(r.client_name);
+        const aName = normalize(assignment.client_name);
+        // Pełne dopasowanie LUB jedno zaczyna się od drugiego (różne pisownie)
+        const nameMatch = rName === aName || (rName.length > 2 && aName.startsWith(rName)) || (aName.length > 2 && rName.startsWith(aName));
+        if (!nameMatch) return false;
+        // Data raportu blisko daty spotkania (±5 dni) lub brak daty raportu
         const reportDay = parseDate(r.meeting_date);
         const meetingDay2 = parseDate(assignment.meeting_date);
-        const dateClose = reportDay && meetingDay2
-          ? Math.abs(reportDay - meetingDay2) <= 3 * 86400000
-          : true; // jeśli brak daty, nie blokuj
-        return nameMatch && authorMatch && dateClose;
+        const dateClose = !reportDay || !meetingDay2 || Math.abs(reportDay - meetingDay2) <= 5 * 86400000;
+        return dateClose;
       });
 
       if (reportExists) continue;
