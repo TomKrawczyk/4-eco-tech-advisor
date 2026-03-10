@@ -78,23 +78,24 @@ Deno.serve(async (req) => {
       if (!meetingDay) continue;
 
       const diffDays = Math.floor((today - meetingDay) / 86400000);
-      if (diffDays <= 0 || diffDays > 30) continue;
+      if (diffDays <= 0) continue; // tylko przeszłe, bez limitu wstecznego
 
-      const reportExists = meetingReports.some(r => {
+      const normalize = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/\s*-\s*/g, '-');
+      const aName = normalize(assignment.client_name);
+      const aPhone = normalizePhone(assignment.client_phone);
+
+      const reportExists = allReports.some(r => {
         const authorMatch = r.author_email === assignment.assigned_user_email;
         if (!authorMatch) return false;
-        // Normalizuj imiona — lowercase, trim, usuń wielokrotne spacje
-        const normalize = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/\s*-\s*/g, '-');
+
         const rName = normalize(r.client_name);
-        const aName = normalize(assignment.client_name);
-        // Pełne dopasowanie LUB jedno zaczyna się od drugiego (różne pisownie)
+        const rPhone = normalizePhone(r.client_phone);
+
+        // Dopasowanie po telefonie LUB po nazwie
+        const phoneMatch = aPhone.length >= 7 && rPhone.length >= 7 && aPhone === rPhone;
         const nameMatch = rName === aName || (rName.length > 2 && aName.startsWith(rName)) || (aName.length > 2 && rName.startsWith(aName));
-        if (!nameMatch) return false;
-        // Data raportu blisko daty spotkania (±5 dni) lub brak daty raportu
-        const reportDay = parseDate(r.meeting_date);
-        const meetingDay2 = parseDate(assignment.meeting_date);
-        const dateClose = !reportDay || !meetingDay2 || Math.abs(reportDay - meetingDay2) <= 5 * 86400000;
-        return dateClose;
+
+        return phoneMatch || nameMatch;
       });
 
       if (reportExists) continue;
