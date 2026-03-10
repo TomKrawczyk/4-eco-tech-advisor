@@ -73,8 +73,14 @@ Deno.serve(async (req) => {
 
       const reportExists = meetingReports.some(r => {
         const nameMatch = (r.client_name || '').toLowerCase().trim() === (assignment.client_name || '').toLowerCase().trim();
-        const authorMatch = r.author_email === assignment.assigned_user_email || r.created_by === assignment.assigned_user_email;
-        return nameMatch && authorMatch;
+        const authorMatch = r.author_email === assignment.assigned_user_email;
+        // Sprawdź czy data raportu jest w oknie ±3 dni od daty spotkania
+        const reportDay = parseDate(r.meeting_date);
+        const meetingDay2 = parseDate(assignment.meeting_date);
+        const dateClose = reportDay && meetingDay2
+          ? Math.abs(reportDay - meetingDay2) <= 3 * 86400000
+          : true; // jeśli brak daty, nie blokuj
+        return nameMatch && authorMatch && dateClose;
       });
 
       if (reportExists) continue;
