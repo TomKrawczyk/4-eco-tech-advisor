@@ -279,6 +279,13 @@ export default function MeetingReports() {
 
   const [view, setView] = useState(prefill ? "create" : "list");
 
+  // Wyczyść parametry URL po załadowaniu żeby nie zostały przy odświeżeniu
+  useEffect(() => {
+    if (prefill) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     const fetchUser = async () => {
       const user = await base44.auth.me();
