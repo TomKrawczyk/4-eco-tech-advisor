@@ -42,13 +42,20 @@ export default function MissingReportsBanner({ currentUser }) {
         if (day >= today || day < pastLimit) return false; // tylko przeszłe w oknie 30 dni
 
         const reportExists = reports.some(r => {
-          const nameMatch = (r.client_name || "").toLowerCase().trim() === (a.client_name || "").toLowerCase().trim();
           // Raport musi być od tego samego autora LUB nie mieć autora (stare raporty)
           const authorMatch = !r.author_email || r.author_email === currentUser.email;
-          // Data raportu blisko daty spotkania (±3 dni) lub brak daty raportu
+          if (!authorMatch) return false;
+          // Normalizuj imiona — lowercase, trim, usuń wielokrotne spacje
+          const normalize = s => (s || "").toLowerCase().trim().replace(/\s+/g, " ");
+          const rName = normalize(r.client_name);
+          const aName = normalize(a.client_name);
+          // Pełne dopasowanie LUB pierwsze słowo (imię) się zgadza
+          const nameMatch = rName === aName || (rName.length > 2 && aName.startsWith(rName)) || (aName.length > 2 && rName.startsWith(aName));
+          if (!nameMatch) return false;
+          // Data raportu blisko daty spotkania (±5 dni) lub brak daty raportu
           const reportDay = parseMeetingDate(r.meeting_date);
-          const dateClose = !reportDay || Math.abs(startOfDay(reportDay) - day) <= 3 * 86400000;
-          return nameMatch && authorMatch && dateClose;
+          const dateClose = !reportDay || Math.abs(startOfDay(reportDay) - day) <= 5 * 86400000;
+          return dateClose;
         });
         return !reportExists;
       });
