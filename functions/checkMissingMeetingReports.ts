@@ -52,12 +52,21 @@ Deno.serve(async (req) => {
     pastLimit.setDate(pastLimit.getDate() - 30);
     const todayStr = today.toISOString().split('T')[0];
 
-    const [assignments, meetingReports, notifications, allowedUsers] = await Promise.all([
+    const [assignments, meetingReports, visitReports, notifications, allowedUsers] = await Promise.all([
       base44.asServiceRole.entities.MeetingAssignment.list(),
       base44.asServiceRole.entities.MeetingReport.list(),
+      base44.asServiceRole.entities.VisitReport.list(),
       base44.asServiceRole.entities.Notification.list(),
       base44.asServiceRole.entities.AllowedUser.list(),
     ]);
+
+    // Łączymy oba typy raportów jako dowód spotkania
+    const allReports = [
+      ...meetingReports.map(r => ({ ...r, _source: 'meeting' })),
+      ...visitReports.map(r => ({ ...r, _source: 'visit' })),
+    ];
+
+    const normalizePhone = p => (p || '').replace(/\s+/g, '').replace(/[^\d]/g, '');
 
     // Grupuj brakujące raporty wg użytkownika
     const missingByUser = {}; // email -> [{assignment, diffDays}]
