@@ -227,8 +227,13 @@ export default function Calendar() {
       return [...calEvents, ...sheetMeetingEvents];
     }
 
+    // Dla zwykłego usera dodaj jego przypisania z MeetingAssignment
+    if (!isLeaderOrAdmin) {
+      return [...calEvents, ...myAssignmentEvents];
+    }
+
     return calEvents;
-  }, [events, currentUser, viewMode, groupUserEmails, isLeaderOrAdmin, sheetMeetingEvents, teamMemberEmails]);
+  }, [events, currentUser, viewMode, groupUserEmails, isLeaderOrAdmin, sheetMeetingEvents, teamMemberEmails, myAssignmentEvents]);
 
   // Dni miesiąca
   const monthStart = startOfMonth(currentMonth);
