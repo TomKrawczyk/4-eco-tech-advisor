@@ -42,9 +42,11 @@ export default function MissingReportsBanner({ currentUser }) {
         const day = startOfDay(d);
         if (day >= today || day < pastLimit) return false; // tylko przeszłe
 
-        const reportExists = reports.some(r =>
-          (r.client_name || "").toLowerCase().trim() === (a.client_name || "").toLowerCase().trim()
-        );
+        const reportExists = reports.some(r => {
+          const nameMatch = (r.client_name || "").toLowerCase().trim() === (a.client_name || "").toLowerCase().trim();
+          const authorMatch = !r.author_email || r.author_email === currentUser.email;
+          return nameMatch && authorMatch;
+        });
         return !reportExists;
       });
 
