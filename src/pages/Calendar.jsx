@@ -105,36 +105,6 @@ export default function Calendar() {
     return emails;
   }, [allUsers, currentUser]);
 
-  // Spotkania przypisane do zwykłego usera — widoczne w jego kalendarzu
-  const myAssignmentEvents = useMemo(() => {
-    if (!currentUser || isLeaderOrAdmin) return [];
-    return meetingAssignments
-      .filter(a => a.assigned_user_email === currentUser.email && a.meeting_calendar)
-      .map(a => {
-        const d = parseMeetingDate(a.meeting_calendar);
-        if (!d) return null;
-        const timeMatch = a.meeting_calendar?.match(/(\d{1,2}):(\d{2})/);
-        const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : "";
-        return {
-          id: `assignment_${a.id}`,
-          title: `📋 ${a.client_name}`,
-          description: `Arkusz: ${a.sheet}${a.comments ? `\n${a.comments}` : ""}`,
-          event_date: format(d, "yyyy-MM-dd"),
-          event_time: time,
-          event_type: "meeting",
-          status: "planned",
-          client_name: a.client_name,
-          client_phone: a.client_phone || "",
-          location: a.client_address || "",
-          owner_email: a.assigned_user_email,
-          owner_name: a.assigned_user_name || "",
-          source: "meeting_assignment",
-          is_sheet_meeting: true,
-        };
-      })
-      .filter(Boolean);
-  }, [meetingAssignments, currentUser, isLeaderOrAdmin]);
-
   // Konwertuj spotkania z arkuszy na pseudo-eventy kalendarza (dla wyświetlania)
   const sheetMeetingEvents = useMemo(() => {
     if (!currentUser || !isLeaderOrAdmin) return [];
@@ -203,6 +173,41 @@ export default function Calendar() {
       });
   }, [allSheetMeetings, currentUser, isLeaderOrAdmin, meetingAssignments, events, sheetMappings, teamMemberEmails]);
 
+  // Spotkania przypisane do zalogowanego użytkownika (dla wszystkich ról)
+  const myAssignmentEvents = useMemo(() => {
+    if (!currentUser) return [];
+    return meetingAssignments
+      .filter(a => a.assigned_user_email === currentUser.email)
+      .map(a => {
+        const dateStr = a.meeting_date || (() => {
+          const d = a.meeting_calendar?.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+          if (d) return `${d[3]}-${d[2].padStart(2,"0")}-${d[1].padStart(2,"0")}`;
+          return null;
+        })();
+        const timeMatch = a.meeting_calendar?.match(/(\d{1,2}):(\d{2})/);
+        const time = timeMatch ? `${timeMatch[1].padStart(2,"0")}:${timeMatch[2]}` : "";
+        // Sprawdź czy jest już CalendarEvent dla tego przypisania
+        const hasCalEv = events.some(e => e.meeting_assignment_id === a.meeting_key);
+        if (hasCalEv) return null;
+        return {
+          id: `assign_${a.id}`,
+          title: `📋 ${a.client_name}`,
+          event_date: dateStr || "",
+          event_time: time,
+          event_type: "meeting",
+          status: "planned",
+          client_name: a.client_name,
+          client_phone: a.client_phone || "",
+          location: a.client_address || "",
+          owner_email: a.assigned_user_email,
+          owner_name: a.assigned_user_name || "",
+          source: "meeting_assignment",
+          is_assignment: true,
+        };
+      })
+      .filter(Boolean);
+  }, [meetingAssignments, currentUser, events]);
+
   // Filtruj wydarzenia wg trybu + dodaj spotkania z arkuszy
   const visibleEvents = useMemo(() => {
     if (!currentUser) return [];
@@ -222,17 +227,15 @@ export default function Calendar() {
       calEvents = events.filter(e => e.owner_email === currentUser.email);
     }
 
+    // Zawsze dodaj przypisania dla własnych spotkań
+    const myAssigns = viewMode === "own" ? myAssignmentEvents : [];
+
     // W trybie zespołu, dodaj spotkania z arkuszy
     if (viewMode === "team" && isLeaderOrAdmin) {
       return [...calEvents, ...sheetMeetingEvents];
     }
 
-    // Dla zwykłego usera dodaj jego przypisania z MeetingAssignment
-    if (!isLeaderOrAdmin) {
-      return [...calEvents, ...myAssignmentEvents];
-    }
-
-    return calEvents;
+    return [...calEvents, ...myAssigns];
   }, [events, currentUser, viewMode, groupUserEmails, isLeaderOrAdmin, sheetMeetingEvents, teamMemberEmails, myAssignmentEvents]);
 
   // Dni miesiąca
