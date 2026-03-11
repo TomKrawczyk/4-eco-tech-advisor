@@ -268,23 +268,28 @@ export default function MeetingReports() {
   const queryClient = useQueryClient();
 
   // Sprawdź prefill z URL (po przejściu ze spotkania)
-  const urlParams = new URLSearchParams(window.location.search);
-  const prefill = urlParams.get("from_meeting") === "1" ? {
-    client_name: urlParams.get("prefill_client_name") || "",
-    client_phone: urlParams.get("prefill_client_phone") || "",
-    client_address: urlParams.get("prefill_client_address") || "",
-    meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
-    meeting_time: urlParams.get("prefill_meeting_time") || "",
-  } : null;
+  const getPrefill = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("from_meeting") !== "1") return null;
+    return {
+      client_name: urlParams.get("prefill_client_name") || "",
+      client_phone: urlParams.get("prefill_client_phone") || "",
+      client_address: urlParams.get("prefill_client_address") || "",
+      meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
+      meeting_time: urlParams.get("prefill_meeting_time") || "",
+    };
+  };
 
+  const prefill = getPrefill();
   const [view, setView] = useState(prefill ? "create" : "list");
 
-  // Wyczyść parametry URL po załadowaniu żeby nie zostały przy odświeżeniu
+  // Jeśli URL zmieni się na "from_meeting=1" (np. przez nawigację z kalendarza), od razu otwórz formularz
   useEffect(() => {
-    if (prefill) {
-      window.history.replaceState({}, "", window.location.pathname);
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("from_meeting") === "1") {
+      setView("create");
     }
-  }, []);
+  }, [window.location.search]);
 
   useEffect(() => {
     const fetchUser = async () => {
