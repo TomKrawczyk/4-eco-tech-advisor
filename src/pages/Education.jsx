@@ -130,6 +130,19 @@ export default function Education() {
     onSuccess: () => queryClient.invalidateQueries(['trainingViews', currentUser?.email])
   });
 
+  const handleDocUpload = async (file) => {
+    if (!file) return;
+    setUploadingDoc(true);
+    try {
+      const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+      setUploadedDocUrl(file_uri);
+      setUploadedDocName(file.name);
+      setFormData(prev => ({ ...prev, document_url: file_uri, document_name: file.name }));
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
   const handleFileUpload = async (file) => {
     if (!file) return;
     setUploading(true);
