@@ -103,7 +103,7 @@ export default function MissingReportsBanner({ currentUser }) {
         <span className="font-semibold">Brak raportów po spotkaniach! </span>
         <span>
           Masz {missingMeetings.length} {missingMeetings.length === 1 ? "spotkanie" : "spotkań"} bez raportu.{" "}
-          Brak raportowania może skutkować blokadą konta.
+          Brak raportowania przez 3 dni skutkuje blokadą konta.
         </span>
       </div>
       <Link
