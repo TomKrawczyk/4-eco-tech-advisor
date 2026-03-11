@@ -613,9 +613,23 @@ export default function Education() {
                           <span className="flex items-center gap-1"><Users className="w-3 h-3" />{getViewCount(training.id)} osób</span>
                         )}
                       </div>
-                      <Button size="sm" onClick={() => handleOpenTraining(training)} className="bg-green-600 hover:bg-green-700 gap-1">
-                        <Play className="w-3 h-3" />Obejrzyj
-                      </Button>
+                      <div className="flex gap-2">
+                       {training.document_url && (
+                         <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleOpenTraining(training); }} className="gap-1 border-blue-200 text-blue-700 hover:bg-blue-50">
+                           <FileText className="w-3 h-3" />Dokument
+                         </Button>
+                       )}
+                       {training.video_url && (
+                         <Button size="sm" onClick={() => handleOpenTraining(training)} className="bg-green-600 hover:bg-green-700 gap-1">
+                           <Play className="w-3 h-3" />Obejrzyj
+                         </Button>
+                       )}
+                       {!training.video_url && !training.document_url && (
+                         <Button size="sm" onClick={() => handleOpenTraining(training)} className="bg-green-600 hover:bg-green-700 gap-1">
+                           <Play className="w-3 h-3" />Otwórz
+                         </Button>
+                       )}
+                      </div>
                     </div>
                   </Card>
                 );
