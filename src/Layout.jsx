@@ -416,23 +416,8 @@ export default function Layout({ children, currentPageName }) {
               currentUser={currentUser}
               onCompleted={() => setPendingRequiredTraining(null)}
             />
-          ) : currentUser?.is_blocked && currentPageName !== "MeetingReports" ? (
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <div className="text-center max-w-md mx-auto">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ShieldAlert className="w-8 h-8 text-red-500" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Konto zablokowane</h2>
-                <p className="text-gray-600 mb-2">Twój dostęp do aplikacji został ograniczony z powodu braku raportów po spotkaniach.</p>
-                <p className="text-sm text-gray-500 mb-6">Złóż brakujące raporty aby odblokować dostęp.</p>
-                <a
-                  href={createPageUrl("MeetingReports")}
-                  className="inline-block px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                >
-                  Przejdź do raportów
-                </a>
-              </div>
-            </div>
+          ) : currentUser?.is_blocked ? (
+            <BlockedUserScreen currentUser={currentUser} />
           ) : (
             children
           )}
