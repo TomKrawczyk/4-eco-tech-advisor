@@ -366,6 +366,8 @@ export default function Meetings() {
       })
       .map(m => ({
         ...m,
+        // Normalizuj meeting_calendar do ISO żeby klucze pasowały do tych w MeetingAssignment
+        meeting_calendar: normalizeMeetingCalendar(m.meeting_calendar),
         meeting_date: format(startOfDay(parseMeetingDate(m.meeting_calendar)), "yyyy-MM-dd"),
       }));
   }, [allMeetings, today, maxDate]);
