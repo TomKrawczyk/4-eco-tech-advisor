@@ -251,6 +251,7 @@ export default function Meetings() {
     queryKey: ["meetingAssignments"],
     queryFn: () => base44.entities.MeetingAssignment.list(),
     enabled: accessChecked,
+    placeholderData: keepPreviousData,
   });
 
   const { data: meetingReports = [] } = useQuery({
