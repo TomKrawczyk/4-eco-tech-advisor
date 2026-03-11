@@ -572,6 +572,54 @@ export default function Education() {
         </TabsContent>
 
         {currentUser?.role === 'admin' && (
+          <TabsContent value="order">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500">Przeciągnij szkolenia aby zmienić ich kolejność wyświetlania.</p>
+                <Button onClick={saveOrder} disabled={reorderSaving} className="bg-green-600 hover:bg-green-700 gap-2">
+                  {reorderSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Zapisz kolejność
+                </Button>
+              </div>
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <Droppable droppableId="trainings-order">
+                  {(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                      {reorderList.map((training, index) => (
+                        <Draggable key={training.id} draggableId={training.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              className={`flex items-center gap-3 p-3 bg-white border-2 rounded-lg transition-shadow ${snapshot.isDragging ? 'shadow-lg border-green-400' : 'border-gray-200'}`}
+                            >
+                              <div {...provided.dragHandleProps} className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing">
+                                <GripVertical className="w-5 h-5" />
+                              </div>
+                              <span className="w-7 h-7 rounded-full bg-green-100 text-green-800 text-xs font-bold flex items-center justify-center shrink-0">
+                                {index + 1}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 truncate">{training.title}</div>
+                                <div className="text-xs text-gray-500">{categoryLabels[training.category]}</div>
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                {training.is_required && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Obowiązkowe</span>}
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            </div>
+          </TabsContent>
+        )}
+
+        {currentUser?.role === 'admin' && (
           <TabsContent value="stats">
             <div className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
