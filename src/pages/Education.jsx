@@ -323,6 +323,9 @@ export default function Education() {
           <TabsList>
             <TabsTrigger value="trainings"><BookOpen className="w-4 h-4 mr-1" />Szkolenia</TabsTrigger>
             {currentUser?.role === 'admin' && (
+              <TabsTrigger value="order"><GripVertical className="w-4 h-4 mr-1" />Kolejność</TabsTrigger>
+            )}
+            {currentUser?.role === 'admin' && (
               <TabsTrigger value="stats"><BarChart2 className="w-4 h-4 mr-1" />Statystyki</TabsTrigger>
             )}
           </TabsList>
