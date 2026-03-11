@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 // Dni opóźnienia po których następuje blokada
-const BLOCK_AFTER_DAYS = 7;
+const BLOCK_AFTER_DAYS = 3;
 
 const emailTemplate = (clientName, meetingDate, daysAgo) => `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
