@@ -33,17 +33,20 @@ Deno.serve(async (req) => {
       filterGroupId = body?.groupId || null;
     } catch (_) {}
 
-    const allowedUsers = await base44.asServiceRole.entities.AllowedUser.list();
-    const allGroups = await base44.asServiceRole.entities.Group.list();
+    const [allowedUsers, allGroups, sheetMappings, allAssignments] = await Promise.all([
+      base44.asServiceRole.entities.AllowedUser.list(),
+      base44.asServiceRole.entities.Group.list(),
+      base44.asServiceRole.entities.SheetGroupMapping.list(),
+      base44.asServiceRole.entities.MeetingAssignment.list(),
+    ]);
+
     const groups = filterGroupId ? allGroups.filter(g => g.id === filterGroupId) : allGroups;
-    const sheetMappings = await base44.asServiceRole.entities.SheetGroupMapping.list();
 
-    // Pobierz spotkania z arkusza (potrzebujemy danych)
-    const { data: sheetData } = await base44.asServiceRole.functions.invoke('getMeetingsFromSheets');
-    const meetings = sheetData?.meetings || [];
+    // Spotkania nieprzypisane do żadnego handlowca
+    const unassignedMeetings = allAssignments.filter(m => !m.assigned_user_email);
 
-    if (meetings.length === 0) {
-      return Response.json({ ok: true, message: 'Brak nowych spotkań' });
+    if (unassignedMeetings.length === 0) {
+      return Response.json({ ok: true, message: 'Brak nieprzypisanych spotkań' });
     }
 
     // Dla każdej grupy: znajdź jej group leaderów i spotkania z przypisanych arkuszy
@@ -60,8 +63,8 @@ Deno.serve(async (req) => {
 
       if (groupSheets.length === 0) continue;
 
-      // Spotkania z tych arkuszy (nieprzypisane do nikogo)
-      const groupMeetings = meetings.filter(m => groupSheets.includes(m.sheet));
+      // Nieprzypisane spotkania z tych arkuszy
+      const groupMeetings = unassignedMeetings.filter(m => groupSheets.includes(m.sheet));
       if (groupMeetings.length === 0) continue;
 
       // Znajdź group leaderów tej grupy
