@@ -187,6 +187,29 @@ export default function Education() {
     onSuccess: () => queryClient.invalidateQueries(['trainings'])
   });
 
+  const [reorderList, setReorderList] = useState([]);
+  const [reorderSaving, setReorderSaving] = useState(false);
+
+  // sync reorderList when trainings load
+  useEffect(() => {
+    if (trainings.length > 0) setReorderList([...trainings].sort((a, b) => (a.order ?? 999) - (b.order ?? 999)));
+  }, [trainings]);
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+    const items = Array.from(reorderList);
+    const [moved] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, moved);
+    setReorderList(items);
+  };
+
+  const saveOrder = async () => {
+    setReorderSaving(true);
+    await Promise.all(reorderList.map((t, i) => base44.entities.Training.update(t.id, { order: i + 1 })));
+    await queryClient.invalidateQueries(['trainings']);
+    setReorderSaving(false);
+  };
+
   const handleEdit = (training) => {
     setEditingTraining(training);
     setFormData({
