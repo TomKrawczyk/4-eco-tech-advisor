@@ -95,7 +95,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                       </div>
 
                       <div className="flex gap-1 shrink-0">
-                        {(dayIsPast || isToday(day)) && (ev.event_type === "meeting" || ev.is_sheet_meeting || ev.is_assignment) && (ev.owner_email === currentUser?.email || !ev.owner_email) && (
+                        {(ev.event_type === "meeting" || ev.is_sheet_meeting || ev.is_assignment) && (ev.owner_email === currentUser?.email || currentUser?.role === "admin" || !ev.owner_email) && (
                           <Link to={makeReportUrl(ev, day)} onClick={onClose}>
                             <Button size="sm" variant="outline" className="h-7 px-2 text-green-700 border-green-300 hover:bg-green-50 text-[10px] gap-1">
                               <FileText className="w-3 h-3" />
