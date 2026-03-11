@@ -9,13 +9,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, Lock, Unlock } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
+import UserNotificationsTab from "@/components/user-management/UserNotificationsTab";
 import { format } from "date-fns";
 
 export default function UserManagement() {
@@ -137,20 +138,6 @@ export default function UserManagement() {
     onError: (error) => {
       toast.error(`Błąd: ${error.message}`);
     },
-  });
-
-  const toggleBlockMutation = useMutation({
-    mutationFn: async ({ userId, block }) => {
-      await base44.entities.AllowedUser.update(userId, {
-        is_blocked: block,
-        blocked_reason: block ? "Zablokowano ręcznie przez administratora" : "",
-      });
-    },
-    onSuccess: (_, { block }) => {
-      queryClient.invalidateQueries(["allowedUsers"]);
-      toast.success(block ? "Użytkownik zablokowany" : "Użytkownik odblokowany");
-    },
-    onError: (error) => toast.error(`Błąd: ${error.message}`),
   });
 
   const updateUserMutation = useMutation({
@@ -352,7 +339,7 @@ export default function UserManagement() {
       />
 
       <Tabs defaultValue="users" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="requests">
             Prośby
             {registrationRequests.length > 0 && (
@@ -363,6 +350,7 @@ export default function UserManagement() {
           <TabsTrigger value="profiles">Profile</TabsTrigger>
           <TabsTrigger value="groups">Grupy</TabsTrigger>
           <TabsTrigger value="activity"><Activity className="w-3 h-3 mr-1" />Aktywność</TabsTrigger>
+          <TabsTrigger value="notifications"><Bell className="w-3 h-3 mr-1" />Powiadomienia</TabsTrigger>
         </TabsList>
 
         <TabsContent value="requests" className="space-y-4">
@@ -603,39 +591,11 @@ export default function UserManagement() {
                     <Clock className="w-3 h-3 inline mr-1" />
                     Ostatnia aktywność: {formatLastActivity(user.data?.last_activity || user.last_activity)}
                   </div>
-                  {(user.data?.is_blocked || user.is_blocked) && (
-                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full mt-1 w-fit">
-                      <Lock className="w-3 h-3" /> Zablokowany
-                    </span>
-                  )}
                   {(user.data?.notes || user.notes) && (
                     <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.data?.notes || user.notes}</p>
                   )}
                 </div>
-                <div className="flex gap-1 flex-wrap justify-end">
-                  {(user.data?.is_blocked || user.is_blocked) ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleBlockMutation.mutate({ userId: user.id, block: false })}
-                      disabled={toggleBlockMutation.isPending}
-                      className="shrink-0 text-green-700 hover:bg-green-50 text-xs px-2"
-                      title="Odblokuj użytkownika"
-                    >
-                      <Unlock className="w-3.5 h-3.5 mr-1" /> Odblokuj
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleBlockMutation.mutate({ userId: user.id, block: true })}
-                      disabled={toggleBlockMutation.isPending}
-                      className="shrink-0 text-red-600 hover:bg-red-50 text-xs px-2"
-                      title="Zablokuj użytkownika"
-                    >
-                      <Lock className="w-3.5 h-3.5 mr-1" /> Zablokuj
-                    </Button>
-                  )}
+                <div className="flex gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -690,6 +650,10 @@ export default function UserManagement() {
 
       <TabsContent value="activity">
         <ActivityLogTab allowedUsers={allowedUsers} />
+      </TabsContent>
+
+      <TabsContent value="notifications">
+        <UserNotificationsTab allowedUsers={allowedUsers} />
       </TabsContent>
       </Tabs>
 
