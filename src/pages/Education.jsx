@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil, GripVertical } from "lucide-react";
+import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil, FileText, ExternalLink, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import PageHeader from "@/components/shared/PageHeader";
 import { Progress } from "@/components/ui/progress";
@@ -187,29 +187,6 @@ export default function Education() {
     onSuccess: () => queryClient.invalidateQueries(['trainings'])
   });
 
-  const [reorderList, setReorderList] = useState([]);
-  const [reorderSaving, setReorderSaving] = useState(false);
-
-  // sync reorderList when trainings load
-  useEffect(() => {
-    if (trainings.length > 0) setReorderList([...trainings].sort((a, b) => (a.order ?? 999) - (b.order ?? 999)));
-  }, [trainings]);
-
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
-    const items = Array.from(reorderList);
-    const [moved] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, moved);
-    setReorderList(items);
-  };
-
-  const saveOrder = async () => {
-    setReorderSaving(true);
-    await Promise.all(reorderList.map((t, i) => base44.entities.Training.update(t.id, { order: i + 1 })));
-    await queryClient.invalidateQueries(['trainings']);
-    setReorderSaving(false);
-  };
-
   const handleEdit = (training) => {
     setEditingTraining(training);
     setFormData({
@@ -297,9 +274,6 @@ export default function Education() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <TabsList>
             <TabsTrigger value="trainings"><BookOpen className="w-4 h-4 mr-1" />Szkolenia</TabsTrigger>
-            {currentUser?.role === 'admin' && (
-              <TabsTrigger value="order"><GripVertical className="w-4 h-4 mr-1" />Kolejność</TabsTrigger>
-            )}
             {currentUser?.role === 'admin' && (
               <TabsTrigger value="stats"><BarChart2 className="w-4 h-4 mr-1" />Statystyki</TabsTrigger>
             )}
@@ -570,54 +544,6 @@ export default function Education() {
             </div>
           )}
         </TabsContent>
-
-        {currentUser?.role === 'admin' && (
-          <TabsContent value="order">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-500">Przeciągnij szkolenia aby zmienić ich kolejność wyświetlania.</p>
-                <Button onClick={saveOrder} disabled={reorderSaving} className="bg-green-600 hover:bg-green-700 gap-2">
-                  {reorderSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Zapisz kolejność
-                </Button>
-              </div>
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="trainings-order">
-                  {(provided) => (
-                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                      {reorderList.map((training, index) => (
-                        <Draggable key={training.id} draggableId={training.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              className={`flex items-center gap-3 p-3 bg-white border-2 rounded-lg transition-shadow ${snapshot.isDragging ? 'shadow-lg border-green-400' : 'border-gray-200'}`}
-                            >
-                              <div {...provided.dragHandleProps} className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing">
-                                <GripVertical className="w-5 h-5" />
-                              </div>
-                              <span className="w-7 h-7 rounded-full bg-green-100 text-green-800 text-xs font-bold flex items-center justify-center shrink-0">
-                                {index + 1}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 truncate">{training.title}</div>
-                                <div className="text-xs text-gray-500">{categoryLabels[training.category]}</div>
-                              </div>
-                              <div className="flex gap-1 shrink-0">
-                                {training.is_required && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Obowiązkowe</span>}
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
-            </div>
-          </TabsContent>
-        )}
 
         {currentUser?.role === 'admin' && (
           <TabsContent value="stats">
