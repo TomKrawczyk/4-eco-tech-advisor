@@ -9,7 +9,7 @@ async function sendBrevoEmail({ to, toName, subject, text }) {
       "api-key": apiKey,
     },
     body: JSON.stringify({
-      sender: { name: "4-ECO Green Energy", email: "noreply@4-eco.pl" },
+      sender: { name: "4-ECO Green Energy", email: "noreply@mail4eco.pl" },
       to: [{ email: to, name: toName || to }],
       subject,
       textContent: text,
