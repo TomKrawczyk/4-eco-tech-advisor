@@ -231,11 +231,13 @@ export default function Education() {
       description: training.description || "",
       category: training.category || "sprzedaz",
       video_url: training.video_url || "",
+      document_url: training.document_url || "",
+      document_name: training.document_name || "",
       duration_minutes: training.duration_minutes || "",
       is_required: training.is_required || false
     });
     setUploadMode("url");
-    setUploadedVideoUrl("");
+    setUploadedVideoUrl(""); setUploadedDocUrl(""); setUploadedDocName("");
   };
 
   const [signedVideoUrl, setSignedVideoUrl] = useState(null);
