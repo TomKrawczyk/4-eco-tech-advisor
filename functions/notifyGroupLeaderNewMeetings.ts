@@ -90,9 +90,12 @@ Deno.serve(async (req) => {
 
         // Email
         try {
-          const meetingList = groupMeetings.slice(0, 10).map(m =>
-            `• ${m.client_name}${m.meeting_calendar ? ' – ' + m.meeting_calendar : ''} (${m.sheet})`
-          ).join('\n');
+          const meetingList = groupMeetings.slice(0, 10).map(m => {
+            const name = m.data?.client_name || m.client_name || '?';
+            const cal = m.data?.meeting_calendar || m.meeting_calendar || '';
+            const sheet = m.data?.sheet || m.sheet || '';
+            return `• ${name}${cal ? ' – ' + cal : ''} (${sheet})`;
+          }).join('\n');
           const moreText = groupMeetings.length > 10 ? `\n...i ${groupMeetings.length - 10} więcej.` : '';
 
           await sendBrevoEmail({
