@@ -202,25 +202,44 @@ export default function Education() {
 
   const [signedVideoUrl, setSignedVideoUrl] = useState(null);
   const [loadingVideo, setLoadingVideo] = useState(false);
+  const [signedDocUrl, setSignedDocUrl] = useState(null);
+  const [loadingDoc, setLoadingDoc] = useState(false);
+  const [docModalOpen, setDocModalOpen] = useState(false);
 
   const handleOpenTraining = async (training) => {
     setSelectedTraining(training);
     setSignedVideoUrl(null);
+    setSignedDocUrl(null);
     markViewedMutation.mutate(training);
 
     if (training.video_url && isPrivateFileUri(training.video_url)) {
       setLoadingVideo(true);
       try {
-        const res = await base44.integrations.Core.CreateFileSignedUrl({
-          file_uri: training.video_url,
-          expires_in: 3600
-        });
+        const res = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: training.video_url, expires_in: 3600 });
         setSignedVideoUrl(res.signed_url);
       } finally {
         setLoadingVideo(false);
       }
     }
+    if (training.document_url && isPrivateFileUri(training.document_url)) {
+      setLoadingDoc(true);
+      try {
+        const res = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: training.document_url, expires_in: 3600 });
+        setSignedDocUrl(res.signed_url);
+      } finally {
+        setLoadingDoc(false);
+      }
+    }
   };
+
+  const closeModal = () => {
+    setSelectedTraining(null);
+    setSignedVideoUrl(null);
+    setSignedDocUrl(null);
+    setDocModalOpen(false);
+  };
+
+  const getDocUrl = () => signedDocUrl || (selectedTraining?.document_url?.startsWith('http') ? selectedTraining.document_url : null);
 
   const handleDownloadAttempt = async (training) => {
     // Notify all admins about the download attempt
