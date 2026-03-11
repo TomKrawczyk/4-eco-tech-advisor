@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -247,7 +247,7 @@ export default function Meetings() {
     enabled: accessChecked,
   });
 
-  const { data: meetingAssignments = [], isLoading: assignmentsLoading } = useQuery({
+  const { data: meetingAssignments = [] } = useQuery({
     queryKey: ["meetingAssignments"],
     queryFn: () => base44.entities.MeetingAssignment.list(),
     enabled: accessChecked,
@@ -447,13 +447,6 @@ export default function Meetings() {
 
   // Zwykły użytkownik widzi tylko swoje przypisane spotkania – z pełnymi szczegółami
   if (!isLeaderOrAdmin) {
-    if (assignmentsLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="w-7 h-7 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      );
-    }
     return (
       <UserMeetingsView
         myAssignedMeetings={myAssignedMeetings}
