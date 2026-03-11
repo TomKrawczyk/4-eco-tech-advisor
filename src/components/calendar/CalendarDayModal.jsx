@@ -22,7 +22,20 @@ const statusColors = {
 };
 const statusLabels = { planned: "Zaplanowane", completed: "Zakończone", cancelled: "Anulowane" };
 
+function makeReportUrl(ev, day) {
+  const dateStr = format(day, "yyyy-MM-dd");
+  const params = new URLSearchParams({
+    from_meeting: "1",
+    prefill_client_name: ev.client_name || ev.title?.replace(/^📋\s*/, "") || "",
+    prefill_client_phone: ev.client_phone || "",
+    prefill_client_address: ev.location || "",
+    prefill_meeting_date: ev.event_date || dateStr,
+  });
+  return `${createPageUrl("MeetingReports")}?${params.toString()}`;
+}
+
 export default function CalendarDayModal({ day, events, currentUser, viewMode, onClose, onEdit, onDelete, onAdd }) {
+  const dayIsPast = isPast(day) && !isToday(day);
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
