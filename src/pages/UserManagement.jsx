@@ -139,6 +139,20 @@ export default function UserManagement() {
     },
   });
 
+  const toggleBlockMutation = useMutation({
+    mutationFn: async ({ userId, block }) => {
+      await base44.entities.AllowedUser.update(userId, {
+        is_blocked: block,
+        blocked_reason: block ? "Zablokowano ręcznie przez administratora" : "",
+      });
+    },
+    onSuccess: (_, { block }) => {
+      queryClient.invalidateQueries(["allowedUsers"]);
+      toast.success(block ? "Użytkownik zablokowany" : "Użytkownik odblokowany");
+    },
+    onError: (error) => toast.error(`Błąd: ${error.message}`),
+  });
+
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, updates, oldAssignedTo }) => {
       await base44.entities.AllowedUser.update(userId, updates);
