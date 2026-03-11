@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -268,28 +269,16 @@ export default function MeetingReports() {
   const queryClient = useQueryClient();
 
   // Sprawdź prefill z URL (po przejściu ze spotkania)
-  const getPrefill = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("from_meeting") !== "1") return null;
-    return {
-      client_name: urlParams.get("prefill_client_name") || "",
-      client_phone: urlParams.get("prefill_client_phone") || "",
-      client_address: urlParams.get("prefill_client_address") || "",
-      meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
-      meeting_time: urlParams.get("prefill_meeting_time") || "",
-    };
-  };
+  const urlParams = new URLSearchParams(window.location.search);
+  const prefill = urlParams.get("from_meeting") === "1" ? {
+    client_name: urlParams.get("prefill_client_name") || "",
+    client_phone: urlParams.get("prefill_client_phone") || "",
+    client_address: urlParams.get("prefill_client_address") || "",
+    meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
+    meeting_time: urlParams.get("prefill_meeting_time") || "",
+  } : null;
 
-  const prefill = getPrefill();
   const [view, setView] = useState(prefill ? "create" : "list");
-
-  // Jeśli URL zmieni się na "from_meeting=1" (np. przez nawigację z kalendarza), od razu otwórz formularz
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("from_meeting") === "1") {
-      setView("create");
-    }
-  }, [window.location.search]);
 
   useEffect(() => {
     const fetchUser = async () => {
