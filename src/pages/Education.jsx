@@ -65,7 +65,7 @@ export default function Education() {
   const [editingTraining, setEditingTraining] = useState(null);
   const [formData, setFormData] = useState({
     title: "", description: "", category: "sprzedaz",
-    video_url: "", duration_minutes: "", is_required: false
+    video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false
   });
   const [uploadMode, setUploadMode] = useState("url"); // "url" | "file"
   const [uploadProgress, setUploadProgress] = useState(0);
