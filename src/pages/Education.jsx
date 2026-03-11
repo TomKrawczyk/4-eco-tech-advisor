@@ -168,14 +168,18 @@ export default function Education() {
     mutationFn: (data) => base44.entities.Training.create({
       ...data,
       video_url: uploadMode === "file" ? uploadedVideoUrl : data.video_url,
+      document_url: uploadedDocUrl || data.document_url,
+      document_name: uploadedDocName || data.document_name,
       duration_minutes: data.duration_minutes ? Number(data.duration_minutes) : undefined,
       order: trainings.length + 1
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setShowAddDialog(false);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false, document_url: "", document_name: "" });
       setUploadedVideoUrl("");
+      setUploadedDocUrl("");
+      setUploadedDocName("");
       setUploadProgress(0);
       setUploadMode("url");
     }
