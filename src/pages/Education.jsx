@@ -523,6 +523,20 @@ export default function Education() {
                     </label>
                   )}
                 </div>
+                <div>
+                  <Label className="mb-2 block">Dokument PDF/TXT (opcjonalnie)</Label>
+                  <label className={`flex items-center gap-3 w-full px-3 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploadingDoc ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>
+                    <input type="file" accept=".pdf,.txt,application/pdf,text/plain" className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleDocUpload(e.target.files[0])} disabled={uploadingDoc} />
+                    {uploadingDoc ? (
+                      <><Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" /><span className="text-sm text-blue-700">Przesyłanie...</span></>
+                    ) : (uploadedDocUrl || formData.document_url) ? (
+                      <><FileText className="w-4 h-4 text-blue-600 shrink-0" /><span className="text-sm text-blue-700 truncate">{uploadedDocName || formData.document_name || "Dokument przesłany"}</span><span className="text-xs text-gray-400 ml-auto shrink-0">Zmień</span></>
+                    ) : (
+                      <><Upload className="w-4 h-4 text-gray-400 shrink-0" /><span className="text-sm text-gray-500">Kliknij aby wgrać PDF lub TXT</span></>
+                    )}
+                  </label>
+                </div>
                 <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
                   <input
                     type="checkbox"
