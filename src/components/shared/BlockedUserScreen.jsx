@@ -33,7 +33,20 @@ export default function BlockedUserScreen({ currentUser }) {
 
       const allReports = [...reports, ...visitReports];
 
-      const missing = assignments.filter(a => {
+      // Deduplikacja: jeśli klient ma kilka spotkań (przeniesione), bierz tylko najnowsze
+      const deduped = new Map();
+      for (const a of assignments) {
+        const meetingDay = parseMeetingDate(a.meeting_calendar || a.meeting_date);
+        if (!meetingDay) continue;
+        const keyId = normalizePhone(a.client_phone) || normalize(a.client_name);
+        if (!keyId) continue;
+        const existing = deduped.get(keyId);
+        if (!existing || meetingDay > parseMeetingDate(existing.meeting_calendar || existing.meeting_date)) {
+          deduped.set(keyId, a);
+        }
+      }
+
+      const missing = Array.from(deduped.values()).filter(a => {
         const meetingDay = parseMeetingDate(a.meeting_calendar || a.meeting_date);
         if (!meetingDay) return false;
         if (startOfDay(meetingDay) >= today) return false;
