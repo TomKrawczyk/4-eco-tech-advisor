@@ -783,6 +783,43 @@ export default function Education() {
                 </div>
               </div>
             )}
+            {/* Dokument PDF/TXT */}
+            {selectedTraining.document_url && (
+              <div className="border-t border-gray-200">
+                {loadingDoc ? (
+                  <div className="h-16 flex items-center justify-center gap-2 text-gray-500 text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" />Ładowanie dokumentu...
+                  </div>
+                ) : (signedDocUrl || (!isPrivateFileUri(selectedTraining.document_url) && selectedTraining.document_url)) ? (
+                  <div>
+                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border-b border-blue-100">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">{selectedTraining.document_name || "Dokument"}</span>
+                    </div>
+                    {(signedDocUrl || selectedTraining.document_url)?.toLowerCase().includes('.pdf') || selectedTraining.document_name?.toLowerCase().endsWith('.pdf') ? (
+                      <iframe
+                        src={signedDocUrl || selectedTraining.document_url}
+                        className="w-full"
+                        style={{ height: '60vh' }}
+                        title={selectedTraining.document_name || "Dokument"}
+                      />
+                    ) : (
+                      <div className="p-4 text-center">
+                        <a
+                          href={signedDocUrl || selectedTraining.document_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        >
+                          <ExternalLink className="w-4 h-4" />Otwórz dokument
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+
             {selectedTraining.description && (
               <div className="p-4">
                 <p className="text-sm text-gray-700">{selectedTraining.description}</p>
