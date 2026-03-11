@@ -8,6 +8,7 @@ import NotificationPanel from "@/components/notifications/NotificationPanel";
 import RequiredTrainingGate from "@/components/training/RequiredTrainingGate";
 import OfflineBanner from "@/components/offline/OfflineBanner";
 import MissingReportsBanner from "@/components/shared/MissingReportsBanner";
+import BlockedUserScreen from "@/components/shared/BlockedUserScreen";
 
 // Dropdown dla desktop
 function DesktopDropdown({ label, items, isGroupActive, currentPageName }) {
