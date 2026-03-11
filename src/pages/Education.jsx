@@ -10,8 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil, FileText, ExternalLink, GripVertical } from "lucide-react";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil, FileText, ExternalLink, X } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { Progress } from "@/components/ui/progress";
 
@@ -65,17 +64,12 @@ export default function Education() {
   const [editingTraining, setEditingTraining] = useState(null);
   const [formData, setFormData] = useState({
     title: "", description: "", category: "sprzedaz",
-    video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false
+    video_url: "", duration_minutes: "", is_required: false
   });
   const [uploadMode, setUploadMode] = useState("url"); // "url" | "file"
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState("");
-  const [uploadingDoc, setUploadingDoc] = useState(false);
-  const [uploadedDocUrl, setUploadedDocUrl] = useState("");
-  const [uploadedDocName, setUploadedDocName] = useState("");
-  const [reorderList, setReorderList] = useState([]);
-  const [reorderSaving, setReorderSaving] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -133,38 +127,6 @@ export default function Education() {
     onSuccess: () => queryClient.invalidateQueries(['trainingViews', currentUser?.email])
   });
 
-  useEffect(() => {
-    if (trainings.length > 0) setReorderList([...trainings].sort((a, b) => (a.order ?? 999) - (b.order ?? 999)));
-  }, [trainings]);
-
-  const handleDocUpload = async (file) => {
-    if (!file) return;
-    setUploadingDoc(true);
-    try {
-      const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
-      setUploadedDocUrl(file_uri);
-      setUploadedDocName(file.name);
-      setFormData(prev => ({ ...prev, document_url: file_uri, document_name: file.name }));
-    } finally {
-      setUploadingDoc(false);
-    }
-  };
-
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
-    const items = Array.from(reorderList);
-    const [moved] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, moved);
-    setReorderList(items);
-  };
-
-  const saveOrder = async () => {
-    setReorderSaving(true);
-    await Promise.all(reorderList.map((t, i) => base44.entities.Training.update(t.id, { order: i + 1 })));
-    await queryClient.invalidateQueries(['trainings']);
-    setReorderSaving(false);
-  };
-
   const handleFileUpload = async (file) => {
     if (!file) return;
     setUploading(true);
@@ -196,8 +158,8 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setShowAddDialog(false);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false });
-      setUploadedVideoUrl(""); setUploadedDocUrl(""); setUploadedDocName("");
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
+      setUploadedVideoUrl("");
       setUploadProgress(0);
       setUploadMode("url");
     }
@@ -212,8 +174,8 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setEditingTraining(null);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false });
-      setUploadedVideoUrl(""); setUploadedDocUrl(""); setUploadedDocName("");
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
+      setUploadedVideoUrl("");
       setUploadProgress(0);
       setUploadMode("url");
     }
@@ -231,42 +193,31 @@ export default function Education() {
       description: training.description || "",
       category: training.category || "sprzedaz",
       video_url: training.video_url || "",
-      document_url: training.document_url || "",
-      document_name: training.document_name || "",
       duration_minutes: training.duration_minutes || "",
       is_required: training.is_required || false
     });
     setUploadMode("url");
-    setUploadedVideoUrl(""); setUploadedDocUrl(""); setUploadedDocName("");
+    setUploadedVideoUrl("");
   };
 
   const [signedVideoUrl, setSignedVideoUrl] = useState(null);
   const [loadingVideo, setLoadingVideo] = useState(false);
-  const [signedDocUrl, setSignedDocUrl] = useState(null);
-  const [loadingDoc, setLoadingDoc] = useState(false);
 
   const handleOpenTraining = async (training) => {
     setSelectedTraining(training);
     setSignedVideoUrl(null);
-    setSignedDocUrl(null);
     markViewedMutation.mutate(training);
 
     if (training.video_url && isPrivateFileUri(training.video_url)) {
       setLoadingVideo(true);
       try {
-        const res = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: training.video_url, expires_in: 3600 });
+        const res = await base44.integrations.Core.CreateFileSignedUrl({
+          file_uri: training.video_url,
+          expires_in: 3600
+        });
         setSignedVideoUrl(res.signed_url);
       } finally {
         setLoadingVideo(false);
-      }
-    }
-    if (training.document_url && isPrivateFileUri(training.document_url)) {
-      setLoadingDoc(true);
-      try {
-        const res = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: training.document_url, expires_in: 3600 });
-        setSignedDocUrl(res.signed_url);
-      } finally {
-        setLoadingDoc(false);
       }
     }
   };
@@ -322,9 +273,6 @@ export default function Education() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <TabsList>
             <TabsTrigger value="trainings"><BookOpen className="w-4 h-4 mr-1" />Szkolenia</TabsTrigger>
-            {currentUser?.role === 'admin' && (
-              <TabsTrigger value="order"><GripVertical className="w-4 h-4 mr-1" />Kolejność</TabsTrigger>
-            )}
             {currentUser?.role === 'admin' && (
               <TabsTrigger value="stats"><BarChart2 className="w-4 h-4 mr-1" />Statystyki</TabsTrigger>
             )}
@@ -424,20 +372,6 @@ export default function Education() {
                         </div>
                       )}
                     </div>
-                    <div>
-                      <Label className="mb-2 block">Dokument PDF/TXT (opcjonalnie)</Label>
-                      <label className={`flex items-center gap-3 w-full px-3 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploadingDoc ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>
-                        <input type="file" accept=".pdf,.txt,application/pdf,text/plain" className="hidden"
-                          onChange={(e) => e.target.files?.[0] && handleDocUpload(e.target.files[0])} disabled={uploadingDoc} />
-                        {uploadingDoc ? (
-                          <><Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" /><span className="text-sm text-blue-700">Przesyłanie...</span></>
-                        ) : (uploadedDocUrl || formData.document_url) ? (
-                          <><FileText className="w-4 h-4 text-blue-600 shrink-0" /><span className="text-sm text-blue-700 truncate">{uploadedDocName || formData.document_name || "Dokument przesłany"}</span><span className="text-xs text-gray-400 ml-auto shrink-0">Zmień</span></>
-                        ) : (
-                          <><Upload className="w-4 h-4 text-gray-400 shrink-0" /><span className="text-sm text-gray-500">Kliknij aby wgrać PDF lub TXT</span></>
-                        )}
-                      </label>
-                    </div>
                     <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
                       <input
                         type="checkbox"
@@ -526,20 +460,6 @@ export default function Education() {
                     </label>
                   )}
                 </div>
-                <div>
-                  <Label className="mb-2 block">Dokument PDF/TXT (opcjonalnie)</Label>
-                  <label className={`flex items-center gap-3 w-full px-3 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploadingDoc ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>
-                    <input type="file" accept=".pdf,.txt,application/pdf,text/plain" className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleDocUpload(e.target.files[0])} disabled={uploadingDoc} />
-                    {uploadingDoc ? (
-                      <><Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" /><span className="text-sm text-blue-700">Przesyłanie...</span></>
-                    ) : (uploadedDocUrl || formData.document_url) ? (
-                      <><FileText className="w-4 h-4 text-blue-600 shrink-0" /><span className="text-sm text-blue-700 truncate">{uploadedDocName || formData.document_name || "Dokument przesłany"}</span><span className="text-xs text-gray-400 ml-auto shrink-0">Zmień</span></>
-                    ) : (
-                      <><Upload className="w-4 h-4 text-gray-400 shrink-0" /><span className="text-sm text-gray-500">Kliknij aby wgrać PDF lub TXT</span></>
-                    )}
-                  </label>
-                </div>
                 <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
                   <input
                     type="checkbox"
@@ -623,46 +543,6 @@ export default function Education() {
             </div>
           )}
         </TabsContent>
-
-        {currentUser?.role === 'admin' && (
-          <TabsContent value="order">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-500">Przeciągnij szkolenia aby zmienić kolejność wyświetlania.</p>
-                <Button onClick={saveOrder} disabled={reorderSaving} className="bg-green-600 hover:bg-green-700 gap-2">
-                  {reorderSaving && <Loader2 className="w-4 h-4 animate-spin" />}Zapisz kolejność
-                </Button>
-              </div>
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="trainings-order">
-                  {(provided) => (
-                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                      {reorderList.map((training, index) => (
-                        <Draggable key={training.id} draggableId={training.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div ref={provided.innerRef} {...provided.draggableProps}
-                              className={`flex items-center gap-3 p-3 bg-white border-2 rounded-lg transition-shadow ${snapshot.isDragging ? 'shadow-lg border-green-400' : 'border-gray-200'}`}>
-                              <div {...provided.dragHandleProps} className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing">
-                                <GripVertical className="w-5 h-5" />
-                              </div>
-                              <span className="w-7 h-7 rounded-full bg-green-100 text-green-800 text-xs font-bold flex items-center justify-center shrink-0">{index + 1}</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 truncate">{training.title}</div>
-                                <div className="text-xs text-gray-500">{categoryLabels[training.category]}</div>
-                              </div>
-                              {training.is_required && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full shrink-0">Obowiązkowe</span>}
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
-            </div>
-          </TabsContent>
-        )}
 
         {currentUser?.role === 'admin' && (
           <TabsContent value="stats">
@@ -807,33 +687,6 @@ export default function Education() {
                   <Play className="w-12 h-12 mx-auto mb-2" />
                   <p>Brak linku do wideo</p>
                 </div>
-              </div>
-            )}
-            {/* Dokument */}
-            {selectedTraining.document_url && (
-              <div className="border-t border-gray-200">
-                {loadingDoc ? (
-                  <div className="h-12 flex items-center justify-center gap-2 text-sm text-gray-500">
-                    <Loader2 className="w-4 h-4 animate-spin" />Ładowanie dokumentu...
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border-b border-blue-100">
-                      <FileText className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800">{selectedTraining.document_name || "Dokument"}</span>
-                    </div>
-                    {(selectedTraining.document_name || "").toLowerCase().endsWith('.pdf') || (signedDocUrl || selectedTraining.document_url || "").includes('.pdf') ? (
-                      <iframe src={signedDocUrl || selectedTraining.document_url} className="w-full" style={{ height: '60vh' }} title="Dokument" />
-                    ) : (
-                      <div className="p-4 text-center">
-                        <a href={signedDocUrl || selectedTraining.document_url} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-                          <ExternalLink className="w-4 h-4" />Otwórz dokument
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )}
             {selectedTraining.description && (
