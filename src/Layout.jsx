@@ -98,29 +98,62 @@ export default function Layout({ children, currentPageName }) {
   const [pendingRequiredTraining, setPendingRequiredTraining] = useState(null);
 
   React.useEffect(() => {
+    const CACHE_KEY = 'layout_user_cache';
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minut
+
     const checkAccess = async () => {
+      // Sprawdź cache sesji — jeśli świeży, użyj go bez zapytań do API
       try {
-        const user = await base44.auth.me();
-        const allowedUsers = await base44.entities.AllowedUser.list();
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data, ts } = JSON.parse(cached);
+          if (Date.now() - ts < CACHE_TTL) {
+            setCurrentUser(data.user);
+            setHasAccess(data.hasAccess);
+            if (data.pendingTraining) setPendingRequiredTraining(data.pendingTraining);
+            setCheckingAccess(false);
+            return;
+          }
+        }
+      } catch (_) {}
+
+      try {
+        // Pobierz usera i allowedUsers równolegle
+        const [user, allowedUsers] = await Promise.all([
+          base44.auth.me(),
+          base44.entities.AllowedUser.list()
+        ]);
+
         const userAccess = allowedUsers.find(allowed =>
           (allowed.data?.email || allowed.email) === user.email
         );
+
         if (userAccess) {
           user.role = userAccess.data?.role || userAccess.role;
           user.displayName = userAccess.data?.name || userAccess.name;
           user.is_blocked = (userAccess.data?.is_blocked || userAccess.is_blocked) === true;
-          setCurrentUser(user);
-          setHasAccess(true);
 
+          let pendingTraining = null;
           if (user.role !== 'admin') {
             const [trainings, views] = await Promise.all([
               base44.entities.Training.list('order'),
               base44.entities.TrainingView.filter({ user_email: user.email })
             ]);
             const completedIds = new Set(views.map(v => v.training_id));
-            const requiredPending = trainings.find(t => t.is_required && t.is_published !== false && !completedIds.has(t.id));
-            if (requiredPending) setPendingRequiredTraining(requiredPending);
+            pendingTraining = trainings.find(t => t.is_required && t.is_published !== false && !completedIds.has(t.id)) || null;
           }
+
+          setCurrentUser(user);
+          setHasAccess(true);
+          if (pendingTraining) setPendingRequiredTraining(pendingTraining);
+
+          // Zapisz do cache
+          try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+              ts: Date.now(),
+              data: { user, hasAccess: true, pendingTraining }
+            }));
+          } catch (_) {}
 
           base44.functions.invoke('trackUserActivity').catch(() => {});
         } else {
@@ -136,11 +169,13 @@ export default function Layout({ children, currentPageName }) {
     };
 
     checkAccess();
+
     const activityInterval = setInterval(() => {
-      if (hasAccess) base44.functions.invoke('trackUserActivity').catch(() => {});
+      base44.functions.invoke('trackUserActivity').catch(() => {});
     }, 5 * 60 * 1000);
+
     return () => clearInterval(activityInterval);
-  }, [hasAccess]);
+  }, []);
 
   const isItemVisible = (item) => {
     if (item.adminOnly && currentUser?.role !== "admin") return false;
