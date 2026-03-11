@@ -44,7 +44,21 @@ export default function MissingReportsBanner({ currentUser }) {
         ...visitReports.map(r => ({ ...r, client_phone: r.client_phone, _source: "visit" })),
       ];
 
-      const missing = assignments.filter(a => {
+      // Deduplikacja: jeśli klient ma kilka spotkań (przeniesione), bierz tylko najnowsze
+      const deduped = new Map();
+      for (const a of assignments) {
+        const meetingDay = parseMeetingDate(a.meeting_calendar || a.meeting_date);
+        if (!meetingDay) continue;
+        const keyId = normalizePhone(a.client_phone) || normalize(a.client_name);
+        if (!keyId) continue;
+        const existing = deduped.get(keyId);
+        if (!existing || meetingDay > parseMeetingDate(existing.meeting_calendar || existing.meeting_date)) {
+          deduped.set(keyId, a);
+        }
+      }
+      const dedupedAssignments = Array.from(deduped.values());
+
+      const missing = dedupedAssignments.filter(a => {
         const meetingDay = parseMeetingDate(a.meeting_calendar || a.meeting_date);
         if (!meetingDay) return false;
         const day = startOfDay(meetingDay);
