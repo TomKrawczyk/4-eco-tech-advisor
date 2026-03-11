@@ -70,6 +70,9 @@ export default function Education() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState("");
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadedDocUrl, setUploadedDocUrl] = useState("");
+  const [uploadedDocName, setUploadedDocName] = useState("");
 
   const queryClient = useQueryClient();
 
