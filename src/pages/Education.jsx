@@ -196,8 +196,8 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setShowAddDialog(false);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
-      setUploadedVideoUrl("");
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false });
+      setUploadedVideoUrl(""); setUploadedDocUrl(""); setUploadedDocName("");
       setUploadProgress(0);
       setUploadMode("url");
     }
