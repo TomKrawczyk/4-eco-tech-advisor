@@ -605,11 +605,37 @@ export default function UserManagement() {
                     <Clock className="w-3 h-3 inline mr-1" />
                     Ostatnia aktywność: {formatLastActivity(user.data?.last_activity || user.last_activity)}
                   </div>
+                  {(user.data?.is_blocked || user.is_blocked) && (
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full mt-1 w-fit">
+                      <Lock className="w-3 h-3" /> Zablokowany
+                    </span>
+                  )}
                   {(user.data?.notes || user.notes) && (
                     <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.data?.notes || user.notes}</p>
                   )}
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-wrap justify-end">
+                  {(user.data?.is_blocked || user.is_blocked) ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleBlockMutation.mutate({ userId: user.id, block: false })}
+                      disabled={toggleBlockMutation.isPending}
+                      className="shrink-0 text-green-700 hover:bg-green-50 text-xs px-2"
+                    >
+                      <Unlock className="w-3.5 h-3.5 mr-1" /> Odblokuj
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleBlockMutation.mutate({ userId: user.id, block: true })}
+                      disabled={toggleBlockMutation.isPending}
+                      className="shrink-0 text-red-600 hover:bg-red-50 text-xs px-2"
+                    >
+                      <Lock className="w-3.5 h-3.5 mr-1" /> Zablokuj
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
