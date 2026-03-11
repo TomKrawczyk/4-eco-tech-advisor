@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -17,18 +17,40 @@ import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-// Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
+// Parsuje daty w różnych formatach: "DD.MM.YYYY HH:MM", "YYYY-MM-DD HH:MM", itp.
 function parseMeetingDate(str) {
   if (!str) return null;
-  const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (match) {
-    const [, d, m, y] = match;
+  // Format polski: DD.MM.YYYY
+  const matchPL = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (matchPL) {
+    const [, d, m, y] = matchPL;
     const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     if (isValid(date)) return date;
   }
-  const parsed = new Date(str);
-  if (isValid(parsed)) return parsed;
+  // Format ISO: YYYY-MM-DD lub YYYY-MM-DD HH:MM — traktuj jako lokalny czas
+  const matchISO = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  if (matchISO) {
+    const [, y, m, d, h = 0, min = 0] = matchISO;
+    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(h), parseInt(min));
+    if (isValid(date)) return date;
+  }
   return null;
+}
+
+// Normalizuje meeting_calendar do formatu YYYY-MM-DD HH:MM (lub bez godziny)
+// żeby klucze z arkusza i z bazy były spójne
+function normalizeMeetingCalendar(str) {
+  if (!str) return str;
+  // Już w formacie ISO
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str;
+  // Format polski DD.MM.YYYY HH:MM → ISO
+  const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}:\d{2}))?/);
+  if (match) {
+    const [, d, m, y, time] = match;
+    const dateStr = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+    return time ? `${dateStr} ${time}` : dateStr;
+  }
+  return str;
 }
 
 function formatDateLabel(dateStr) {
@@ -251,7 +273,6 @@ export default function Meetings() {
     queryKey: ["meetingAssignments"],
     queryFn: () => base44.entities.MeetingAssignment.list(),
     enabled: accessChecked,
-    placeholderData: keepPreviousData,
   });
 
   const { data: meetingReports = [] } = useQuery({
