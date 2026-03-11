@@ -67,18 +67,39 @@ Deno.serve(async (req) => {
     ];
 
     const normalizePhone = p => (p || '').replace(/\s+/g, '').replace(/[^\d]/g, '');
+    const normalizeStr = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+
+    // Deduplikacja: dla każdego użytkownika i klienta bierz tylko NAJNOWSZE przypisanie
+    // Jeśli spotkanie zostało przełożone na przyszłość, nie wymagamy raportu
+    const dedupedAssignments = (() => {
+      const map = new Map(); // key: email|phone_or_name -> najnowsze assignment
+      for (const a of assignments) {
+        if (!a.assigned_user_email) continue;
+        const phone = normalizePhone(a.client_phone);
+        const name = normalizeStr(a.client_name);
+        const clientKey = phone.length >= 7 ? phone : name;
+        const key = `${a.assigned_user_email}|${clientKey}`;
+        const existing = map.get(key);
+        const thisDate = parseDate(a.meeting_date);
+        const existDate = existing ? parseDate(existing.meeting_date) : null;
+        if (!existing || (thisDate && existDate && thisDate > existDate)) {
+          map.set(key, a);
+        }
+      }
+      return Array.from(map.values());
+    })();
 
     // Grupuj brakujące raporty wg użytkownika
     const missingByUser = {}; // email -> [{assignment, diffDays}]
 
-    for (const assignment of assignments) {
+    for (const assignment of dedupedAssignments) {
       if (!assignment.meeting_date || !assignment.assigned_user_email) continue;
 
       const meetingDay = parseDate(assignment.meeting_date);
       if (!meetingDay) continue;
 
       const diffDays = Math.floor((today - meetingDay) / 86400000);
-      if (diffDays <= 0) continue; // tylko przeszłe, bez limitu wstecznego
+      if (diffDays <= 0) continue; // tylko przeszłe (przyszłe/dzisiejsze → brak wymogu raportu)
 
       const normalize = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/\s*-\s*/g, '-');
       const aName = normalize(assignment.client_name);
