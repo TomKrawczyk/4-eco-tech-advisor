@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -263,36 +262,22 @@ function MeetingDetail({ report, onBack, onDelete, onEdit }) {
 }
 
 export default function MeetingReports() {
-  const location = useLocation();
   const [search, setSearch] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Pobierz prefill z URL
-  const getPrefill = (search) => {
-    const urlParams = new URLSearchParams(search);
-    if (urlParams.get("from_meeting") !== "1") return null;
-    return {
-      client_name: urlParams.get("prefill_client_name") || "",
-      client_phone: urlParams.get("prefill_client_phone") || "",
-      client_address: urlParams.get("prefill_client_address") || "",
-      meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
-      meeting_time: urlParams.get("prefill_meeting_time") || "",
-    };
-  };
+  // Sprawdź prefill z URL (po przejściu ze spotkania)
+  const urlParams = new URLSearchParams(window.location.search);
+  const prefill = urlParams.get("from_meeting") === "1" ? {
+    client_name: urlParams.get("prefill_client_name") || "",
+    client_phone: urlParams.get("prefill_client_phone") || "",
+    client_address: urlParams.get("prefill_client_address") || "",
+    meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
+    meeting_time: urlParams.get("prefill_meeting_time") || "",
+  } : null;
 
-  const prefill = getPrefill(location.search);
   const [view, setView] = useState(prefill ? "create" : "list");
-
-  // Za każdym razem gdy URL się zmienia (np. klik Raport z kalendarza), otwórz formularz
-  useEffect(() => {
-    const p = getPrefill(location.search);
-    if (p) {
-      setSelectedReport(null);
-      setView("create");
-    }
-  }, [location.search]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -308,11 +293,23 @@ export default function MeetingReports() {
     fetchUser();
   }, []);
 
-  const { data: reports = [], isLoading } = useQuery({
+  const { data: allReports = [], isLoading } = useQuery({
     queryKey: ["meetingReports"],
-    queryFn: () => base44.entities.MeetingReport.list("-created_date", 100),
+    queryFn: () => base44.entities.MeetingReport.list("-created_date", 200),
     enabled: !!currentUser,
   });
+
+  const { data: hierarchyData } = useQuery({
+    queryKey: ["userHierarchy", currentUser?.email],
+    queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
+    enabled: !!currentUser,
+  });
+
+  const reports = React.useMemo(() => {
+    if (!currentUser || !hierarchyData?.data) return [];
+    const allowedEmails = hierarchyData.data.userEmails || [];
+    return allReports.filter(r => allowedEmails.includes(r.created_by));
+  }, [allReports, hierarchyData, currentUser]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MeetingReport.create({
