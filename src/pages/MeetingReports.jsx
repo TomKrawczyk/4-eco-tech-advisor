@@ -305,7 +305,7 @@ export default function MeetingReports() {
     enabled: !!currentUser,
   });
 
-  const reports = React.useMemo(() => {
+  const reports = useMemo(() => {
     if (!currentUser || !hierarchyData?.data) return [];
     const allowedEmails = hierarchyData.data.userEmails || [];
     return allReports.filter(r => allowedEmails.includes(r.created_by));
