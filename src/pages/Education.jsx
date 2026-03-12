@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil, FileText, ExternalLink, X } from "lucide-react";
+import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { Progress } from "@/components/ui/progress";
 
@@ -202,9 +202,8 @@ export default function Education() {
 
   const [signedVideoUrl, setSignedVideoUrl] = useState(null);
   const [loadingVideo, setLoadingVideo] = useState(false);
+
   const [signedDocUrl, setSignedDocUrl] = useState(null);
-  const [loadingDoc, setLoadingDoc] = useState(false);
-  const [docModalOpen, setDocModalOpen] = useState(false);
 
   const handleOpenTraining = async (training) => {
     setSelectedTraining(training);
@@ -212,34 +211,31 @@ export default function Education() {
     setSignedDocUrl(null);
     markViewedMutation.mutate(training);
 
+    // Signed URL dla prywatnego wideo
     if (training.video_url && isPrivateFileUri(training.video_url)) {
       setLoadingVideo(true);
       try {
-        const res = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: training.video_url, expires_in: 3600 });
+        const res = await base44.integrations.Core.CreateFileSignedUrl({
+          file_uri: training.video_url,
+          expires_in: 3600
+        });
         setSignedVideoUrl(res.signed_url);
       } finally {
         setLoadingVideo(false);
       }
     }
+
+    // Signed URL dla prywatnego dokumentu PDF
     if (training.document_url && isPrivateFileUri(training.document_url)) {
-      setLoadingDoc(true);
       try {
-        const res = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: training.document_url, expires_in: 3600 });
+        const res = await base44.integrations.Core.CreateFileSignedUrl({
+          file_uri: training.document_url,
+          expires_in: 3600
+        });
         setSignedDocUrl(res.signed_url);
-      } finally {
-        setLoadingDoc(false);
-      }
+      } catch (_) {}
     }
   };
-
-  const closeModal = () => {
-    setSelectedTraining(null);
-    setSignedVideoUrl(null);
-    setSignedDocUrl(null);
-    setDocModalOpen(false);
-  };
-
-  const getDocUrl = () => signedDocUrl || (selectedTraining?.document_url?.startsWith('http') ? selectedTraining.document_url : null);
 
   const handleDownloadAttempt = async (training) => {
     // Notify all admins about the download attempt
@@ -654,122 +650,63 @@ export default function Education() {
 
       {/* Modal z wideo */}
       {selectedTraining && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={closeModal}>
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b shrink-0">
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); }}>
+          <div className="bg-white rounded-2xl w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b">
               <div>
                 <h2 className="font-bold text-lg text-gray-900">{selectedTraining.title}</h2>
                 <Badge className={categoryColors[selectedTraining.category]}>{categoryLabels[selectedTraining.category]}</Badge>
               </div>
-              <div className="flex items-center gap-2">
-                {selectedTraining.document_url && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
-                    onClick={() => setDocModalOpen(true)}
-                    disabled={loadingDoc}
-                  >
-                    {loadingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                    {selectedTraining.document_name || "Dokument"}
-                  </Button>
-                )}
-                <Button variant="ghost" size="icon" onClick={closeModal}><X className="w-5 h-5" /></Button>
-              </div>
+              <Button variant="ghost" size="icon" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); }}>✕</Button>
             </div>
-            <div className="overflow-y-auto flex-1">
-              {selectedTraining.video_url ? (
-                isExternalEmbed(selectedTraining.video_url) ? (
-                  <div className="relative pt-[56.25%] bg-black">
-                    <iframe
-                      src={getEmbedUrl(selectedTraining.video_url)}
-                      className="absolute inset-0 w-full h-full"
-                      allowFullScreen
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    />
-                  </div>
-                ) : loadingVideo ? (
-                  <div className="h-64 flex items-center justify-center bg-gray-900">
-                    <div className="text-center text-white">
-                      <Loader2 className="w-10 h-10 animate-spin mx-auto mb-2" />
-                      <p className="text-sm">Ładowanie wideo...</p>
-                    </div>
-                  </div>
-                ) : signedVideoUrl ? (
-                  <div className="relative bg-black" onContextMenu={(e) => { e.preventDefault(); handleDownloadAttempt(selectedTraining); }}>
-                    <video
-                      src={signedVideoUrl}
-                      className="w-full max-h-[60vh]"
-                      controls
-                      controlsList="nodownload nofullscreen"
-                      disablePictureInPicture
-                      onContextMenu={(e) => e.preventDefault()}
-                    />
-                    <div className="absolute inset-0 pointer-events-none select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }} />
-                  </div>
-                ) : null
-              ) : !selectedTraining.document_url ? (
-                <div className="h-64 flex items-center justify-center bg-gray-50">
-                  <div className="text-center text-gray-400">
-                    <Play className="w-12 h-12 mx-auto mb-2" />
-                    <p>Brak linku do wideo</p>
+            {selectedTraining.video_url ? (
+              isExternalEmbed(selectedTraining.video_url) ? (
+                <div className="relative pt-[56.25%] bg-black">
+                  <iframe
+                    src={getEmbedUrl(selectedTraining.video_url)}
+                    className="absolute inset-0 w-full h-full"
+                    allowFullScreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  />
+                </div>
+              ) : loadingVideo ? (
+                <div className="h-64 flex items-center justify-center bg-gray-900">
+                  <div className="text-center text-white">
+                    <Loader2 className="w-10 h-10 animate-spin mx-auto mb-2" />
+                    <p className="text-sm">Ładowanie wideo...</p>
                   </div>
                 </div>
-              ) : null}
-              {selectedTraining.description && (
-                <div className="p-4 border-t">
-                  <p className="text-sm text-gray-700">{selectedTraining.description}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal z dokumentem PDF — pełnoekranowy */}
-      {docModalOpen && selectedTraining && (
-        <div className="fixed inset-0 bg-black/80 z-[60] flex flex-col" onClick={() => setDocModalOpen(false)}>
-          <div className="flex items-center justify-between px-4 py-3 bg-white border-b shrink-0" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-gray-900">{selectedTraining.document_name || selectedTraining.title}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {getDocUrl() && (
-                <a
-                  href={getDocUrl()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  onClick={(e) => e.stopPropagation()}
+              ) : signedVideoUrl ? (
+                <div
+                  className="relative bg-black"
+                  onContextMenu={(e) => { e.preventDefault(); handleDownloadAttempt(selectedTraining); }}
                 >
-                  <ExternalLink className="w-4 h-4" />
-                  Otwórz w nowej karcie
-                </a>
-              )}
-              <Button variant="ghost" size="icon" onClick={() => setDocModalOpen(false)}><X className="w-5 h-5" /></Button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            {loadingDoc ? (
-              <div className="h-full flex items-center justify-center">
-                <div className="text-center text-white">
-                  <Loader2 className="w-10 h-10 animate-spin mx-auto mb-2" />
-                  <p>Ładowanie dokumentu...</p>
+                  <video
+                    src={signedVideoUrl}
+                    className="w-full max-h-[60vh]"
+                    controls
+                    controlsList="nodownload nofullscreen"
+                    disablePictureInPicture
+                    onContextMenu={(e) => e.preventDefault()}
+                  />
+                  {/* Invisible overlay to block right-click on video */}
+                  <div
+                    className="absolute inset-0 pointer-events-none select-none"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                  />
+                </div>
+              ) : null
+            ) : (
+              <div className="h-64 flex items-center justify-center bg-gray-50">
+                <div className="text-center text-gray-400">
+                  <Play className="w-12 h-12 mx-auto mb-2" />
+                  <p>Brak linku do wideo</p>
                 </div>
               </div>
-            ) : getDocUrl() ? (
-              <iframe
-                src={getDocUrl()}
-                className="w-full h-full"
-                title={selectedTraining.document_name || "Dokument"}
-              />
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <div className="text-center text-white">
-                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Nie można załadować dokumentu</p>
-                </div>
+            )}
+            {selectedTraining.description && (
+              <div className="p-4">
+                <p className="text-sm text-gray-700">{selectedTraining.description}</p>
               </div>
             )}
           </div>
