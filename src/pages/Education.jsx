@@ -659,7 +659,8 @@ export default function Education() {
               </div>
               <Button variant="ghost" size="icon" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); }}>✕</Button>
             </div>
-            {selectedTraining.video_url ? (
+            {/* Wideo */}
+            {selectedTraining.video_url && (
               isExternalEmbed(selectedTraining.video_url) ? (
                 <div className="relative pt-[56.25%] bg-black">
                   <iframe
@@ -689,18 +690,37 @@ export default function Education() {
                     disablePictureInPicture
                     onContextMenu={(e) => e.preventDefault()}
                   />
-                  {/* Invisible overlay to block right-click on video */}
-                  <div
-                    className="absolute inset-0 pointer-events-none select-none"
-                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
-                  />
+                  <div className="absolute inset-0 pointer-events-none select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }} />
                 </div>
               ) : null
-            ) : (
+            )}
+
+            {/* Dokument PDF */}
+            {selectedTraining.document_url && (() => {
+              const docUrl = isPrivateFileUri(selectedTraining.document_url) ? signedDocUrl : selectedTraining.document_url;
+              if (!docUrl) return (
+                <div className="h-32 flex items-center justify-center bg-gray-50">
+                  <Loader2 className="w-6 h-6 text-green-600 animate-spin" />
+                </div>
+              );
+              return (
+                <div className="border-t border-gray-200">
+                  <iframe
+                    src={docUrl}
+                    className="w-full"
+                    style={{ height: '70vh' }}
+                    title={selectedTraining.document_name || "Dokument"}
+                  />
+                </div>
+              );
+            })()}
+
+            {/* Fallback gdy brak obu */}
+            {!selectedTraining.video_url && !selectedTraining.document_url && (
               <div className="h-64 flex items-center justify-center bg-gray-50">
                 <div className="text-center text-gray-400">
                   <Play className="w-12 h-12 mx-auto mb-2" />
-                  <p>Brak linku do wideo</p>
+                  <p>Brak materiałów do wyświetlenia</p>
                 </div>
               </div>
             )}
