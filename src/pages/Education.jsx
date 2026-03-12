@@ -201,11 +201,13 @@ export default function Education() {
   };
 
   const [signedVideoUrl, setSignedVideoUrl] = useState(null);
+  const [signedDocUrl, setSignedDocUrl] = useState(null);
   const [loadingVideo, setLoadingVideo] = useState(false);
 
   const handleOpenTraining = async (training) => {
     setSelectedTraining(training);
     setSignedVideoUrl(null);
+    setSignedDocUrl(null);
     markViewedMutation.mutate(training);
 
     if (training.video_url && isPrivateFileUri(training.video_url)) {
@@ -219,6 +221,20 @@ export default function Education() {
       } finally {
         setLoadingVideo(false);
       }
+    }
+
+    if (training.document_url && isPrivateFileUri(training.document_url)) {
+      try {
+        const res = await base44.integrations.Core.CreateFileSignedUrl({
+          file_uri: training.document_url,
+          expires_in: 3600
+        });
+        setSignedDocUrl(res.signed_url);
+      } catch (e) {
+        console.error("Error creating signed URL for document", e);
+      }
+    } else if (training.document_url) {
+      setSignedDocUrl(training.document_url);
     }
   };
 
@@ -633,20 +649,18 @@ export default function Education() {
         )}
       </Tabs>
 
-      {/* Modal z wideo / dokumentem */}
+      {/* Modal z wideo */}
       {selectedTraining && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); setSignedDocUrl(null); }}>
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); }}>
           <div className="bg-white rounded-2xl w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b">
               <div>
                 <h2 className="font-bold text-lg text-gray-900">{selectedTraining.title}</h2>
                 <Badge className={categoryColors[selectedTraining.category]}>{categoryLabels[selectedTraining.category]}</Badge>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); setSignedDocUrl(null); }}>✕</Button>
+              <Button variant="ghost" size="icon" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); }}>✕</Button>
             </div>
-
-            {/* Wideo */}
-            {selectedTraining.video_url && (
+            {selectedTraining.video_url ? (
               isExternalEmbed(selectedTraining.video_url) ? (
                 <div className="relative pt-[56.25%] bg-black">
                   <iframe
@@ -664,44 +678,35 @@ export default function Education() {
                   </div>
                 </div>
               ) : signedVideoUrl ? (
-                <div className="relative bg-black" onContextMenu={(e) => { e.preventDefault(); handleDownloadAttempt(selectedTraining); }}>
-                  <video src={signedVideoUrl} className="w-full max-h-[60vh]" controls controlsList="nodownload nofullscreen" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} />
-                  <div className="absolute inset-0 pointer-events-none select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }} />
+                <div
+                  className="relative bg-black"
+                  onContextMenu={(e) => { e.preventDefault(); handleDownloadAttempt(selectedTraining); }}
+                >
+                  <video
+                    src={signedVideoUrl}
+                    className="w-full max-h-[60vh]"
+                    controls
+                    controlsList="nodownload nofullscreen"
+                    disablePictureInPicture
+                    onContextMenu={(e) => e.preventDefault()}
+                  />
+                  {/* Invisible overlay to block right-click on video */}
+                  <div
+                    className="absolute inset-0 pointer-events-none select-none"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                  />
                 </div>
               ) : null
-            )}
-
-            {/* Dokument PDF — przycisk otwierający w nowym oknie */}
-            {selectedTraining.document_url && (
-              <div className="p-5 flex items-center justify-between bg-gray-50 border-t border-gray-100">
-                <div className="flex items-center gap-2 text-sm text-gray-700">
-                  <BookOpen className="w-4 h-4 text-green-600 shrink-0" />
-                  <span className="font-medium">{selectedTraining.document_name || "Dokument PDF"}</span>
-                </div>
-                {signedDocUrl ? (
-                  <Button size="sm" className="bg-green-600 hover:bg-green-700 gap-1 shrink-0" onClick={() => window.open(signedDocUrl, '_blank')}>
-                    <BookOpen className="w-3 h-3" /> Otwórz PDF
-                  </Button>
-                ) : (
-                  <span className="flex items-center gap-2 text-sm text-gray-400">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Przygotowywanie...
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Brak materiałów */}
-            {!selectedTraining.video_url && !selectedTraining.document_url && (
-              <div className="h-48 flex items-center justify-center bg-gray-50">
+            ) : (
+              <div className="h-64 flex items-center justify-center bg-gray-50">
                 <div className="text-center text-gray-400">
                   <Play className="w-12 h-12 mx-auto mb-2" />
-                  <p>Brak materiałów do wyświetlenia</p>
+                  <p>Brak linku do wideo</p>
                 </div>
               </div>
             )}
-
             {selectedTraining.description && (
-              <div className="p-4 border-t border-gray-100">
+              <div className="p-4">
                 <p className="text-sm text-gray-700">{selectedTraining.description}</p>
               </div>
             )}
