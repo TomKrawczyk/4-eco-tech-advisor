@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
   try {
@@ -9,9 +9,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Znajdź AllowedUser dla tego użytkownika
-    const allowedUsers = await base44.asServiceRole.entities.AllowedUser.list();
-    const allowedUser = allowedUsers.find(u => (u.data?.email || u.email) === user.email);
+    // Filtruj bezpośrednio po emailu zamiast pobierać wszystkich
+    const results = await base44.asServiceRole.entities.AllowedUser.filter({ email: user.email });
+    const allowedUser = results[0];
 
     if (allowedUser) {
       await base44.asServiceRole.entities.AllowedUser.update(allowedUser.id, {
