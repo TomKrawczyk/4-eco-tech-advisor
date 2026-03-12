@@ -549,7 +549,10 @@ export default function Education() {
                         )}
                       </div>
                       <Button size="sm" onClick={() => handleOpenTraining(training)} className="bg-green-600 hover:bg-green-700 gap-1">
-                        <Play className="w-3 h-3" />Obejrzyj
+                        {training.document_url && !training.video_url
+                          ? <><BookOpen className="w-3 h-3" />Otwórz</>
+                          : <><Play className="w-3 h-3" />Obejrzyj</>
+                        }
                       </Button>
                     </div>
                   </Card>
