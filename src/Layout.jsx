@@ -172,7 +172,7 @@ export default function Layout({ children, currentPageName }) {
 
     const activityInterval = setInterval(() => {
       base44.functions.invoke('trackUserActivity').catch(() => {});
-    }, 5 * 60 * 1000);
+    }, 15 * 60 * 1000);
 
     return () => clearInterval(activityInterval);
   }, []);
