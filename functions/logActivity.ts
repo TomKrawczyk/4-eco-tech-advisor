@@ -15,15 +15,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'action_type is required' }, { status: 400 });
     }
 
-    // Pobierz dane użytkownika z AllowedUser
-    const allowedUsers = await base44.entities.AllowedUser.list();
-    const userAccess = allowedUsers.find(allowed => 
-      (allowed.data?.email || allowed.email) === user.email
-    );
-
     await base44.entities.ActivityLog.create({
       user_email: user.email,
-      user_name: userAccess?.data?.name || userAccess?.name || user.full_name,
+      user_name: user.full_name,
       action_type,
       page_name: page_name || null,
       details: details || {},
