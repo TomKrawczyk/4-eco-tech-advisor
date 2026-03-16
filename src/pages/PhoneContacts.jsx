@@ -318,32 +318,49 @@ export default function PhoneContacts() {
             <p className="text-sm text-gray-500">Nie masz jeszcze żadnych przypisanych kontaktów telefonicznych.</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {myContacts.map((c, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
-                {c.phone && (
-                  <a href={`tel:${c.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
-                    <Phone className="w-3 h-3" /> {c.phone}
-                  </a>
-                )}
-                {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {c.sheet && <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{c.sheet}</Badge>}
-                  {c.assigned_group_name && (
-                    <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
-                  )}
+          <div className="space-y-6">
+            {Object.entries(
+              myContacts.reduce((acc, c) => {
+                const key = c.sheet || "Inne";
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(c);
+                return acc;
+              }, {})
+            ).map(([source, items]) => {
+              const { badgeCls } = getSourceStyle(source);
+              return (
+                <div key={source}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge className={`text-xs px-3 py-1 border font-semibold ${badgeCls}`}>{source}</Badge>
+                    <span className="text-xs text-gray-400">{items.length} kontaktów</span>
+                  </div>
+                  <div className="space-y-2">
+                    {items.map((c, i) => (
+                      <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
+                        {c.phone && (
+                          <a href={`tel:${c.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
+                            <Phone className="w-3 h-3" /> {c.phone}
+                          </a>
+                        )}
+                        {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
+                        {c.comments && (
+                          <div className="text-xs text-gray-600 mt-1 bg-gray-50 rounded px-2 py-1">{c.comments}</div>
+                        )}
+                        {(c.comments || c.agent || c.interview_data) && (
+                          <button
+                            onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                            className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                          >
+                            Szczegóły
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {(c.comments || c.agent) && (
-                  <button
-                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
-                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                  >
-                    Szczegóły
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
