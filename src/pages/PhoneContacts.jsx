@@ -457,9 +457,9 @@ export default function PhoneContacts() {
           {sheetGroups.map(({ sheet, dates }) => {
             const isOpen = expandedSheets[sheet] ?? false;
             const total = dates.reduce((acc, d) => acc + d.items.length, 0);
+            const { badgeCls, headerCls } = getSourceStyle(sheet);
             return (
-              {(() => { const { badgeCls, headerCls } = getSourceStyle(sheet); return (
-              <div key={sheet} className={`border rounded-xl overflow-hidden bg-white ${headerCls.replace('hover:', '')}`}>
+              <div key={sheet} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
                 <button
                   onClick={() => toggleSheet(sheet)}
                   className={`w-full flex items-center justify-between px-4 py-3 transition-colors text-left ${headerCls}`}
