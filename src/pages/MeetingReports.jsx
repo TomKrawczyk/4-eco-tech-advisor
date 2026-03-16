@@ -299,7 +299,7 @@ export default function MeetingReports() {
     enabled: !!currentUser,
   });
 
-  const reports = React.useMemo(() => {
+  const reports = useMemo(() => {
     if (!currentUser) return [];
     if (currentUser.role === "admin" || currentUser.role === "group_leader" || currentUser.role === "team_leader") {
       return allReports;
