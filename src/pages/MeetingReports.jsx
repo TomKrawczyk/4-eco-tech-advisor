@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -293,23 +294,11 @@ export default function MeetingReports() {
     fetchUser();
   }, []);
 
-  const { data: allReports = [], isLoading } = useQuery({
+  const { data: reports = [], isLoading } = useQuery({
     queryKey: ["meetingReports"],
-    queryFn: () => base44.entities.MeetingReport.list("-created_date", 200),
+    queryFn: () => base44.entities.MeetingReport.list("-created_date", 100),
     enabled: !!currentUser,
   });
-
-  const { data: hierarchyData } = useQuery({
-    queryKey: ["userHierarchy", currentUser?.email],
-    queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
-    enabled: !!currentUser,
-  });
-
-  const reports = useMemo(() => {
-    if (!currentUser || !hierarchyData?.data) return [];
-    const allowedEmails = hierarchyData.data.userEmails || [];
-    return allReports.filter(r => allowedEmails.includes(r.created_by));
-  }, [allReports, hierarchyData, currentUser]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MeetingReport.create({
