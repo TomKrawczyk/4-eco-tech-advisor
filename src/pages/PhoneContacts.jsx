@@ -458,14 +458,15 @@ export default function PhoneContacts() {
             const isOpen = expandedSheets[sheet] ?? false;
             const total = dates.reduce((acc, d) => acc + d.items.length, 0);
             return (
-              <div key={sheet} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+              {(() => { const { badgeCls, headerCls } = getSourceStyle(sheet); return (
+              <div key={sheet} className={`border rounded-xl overflow-hidden bg-white ${headerCls.replace('hover:', '')}`}>
                 <button
                   onClick={() => toggleSheet(sheet)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                  className={`w-full flex items-center justify-between px-4 py-3 transition-colors text-left ${headerCls}`}
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-800 text-sm">{sheet}</span>
-                    <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{total} kontaktów</Badge>
+                    <Badge className={`text-[10px] border ${badgeCls}`}>{total} kontaktów</Badge>
                   </div>
                   {isOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </button>
