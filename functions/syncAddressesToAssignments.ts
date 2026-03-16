@@ -56,10 +56,12 @@ Deno.serve(async (req) => {
 
   const { accessToken } = await base44.asServiceRole.connectors.getConnection('googlesheets');
   const allTabs = await getAllSheetTabs(accessToken);
+  console.log('Zakładki:', allTabs.length);
 
   // Pobierz wszystkie dane z arkuszy
   const allMaps = await Promise.all(allTabs.map(tab => fetchAddressesFromSheet(accessToken, tab)));
   const masterMap = Object.assign({}, ...allMaps);
+  console.log('Łącznie kluczy w mapie:', Object.keys(masterMap).length);
 
   // Pobierz wszystkie MeetingAssignment
   const assignments = await base44.asServiceRole.entities.MeetingAssignment.list('-created_date', 2000);
