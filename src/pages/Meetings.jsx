@@ -100,10 +100,13 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
 
               <div className="space-y-3">
                 {meetings.map((a, i) => {
+                  // Adres — sprawdź wszystkie możliwe pola (dane mogą być w różnych polach zależnie od źródła)
+                  const clientAddress = a.client_address || a.address || "";
+                  const clientPhone = a.client_phone || a.phone || "";
                   const clientParams = new URLSearchParams({
                     prefill_client_name: a.client_name || "",
-                    prefill_client_phone: a.client_phone || a.phone || "",
-                    prefill_client_address: a.client_address || a.address || "",
+                    prefill_client_phone: clientPhone,
+                    prefill_client_address: clientAddress,
                     prefill_meeting_date: a.meeting_date || "",
                     prefill_meeting_time: extractTime(a.meeting_calendar) || "",
                     from_meeting: "1",
@@ -322,14 +325,8 @@ export default function Meetings() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        const email = u.data?.email || u.email;
-        if (currentUser?.role === "admin") return true;
-        // group_leader może przypisać do siebie lub do użytkowników/team_leaderów swojej grupy
-        if (currentUser?.role === "group_leader") {
-          if (email === currentUser.email) return true; // siebie też
-          if (role !== "user" && role !== "team_leader") return false;
-          const uGroupId = u.data?.group_id || u.group_id;
-          return uGroupId === currentUserGroupId;
+        if (currentUser?.role === "admin") {
+          return true;
         }
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
