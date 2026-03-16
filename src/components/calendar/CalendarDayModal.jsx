@@ -39,6 +39,17 @@ function makeReportUrl(ev, day) {
 
 export default function CalendarDayModal({ day, events, currentUser, viewMode, onClose, onEdit, onDelete, onAdd }) {
   const dayIsPast = isPast(day) && !isToday(day);
+  const queryClient = useQueryClient();
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }) => base44.entities.CalendarEvent.update(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["calendarEvents"]);
+      toast.success("Status zaktualizowany");
+    },
+    onError: () => toast.error("Błąd aktualizacji statusu"),
+  });
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
