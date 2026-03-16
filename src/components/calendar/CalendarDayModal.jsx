@@ -137,7 +137,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                             )}
                             {ev.status !== "planned" && (
                               <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-500 hover:bg-blue-50" title="Przywróć jako zaplanowane" onClick={() => statusMutation.mutate({ id: ev.id, status: "planned" })}>
-                                <RotateCcw className="w-3.5 h-3.5" />
+                                <CheckCircle2 className="w-3.5 h-3.5 rotate-180" />
                               </Button>
                             )}
                             {!ev.is_assignment && (
