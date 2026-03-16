@@ -176,6 +176,7 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       new_meetings: newMeetings,
+      updated_meetings: updatedMeetings,
       new_contacts: newContacts,
       refreshed_at: new Date().toISOString()
     });
