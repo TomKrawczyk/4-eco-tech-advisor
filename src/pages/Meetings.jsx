@@ -17,40 +17,18 @@ import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-// Parsuje daty w różnych formatach: "DD.MM.YYYY HH:MM", "YYYY-MM-DD HH:MM", itp.
+// Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
 function parseMeetingDate(str) {
   if (!str) return null;
-  // Format polski: DD.MM.YYYY
-  const matchPL = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (matchPL) {
-    const [, d, m, y] = matchPL;
+  const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (match) {
+    const [, d, m, y] = match;
     const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     if (isValid(date)) return date;
   }
-  // Format ISO: YYYY-MM-DD lub YYYY-MM-DD HH:MM — traktuj jako lokalny czas
-  const matchISO = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
-  if (matchISO) {
-    const [, y, m, d, h = 0, min = 0] = matchISO;
-    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(h), parseInt(min));
-    if (isValid(date)) return date;
-  }
+  const parsed = new Date(str);
+  if (isValid(parsed)) return parsed;
   return null;
-}
-
-// Normalizuje meeting_calendar do formatu YYYY-MM-DD HH:MM (lub bez godziny)
-// żeby klucze z arkusza i z bazy były spójne
-function normalizeMeetingCalendar(str) {
-  if (!str) return str;
-  // Już w formacie ISO
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str;
-  // Format polski DD.MM.YYYY HH:MM → ISO
-  const match = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}:\d{2}))?/);
-  if (match) {
-    const [, d, m, y, time] = match;
-    const dateStr = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-    return time ? `${dateStr} ${time}` : dateStr;
-  }
-  return str;
 }
 
 function formatDateLabel(dateStr) {
@@ -344,8 +322,14 @@ export default function Meetings() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        if (currentUser?.role === "admin") {
-          return true;
+        const email = u.data?.email || u.email;
+        if (currentUser?.role === "admin") return true;
+        // group_leader może przypisać do siebie lub do użytkowników/team_leaderów swojej grupy
+        if (currentUser?.role === "group_leader") {
+          if (email === currentUser.email) return true; // siebie też
+          if (role !== "user" && role !== "team_leader") return false;
+          const uGroupId = u.data?.group_id || u.group_id;
+          return uGroupId === currentUserGroupId;
         }
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
@@ -366,8 +350,6 @@ export default function Meetings() {
       })
       .map(m => ({
         ...m,
-        // Normalizuj meeting_calendar do ISO żeby klucze pasowały do tych w MeetingAssignment
-        meeting_calendar: normalizeMeetingCalendar(m.meeting_calendar),
         meeting_date: format(startOfDay(parseMeetingDate(m.meeting_calendar)), "yyyy-MM-dd"),
       }));
   }, [allMeetings, today, maxDate]);
