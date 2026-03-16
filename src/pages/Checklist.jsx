@@ -53,12 +53,12 @@ const checklistItems = [
 const installationOptions = ["PV", "Pompa ciepła", "Magazyn energii"];
 
 export default function Checklist() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const prefillData = urlParams.get("from_meeting") === "1" ? {
-    client_name: urlParams.get("prefill_client_name") || "",
-    client_phone: urlParams.get("prefill_client_phone") || "",
-    client_address: urlParams.get("prefill_client_address") || "",
-    visit_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
+  const [searchParams] = useSearchParams();
+  const prefillData = searchParams.get("from_meeting") === "1" ? {
+    client_name: searchParams.get("prefill_client_name") || "",
+    client_phone: searchParams.get("prefill_client_phone") || "",
+    client_address: searchParams.get("prefill_client_address") || "",
+    visit_date: searchParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
   } : null;
 
   const [currentReport, setCurrentReport] = useState(null);
