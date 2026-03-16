@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
         const events = await base44.asServiceRole.entities.CalendarEvent.filter({ meeting_assignment_id: a.meeting_key });
         await sleep(200);
         for (const ev of events) {
-          if (!ev.location) {
+          if (!ev.location || ev.location.trim() === '') {
             await base44.asServiceRole.entities.CalendarEvent.update(ev.id, { location: patch.client_address });
             updatedEvents++;
             await sleep(200);
