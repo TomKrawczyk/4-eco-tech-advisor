@@ -20,7 +20,8 @@ const eventTypeOptions = [
 const statusOptions = [
   { value: "planned", label: "Zaplanowane" },
   { value: "completed", label: "Zakończone" },
-  { value: "cancelled", label: "Anulowane" },
+  { value: "postponed", label: "Przełożone" },
+  { value: "cancelled", label: "Odwołane" },
 ];
 
 export default function CalendarEventModal({ initialData, currentUser, onClose, onSaved }) {
