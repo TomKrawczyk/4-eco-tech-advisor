@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, List } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
@@ -36,14 +36,6 @@ function formatDateLabel(str) {
   if (diff === 0) return `Dziś (${dateFormatted})`;
   if (diff === 1) return `Jutro (${dateFormatted})`;
   return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} (${dateFormatted})`;
-}
-
-function getSourceStyle(sheet) {
-  const s = (sheet || "").toLowerCase();
-  if (s.includes("facebook") || s.includes("fb")) return { badgeCls: "bg-blue-100 text-blue-800 border-blue-300", headerCls: "bg-blue-50 hover:bg-blue-100" };
-  if (s.includes("infolinia")) return { badgeCls: "bg-orange-100 text-orange-800 border-orange-300", headerCls: "bg-orange-50 hover:bg-orange-100" };
-  if (s.includes("polecen")) return { badgeCls: "bg-purple-100 text-purple-800 border-purple-300", headerCls: "bg-purple-50 hover:bg-purple-100" };
-  return { badgeCls: "bg-gray-100 text-gray-700 border-gray-300", headerCls: "bg-gray-50 hover:bg-gray-100" };
 }
 
 export default function PhoneContacts() {
@@ -80,6 +72,7 @@ export default function PhoneContacts() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
+  // Zawsze pobieramy przypisania z bazy - potrzebne dla każdej roli
   const { data: phoneContactsFromDB = [] } = useQuery({
     queryKey: ["phoneContactsDB"],
     queryFn: () => base44.entities.PhoneContact.list(),
@@ -102,12 +95,14 @@ export default function PhoneContacts() {
     refetchInterval: 5 * 60 * 1000,
   });
 
+  // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
     if (!currentUser) return null;
     if (currentUser.role === "admin") return null;
     return currentUser.groupId || null;
   }, [currentUser]);
 
+  // Ustal emaile zespołu team_leadera
   const teamMemberEmails = useMemo(() => {
     if (!currentUser || currentUser.role !== "team_leader") return [];
     const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
@@ -119,6 +114,7 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
+  // Scal dane z arkusza z przypisaniami z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
     return rawContacts.map(c => {
@@ -208,6 +204,7 @@ export default function PhoneContacts() {
     },
   });
 
+  // Handlowcy do przypisania – filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
     return allAllowedUsers
       .filter(u => {
@@ -222,22 +219,26 @@ export default function PhoneContacts() {
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
+  // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts;
+      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
       return contacts.filter(c => {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
         if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
+        // Fallback: kontakty przypisane do grupy
         if (c.assigned_group_id === myGroupId) return true;
         return false;
       });
     }
     if (currentUser?.role === "team_leader") {
+      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
       return contacts.filter(c => {
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
         if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
+        // Nieprzypisane kontakty z arkuszy grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
           return sheetMapping?.group_id === currentUserGroupId;
@@ -257,6 +258,7 @@ export default function PhoneContacts() {
     });
   }, [visibleContacts, search, sheetFilter]);
 
+  // Grupuj po zakładce, potem po dacie
   const sheetGroups = useMemo(() => {
     const bySheet = {};
     filtered.forEach(c => {
@@ -291,19 +293,14 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik — widzi swoje kontakty pogrupowane po źródle
+  // Zwykły użytkownik widzi swoje przypisane kontakty
   if (!isLeaderOrAdmin) {
-    const myContacts = phoneContactsFromDB.filter(c => c.assigned_user_email === currentUser?.email);
-    const bySource = myContacts.reduce((acc, c) => {
-      const key = c.sheet || "Inne";
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(c);
-      return acc;
-    }, {});
-
+    const myContacts = phoneContactsFromDB.filter(c =>
+      c.assigned_user_email === currentUser?.email
+    );
     return (
       <div className="space-y-6">
-        <PageHeader title="Moje kontakty" subtitle="Kontakty przypisane do Ciebie" />
+        <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
         {myContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -313,42 +310,32 @@ export default function PhoneContacts() {
             <p className="text-sm text-gray-500">Nie masz jeszcze żadnych przypisanych kontaktów telefonicznych.</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {Object.entries(bySource).map(([source, items]) => {
-              const { badgeCls } = getSourceStyle(source);
-              return (
-                <div key={source}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Badge className={`text-xs px-3 py-1 border font-semibold ${badgeCls}`}>{source}</Badge>
-                    <span className="text-xs text-gray-400">{items.length} kontaktów</span>
-                  </div>
-                  <div className="space-y-2">
-                    {items.map((c, i) => (
-                      <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-                        <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
-                        {c.phone && (
-                          <a href={`tel:${c.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
-                            <Phone className="w-3 h-3" /> {c.phone}
-                          </a>
-                        )}
-                        {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
-                        {c.comments && (
-                          <div className="text-xs text-gray-600 mt-1 bg-gray-50 rounded px-2 py-1">{c.comments}</div>
-                        )}
-                        {(c.comments || c.agent || c.interview_data) && (
-                          <button
-                            onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
-                            className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                          >
-                            Szczegóły
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+          <div className="space-y-2">
+            {myContacts.map((c, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
+                {c.phone && (
+                  <a href={`tel:${c.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
+                    <Phone className="w-3 h-3" /> {c.phone}
+                  </a>
+                )}
+                {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {c.sheet && <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{c.sheet}</Badge>}
+                  {c.assigned_group_name && (
+                    <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
+                  )}
                 </div>
-              );
-            })}
+                {(c.comments || c.agent) && (
+                  <button
+                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                  >
+                    Szczegóły
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
@@ -356,7 +343,6 @@ export default function PhoneContacts() {
     );
   }
 
-  // Admin / lider
   return (
     <div className="space-y-6">
       <PageHeader title="Kontakt telefoniczny do doradcy" subtitle="Klienci zainteresowani kontaktem z doradcą – aktualizacja co 5 minut" />
@@ -401,10 +387,18 @@ export default function PhoneContacts() {
               const groupId = currentUser.role === "group_leader" ? currentUserGroupId : null;
               if (groupId) {
                 const g = groups.find(gr => gr.id === groupId);
-                await base44.functions.invoke("notifyGroupLeaderNewContacts", { groupId, groupName: g?.name || "", bulkMode: true });
+                await base44.functions.invoke("notifyGroupLeaderNewContacts", {
+                  groupId,
+                  groupName: g?.name || "",
+                  bulkMode: true,
+                });
               } else {
                 for (const g of groups) {
-                  await base44.functions.invoke("notifyGroupLeaderNewContacts", { groupId: g.id, groupName: g.name, bulkMode: true });
+                  await base44.functions.invoke("notifyGroupLeaderNewContacts", {
+                    groupId: g.id,
+                    groupName: g.name,
+                    bulkMode: true,
+                  });
                 }
               }
               setNotifySending(false);
@@ -455,16 +449,15 @@ export default function PhoneContacts() {
           {sheetGroups.map(({ sheet, dates }) => {
             const isOpen = expandedSheets[sheet] ?? false;
             const total = dates.reduce((acc, d) => acc + d.items.length, 0);
-            const { badgeCls, headerCls } = getSourceStyle(sheet);
             return (
               <div key={sheet} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
                 <button
                   onClick={() => toggleSheet(sheet)}
-                  className={`w-full flex items-center justify-between px-4 py-3 transition-colors text-left ${headerCls}`}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-800 text-sm">{sheet}</span>
-                    <Badge className={`text-[10px] border ${badgeCls}`}>{total} kontaktów</Badge>
+                    <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{total} kontaktów</Badge>
                   </div>
                   {isOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </button>
@@ -506,10 +499,15 @@ export default function PhoneContacts() {
                                     <div className="shrink-0 flex gap-2 flex-wrap">
                                       <button
                                         onClick={() => {
-                                          setSelectedDetails({ agent: contact.agent, comments: contact.comments, interview_data: contact.interview_data || {} });
+                                          setSelectedDetails({
+                                            agent: contact.agent,
+                                            comments: contact.comments,
+                                            interview_data: contact.interview_data || {}
+                                          });
                                           setDetailsModalOpen(true);
                                         }}
                                         className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                        title="Pokaż szczegóły"
                                       >
                                         Szczegóły
                                       </button>
@@ -519,7 +517,10 @@ export default function PhoneContacts() {
                                           <User className="w-3 h-3 text-green-600" />
                                           <span className="text-xs font-medium text-green-700">{contact.assigned_user_name || contact.assigned_user_email}</span>
                                           {canAssign && (
-                                            <button onClick={() => assignMutation.mutate({ contact, email: "", name: "" })} className="ml-1 text-gray-400 hover:text-red-500 text-xs">×</button>
+                                            <button
+                                              onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
+                                              className="ml-1 text-gray-400 hover:text-red-500 text-xs"
+                                            >×</button>
                                           )}
                                         </div>
                                       ) : (
@@ -541,26 +542,31 @@ export default function PhoneContacts() {
                                       )}
 
                                       {canManageGroups && (
-                                        contact.assigned_group_id ? (
-                                          <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
-                                            <span className="text-xs font-medium text-blue-700">{contact.assigned_group_name}</span>
-                                            <button onClick={() => assignGroupMutation.mutate({ contact, groupId: "", groupName: "" })} className="ml-1 text-gray-400 hover:text-red-500 text-xs">×</button>
-                                          </div>
-                                        ) : (
-                                          <Select onValueChange={(val) => {
-                                            const g = groups.find(gr => gr.id === val);
-                                            if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
-                                          }}>
-                                            <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
-                                              <SelectValue placeholder="Przypisz grupę" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {groups.map(g => (
-                                                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        )
+                                        <>
+                                          {contact.assigned_group_id ? (
+                                            <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
+                                              <span className="text-xs font-medium text-blue-700">{contact.assigned_group_name}</span>
+                                              <button
+                                                onClick={() => assignGroupMutation.mutate({ contact, groupId: "", groupName: "" })}
+                                                className="ml-1 text-gray-400 hover:text-red-500 text-xs"
+                                              >×</button>
+                                            </div>
+                                          ) : (
+                                            <Select onValueChange={(val) => {
+                                              const g = groups.find(gr => gr.id === val);
+                                              if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
+                                            }}>
+                                              <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
+                                                <SelectValue placeholder="Przypisz grupę" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {groups.map(g => (
+                                                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          )}
+                                        </>
                                       )}
                                     </div>
                                   </div>
@@ -579,7 +585,11 @@ export default function PhoneContacts() {
         </div>
       )}
 
-      <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
+      <DetailsModal
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        data={selectedDetails}
+      />
     </div>
   );
 }
