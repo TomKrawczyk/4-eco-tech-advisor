@@ -56,8 +56,9 @@ Deno.serve(async (req) => {
   }
 
   const { accessToken } = await base44.asServiceRole.connectors.getConnection('googlesheets');
+  console.error('[sync] accessToken length:', accessToken?.length);
   const allTabs = await getAllSheetTabs(accessToken);
-  console.error('[sync] Zakładki:', allTabs.length);
+  console.error('[sync] Zakładki:', allTabs.length, JSON.stringify(allTabs.slice(0, 3)));
 
   // Pobierz wszystkie dane z arkuszy
   const allMaps = await Promise.all(allTabs.map(tab => fetchAddressesFromSheet(accessToken, tab)));
