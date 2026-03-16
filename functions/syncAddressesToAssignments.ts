@@ -2,16 +2,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const SPREADSHEET_ID = '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
 
-async function getAllSheetTabs(accessToken) {
-  const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?includeGridData=false`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  if (!res.ok) return [];
-  const meta = await res.json();
-  return meta.sheets.map(s => s.properties.title);
-}
-
 async function fetchAddressMapFromSheet(accessToken, sheetTitle) {
   const range = `'${sheetTitle}'!A1:Z3000`;
   const res = await fetch(
@@ -63,48 +53,47 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json().catch(() => ({}));
-  // mode: 'build_map' - tylko buduje mapę i zwraca ją
-  // mode: 'apply' - przyjmuje gotową mapę i stosuje ją na partii rekordów
-  const mode = body.mode || 'build_map';
+  // Wymagane: sheet - nazwa konkretnej zakładki do synchronizacji
+  const sheetTitle = body.sheet;
+  if (!sheetTitle) {
+    return Response.json({ error: 'Podaj parametr "sheet" - nazwę zakładki do synchronizacji' }, { status: 400 });
+  }
 
   const { accessToken } = await base44.asServiceRole.connectors.getConnection('googlesheets');
 
-  if (mode === 'build_map') {
-    const allTabs = await getAllSheetTabs(accessToken);
-    const allMaps = await Promise.all(allTabs.map(tab => fetchAddressMapFromSheet(accessToken, tab)));
-    const masterMap = Object.assign({}, ...allMaps);
-    return Response.json({ map: masterMap, total_keys: Object.keys(masterMap).length });
+  // Pobierz mapę adresów dla tego arkusza
+  const sheetMap = await fetchAddressMapFromSheet(accessToken, sheetTitle);
+  const keysInSheet = Object.keys(sheetMap).length;
+
+  if (keysInSheet === 0) {
+    return Response.json({ sheet: sheetTitle, message: 'Brak wierszy ze spotkaniami w tym arkuszu', updated: 0 });
   }
 
-  // mode: 'apply'
-  const masterMap = body.map || {};
-  const offset = body.offset || 0;
-  const batchSize = 15;
+  // Pobierz tylko assignment'y z tego arkusza
+  const assignments = await base44.asServiceRole.entities.MeetingAssignment.filter({ sheet: sheetTitle });
+  await sleep(300);
 
-  // Pobierz wszystkie MeetingAssignment bez adresu (max 2000)
-  const assignments = await base44.asServiceRole.entities.MeetingAssignment.list('-created_date', 2000);
   const toUpdate = assignments.filter(a => {
     if (!a.meeting_key) return false;
-    const sheetData = masterMap[a.meeting_key];
-    if (!sheetData) return false;
-    return (sheetData.address && !a.client_address) || (sheetData.phone && !a.client_phone);
+    const sd = sheetMap[a.meeting_key];
+    if (!sd) return false;
+    return (sd.address && !a.client_address) || (sd.phone && !a.client_phone);
   });
 
-  const batch = toUpdate.slice(offset, offset + batchSize);
   let updatedAssignments = 0;
   let updatedEvents = 0;
   const errors = [];
 
-  for (const a of batch) {
-    const sheetData = masterMap[a.meeting_key];
+  for (const a of toUpdate) {
+    const sd = sheetMap[a.meeting_key];
     const patch = {};
-    if (sheetData.address && !a.client_address) patch.client_address = sheetData.address;
-    if (sheetData.phone && !a.client_phone) patch.client_phone = sheetData.phone;
+    if (sd.address && !a.client_address) patch.client_address = sd.address;
+    if (sd.phone && !a.client_phone) patch.client_phone = sd.phone;
 
     try {
       await base44.asServiceRole.entities.MeetingAssignment.update(a.id, patch);
       updatedAssignments++;
-      await sleep(300);
+      await sleep(400);
 
       if (patch.client_address) {
         const events = await base44.asServiceRole.entities.CalendarEvent.filter({ meeting_assignment_id: a.meeting_key });
@@ -119,20 +108,18 @@ Deno.serve(async (req) => {
       }
     } catch (e) {
       errors.push({ key: a.meeting_key, error: e.message });
-      await sleep(500);
+      await sleep(800);
     }
   }
 
-  const remaining = toUpdate.length - offset - batch.length;
   return Response.json({
-    total_to_update: toUpdate.length,
-    offset,
-    batch_size: batch.length,
+    sheet: sheetTitle,
+    keys_in_sheet: keysInSheet,
+    assignments_in_sheet: assignments.length,
+    to_update: toUpdate.length,
     updated_assignments: updatedAssignments,
     updated_events: updatedEvents,
     errors,
-    remaining,
-    next_offset: remaining > 0 ? offset + batchSize : null,
-    done: remaining <= 0,
+    done: true,
   });
 });
