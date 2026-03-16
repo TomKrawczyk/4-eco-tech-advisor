@@ -263,22 +263,27 @@ function MeetingDetail({ report, onBack, onDelete, onEdit }) {
 }
 
 export default function MeetingReports() {
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Sprawdź prefill z URL (po przejściu ze spotkania)
-  const urlParams = new URLSearchParams(window.location.search);
-  const prefill = urlParams.get("from_meeting") === "1" ? {
-    client_name: urlParams.get("prefill_client_name") || "",
-    client_phone: urlParams.get("prefill_client_phone") || "",
-    client_address: urlParams.get("prefill_client_address") || "",
-    meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
-    meeting_time: urlParams.get("prefill_meeting_time") || "",
+  // Sprawdź prefill z URL (po przejściu ze spotkania) — używamy useSearchParams żeby poprawnie reagować na nawigację
+  const prefill = searchParams.get("from_meeting") === "1" ? {
+    client_name: searchParams.get("prefill_client_name") || "",
+    client_phone: searchParams.get("prefill_client_phone") || "",
+    client_address: searchParams.get("prefill_client_address") || "",
+    meeting_date: searchParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
+    meeting_time: searchParams.get("prefill_meeting_time") || "",
   } : null;
 
   const [view, setView] = useState(prefill ? "create" : "list");
+
+  // Reaguj na zmianę URL params (np. kliknięcie nowego linku ze spotkania gdy formularz już otwarty)
+  useEffect(() => {
+    if (prefill) setView("create");
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchUser = async () => {
