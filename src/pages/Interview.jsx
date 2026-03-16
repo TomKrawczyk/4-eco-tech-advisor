@@ -24,9 +24,9 @@ const questions = [
 ];
 
 export default function Interview() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const prefillVisitDate = urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0];
-  const prefillClientName = urlParams.get("prefill_client_name") || "";
+  const [searchParams] = useSearchParams();
+  const prefillVisitDate = searchParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0];
+  const prefillClientName = searchParams.get("prefill_client_name") || "";
 
   const [currentReport, setCurrentReport] = useState(null);
   const [form, setForm] = useState({
