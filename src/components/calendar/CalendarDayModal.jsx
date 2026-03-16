@@ -22,8 +22,9 @@ const statusColors = {
   planned: "bg-blue-50 text-blue-700 border-blue-200",
   completed: "bg-green-50 text-green-700 border-green-200",
   cancelled: "bg-red-50 text-red-600 border-red-200",
+  postponed: "bg-orange-50 text-orange-600 border-orange-200",
 };
-const statusLabels = { planned: "Zaplanowane", completed: "Zakończone", cancelled: "Anulowane" };
+const statusLabels = { planned: "Zaplanowane", completed: "Zakończone", cancelled: "Odwołane", postponed: "Przełożone" };
 
 function makeReportUrl(ev, day) {
   const dateStr = format(day, "yyyy-MM-dd");
