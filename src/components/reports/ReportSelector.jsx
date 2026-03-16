@@ -28,11 +28,20 @@ export default function ReportSelector({ onSelectReport, currentReport }) {
     fetchUser();
   }, []);
 
-  const { data: reports = [] } = useQuery({
+  const { data: allReports = [] } = useQuery({
     queryKey: ['visitReports'],
     queryFn: () => smartList(base44.entities.VisitReport, "VisitReport", "-updated_date", 50),
     staleTime: 30000,
+    enabled: !!currentUser,
   });
+
+  // Zwykły użytkownik widzi tylko swoje raporty
+  const reports = React.useMemo(() => {
+    if (!currentUser) return [];
+    const role = currentUser.role;
+    if (role === "admin" || role === "group_leader" || role === "team_leader") return allReports;
+    return allReports.filter(r => r.author_email === currentUser.email || r.created_by === currentUser.email);
+  }, [allReports, currentUser]);
 
   const handleCreateNew = async () => {
     if (!newClientName.trim()) return;
