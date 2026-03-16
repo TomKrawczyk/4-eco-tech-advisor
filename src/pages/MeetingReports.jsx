@@ -58,7 +58,7 @@ function PhotoGallery({ photos, onAdd, onRemove, uploading }) {
 }
 
 function MeetingForm({ initialData, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(initialData || {
+  const defaultForm = {
     client_name: "",
     client_address: "",
     client_phone: "",
@@ -68,8 +68,16 @@ function MeetingForm({ initialData, onSave, onCancel, saving }) {
     next_steps: "",
     status: "planned",
     photos: [],
-  });
+  };
+  const [form, setForm] = useState(initialData ? { ...defaultForm, ...initialData } : defaultForm);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+
+  // Aktualizuj formularz gdy zmienią się dane prefill (np. nowe spotkanie)
+  useEffect(() => {
+    if (initialData) {
+      setForm({ ...defaultForm, ...initialData });
+    }
+  }, [JSON.stringify(initialData)]);
 
   const handleAddPhotos = async (e) => {
     const files = Array.from(e.target.files || []);
