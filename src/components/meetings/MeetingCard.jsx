@@ -124,14 +124,14 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
       if (parsed) {
         const eventData = {
           title: `Spotkanie: ${meeting.client_name}`,
-          description: `Arkusz: ${meeting.sheet}${meeting.address ? `\nAdres: ${meeting.address}` : ""}${meeting.phone ? `\nTel: ${meeting.phone}` : ""}`,
+          description: `Arkusz: ${meeting.sheet}${(meeting.address || assignment?.client_address) ? `\nAdres: ${meeting.address || assignment?.client_address}` : ""}${(meeting.phone || assignment?.client_phone) ? `\nTel: ${meeting.phone || assignment?.client_phone}` : ""}`,
           event_date: parsed.date,
           event_time: parsed.time,
           event_type: "meeting",
           status: "planned",
           client_name: meeting.client_name,
-          client_phone: meeting.phone || "",
-          location: meeting.address || "",
+          client_phone: meeting.phone || assignment?.client_phone || "",
+          location: meeting.address || assignment?.client_address || "",
           owner_email: userEmail,
           owner_name: userName,
           source: "meeting_assignment",
