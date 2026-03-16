@@ -266,7 +266,7 @@ export default function Calendar() {
             </div>
           )}
           <Button
-            onClick={() => { setEditingEvent(null); setShowEventModal(true); }}
+            onClick={() => { setEditingEvent({}); setShowEventModal(true); }}
             className="bg-green-600 hover:bg-green-700 gap-1.5 text-sm"
           >
             <Plus className="w-4 h-4" /> Dodaj
