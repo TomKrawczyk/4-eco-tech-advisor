@@ -600,6 +600,14 @@ export default function PhoneContacts() {
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
       />
+
+      <ManualContactModal
+        open={showManualModal}
+        onOpenChange={setShowManualModal}
+        currentUser={currentUser}
+        groups={groups}
+        salespeople={salespeople}
+      />
     </div>
   );
 }
