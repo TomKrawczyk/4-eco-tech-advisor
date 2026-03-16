@@ -51,6 +51,10 @@ async function fetchAddressMapFromSheet(accessToken, sheetTitle) {
   return map;
 }
 
+async function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const user = await base44.auth.me();
@@ -58,16 +62,26 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  const body = await req.json().catch(() => ({}));
+  // mode: 'build_map' - tylko buduje mapę i zwraca ją
+  // mode: 'apply' - przyjmuje gotową mapę i stosuje ją na partii rekordów
+  const mode = body.mode || 'build_map';
+
   const { accessToken } = await base44.asServiceRole.connectors.getConnection('googlesheets');
-  const allTabs = await getAllSheetTabs(accessToken);
 
-  // Pobierz dane ze wszystkich arkuszy (równolegle)
-  const allMaps = await Promise.all(allTabs.map(tab => fetchAddressMapFromSheet(accessToken, tab)));
-  const masterMap = Object.assign({}, ...allMaps);
+  if (mode === 'build_map') {
+    const allTabs = await getAllSheetTabs(accessToken);
+    const allMaps = await Promise.all(allTabs.map(tab => fetchAddressMapFromSheet(accessToken, tab)));
+    const masterMap = Object.assign({}, ...allMaps);
+    return Response.json({ map: masterMap, total_keys: Object.keys(masterMap).length });
+  }
 
-  console.error('[sync] Kluczy w mapie:', Object.keys(masterMap).length);
+  // mode: 'apply'
+  const masterMap = body.map || {};
+  const offset = body.offset || 0;
+  const batchSize = 15;
 
-  // Pobierz wszystkie MeetingAssignment bez adresu
+  // Pobierz wszystkie MeetingAssignment bez adresu (max 2000)
   const assignments = await base44.asServiceRole.entities.MeetingAssignment.list('-created_date', 2000);
   const toUpdate = assignments.filter(a => {
     if (!a.meeting_key) return false;
@@ -76,40 +90,49 @@ Deno.serve(async (req) => {
     return (sheetData.address && !a.client_address) || (sheetData.phone && !a.client_phone);
   });
 
-  console.error('[sync] Do aktualizacji:', toUpdate.length);
-
-  // Aktualizuj sekwencyjnie (żeby nie przekroczyć rate limit)
+  const batch = toUpdate.slice(offset, offset + batchSize);
   let updatedAssignments = 0;
   let updatedEvents = 0;
+  const errors = [];
 
-  for (const a of toUpdate) {
+  for (const a of batch) {
     const sheetData = masterMap[a.meeting_key];
     const patch = {};
     if (sheetData.address && !a.client_address) patch.client_address = sheetData.address;
     if (sheetData.phone && !a.client_phone) patch.client_phone = sheetData.phone;
 
-    await base44.asServiceRole.entities.MeetingAssignment.update(a.id, patch);
-    updatedAssignments++;
+    try {
+      await base44.asServiceRole.entities.MeetingAssignment.update(a.id, patch);
+      updatedAssignments++;
+      await sleep(300);
 
-    // Zaktualizuj powiązany CalendarEvent
-    if (patch.client_address) {
-      const events = await base44.asServiceRole.entities.CalendarEvent.filter({ meeting_assignment_id: a.meeting_key });
-      for (const ev of events) {
-        if (!ev.location) {
-          await base44.asServiceRole.entities.CalendarEvent.update(ev.id, { location: patch.client_address });
-          updatedEvents++;
+      if (patch.client_address) {
+        const events = await base44.asServiceRole.entities.CalendarEvent.filter({ meeting_assignment_id: a.meeting_key });
+        await sleep(200);
+        for (const ev of events) {
+          if (!ev.location) {
+            await base44.asServiceRole.entities.CalendarEvent.update(ev.id, { location: patch.client_address });
+            updatedEvents++;
+            await sleep(200);
+          }
         }
       }
+    } catch (e) {
+      errors.push({ key: a.meeting_key, error: e.message });
+      await sleep(500);
     }
-
-    // Mała pauza żeby nie przekroczyć rate limit
-    await new Promise(r => setTimeout(r, 100));
   }
 
+  const remaining = toUpdate.length - offset - batch.length;
   return Response.json({
-    total_in_map: Object.keys(masterMap).length,
-    total_assignments: assignments.length,
+    total_to_update: toUpdate.length,
+    offset,
+    batch_size: batch.length,
     updated_assignments: updatedAssignments,
     updated_events: updatedEvents,
+    errors,
+    remaining,
+    next_offset: remaining > 0 ? offset + batchSize : null,
+    done: remaining <= 0,
   });
 });
