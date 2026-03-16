@@ -341,9 +341,16 @@ export default function PhoneContacts() {
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
-      </div>
-    );
-  }
+        <ManualContactModal
+          open={manualModalOpen}
+          onOpenChange={setManualModalOpen}
+          currentUser={currentUser}
+          groups={groups}
+          salespeople={salespeople}
+        />
+        </div>
+        );
+        }
 
   return (
     <div className="space-y-6">
