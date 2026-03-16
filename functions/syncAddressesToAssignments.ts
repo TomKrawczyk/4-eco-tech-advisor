@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
-const SPREADSHEET_ID = Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID') || '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
+const SPREADSHEET_ID = '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
 
 async function getAllSheetTabs(accessToken) {
   const res = await fetch(
@@ -12,7 +12,7 @@ async function getAllSheetTabs(accessToken) {
   return meta.sheets.map(s => s.properties.title);
 }
 
-async function fetchAddressesFromSheet(accessToken, sheetTitle) {
+async function fetchAddressMapFromSheet(accessToken, sheetTitle) {
   const range = `'${sheetTitle}'!A1:Z3000`;
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`,
@@ -30,19 +30,23 @@ async function fetchAddressesFromSheet(accessToken, sheetTitle) {
     h.includes('Numer telefonu') || h.toLowerCase().includes('telefon') || h.toLowerCase() === 'tel'
   );
   const calendarIdx = headers.findIndex(h => h.includes('Data i godzina spotkania'));
+  const intIdx = headers.findIndex(h => h.includes('Zainteresowany rozmową z doradcą'));
 
-  if (nameIdx === -1) return {};
+  if (nameIdx === -1 || intIdx === -1) return {};
 
-  // Mapa: client_name + calendar -> { address, phone }
   const map = {};
   for (const row of rows.slice(1)) {
+    const intVal = (row[intIdx] || '').trim().toLowerCase();
+    if (intVal !== 'spotkanie') continue;
     const name = (row[nameIdx] || '').trim();
     if (!name) continue;
     const calendar = calendarIdx >= 0 ? (row[calendarIdx] || '').trim() : '';
     const address = addressIdx >= 0 ? (row[addressIdx] || '').trim() : '';
     const phone = phoneIdx >= 0 ? (row[phoneIdx] || '').trim() : '';
     const key = `${sheetTitle}__${name}__${calendar}`;
-    map[key] = { address, phone };
+    if (address || phone) {
+      map[key] = { address, phone };
+    }
   }
   return map;
 }
@@ -50,66 +54,62 @@ async function fetchAddressesFromSheet(accessToken, sheetTitle) {
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const user = await base44.auth.me();
-  console.error('[sync] user role:', user?.role);
   if (user?.role !== 'admin') {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const { accessToken } = await base44.asServiceRole.connectors.getConnection('googlesheets');
-  console.error('[sync] accessToken length:', accessToken?.length);
   const allTabs = await getAllSheetTabs(accessToken);
-  console.error('[sync] Zakładki:', allTabs.length, JSON.stringify(allTabs.slice(0, 3)));
 
-  // Pobierz wszystkie dane z arkuszy
-  const allMaps = await Promise.all(allTabs.map(tab => fetchAddressesFromSheet(accessToken, tab)));
+  // Pobierz dane ze wszystkich arkuszy (równolegle)
+  const allMaps = await Promise.all(allTabs.map(tab => fetchAddressMapFromSheet(accessToken, tab)));
   const masterMap = Object.assign({}, ...allMaps);
-  console.log('Łącznie kluczy w mapie:', Object.keys(masterMap).length);
 
-  // Pobierz wszystkie MeetingAssignment
+  console.error('[sync] Kluczy w mapie:', Object.keys(masterMap).length);
+
+  // Pobierz wszystkie MeetingAssignment bez adresu
   const assignments = await base44.asServiceRole.entities.MeetingAssignment.list('-created_date', 2000);
+  const toUpdate = assignments.filter(a => {
+    if (!a.meeting_key) return false;
+    const sheetData = masterMap[a.meeting_key];
+    if (!sheetData) return false;
+    return (sheetData.address && !a.client_address) || (sheetData.phone && !a.client_phone);
+  });
 
-  // Debug: sprawdź konkretny klucz
-  const debugKey = 'Pomorskie - 2__MARCIN GŁODOWSKI__2026-03-16 11:00';
-  console.log('Debug klucz w mapie:', debugKey in masterMap, JSON.stringify(masterMap[debugKey]));
-  console.log('Przykładowe klucze z mapy (Pomorskie):', Object.keys(masterMap).filter(k => k.startsWith('Pomorskie - 2')).slice(0, 3));
+  console.error('[sync] Do aktualizacji:', toUpdate.length);
 
+  // Aktualizuj sekwencyjnie (żeby nie przekroczyć rate limit)
   let updatedAssignments = 0;
   let updatedEvents = 0;
 
-  for (const a of assignments) {
+  for (const a of toUpdate) {
     const sheetData = masterMap[a.meeting_key];
-    if (!sheetData) continue;
+    const patch = {};
+    if (sheetData.address && !a.client_address) patch.client_address = sheetData.address;
+    if (sheetData.phone && !a.client_phone) patch.client_phone = sheetData.phone;
 
-    const newAddress = sheetData.address;
-    const newPhone = sheetData.phone;
+    await base44.asServiceRole.entities.MeetingAssignment.update(a.id, patch);
+    updatedAssignments++;
 
-    // Aktualizuj MeetingAssignment jeśli adres lub telefon się różni
-    const needsUpdate =
-      (newAddress && a.client_address !== newAddress) ||
-      (newPhone && a.client_phone !== newPhone);
-
-    if (needsUpdate) {
-      const patch = {};
-      if (newAddress && a.client_address !== newAddress) patch.client_address = newAddress;
-      if (newPhone && a.client_phone !== newPhone) patch.client_phone = newPhone;
-
-      await base44.asServiceRole.entities.MeetingAssignment.update(a.id, patch);
-      updatedAssignments++;
-
-      // Aktualizuj powiązane CalendarEvent
+    // Zaktualizuj powiązany CalendarEvent
+    if (patch.client_address) {
       const events = await base44.asServiceRole.entities.CalendarEvent.filter({ meeting_assignment_id: a.meeting_key });
       for (const ev of events) {
-        const evPatch = {};
-        if (patch.client_address) evPatch.location = patch.client_address;
-        if (patch.client_phone) evPatch.client_phone = patch.client_phone;
-        if (Object.keys(evPatch).length > 0) {
-          await base44.asServiceRole.entities.CalendarEvent.update(ev.id, evPatch);
+        if (!ev.location) {
+          await base44.asServiceRole.entities.CalendarEvent.update(ev.id, { location: patch.client_address });
           updatedEvents++;
         }
       }
     }
+
+    // Mała pauza żeby nie przekroczyć rate limit
+    await new Promise(r => setTimeout(r, 100));
   }
 
-  console.log(`[syncAddresses] Zaktualizowane przypisania: ${updatedAssignments}, eventy: ${updatedEvents}`);
-  return Response.json({ updated_assignments: updatedAssignments, updated_events: updatedEvents, total_assignments: assignments.length });
+  return Response.json({
+    total_in_map: Object.keys(masterMap).length,
+    total_assignments: assignments.length,
+    updated_assignments: updatedAssignments,
+    updated_events: updatedEvents,
+  });
 });
