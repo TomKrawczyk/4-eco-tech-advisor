@@ -64,6 +64,11 @@ Deno.serve(async (req) => {
   // Pobierz wszystkie MeetingAssignment
   const assignments = await base44.asServiceRole.entities.MeetingAssignment.list('-created_date', 2000);
 
+  // Debug: sprawdź konkretny klucz
+  const debugKey = 'Pomorskie - 2__MARCIN GŁODOWSKI__2026-03-16 11:00';
+  console.log('Debug klucz w mapie:', debugKey in masterMap, JSON.stringify(masterMap[debugKey]));
+  console.log('Przykładowe klucze z mapy (Pomorskie):', Object.keys(masterMap).filter(k => k.startsWith('Pomorskie - 2')).slice(0, 3));
+
   let updatedAssignments = 0;
   let updatedEvents = 0;
 
