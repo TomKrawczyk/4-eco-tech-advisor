@@ -50,13 +50,14 @@ async function fetchAddressesFromSheet(accessToken, sheetTitle) {
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const user = await base44.auth.me();
+  console.error('[sync] user role:', user?.role);
   if (user?.role !== 'admin') {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const { accessToken } = await base44.asServiceRole.connectors.getConnection('googlesheets');
   const allTabs = await getAllSheetTabs(accessToken);
-  console.log('Zakładki:', allTabs.length);
+  console.error('[sync] Zakładki:', allTabs.length);
 
   // Pobierz wszystkie dane z arkuszy
   const allMaps = await Promise.all(allTabs.map(tab => fetchAddressesFromSheet(accessToken, tab)));
