@@ -73,18 +73,25 @@ Deno.serve(async (req) => {
   const assignments = await base44.asServiceRole.entities.MeetingAssignment.filter({ sheet: sheetTitle });
   await sleep(300);
 
-  const toUpdate = assignments.filter(a => {
+  // Assignmenty do aktualizacji: brakuje adresu/telefonu
+  const toUpdateAssignments = assignments.filter(a => {
     if (!a.meeting_key) return false;
     const sd = sheetMap[a.meeting_key];
     if (!sd) return false;
     return (sd.address && !a.client_address) || (sd.phone && !a.client_phone);
   });
 
+  // Assignmenty które mają adres ale powiązany CalendarEvent ma pustą lokalizację
+  const toFixEvents = assignments.filter(a => {
+    if (!a.meeting_key || !a.client_address) return false;
+    return !toUpdateAssignments.includes(a); // nie duplikuj tych co i tak idą wyżej
+  });
+
   let updatedAssignments = 0;
   let updatedEvents = 0;
   const errors = [];
 
-  for (const a of toUpdate) {
+  for (const a of toUpdateAssignments) {
     const sd = sheetMap[a.meeting_key];
     const patch = {};
     if (sd.address && !a.client_address) patch.client_address = sd.address;
@@ -109,6 +116,24 @@ Deno.serve(async (req) => {
     } catch (e) {
       errors.push({ key: a.meeting_key, error: e.message });
       await sleep(800);
+    }
+  }
+
+  // Napraw eventy które mają pusty location mimo że assignment ma adres
+  for (const a of toFixEvents) {
+    try {
+      const events = await base44.asServiceRole.entities.CalendarEvent.filter({ meeting_assignment_id: a.meeting_key });
+      await sleep(200);
+      for (const ev of events) {
+        if (!ev.location || ev.location.trim() === '') {
+          await base44.asServiceRole.entities.CalendarEvent.update(ev.id, { location: a.client_address });
+          updatedEvents++;
+          await sleep(200);
+        }
+      }
+    } catch (e) {
+      errors.push({ key: a.meeting_key, error: e.message });
+      await sleep(400);
     }
   }
 
