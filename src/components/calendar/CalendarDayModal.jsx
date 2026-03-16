@@ -108,7 +108,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                         )}
                       </div>
 
-                      <div className="flex gap-1 shrink-0">
+                      <div className="flex gap-1 shrink-0 flex-wrap justify-end">
                         {(ev.event_type === "meeting" || ev.is_sheet_meeting || ev.is_assignment) && (ev.owner_email === currentUser?.email || currentUser?.role === "admin" || !ev.owner_email) && (
                           <Link to={makeReportUrl(ev, day)} onClick={onClose}>
                             <Button size="sm" variant="outline" className="h-7 px-2 text-green-700 border-green-300 hover:bg-green-50 text-[10px] gap-1">
@@ -117,14 +117,33 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                             </Button>
                           </Link>
                         )}
-                        {canEdit && !ev.is_sheet_meeting && !ev.is_assignment && (
+                        {canEdit && !ev.is_sheet_meeting && (
                           <>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(ev)}>
-                              <Pencil className="w-3.5 h-3.5 text-gray-500" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => onDelete(ev.id)}>
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                            {ev.status !== "completed" && (
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50" title="Zakończone" onClick={() => statusMutation.mutate({ id: ev.id, status: "completed" })}>
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                            {ev.status !== "cancelled" && (
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:bg-red-50" title="Odwołane" onClick={() => statusMutation.mutate({ id: ev.id, status: "cancelled" })}>
+                                <XCircle className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                            {ev.status !== "planned" && (
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-500 hover:bg-blue-50" title="Przywróć jako zaplanowane" onClick={() => statusMutation.mutate({ id: ev.id, status: "planned" })}>
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                            {!ev.is_assignment && (
+                              <>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(ev)}>
+                                  <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => onDelete(ev.id)}>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
