@@ -42,11 +42,21 @@ Deno.serve(async (req) => {
 
     const groups = filterGroupId ? allGroups.filter(g => g.id === filterGroupId) : allGroups;
 
-    // Spotkania nieprzypisane do żadnego handlowca
-    const unassignedMeetings = allAssignments.filter(m => !m.assigned_user_email);
+    // Spotkania nieprzypisane – tylko z przyszłości lub dzisiaj (nie starsze niż wczoraj)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    const unassignedMeetings = allAssignments.filter(m => {
+      if (m.assigned_user_email) return false;
+      const meetingDate = m.meeting_date || (m.data && m.data.meeting_date);
+      if (!meetingDate) return false;
+      // Tylko spotkania od dziś wzwyż
+      return meetingDate >= todayStr;
+    });
 
     if (unassignedMeetings.length === 0) {
-      return Response.json({ ok: true, message: 'Brak nieprzypisanych spotkań' });
+      return Response.json({ ok: true, message: 'Brak nieprzypisanych nadchodzących spotkań' });
     }
 
     // Dla każdej grupy: znajdź jej group leaderów i spotkania z przypisanych arkuszy
