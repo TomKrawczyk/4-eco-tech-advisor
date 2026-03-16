@@ -118,6 +118,8 @@ Deno.serve(async (req) => {
           meeting_key: key,
           sheet: m.sheet,
           client_name: m.client_name,
+          client_phone: m.phone || "",
+          client_address: m.address || "",
           meeting_calendar: m.meeting_calendar,
           meeting_date: d ? formatDate(d) : '',
         });
