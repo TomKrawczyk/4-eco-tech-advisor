@@ -413,16 +413,27 @@ export default function PhoneContacts() {
         )}
 
         {currentUser?.role === "admin" && (
-          <Button
-            variant={showStats ? "default" : "outline"}
-            size="sm"
-            className="gap-2 h-11"
-            onClick={() => setShowStats(p => !p)}
-          >
-            <BarChart2 className="w-4 h-4" />
-            Statystyki
-          </Button>
-        )}
+              <Button
+                variant={showStats ? "default" : "outline"}
+                size="sm"
+                className="gap-2 h-11"
+                onClick={() => setShowStats(p => !p)}
+              >
+                <BarChart2 className="w-4 h-4" />
+                Statystyki
+              </Button>
+            )}
+
+            {canAssign && (
+              <Button
+                size="sm"
+                className="gap-2 h-11 bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => setManualModalOpen(true)}
+              >
+                <Plus className="w-4 h-4" />
+                Dodaj ręcznie
+              </Button>
+            )}
       </div>
 
       <div className="text-sm text-gray-500">
