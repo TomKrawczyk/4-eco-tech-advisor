@@ -209,7 +209,15 @@ export default function PhoneContacts() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
+        const email = u.data?.email || u.email;
         if (currentUser?.role === "admin") return true;
+        // group_leader może przypisać do siebie lub do użytkowników/team_leaderów swojej grupy
+        if (currentUser?.role === "group_leader") {
+          if (email === currentUser.email) return true;
+          if (role !== "user" && role !== "team_leader") return false;
+          const uGroupId = u.data?.group_id || u.group_id;
+          return uGroupId === currentUserGroupId;
+        }
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
@@ -351,15 +359,15 @@ export default function PhoneContacts() {
         <AssignmentStats onClose={() => setShowStats(false)} />
       )}
 
-      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-        <div className="relative flex-1 min-w-0">
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Szukaj klienta, telefonu, adresu..." className="pl-10 h-11 w-full" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Szukaj klienta, telefonu, adresu..." className="pl-10 h-11" />
         </div>
 
         {allSheetTabs.length > 0 && (
           <Select value={sheetFilter} onValueChange={setSheetFilter}>
-            <SelectTrigger className="w-full sm:w-52 h-11">
+            <SelectTrigger className="w-52 h-11">
               <SelectValue placeholder="Wszystkie arkusze" />
             </SelectTrigger>
             <SelectContent>
@@ -371,7 +379,7 @@ export default function PhoneContacts() {
           </Select>
         )}
 
-        <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11 w-full sm:w-auto" disabled={isFetching}>
+        <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           Odśwież
         </Button>
@@ -380,7 +388,7 @@ export default function PhoneContacts() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 h-11 w-full sm:w-auto border-orange-200 text-orange-600 hover:bg-orange-50"
+            className="gap-2 h-11 border-orange-200 text-orange-600 hover:bg-orange-50"
             disabled={notifySending}
             onClick={async () => {
               setNotifySending(true);
@@ -414,7 +422,7 @@ export default function PhoneContacts() {
           <Button
             variant={showStats ? "default" : "outline"}
             size="sm"
-            className="gap-2 h-11 w-full sm:w-auto"
+            className="gap-2 h-11"
             onClick={() => setShowStats(p => !p)}
           >
             <BarChart2 className="w-4 h-4" />
@@ -482,94 +490,96 @@ export default function PhoneContacts() {
                             </div>
                             <div className="space-y-2">
                               {items.map((contact, i) => (
-                                 <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100 space-y-2">
-                                   {/* Dane klienta */}
-                                   <div className="min-w-0">
-                                     <div className="font-medium text-gray-800 text-sm">{contact.client_name}</div>
-                                     {(contact.phone || contact.client_phone) && (
-                                       <a href={`tel:${contact.phone || contact.client_phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
-                                         <Phone className="w-3 h-3" /> {contact.phone || contact.client_phone}
-                                       </a>
-                                     )}
-                                     {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
-                                     {contact.status && (
-                                       <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
-                                     )}
-                                   </div>
+                                <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <div className="font-medium text-gray-800 text-sm truncate">{contact.client_name}</div>
+                                      {contact.phone && (
+                                        <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
+                                          <Phone className="w-3 h-3" /> {contact.phone}
+                                        </a>
+                                      )}
+                                      {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
+                                      {contact.status && (
+                                        <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
+                                      )}
+                                    </div>
+                                    <div className="shrink-0 flex gap-2 flex-wrap">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedDetails({
+                                            agent: contact.agent,
+                                            comments: contact.comments,
+                                            interview_data: contact.interview_data || {}
+                                          });
+                                          setDetailsModalOpen(true);
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                        title="Pokaż szczegóły"
+                                      >
+                                        Szczegóły
+                                      </button>
 
-                                   {/* Akcje – pod danymi, pełna szerokość */}
-                                   <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-200">
-                                     <button
-                                       onClick={() => {
-                                         setSelectedDetails({
-                                           agent: contact.agent,
-                                           comments: contact.comments,
-                                           interview_data: contact.interview_data || {}
-                                         });
-                                         setDetailsModalOpen(true);
-                                       }}
-                                       className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                     >
-                                       Szczegóły
-                                     </button>
+                                      {contact.assigned_user_email ? (
+                                        <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
+                                          <User className="w-3 h-3 text-green-600" />
+                                          <span className="text-xs font-medium text-green-700">{contact.assigned_user_name || contact.assigned_user_email}</span>
+                                          {canAssign && (
+                                            <button
+                                              onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
+                                              className="ml-1 text-gray-400 hover:text-red-500 text-xs"
+                                            >×</button>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        canAssign && (
+                                          <Select onValueChange={(val) => {
+                                            const sp = salespeople.find(s => s.email === val);
+                                            if (sp) assignMutation.mutate({ contact, email: sp.email, name: sp.name });
+                                          }}>
+                                            <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
+                                              <SelectValue placeholder="Przypisz doradcę" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {salespeople.map(sp => (
+                                                <SelectItem key={sp.email} value={sp.email}>{sp.name}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        )
+                                      )}
 
-                                     {contact.assigned_user_email ? (
-                                       <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
-                                         <User className="w-3 h-3 text-green-600" />
-                                         <span className="text-xs font-medium text-green-700 truncate max-w-[120px]">{contact.assigned_user_name || contact.assigned_user_email}</span>
-                                         {canAssign && (
-                                           <button
-                                             onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
-                                             className="ml-1 text-gray-400 hover:text-red-500 text-xs"
-                                           >×</button>
-                                         )}
-                                       </div>
-                                     ) : (
-                                       canAssign && (
-                                         <Select onValueChange={(val) => {
-                                           const sp = salespeople.find(s => s.email === val);
-                                           if (sp) assignMutation.mutate({ contact, email: sp.email, name: sp.name });
-                                         }}>
-                                           <SelectTrigger className="h-8 text-xs w-full sm:w-44">
-                                             <SelectValue placeholder="Przypisz doradcę" />
-                                           </SelectTrigger>
-                                           <SelectContent>
-                                             {salespeople.map(sp => (
-                                               <SelectItem key={sp.email} value={sp.email}>{sp.name}</SelectItem>
-                                             ))}
-                                           </SelectContent>
-                                         </Select>
-                                       )
-                                     )}
-
-                                     {canManageGroups && (
-                                       contact.assigned_group_id ? (
-                                         <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
-                                           <span className="text-xs font-medium text-blue-700">{contact.assigned_group_name}</span>
-                                           <button
-                                             onClick={() => assignGroupMutation.mutate({ contact, groupId: "", groupName: "" })}
-                                             className="ml-1 text-gray-400 hover:text-red-500 text-xs"
-                                           >×</button>
-                                         </div>
-                                       ) : (
-                                         <Select onValueChange={(val) => {
-                                           const g = groups.find(gr => gr.id === val);
-                                           if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
-                                         }}>
-                                           <SelectTrigger className="h-8 text-xs w-full sm:w-44">
-                                             <SelectValue placeholder="Przypisz grupę" />
-                                           </SelectTrigger>
-                                           <SelectContent>
-                                             {groups.map(g => (
-                                               <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                             ))}
-                                           </SelectContent>
-                                         </Select>
-                                       )
-                                     )}
-                                   </div>
-                                 </div>
-                               ))}
+                                      {canManageGroups && (
+                                        <>
+                                          {contact.assigned_group_id ? (
+                                            <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
+                                              <span className="text-xs font-medium text-blue-700">{contact.assigned_group_name}</span>
+                                              <button
+                                                onClick={() => assignGroupMutation.mutate({ contact, groupId: "", groupName: "" })}
+                                                className="ml-1 text-gray-400 hover:text-red-500 text-xs"
+                                              >×</button>
+                                            </div>
+                                          ) : (
+                                            <Select onValueChange={(val) => {
+                                              const g = groups.find(gr => gr.id === val);
+                                              if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
+                                            }}>
+                                              <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
+                                                <SelectValue placeholder="Przypisz grupę" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {groups.map(g => (
+                                                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         ))}
