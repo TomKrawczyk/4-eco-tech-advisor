@@ -120,25 +120,28 @@ Deno.serve(async (req) => {
   }
 
   // Napraw eventy które mają pusty location mimo że assignment ma adres
-  // Pobierz wszystkie eventy z meeting_assignment naraz (po source)
   if (toFixEvents.length > 0) {
-    const allEvents = await base44.asServiceRole.entities.CalendarEvent.filter({ source: "meeting_assignment" });
-    await sleep(300);
-    // Zbuduj mapę keyMap -> adres z toFixEvents
+    // Zbuduj mapę key -> adres
     const keyToAddress = {};
     for (const a of toFixEvents) {
-      keyToAddress[a.meeting_key] = a.client_address;
+      if (a.meeting_key && a.client_address) keyToAddress[a.meeting_key] = a.client_address;
     }
-    for (const ev of allEvents) {
-      const addr = keyToAddress[ev.meeting_assignment_id];
-      if (addr && (!ev.location || ev.location.trim() === '')) {
-        try {
-          await base44.asServiceRole.entities.CalendarEvent.update(ev.id, { location: addr });
-          updatedEvents++;
-          await sleep(150);
-        } catch (e) {
-          errors.push({ key: ev.meeting_assignment_id, error: e.message });
+    const keys = Object.keys(keyToAddress);
+    // Sprawdź eventy po jednym kluczu naraz ale tylko dla przypisanych (assigned_user_email != null)
+    const assignedOnly = toFixEvents.filter(a => a.assigned_user_email);
+    for (const a of assignedOnly) {
+      try {
+        const events = await base44.asServiceRole.entities.CalendarEvent.filter({ meeting_assignment_id: a.meeting_key });
+        await sleep(150);
+        for (const ev of events) {
+          if (!ev.location || ev.location.trim() === '') {
+            await base44.asServiceRole.entities.CalendarEvent.update(ev.id, { location: a.client_address });
+            updatedEvents++;
+            await sleep(150);
+          }
         }
+      } catch (e) {
+        errors.push({ key: a.meeting_key, error: e.message });
       }
     }
   }
