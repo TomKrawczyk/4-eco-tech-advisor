@@ -589,8 +589,7 @@ export default function PhoneContacts() {
                   )}
                 </AnimatePresence>
               </div>
-            ); })()}
-          );
+            );
           })}
         </div>
       )}
