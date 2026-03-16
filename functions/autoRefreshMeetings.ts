@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[autoRefreshMeetings] Nowe spotkania: ${newMeetings}, nowe kontakty: ${newContacts}`);
+    console.log(`[autoRefreshMeetings] Nowe spotkania: ${newMeetings}, zaktualizowane: ${updatedMeetings}, nowe kontakty: ${newContacts}`);
 
     return Response.json({
       success: true,
