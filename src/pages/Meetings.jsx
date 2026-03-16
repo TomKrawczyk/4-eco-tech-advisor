@@ -564,6 +564,14 @@ export default function Meetings() {
           </Button>
         )}
 
+        <Button
+          onClick={() => setShowManualModal(true)}
+          className="gap-2 h-11 bg-green-600 hover:bg-green-700 text-white"
+        >
+          <Plus className="w-4 h-4" />
+          Dodaj ręcznie
+        </Button>
+
         <div className="flex flex-col items-end gap-1 shrink-0">
           <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
             <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
