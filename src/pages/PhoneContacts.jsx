@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
-import ManualContactModal from "@/components/shared/ManualContactModal";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
@@ -49,7 +48,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [showManualModal, setShowManualModal] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -300,9 +298,26 @@ export default function PhoneContacts() {
     const myContacts = phoneContactsFromDB.filter(c =>
       c.assigned_user_email === currentUser?.email
     );
+
+    const getSourceStyle = (sheet) => {
+      const s = (sheet || "").toLowerCase();
+      if (s.includes("facebook") || s.includes("fb")) return { label: sheet, cls: "bg-blue-100 text-blue-800 border-blue-300" };
+      if (s.includes("infolinia")) return { label: sheet, cls: "bg-orange-100 text-orange-800 border-orange-300" };
+      if (s.includes("polecen")) return { label: sheet, cls: "bg-purple-100 text-purple-800 border-purple-300" };
+      return { label: sheet, cls: "bg-gray-100 text-gray-700 border-gray-300" };
+    };
+
+    // Grupuj po zakładce (źródle)
+    const bySource = myContacts.reduce((acc, c) => {
+      const key = c.sheet || "Inne";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(c);
+      return acc;
+    }, {});
+
     return (
       <div className="space-y-6">
-        <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
+        <PageHeader title="Moje kontakty" subtitle="Kontakty przypisane do Ciebie" />
         {myContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -312,32 +327,42 @@ export default function PhoneContacts() {
             <p className="text-sm text-gray-500">Nie masz jeszcze żadnych przypisanych kontaktów telefonicznych.</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {myContacts.map((c, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
-                {c.phone && (
-                  <a href={`tel:${c.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
-                    <Phone className="w-3 h-3" /> {c.phone}
-                  </a>
-                )}
-                {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {c.sheet && <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{c.sheet}</Badge>}
-                  {c.assigned_group_name && (
-                    <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
-                  )}
+          <div className="space-y-6">
+            {Object.entries(bySource).map(([source, contacts]) => {
+              const { label, cls } = getSourceStyle(source);
+              return (
+                <div key={source}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge className={`text-xs px-3 py-1 border font-semibold ${cls}`}>{label}</Badge>
+                    <span className="text-xs text-gray-400">{contacts.length} kontaktów</span>
+                  </div>
+                  <div className="space-y-2">
+                    {contacts.map((c, i) => (
+                      <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
+                        {c.phone && (
+                          <a href={`tel:${c.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
+                            <Phone className="w-3 h-3" /> {c.phone}
+                          </a>
+                        )}
+                        {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
+                        {c.comments && (
+                          <div className="text-xs text-gray-600 mt-1 bg-gray-50 rounded px-2 py-1">{c.comments}</div>
+                        )}
+                        {(c.comments || c.agent || c.interview_data) && (
+                          <button
+                            onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                            className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                          >
+                            Szczegóły
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {(c.comments || c.agent) && (
-                  <button
-                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
-                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                  >
-                    Szczegóły
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
@@ -376,14 +401,6 @@ export default function PhoneContacts() {
         <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           Odśwież
-        </Button>
-
-        <Button
-          onClick={() => setShowManualModal(true)}
-          className="gap-2 h-11 bg-green-600 hover:bg-green-700 text-white"
-        >
-          <Plus className="w-4 h-4" />
-          Dodaj ręcznie
         </Button>
 
         {isAdminOrGroupLeader && filtered.length > 0 && (
@@ -599,14 +616,6 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
-      />
-
-      <ManualContactModal
-        open={showManualModal}
-        onOpenChange={setShowManualModal}
-        currentUser={currentUser}
-        groups={groups}
-        salespeople={salespeople}
       />
     </div>
   );
