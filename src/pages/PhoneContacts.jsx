@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
+import ManualContactModal from "@/components/shared/ManualContactModal";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
@@ -209,15 +210,7 @@ export default function PhoneContacts() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        const email = u.data?.email || u.email;
         if (currentUser?.role === "admin") return true;
-        // group_leader może przypisać do siebie lub do użytkowników/team_leaderów swojej grupy
-        if (currentUser?.role === "group_leader") {
-          if (email === currentUser.email) return true;
-          if (role !== "user" && role !== "team_leader") return false;
-          const uGroupId = u.data?.group_id || u.group_id;
-          return uGroupId === currentUserGroupId;
-        }
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;

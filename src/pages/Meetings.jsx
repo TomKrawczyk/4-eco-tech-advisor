@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList } from "lucide-react";
+import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList, Plus } from "lucide-react";
+import ManualContactModal from "@/components/shared/ManualContactModal";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
 import { motion, AnimatePresence } from "framer-motion";
@@ -100,13 +101,10 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
 
               <div className="space-y-3">
                 {meetings.map((a, i) => {
-                  // Adres — sprawdź wszystkie możliwe pola (dane mogą być w różnych polach zależnie od źródła)
-                  const clientAddress = a.client_address || a.address || "";
-                  const clientPhone = a.client_phone || a.phone || "";
                   const clientParams = new URLSearchParams({
                     prefill_client_name: a.client_name || "",
-                    prefill_client_phone: clientPhone,
-                    prefill_client_address: clientAddress,
+                    prefill_client_phone: a.client_phone || a.phone || "",
+                    prefill_client_address: a.client_address || a.address || "",
                     prefill_meeting_date: a.meeting_date || "",
                     prefill_meeting_time: extractTime(a.meeting_calendar) || "",
                     from_meeting: "1",
