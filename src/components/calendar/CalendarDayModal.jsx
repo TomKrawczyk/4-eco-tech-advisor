@@ -125,6 +125,11 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                                 <CheckCircle2 className="w-3.5 h-3.5" />
                               </Button>
                             )}
+                            {ev.status !== "postponed" && (
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-orange-500 hover:bg-orange-50" title="Przełożone" onClick={() => statusMutation.mutate({ id: ev.id, status: "postponed" })}>
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
                             {ev.status !== "cancelled" && (
                               <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:bg-red-50" title="Odwołane" onClick={() => statusMutation.mutate({ id: ev.id, status: "cancelled" })}>
                                 <XCircle className="w-3.5 h-3.5" />
