@@ -72,9 +72,14 @@ export default function Referrals() {
   });
 
   const referrals = allReferrals.filter(ref => {
+    if (!currentUser) return false;
     const creatorEmail = ref.created_by;
     if (currentUser.role === 'admin') return true;
-    return hierarchy.some(u => (u.data?.email || u.email) === creatorEmail);
+    if (currentUser.role === 'group_leader' || currentUser.role === 'team_leader') {
+      return hierarchy.some(u => (u.data?.email || u.email) === creatorEmail);
+    }
+    // Zwykły użytkownik widzi tylko swoje
+    return creatorEmail === currentUser.email;
   });
 
   const filteredReferrals = referrals.filter(ref => {
