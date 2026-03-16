@@ -64,8 +64,8 @@ export default function CalendarEventModal({ initialData, currentUser, onClose, 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edytuj wydarzenie" : "Nowe wydarzenie"}</DialogTitle>
         </DialogHeader>
