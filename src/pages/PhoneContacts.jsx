@@ -378,6 +378,14 @@ export default function PhoneContacts() {
           Odśwież
         </Button>
 
+        <Button
+          onClick={() => setShowManualModal(true)}
+          className="gap-2 h-11 bg-green-600 hover:bg-green-700 text-white"
+        >
+          <Plus className="w-4 h-4" />
+          Dodaj ręcznie
+        </Button>
+
         {isAdminOrGroupLeader && filtered.length > 0 && (
           <Button
             variant="outline"
