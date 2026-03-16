@@ -105,14 +105,19 @@ Deno.serve(async (req) => {
     const meetings = results.flatMap(r => r.meetings);
     const phoneContacts = results.flatMap(r => r.phoneContacts);
 
-    // Sync MeetingAssignment — utwórz nowe jeśli jeszcze nie istnieją
+    // Sync MeetingAssignment — utwórz nowe lub zaktualizuj adres/telefon
     const existingAssignments = await base44.asServiceRole.entities.MeetingAssignment.list();
-    const existingKeys = new Set(existingAssignments.map(a => a.meeting_key));
+    const existingMap = {};
+    for (const a of existingAssignments) {
+      existingMap[a.meeting_key] = a;
+    }
 
     let newMeetings = 0;
+    let updatedMeetings = 0;
     for (const m of meetings) {
       const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-      if (!existingKeys.has(key)) {
+      const existing = existingMap[key];
+      if (!existing) {
         const d = parseMeetingDate(m.meeting_calendar);
         await base44.asServiceRole.entities.MeetingAssignment.create({
           meeting_key: key,
@@ -124,6 +129,20 @@ Deno.serve(async (req) => {
           meeting_date: d ? formatDate(d) : '',
         });
         newMeetings++;
+      } else if ((m.address && !existing.client_address) || (m.phone && !existing.client_phone)) {
+        // Uzupełnij brakujące dane kontaktowe
+        const patch = {};
+        if (m.address && !existing.client_address) patch.client_address = m.address;
+        if (m.phone && !existing.client_phone) patch.client_phone = m.phone;
+        await base44.asServiceRole.entities.MeetingAssignment.update(existing.id, patch);
+        // Zaktualizuj powiązany CalendarEvent
+        if (patch.client_address) {
+          const eventsToUpdate = await base44.asServiceRole.entities.CalendarEvent.filter({ meeting_assignment_id: key });
+          for (const ev of eventsToUpdate) {
+            if (!ev.location) await base44.asServiceRole.entities.CalendarEvent.update(ev.id, { location: patch.client_address });
+          }
+        }
+        updatedMeetings++;
       }
     }
 
