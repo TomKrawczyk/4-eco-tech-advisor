@@ -80,10 +80,10 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                             {ev.client_phone && <span className="text-gray-400 ml-1">· {ev.client_phone}</span>}
                           </div>
                         )}
-                        {ev.location && (
+                        {(ev.location || ev.client_address) && (
                           <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
                             <MapPin className="w-3 h-3" />
-                            {ev.location}
+                            {ev.location || ev.client_address}
                           </div>
                         )}
                         {viewMode === "team" && ev.owner_name && (
