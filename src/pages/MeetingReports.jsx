@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -299,14 +299,17 @@ export default function MeetingReports() {
     enabled: !!currentUser,
   });
 
-  const reports = useMemo(() => {
-    if (!currentUser) return [];
-    if (currentUser.role === "admin" || currentUser.role === "group_leader" || currentUser.role === "team_leader") {
-      return allReports;
-    }
-    // Zwykły użytkownik widzi tylko swoje raporty
-    return allReports.filter(r => r.author_email === currentUser.email || r.created_by === currentUser.email);
-  }, [allReports, currentUser]);
+  const { data: hierarchyData } = useQuery({
+    queryKey: ["userHierarchy", currentUser?.email],
+    queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
+    enabled: !!currentUser,
+  });
+
+  const reports = React.useMemo(() => {
+    if (!currentUser || !hierarchyData?.data) return [];
+    const allowedEmails = hierarchyData.data.userEmails || [];
+    return allReports.filter(r => allowedEmails.includes(r.created_by));
+  }, [allReports, hierarchyData, currentUser]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MeetingReport.create({
