@@ -46,7 +46,7 @@ export default function VisitReports() {
     staleTime: 30000,
   });
 
-  const { data: hierarchyData } = useQuery({
+  const { data: hierarchyData, isLoading: hierarchyLoading } = useQuery({
     queryKey: ["userHierarchy", currentUser?.email],
     queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
     enabled: !!currentUser,
@@ -55,7 +55,6 @@ export default function VisitReports() {
   // Filtruj raporty według hierarchii
   const reports = React.useMemo(() => {
     if (!currentUser || !hierarchyData?.data) return [];
-    
     const allowedEmails = hierarchyData.data.userEmails || [];
     return allReports.filter(report => allowedEmails.includes(report.created_by));
   }, [allReports, hierarchyData, currentUser]);
