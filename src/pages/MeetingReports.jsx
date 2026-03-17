@@ -299,7 +299,7 @@ export default function MeetingReports() {
     enabled: !!currentUser,
   });
 
-  const { data: hierarchyData } = useQuery({
+  const { data: hierarchyData, isLoading: hierarchyLoading } = useQuery({
     queryKey: ["userHierarchy", currentUser?.email],
     queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
     enabled: !!currentUser,
