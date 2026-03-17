@@ -267,8 +267,9 @@ export default function MeetingReports() {
   const [currentUser, setCurrentUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Sprawdź prefill z URL (po przejściu ze spotkania)
-  const urlParams = new URLSearchParams(window.location.search);
+  // Sprawdź prefill z URL (po przejściu ze spotkania) — HashRouter używa hash, nie search
+  const hashSearch = window.location.hash.includes("?") ? window.location.hash.split("?")[1] : "";
+  const urlParams = new URLSearchParams(hashSearch);
   const prefill = urlParams.get("from_meeting") === "1" ? {
     client_name: urlParams.get("prefill_client_name") || "",
     client_phone: urlParams.get("prefill_client_phone") || "",
@@ -293,23 +294,11 @@ export default function MeetingReports() {
     fetchUser();
   }, []);
 
-  const { data: allReports = [], isLoading } = useQuery({
+  const { data: reports = [], isLoading } = useQuery({
     queryKey: ["meetingReports"],
     queryFn: () => base44.entities.MeetingReport.list("-created_date", 100),
     enabled: !!currentUser,
   });
-
-  const { data: hierarchyData, isLoading: hierarchyLoading } = useQuery({
-    queryKey: ["userHierarchy", currentUser?.email],
-    queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
-    enabled: !!currentUser,
-  });
-
-  const reports = React.useMemo(() => {
-    if (!currentUser || !hierarchyData?.data) return [];
-    const allowedEmails = hierarchyData.data.userEmails || [];
-    return allReports.filter(r => allowedEmails.includes(r.created_by));
-  }, [allReports, hierarchyData, currentUser]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MeetingReport.create({
@@ -429,7 +418,7 @@ export default function MeetingReports() {
         ))}
       </div>
 
-      {(isLoading || hierarchyLoading) ? (
+      {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
             <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
