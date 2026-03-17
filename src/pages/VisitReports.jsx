@@ -124,7 +124,7 @@ export default function VisitReports() {
       </div>
 
       {/* Reports list */}
-      {isLoading ? (
+      {(isLoading || hierarchyLoading) ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
