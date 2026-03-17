@@ -50,33 +50,8 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (shouldNotifyEmail) {
-        const sections = `
-          <p style="color: #4b5563; line-height: 1.7; margin: 0 0 10px 0;">
-            Do systemu dodano nowy raport wizyty technicznej.
-          </p>
-          <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin: 16px 0;">
-            <p style="margin: 0 0 8px 0; color: #1f2937;">
-              <strong>Klient:</strong> ${data.client_name || 'Bez nazwy'}
-            </p>
-            <p style="margin: 0 0 8px 0; color: #1f2937;">
-              <strong>Data wizyty:</strong> ${data.visit_date || 'Nie podano'}
-            </p>
-            ${data.installation_types?.length ? `<p style="margin: 0 0 8px 0; color: #1f2937;"><strong>Rodzaj instalacji:</strong> ${data.installation_types.join(', ')}</p>` : ''}
-          </div>
-          <div style="background: #dcfce7; border-left: 4px solid #22c55e; padding: 12px 16px; border-radius: 4px; margin: 16px 0;">
-            <p style="margin: 0 0 4px 0; color: #14532d; font-weight: bold;">Autor raportu</p>
-            <p style="margin: 0 0 4px 0; color: #166534;">${creatorName}</p>
-            <p style="margin: 0; color: #15803d; font-size: 13px;">${creatorEmail}</p>
-          </div>
-        `;
-
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          to: admin.email,
-          subject: '4-ECO: Nowy raport utworzony',
-          body: emailTemplate('Nowy raport utworzony', sections, null),
-        });
-      }
+      // Email wyłączony celowo – powiadomienia tylko in-app
+      // if (shouldNotifyEmail) { ... }
     }
 
     return Response.json({ success: true, notified: adminUsers.length });

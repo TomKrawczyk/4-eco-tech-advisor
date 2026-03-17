@@ -38,17 +38,7 @@ Deno.serve(async (req) => {
       is_read: false,
     });
 
-    // Wyślij email przez Brevo
-    try {
-      await sendBrevoEmail({
-        to: assignedUserEmail,
-        toName: assignedUserName,
-        subject: `Nowe spotkanie: ${clientName} – ${meetingCalendar}`,
-        text: `Cześć ${assignedUserName}!\n\nZostało Ci przypisane nowe spotkanie:\n\nKlient: ${clientName}\nArkusz: ${sheet}\nData i godzina: ${meetingCalendar}\n\nPamiętaj, że po spotkaniu należy uzupełnić raport w aplikacji.\n\nPozdrawiamy,\n4-ECO Green Energy`,
-      });
-    } catch (emailErr) {
-      console.error("Błąd wysyłki email Brevo:", emailErr.message);
-    }
+    // Email wyłączony celowo – powiadomienia tylko in-app
 
     return Response.json({ ok: true });
   } catch (error) {

@@ -98,26 +98,8 @@ Deno.serve(async (req) => {
           is_read: false,
         });
 
-        // Email
-        try {
-          const meetingList = groupMeetings.slice(0, 10).map(m => {
-            const name = m.data?.client_name || m.client_name || '?';
-            const cal = m.data?.meeting_calendar || m.meeting_calendar || '';
-            const sheet = m.data?.sheet || m.sheet || '';
-            return `• ${name}${cal ? ' – ' + cal : ''} (${sheet})`;
-          }).join('\n');
-          const moreText = groupMeetings.length > 10 ? `\n...i ${groupMeetings.length - 10} więcej.` : '';
-
-          await sendBrevoEmail({
-            to: leaderEmail,
-            toName: leaderName,
-            subject: `Nowe spotkania do przypisania – ${groupName} (${groupMeetings.length})`,
-            text: `Cześć ${leaderName}!\n\nW arkuszach Twojej grupy "${groupName}" oczekuje ${groupMeetings.length} spotkań do przypisania handlowcom:\n\n${meetingList}${moreText}\n\nZaloguj się do aplikacji, aby przypisać spotkania do handlowców.\n\nPozdrawiamy,\n4-ECO Green Energy`,
-          });
-          notified.push(leaderEmail);
-        } catch (emailErr) {
-          console.error("Błąd wysyłki email Brevo:", emailErr.message);
-        }
+        // Email wyłączony celowo – powiadomienia tylko in-app
+        notified.push(leaderEmail);
       }
     }
 

@@ -38,17 +38,7 @@ Deno.serve(async (req) => {
       is_read: false,
     });
 
-    // Email przez Brevo
-    try {
-      await sendBrevoEmail({
-        to: assignedUserEmail,
-        toName: assignedUserName,
-        subject: `Nowy kontakt telefoniczny: ${clientName}`,
-        text: `Cześć ${assignedUserName}!\n\nZostał Ci przypisany nowy kontakt telefoniczny do obsłużenia:\n\nKlient: ${clientName}${phone ? '\nTelefon: ' + phone : ''}\nArkusz: ${sheet}\n\nZaloguj się do aplikacji, aby zobaczyć szczegóły.\n\nPozdrawiamy,\n4-ECO Green Energy`,
-      });
-    } catch (emailErr) {
-      console.error("Błąd wysyłki email Brevo:", emailErr.message);
-    }
+    // Email wyłączony celowo – powiadomienia tylko in-app
 
     return Response.json({ ok: true });
   } catch (error) {

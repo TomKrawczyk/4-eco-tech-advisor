@@ -77,24 +77,8 @@ Deno.serve(async (req) => {
         is_read: false,
       });
 
-      try {
-        let emailSubject, emailText;
-        if (isBulk) {
-          const list = bulkContacts.slice(0, 10).map(c =>
-            `• ${c.client_name}${c.phone ? ' – ' + c.phone : ''}${c.sheet ? ' (' + c.sheet + ')' : ''}`
-          ).join('\n');
-          const more = bulkContacts.length > 10 ? `\n...i ${bulkContacts.length - 10} więcej.` : '';
-          emailSubject = `Kontakty telefoniczne do przypisania – ${groupName} (${bulkContacts.length})`;
-          emailText = `Cześć ${leaderName}!\n\nW Twojej grupie "${groupName}" jest ${bulkContacts.length} kontaktów telefonicznych oczekujących na przypisanie do doradców:\n\n${list}${more}\n\nZaloguj się do aplikacji, aby przypisać kontakty.\n\nPozdrawiamy,\n4-ECO Green Energy`;
-        } else {
-          emailSubject = `Nowy kontakt telefoniczny dla grupy ${groupName}: ${clientName}`;
-          emailText = `Cześć ${leaderName}!\n\nNowy kontakt telefoniczny został przypisany do Twojej grupy "${groupName}":\n\nKlient: ${clientName}${phone ? '\nTelefon: ' + phone : ''}\nArkusz: ${sheet}\n\nZaloguj się do aplikacji, aby przypisać kontakt do doradcy.\n\nPozdrawiamy,\n4-ECO Green Energy`;
-        }
-        await sendBrevoEmail({ to: leaderEmail, toName: leaderName, subject: emailSubject, text: emailText });
-        notified.push(leaderEmail);
-      } catch (emailErr) {
-        console.error("Błąd wysyłki email:", emailErr.message);
-      }
+      // Email wyłączony celowo – powiadomienia tylko in-app
+      notified.push(leaderEmail);
     }
 
     return Response.json({ ok: true, notified });
