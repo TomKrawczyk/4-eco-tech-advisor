@@ -49,7 +49,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [manualModalOpen, setManualModalOpen] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -341,16 +340,9 @@ export default function PhoneContacts() {
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
-        <ManualContactModal
-          open={manualModalOpen}
-          onOpenChange={setManualModalOpen}
-          currentUser={currentUser}
-          groups={groups}
-          salespeople={salespeople}
-        />
-        </div>
-        );
-        }
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -420,27 +412,16 @@ export default function PhoneContacts() {
         )}
 
         {currentUser?.role === "admin" && (
-              <Button
-                variant={showStats ? "default" : "outline"}
-                size="sm"
-                className="gap-2 h-11"
-                onClick={() => setShowStats(p => !p)}
-              >
-                <BarChart2 className="w-4 h-4" />
-                Statystyki
-              </Button>
-            )}
-
-            {canAssign && (
-              <Button
-                size="sm"
-                className="gap-2 h-11 bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => setManualModalOpen(true)}
-              >
-                <Plus className="w-4 h-4" />
-                Dodaj ręcznie
-              </Button>
-            )}
+          <Button
+            variant={showStats ? "default" : "outline"}
+            size="sm"
+            className="gap-2 h-11"
+            onClick={() => setShowStats(p => !p)}
+          >
+            <BarChart2 className="w-4 h-4" />
+            Statystyki
+          </Button>
+        )}
       </div>
 
       <div className="text-sm text-gray-500">
