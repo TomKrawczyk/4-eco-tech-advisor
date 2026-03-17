@@ -101,8 +101,21 @@ export async function syncQueue(entityMap) {
 /**
  * Smart list: fetch from server (and cache), or return cache if offline.
  */
+function getUserCachePrefix() {
+  try {
+    // Użyj email z sessionStorage (layout zapisuje user tam)
+    const cached = sessionStorage.getItem('layout_user_cache');
+    if (cached) {
+      const { data } = JSON.parse(cached);
+      return data?.user?.email || "anon";
+    }
+  } catch (_) {}
+  return "anon";
+}
+
 export async function smartList(entity, entityName, filterOrSort, limit = 200) {
-  const cacheKey = entityName + "_" + JSON.stringify(filterOrSort);
+  const userPrefix = getUserCachePrefix();
+  const cacheKey = userPrefix + "_" + entityName + "_" + JSON.stringify(filterOrSort);
   if (isOnline()) {
     try {
       let data;
