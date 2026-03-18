@@ -25,12 +25,25 @@ export default function MissingReportsBanner({ currentUser }) {
     const check = async () => {
       const today = startOfDay(new Date());
 
-      const [assignments, reports, visitReports, allowedUsers] = await Promise.all([
+      const [assignments, reports, visitReports, allowedUsers, calendarEvents] = await Promise.all([
         base44.entities.MeetingAssignment.filter({ assigned_user_email: currentUser.email }),
         base44.entities.MeetingReport.filter({ author_email: currentUser.email }),
         base44.entities.VisitReport.filter({ author_email: currentUser.email }),
         base44.entities.AllowedUser.list(),
+        base44.entities.CalendarEvent.filter({ owner_email: currentUser.email }),
       ]);
+
+      // Zbiór kluczy klientów których spotkania są przełożone na przyszłość
+      const postponedClientKeys = new Set();
+      for (const ev of calendarEvents) {
+        if (ev.status !== 'postponed' || !ev.postponed_to) continue;
+        const newDay = parseMeetingDate(ev.postponed_to);
+        if (!newDay || startOfDay(newDay) <= today) continue;
+        const ph = normalizePhone(ev.client_phone);
+        const nm = normalize(ev.client_name);
+        const key = ph.length >= 7 ? ph : nm;
+        if (key) postponedClientKeys.add(key);
+      }
 
       const ua = allowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
       setIsBlocked(ua?.data?.is_blocked || ua?.is_blocked || false);
