@@ -57,7 +57,7 @@ function PhotoGallery({ photos, onAdd, onRemove, uploading }) {
 }
 
 function MeetingForm({ initialData, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(initialData || {
+  const [form, setForm] = useState({
     client_name: "",
     client_address: "",
     client_phone: "",
@@ -67,6 +67,7 @@ function MeetingForm({ initialData, onSave, onCancel, saving }) {
     next_steps: "",
     status: "planned",
     photos: [],
+    ...initialData,
   });
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
