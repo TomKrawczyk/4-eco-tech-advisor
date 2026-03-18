@@ -7,10 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
-import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
+import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -49,7 +49,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [manualAddOpen, setManualAddOpen] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -302,12 +301,7 @@ export default function PhoneContacts() {
     );
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
-          <Button onClick={() => setManualAddOpen(true)} className="bg-green-600 hover:bg-green-700 gap-2 shrink-0">
-            <Plus className="w-4 h-4" /> Dodaj ręcznie
-          </Button>
-        </div>
+        <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
         {myContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -346,12 +340,6 @@ export default function PhoneContacts() {
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
-        <ManualAddModal
-          open={manualAddOpen}
-          onClose={() => setManualAddOpen(false)}
-          currentUser={currentUser}
-          onContactAdded={() => queryClient.invalidateQueries(["phoneContactsDB"])}
-        />
       </div>
     );
   }
@@ -387,10 +375,6 @@ export default function PhoneContacts() {
         <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           Odśwież
-        </Button>
-
-        <Button onClick={() => setManualAddOpen(true)} className="bg-green-600 hover:bg-green-700 gap-2 h-11">
-          <Plus className="w-4 h-4" /> Dodaj ręcznie
         </Button>
 
         {isAdminOrGroupLeader && filtered.length > 0 && (
@@ -606,16 +590,6 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
-      />
-
-      <ManualAddModal
-        open={manualAddOpen}
-        onClose={() => setManualAddOpen(false)}
-        currentUser={currentUser}
-        onContactAdded={() => {
-          queryClient.invalidateQueries(["phoneContactsDB"]);
-          queryClient.invalidateQueries(["phoneContacts"]);
-        }}
       />
     </div>
   );
