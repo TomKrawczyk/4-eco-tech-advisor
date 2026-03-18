@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,9 +23,10 @@ const questions = [
 ];
 
 export default function Interview() {
-  const [searchParams] = useSearchParams();
-  const prefillVisitDate = searchParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0];
-  const prefillClientName = searchParams.get("prefill_client_name") || "";
+  const hashSearch = window.location.hash.includes("?") ? window.location.hash.split("?")[1] : window.location.search;
+  const urlParams = new URLSearchParams(hashSearch);
+  const prefillVisitDate = urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0];
+  const prefillClientName = urlParams.get("prefill_client_name") || "";
 
   const [currentReport, setCurrentReport] = useState(null);
   const [form, setForm] = useState({
