@@ -328,14 +328,22 @@ export default function PhoneContacts() {
                     <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
                   )}
                 </div>
-                {(c.comments || c.agent) && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {(c.comments || c.agent) && (
+                    <button
+                      onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                      className="px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                    >
+                      Szczegóły
+                    </button>
+                  )}
                   <button
-                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
-                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                    onClick={() => setReportContact(c)}
+                    className="px-2 py-1 rounded text-xs bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
                   >
-                    Szczegóły
+                    <FileText className="w-3 h-3" /> Raport
                   </button>
-                )}
+                </div>
               </div>
             ))}
           </div>
