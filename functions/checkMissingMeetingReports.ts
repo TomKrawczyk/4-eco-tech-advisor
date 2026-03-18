@@ -52,13 +52,34 @@ Deno.serve(async (req) => {
     pastLimit.setDate(pastLimit.getDate() - 30);
     const todayStr = today.toISOString().split('T')[0];
 
-    const [assignments, meetingReports, visitReports, notifications, allowedUsers] = await Promise.all([
+    const [assignments, meetingReports, visitReports, notifications, allowedUsers, calendarEvents] = await Promise.all([
       base44.asServiceRole.entities.MeetingAssignment.list(),
       base44.asServiceRole.entities.MeetingReport.list(),
       base44.asServiceRole.entities.VisitReport.list(),
       base44.asServiceRole.entities.Notification.list(),
       base44.asServiceRole.entities.AllowedUser.list(),
+      base44.asServiceRole.entities.CalendarEvent.list(),
     ]);
+
+    // Zbiór wydarzeń przełożonych (status=postponed) z nową datą w przyszłości
+    // Jeśli spotkanie jest przełożone na datę w przyszłości → nie wymagamy raportu
+    const postponedKeys = new Set();
+    for (const ev of calendarEvents) {
+      if (ev.status !== 'postponed') continue;
+      const postponedTo = ev.postponed_to;
+      if (!postponedTo) continue;
+      const newDay = parseDate(postponedTo);
+      if (!newDay) continue;
+      if (newDay > today) {
+        // Klucz: email właściciela + znormalizowany telefon lub nazwa klienta
+        const phone = (ev.client_phone || '').replace(/\s+/g, '').replace(/[^\d]/g, '');
+        const name = (ev.client_name || '').toLowerCase().trim();
+        const clientKey = phone.length >= 7 ? phone : name;
+        if (clientKey && ev.owner_email) {
+          postponedKeys.add(`${ev.owner_email}|${clientKey}`);
+        }
+      }
+    }
 
     // Łączymy oba typy raportów jako dowód spotkania
     const allReports = [
