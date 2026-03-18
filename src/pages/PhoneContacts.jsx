@@ -607,6 +607,15 @@ export default function PhoneContacts() {
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
       />
+
+      {reportContact && (
+        <PhoneContactReportModal
+          contact={reportContact}
+          currentUser={currentUser}
+          open={!!reportContact}
+          onClose={() => setReportContact(null)}
+        />
+      )}
     </div>
   );
 }
