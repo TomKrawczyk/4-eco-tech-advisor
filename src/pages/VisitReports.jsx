@@ -46,7 +46,7 @@ export default function VisitReports() {
     staleTime: 30000,
   });
 
-  const { data: hierarchyData, isLoading: hierarchyLoading } = useQuery({
+  const { data: hierarchyData } = useQuery({
     queryKey: ["userHierarchy", currentUser?.email],
     queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
     enabled: !!currentUser,
@@ -54,7 +54,14 @@ export default function VisitReports() {
 
   // Filtruj raporty według hierarchii
   const reports = React.useMemo(() => {
-    if (!currentUser || !hierarchyData?.data) return [];
+    if (!currentUser) return [];
+    const role = currentUser.role;
+    // Zwykły użytkownik widzi tylko swoje raporty
+    if (role !== "admin" && role !== "group_leader" && role !== "team_leader") {
+      return allReports.filter(r => r.author_email === currentUser.email || r.created_by === currentUser.email);
+    }
+    // Liderzy/admini widzą według hierarchii
+    if (!hierarchyData?.data) return [];
     const allowedEmails = hierarchyData.data.userEmails || [];
     return allReports.filter(report => allowedEmails.includes(report.created_by));
   }, [allReports, hierarchyData, currentUser]);
@@ -124,7 +131,7 @@ export default function VisitReports() {
       </div>
 
       {/* Reports list */}
-      {(isLoading || hierarchyLoading) ? (
+      {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
