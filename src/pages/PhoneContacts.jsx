@@ -289,7 +289,8 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      const matchStatus = c.status === "Kontakt do doradcy" || c.status === "DWS";
+      // Ręcznie dodane zawsze pokazuj; z arkusza – tylko z odpowiednim statusem
+      const matchStatus = isManualContact(c) || c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
   }, [visibleContacts, search, sheetFilter]);
