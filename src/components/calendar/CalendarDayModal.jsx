@@ -191,9 +191,8 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                         )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Formularz przełożenia */}
+                    {/* Formularz przełożenia */}
                   {postponeFor === ev.id && (
                     <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-2">
                       <Label className="text-xs font-medium text-orange-800">Przenieś na nową datę:</Label>
