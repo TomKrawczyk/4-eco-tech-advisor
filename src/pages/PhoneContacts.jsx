@@ -521,6 +521,13 @@ export default function PhoneContacts() {
                                       >
                                         Szczegóły
                                       </button>
+                                      <button
+                                        onClick={() => setReportContact(contact)}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
+                                        title="Raporty kontaktu"
+                                      >
+                                        <FileText className="w-3 h-3" /> Raport
+                                      </button>
 
                                       {contact.assigned_user_email ? (
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
