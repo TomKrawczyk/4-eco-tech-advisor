@@ -49,7 +49,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [manualAddOpen, setManualAddOpen] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -116,12 +115,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy + dołącz ręcznie dodane (manual_*)
+  // Scal dane z arkusza z przypisaniami z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-
-    // Kontakty z arkusza wzbogacone o dane z DB
-    const sheetContacts = rawContacts.map(c => {
+    return rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -135,56 +132,27 @@ export default function PhoneContacts() {
       }
       return c;
     });
-
-    // Ręcznie dodane kontakty – te z DB których contact_key zaczyna się od "manual_"
-    const manualContacts = phoneContactsFromDB
-      .filter(db => db.contact_key?.startsWith("manual_"))
-      .map(db => ({
-        contact_key: db.contact_key,
-        id: db.id,
-        sheet: db.sheet || "Ręczne",
-        client_name: db.client_name,
-        phone: db.phone,
-        address: db.address,
-        date: db.date,
-        contact_date: db.contact_date,
-        status: db.status || "Kontakt do doradcy",
-        comments: db.comments,
-        agent: db.agent,
-        interview_data: db.interview_data || {},
-        assigned_user_email: db.assigned_user_email,
-        assigned_user_name: db.assigned_user_name,
-        assigned_group_id: db.assigned_group_id,
-        assigned_group_name: db.assigned_group_name,
-      }));
-
-    return [...sheetContacts, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
-    // Jeśli kontakt ma już id (np. ręcznie dodany lub wcześniej zapisany) – update po id
-    if (contact.id) {
-      return base44.entities.PhoneContact.update(contact.id, patch);
-    }
-    // Sprawdź czy istnieje w DB po contact_key
     const existing = phoneContactsFromDB.find(db => db.contact_key === contact.contact_key);
     if (existing) {
       return base44.entities.PhoneContact.update(existing.id, patch);
+    } else {
+      return base44.entities.PhoneContact.create({
+        contact_key: contact.contact_key,
+        sheet: contact.sheet,
+        client_name: contact.client_name,
+        phone: contact.phone,
+        address: contact.address,
+        date: contact.date,
+        agent: contact.agent,
+        contact_date: contact.contact_date,
+        status: contact.status,
+        comments: contact.comments,
+        ...patch,
+      });
     }
-    // Nowy rekord – utwórz
-    return base44.entities.PhoneContact.create({
-      contact_key: contact.contact_key,
-      sheet: contact.sheet,
-      client_name: contact.client_name,
-      phone: contact.phone,
-      address: contact.address,
-      date: contact.date,
-      agent: contact.agent,
-      contact_date: contact.contact_date,
-      status: contact.status,
-      comments: contact.comments,
-      ...patch,
-    });
   };
 
   const assignMutation = useMutation({
@@ -252,31 +220,27 @@ export default function PhoneContacts() {
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
-  // Ręcznie dodane kontakty są zawsze widoczne (nie mają statusu z arkusza) – uwzględnij je w filtrze
-  const isManualContact = (c) => c.contact_key?.startsWith("manual_");
-
   // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts;
+      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
       return contacts.filter(c => {
-        // Ręcznie dodane – pokaż jeśli nieprzypisane lub przypisane do tej grupy
-        if (isManualContact(c)) return !c.assigned_group_id || c.assigned_group_id === myGroupId;
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
         if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
+        // Fallback: kontakty przypisane do grupy
         if (c.assigned_group_id === myGroupId) return true;
         return false;
       });
     }
     if (currentUser?.role === "team_leader") {
+      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
       return contacts.filter(c => {
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
         if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
         // Nieprzypisane kontakty z arkuszy grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
-          if (isManualContact(c)) return true; // ręczne nieprzypisane widoczne dla team_leadera
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
           return sheetMapping?.group_id === currentUserGroupId;
         }
@@ -290,8 +254,7 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      // Ręcznie dodane zawsze pokazuj; z arkusza – tylko z odpowiednim statusem
-      const matchStatus = isManualContact(c) || c.status === "Kontakt do doradcy" || c.status === "DWS";
+      const matchStatus = c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
   }, [visibleContacts, search, sheetFilter]);
@@ -331,20 +294,14 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi swoje przypisane kontakty + swoje ręcznie dodane
+  // Zwykły użytkownik widzi swoje przypisane kontakty
   if (!isLeaderOrAdmin) {
     const myContacts = phoneContactsFromDB.filter(c =>
-      c.assigned_user_email === currentUser?.email ||
-      (c.contact_key?.startsWith("manual_") && !c.assigned_user_email && c.created_by === currentUser?.email)
+      c.assigned_user_email === currentUser?.email
     );
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between gap-3">
-          <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
-          <Button onClick={() => setManualAddOpen(true)} className="bg-green-600 hover:bg-green-700 gap-2 shrink-0">
-            <Plus className="w-4 h-4" /> Dodaj ręcznie
-          </Button>
-        </div>
+        <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
         {myContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -383,12 +340,6 @@ export default function PhoneContacts() {
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
-        <ManualAddModal
-          open={manualAddOpen}
-          onClose={() => setManualAddOpen(false)}
-          currentUser={currentUser}
-          onContactAdded={() => queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] })}
-        />
       </div>
     );
   }
@@ -424,10 +375,6 @@ export default function PhoneContacts() {
         <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           Odśwież
-        </Button>
-
-        <Button onClick={() => setManualAddOpen(true)} className="bg-green-600 hover:bg-green-700 gap-2 h-11 shrink-0">
-          <Plus className="w-4 h-4" /> Dodaj ręcznie
         </Button>
 
         {isAdminOrGroupLeader && filtered.length > 0 && (
@@ -546,14 +493,9 @@ export default function PhoneContacts() {
                                         </a>
                                       )}
                                       {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        {isManualContact(contact) && (
-                                          <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">Ręcznie dodany</Badge>
-                                        )}
-                                        {contact.status && (
-                                          <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
-                                        )}
-                                      </div>
+                                      {contact.status && (
+                                        <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
+                                      )}
                                     </div>
                                     <div className="shrink-0 flex gap-2 flex-wrap">
                                       <button
@@ -648,15 +590,6 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
-      />
-
-      <ManualAddModal
-        open={manualAddOpen}
-        onClose={() => setManualAddOpen(false)}
-        currentUser={currentUser}
-        onContactAdded={() => {
-          queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
-        }}
       />
     </div>
   );
