@@ -162,24 +162,29 @@ export default function PhoneContacts() {
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
+    // Jeśli kontakt ma już id (np. ręcznie dodany lub wcześniej zapisany) – update po id
+    if (contact.id) {
+      return base44.entities.PhoneContact.update(contact.id, patch);
+    }
+    // Sprawdź czy istnieje w DB po contact_key
     const existing = phoneContactsFromDB.find(db => db.contact_key === contact.contact_key);
     if (existing) {
       return base44.entities.PhoneContact.update(existing.id, patch);
-    } else {
-      return base44.entities.PhoneContact.create({
-        contact_key: contact.contact_key,
-        sheet: contact.sheet,
-        client_name: contact.client_name,
-        phone: contact.phone,
-        address: contact.address,
-        date: contact.date,
-        agent: contact.agent,
-        contact_date: contact.contact_date,
-        status: contact.status,
-        comments: contact.comments,
-        ...patch,
-      });
     }
+    // Nowy rekord – utwórz
+    return base44.entities.PhoneContact.create({
+      contact_key: contact.contact_key,
+      sheet: contact.sheet,
+      client_name: contact.client_name,
+      phone: contact.phone,
+      address: contact.address,
+      date: contact.date,
+      agent: contact.agent,
+      contact_date: contact.contact_date,
+      status: contact.status,
+      comments: contact.comments,
+      ...patch,
+    });
   };
 
   const assignMutation = useMutation({
