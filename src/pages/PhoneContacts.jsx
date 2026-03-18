@@ -49,6 +49,9 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
+  const [manualAddOpen, setManualAddOpen] = useState(false);
+
+  const isManualContact = (c) => c.contact_key?.startsWith("manual_");
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
