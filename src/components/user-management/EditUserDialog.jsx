@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Key, Loader2 } from "lucide-react";
+import { Key, Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EditUserDialog({ user, open, onClose, onSave, allUsers, groups }) {
