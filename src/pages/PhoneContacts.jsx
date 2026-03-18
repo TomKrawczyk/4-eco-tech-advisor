@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, FileText } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
-import ManualContactModal from "@/components/shared/ManualContactModal";
+import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -49,7 +49,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [manualModalOpen, setManualModalOpen] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -119,7 +118,7 @@ export default function PhoneContacts() {
   // Scal dane z arkusza z przypisaniami z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    const sheetContacts = rawContacts.map(c => {
+    return rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -133,31 +132,6 @@ export default function PhoneContacts() {
       }
       return c;
     });
-
-    // Dodaj ręcznie dodane kontakty (nie mają odpowiednika w arkuszu)
-    const sheetKeys = new Set(rawContacts.map(c => c.contact_key));
-    const manualContacts = phoneContactsFromDB
-      .filter(db => !sheetKeys.has(db.contact_key) && db.contact_key?.startsWith("manual__"))
-      .map(db => ({
-        contact_key: db.contact_key,
-        sheet: db.sheet || "Ręczne",
-        client_name: db.client_name,
-        phone: db.phone,
-        address: db.address,
-        contact_date: db.contact_date,
-        status: db.status || "Kontakt do doradcy",
-        comments: db.comments,
-        agent: db.agent,
-        interview_data: db.interview_data,
-        assigned_user_email: db.assigned_user_email,
-        assigned_user_name: db.assigned_user_name,
-        assigned_group_id: db.assigned_group_id,
-        assigned_group_name: db.assigned_group_name,
-        id: db.id,
-        isManual: true,
-      }));
-
-    return [...sheetContacts, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -448,15 +422,6 @@ export default function PhoneContacts() {
             Statystyki
           </Button>
         )}
-
-        <Button
-          size="sm"
-          className="gap-2 h-11 bg-green-600 hover:bg-green-700"
-          onClick={() => setManualModalOpen(true)}
-        >
-          <Plus className="w-4 h-4" />
-          Dodaj ręcznie
-        </Button>
       </div>
 
       <div className="text-sm text-gray-500">
@@ -521,21 +486,16 @@ export default function PhoneContacts() {
                                 <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
-                                     <div className="flex items-center gap-1.5">
-                                       <div className="font-medium text-gray-800 text-sm truncate">{contact.client_name}</div>
-                                       {contact.isManual && (
-                                         <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] shrink-0">Ręczny</Badge>
-                                       )}
-                                     </div>
-                                     {contact.phone && (
-                                       <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
-                                         <Phone className="w-3 h-3" /> {contact.phone}
-                                       </a>
-                                     )}
-                                     {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
-                                     {contact.status && (
-                                       <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
-                                     )}
+                                      <div className="font-medium text-gray-800 text-sm truncate">{contact.client_name}</div>
+                                      {contact.phone && (
+                                        <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
+                                          <Phone className="w-3 h-3" /> {contact.phone}
+                                        </a>
+                                      )}
+                                      {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
+                                      {contact.status && (
+                                        <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
+                                      )}
                                     </div>
                                     <div className="shrink-0 flex gap-2 flex-wrap">
                                       <button
@@ -630,14 +590,6 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
-      />
-
-      <ManualContactModal
-        open={manualModalOpen}
-        onOpenChange={setManualModalOpen}
-        currentUser={currentUser}
-        groups={groups}
-        salespeople={salespeople}
       />
     </div>
   );
