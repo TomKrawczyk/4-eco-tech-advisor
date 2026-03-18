@@ -234,22 +234,21 @@ export default function PhoneContacts() {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
+      if (!myGroupId) return contacts;
       return contacts.filter(c => {
+        if (isManualContact(c)) return !c.assigned_group_id || c.assigned_group_id === myGroupId;
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
         if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
-        // Fallback: kontakty przypisane do grupy
         if (c.assigned_group_id === myGroupId) return true;
         return false;
       });
     }
     if (currentUser?.role === "team_leader") {
-      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
       return contacts.filter(c => {
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
         if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
-        // Nieprzypisane kontakty z arkuszy grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
+          if (isManualContact(c)) return true;
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
           return sheetMapping?.group_id === currentUserGroupId;
         }
@@ -263,7 +262,8 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      const matchStatus = c.status === "Kontakt do doradcy" || c.status === "DWS";
+      // Ręcznie dodane zawsze pokazuj; z arkusza – tylko z odpowiednim statusem
+      const matchStatus = isManualContact(c) || c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
   }, [visibleContacts, search, sheetFilter]);
