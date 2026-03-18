@@ -389,6 +389,10 @@ export default function PhoneContacts() {
           Odśwież
         </Button>
 
+        <Button onClick={() => setManualAddOpen(true)} className="bg-green-600 hover:bg-green-700 gap-2 h-11">
+          <Plus className="w-4 h-4" /> Dodaj ręcznie
+        </Button>
+
         {isAdminOrGroupLeader && filtered.length > 0 && (
           <Button
             variant="outline"
