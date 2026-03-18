@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList, Plus } from "lucide-react";
-import ManualContactModal from "@/components/shared/ManualContactModal";
+import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
 import { motion, AnimatePresence } from "framer-motion";
@@ -211,14 +210,6 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
       />
-
-      <ManualContactModal
-        open={showManualModal}
-        onOpenChange={setShowManualModal}
-        currentUser={currentUser}
-        groups={groups}
-        salespeople={salespeople}
-      />
     </div>
   );
 }
@@ -234,7 +225,6 @@ export default function Meetings() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [showManualModal, setShowManualModal] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -386,8 +376,10 @@ export default function Meetings() {
           const assignment = meetingAssignments.find(a => a.meeting_key === key);
           const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
           matchRole = isSheetInMyGroup || isAssignedToMyGroup;
+        } else {
+          // Brak przypisanej grupy = nie widzi niczego
+          matchRole = false;
         }
-        // Brak grupy = lider widzi wszystko (np. po świeżym awansie)
       } else if (currentUser?.role === "team_leader") {
         // Team leader widzi spotkania przypisane bezpośrednio do niego lub do członków jego zespołu
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
@@ -571,14 +563,6 @@ export default function Meetings() {
             {notifySending ? "Wysyłanie..." : "Wyślij powiadomienia"}
           </Button>
         )}
-
-        <Button
-          onClick={() => setShowManualModal(true)}
-          className="gap-2 h-11 bg-green-600 hover:bg-green-700 text-white"
-        >
-          <Plus className="w-4 h-4" />
-          Dodaj ręcznie
-        </Button>
 
         <div className="flex flex-col items-end gap-1 shrink-0">
           <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
