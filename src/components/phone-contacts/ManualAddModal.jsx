@@ -47,8 +47,6 @@ export default function ManualAddModal({ open, onClose, currentUser, onContactAd
         date: form.contact_date,
         status: "Kontakt do doradcy",
         comments: form.description,
-        assigned_user_email: currentUser?.email || "",
-        assigned_user_name: currentUser?.displayName || currentUser?.full_name || "",
       });
     } else {
       // Spotkanie do kalendarza
