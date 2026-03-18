@@ -163,8 +163,8 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                               </Button>
                             )}
                             {ev.status !== "postponed" && (
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-orange-500 hover:bg-orange-50" title="Przełożone" onClick={() => statusMutation.mutate({ id: ev.id, status: "postponed" })}>
-                                <RotateCcw className="w-3.5 h-3.5" />
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-orange-500 hover:bg-orange-50" title="Przenieś na inny dzień" onClick={() => { setPostponeFor(ev.id); setNewDate(""); }}>
+                                <CalendarDays className="w-3.5 h-3.5" />
                               </Button>
                             )}
                             {ev.status !== "cancelled" && (
