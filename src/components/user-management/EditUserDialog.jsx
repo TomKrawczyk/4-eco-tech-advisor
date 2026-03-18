@@ -164,14 +164,25 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
           </div>
         </div>
         <DialogFooter className="flex items-center justify-between">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowResetPassword(true)}
-            className="text-orange-600 border-orange-200 hover:bg-orange-50"
-          >
-            <Key className="w-4 h-4 mr-2" />
-            Resetuj hasło
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleResetReports}
+              disabled={resettingReports}
+              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+            >
+              {resettingReports ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+              Zeruj raporty
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowResetPassword(true)}
+              className="text-orange-600 border-orange-200 hover:bg-orange-50"
+            >
+              <Key className="w-4 h-4 mr-2" />
+              Resetuj hasło
+            </Button>
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Anuluj</Button>
             <Button onClick={handleSave}>Zapisz zmiany</Button>
