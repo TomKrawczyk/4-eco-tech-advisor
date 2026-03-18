@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, FileText } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
+import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
-import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -49,7 +49,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [reportContact, setReportContact] = useState(null);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -328,22 +327,14 @@ export default function PhoneContacts() {
                     <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
                   )}
                 </div>
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {(c.comments || c.agent) && (
-                    <button
-                      onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
-                      className="px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                    >
-                      Szczegóły
-                    </button>
-                  )}
+                {(c.comments || c.agent) && (
                   <button
-                    onClick={() => setReportContact(c)}
-                    className="px-2 py-1 rounded text-xs bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
+                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                   >
-                    <FileText className="w-3 h-3" /> Raport
+                    Szczegóły
                   </button>
-                </div>
+                )}
               </div>
             ))}
           </div>
@@ -521,13 +512,6 @@ export default function PhoneContacts() {
                                       >
                                         Szczegóły
                                       </button>
-                                      <button
-                                        onClick={() => setReportContact(contact)}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
-                                        title="Raporty kontaktu"
-                                      >
-                                        <FileText className="w-3 h-3" /> Raport
-                                      </button>
 
                                       {contact.assigned_user_email ? (
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
@@ -607,15 +591,6 @@ export default function PhoneContacts() {
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
       />
-
-      {reportContact && (
-        <PhoneContactReportModal
-          contact={reportContact}
-          currentUser={currentUser}
-          open={!!reportContact}
-          onClose={() => setReportContact(null)}
-        />
-      )}
     </div>
   );
 }
