@@ -303,14 +303,20 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi swoje przypisane kontakty
+  // Zwykły użytkownik widzi swoje przypisane kontakty + własne ręcznie dodane
   if (!isLeaderOrAdmin) {
     const myContacts = phoneContactsFromDB.filter(c =>
-      c.assigned_user_email === currentUser?.email
+      c.assigned_user_email === currentUser?.email ||
+      (isManualContact(c) && !c.assigned_user_email && c.created_by === currentUser?.email)
     );
     return (
       <div className="space-y-6">
-        <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
+        <div className="flex items-center justify-between gap-3">
+          <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
+          <Button onClick={() => setManualAddOpen(true)} className="bg-green-600 hover:bg-green-700 gap-2 shrink-0">
+            <Plus className="w-4 h-4" /> Dodaj ręcznie
+          </Button>
+        </div>
         {myContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
