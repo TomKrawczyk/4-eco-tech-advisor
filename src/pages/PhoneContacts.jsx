@@ -519,9 +519,14 @@ export default function PhoneContacts() {
                                         </a>
                                       )}
                                       {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
-                                      {contact.status && (
-                                        <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
-                                      )}
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {isManualContact(contact) && (
+                                          <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">Ręcznie dodany</Badge>
+                                        )}
+                                        {contact.status && (
+                                          <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
+                                        )}
+                                      </div>
                                     </div>
                                     <div className="shrink-0 flex gap-2 flex-wrap">
                                       <button
