@@ -413,9 +413,9 @@ export default function MeetingReports() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { label: "Wszystkie", count: reports.length, color: "text-gray-900" },
-          { label: "Zaplanowane", count: reports.filter(r => r.status === "planned").length, color: "text-blue-600" },
-          { label: "Zakończone", count: reports.filter(r => r.status === "completed").length, color: "text-green-600" },
+          { label: "Wszystkie", count: myReports.length, color: "text-gray-900" },
+          { label: "Zaplanowane", count: myReports.filter(r => r.status === "planned").length, color: "text-blue-600" },
+          { label: "Zakończone", count: myReports.filter(r => r.status === "completed").length, color: "text-green-600" },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-lg border border-gray-200 p-2 text-center">
             <div className={`text-lg font-bold ${stat.color}`}>{stat.count}</div>
