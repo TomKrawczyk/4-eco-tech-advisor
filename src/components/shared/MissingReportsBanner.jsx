@@ -34,6 +34,8 @@ export default function MissingReportsBanner({ currentUser }) {
       ]);
 
       const ua = allowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+      const isExempt = ua?.data?.exempt_from_reports || ua?.exempt_from_reports || false;
+      if (isExempt) return; // zwolniony z raportowania
       setIsBlocked(ua?.data?.is_blocked || ua?.is_blocked || false);
 
       const normalize = s => (s || "").toLowerCase().trim().replace(/\s+/g, " ").replace(/\s*-\s*/g, "-");

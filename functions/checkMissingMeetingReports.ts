@@ -110,10 +110,18 @@ Deno.serve(async (req) => {
       return Array.from(map.values());
     })();
 
+    // Zbiór emaili zwolnionych z raportowania
+    const exemptEmails = new Set(
+      allowedUsers
+        .filter(u => u.data?.exempt_from_reports || u.exempt_from_reports)
+        .map(u => u.data?.email || u.email)
+    );
+
     // Grupuj brakujące raporty wg użytkownika
     const missingByUser = {}; // email -> [{assignment, diffDays}]
 
     for (const assignment of dedupedAssignments) {
+      if (exemptEmails.has(assignment.assigned_user_email)) continue;
       if (!assignment.meeting_date || !assignment.assigned_user_email) continue;
 
       const meetingDay = parseDate(assignment.meeting_date);
