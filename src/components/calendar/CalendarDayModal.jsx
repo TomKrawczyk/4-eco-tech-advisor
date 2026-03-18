@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-// eslint-disable-next-line no-unused-vars
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, isPast, isToday } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Plus, Pencil, Trash2, MapPin, Clock, User, FileText, CheckCircle2, XCircle, RotateCcw, CalendarDays } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Clock, User, FileText, CheckCircle2, XCircle, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -42,9 +41,8 @@ function makeReportUrl(ev, day) {
 }
 
 export default function CalendarDayModal({ day, events, currentUser, viewMode, onClose, onEdit, onDelete, onAdd }) {
-  const dayIsPast = isPast(day) && !isToday(day);
   const queryClient = useQueryClient();
-  const [postponeFor, setPostponeFor] = useState(null); // id eventu do przełożenia
+  const [postponeFor, setPostponeFor] = useState(null);
   const [newDate, setNewDate] = useState("");
 
   const statusMutation = useMutation({
@@ -58,12 +56,10 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
 
   const postponeMutation = useMutation({
     mutationFn: async ({ event, newDate }) => {
-      // Oznacz stare wydarzenie jako przełożone
       await base44.entities.CalendarEvent.update(event.id, {
         status: "postponed",
         postponed_to: newDate,
       });
-      // Stwórz nowe wydarzenie na nową datę
       await base44.entities.CalendarEvent.create({
         title: event.title,
         description: event.description,
@@ -108,7 +104,6 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                 const canEdit = currentUser?.email === ev.owner_email || currentUser?.role === "admin";
                 return (
                   <div key={ev.id} className="border border-gray-200 rounded-lg p-3 space-y-2">
-
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -194,33 +189,32 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                       </div>
                     </div>
 
-                    {/* Formularz przełożenia */}
-                  {postponeFor === ev.id && (
-                    <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-2">
-                      <Label className="text-xs font-medium text-orange-800">Przenieś na nową datę:</Label>
-                      <div className="flex gap-2 items-center">
-                        <Input
-                          type="date"
-                          value={newDate}
-                          min={new Date().toISOString().split("T")[0]}
-                          onChange={e => setNewDate(e.target.value)}
-                          className="h-8 text-sm"
-                        />
-                        <Button
-                          size="sm"
-                          className="bg-orange-500 hover:bg-orange-600 h-8 text-xs"
-                          disabled={!newDate || postponeMutation.isPending}
-                          onClick={() => postponeMutation.mutate({ event: ev, newDate })}
-                        >
-                          Przenieś
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setPostponeFor(null)}>
-                          Anuluj
-                        </Button>
+                    {postponeFor === ev.id && (
+                      <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-2">
+                        <Label className="text-xs font-medium text-orange-800">Przenieś na nową datę:</Label>
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            type="date"
+                            value={newDate}
+                            min={new Date().toISOString().split("T")[0]}
+                            onChange={e => setNewDate(e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            className="bg-orange-500 hover:bg-orange-600 h-8 text-xs"
+                            disabled={!newDate || postponeMutation.isPending}
+                            onClick={() => postponeMutation.mutate({ event: ev, newDate })}
+                          >
+                            Przenieś
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setPostponeFor(null)}>
+                            Anuluj
+                          </Button>
+                        </div>
+                        <p className="text-[10px] text-orange-600">Spotkanie zostanie oznaczone jako przełożone, a raport będzie wymagany po nowej dacie.</p>
                       </div>
-                      <p className="text-[10px] text-orange-600">Spotkanie zostanie oznaczone jako przełożone, a raport będzie wymagany po nowej dacie.</p>
-                    </div>
-                  )}
+                    )}
                   </div>
                 );
               })
