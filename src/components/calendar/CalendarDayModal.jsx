@@ -192,6 +192,35 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                       </div>
                     </div>
                   </div>
+
+                  {/* Formularz przełożenia */}
+                  {postponeFor === ev.id && (
+                    <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-2">
+                      <Label className="text-xs font-medium text-orange-800">Przenieś na nową datę:</Label>
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          type="date"
+                          value={newDate}
+                          min={new Date().toISOString().split("T")[0]}
+                          onChange={e => setNewDate(e.target.value)}
+                          className="h-8 text-sm"
+                        />
+                        <Button
+                          size="sm"
+                          className="bg-orange-500 hover:bg-orange-600 h-8 text-xs"
+                          disabled={!newDate || postponeMutation.isPending}
+                          onClick={() => postponeMutation.mutate({ event: ev, newDate })}
+                        >
+                          Przenieś
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setPostponeFor(null)}>
+                          Anuluj
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-orange-600">Spotkanie zostanie oznaczone jako przełożone, a raport będzie wymagany po nowej dacie.</p>
+                    </div>
+                  )}
+                </div>
                 );
               })
           )}
