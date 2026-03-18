@@ -331,10 +331,11 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi swoje przypisane kontakty
+  // Zwykły użytkownik widzi swoje przypisane kontakty + swoje ręcznie dodane
   if (!isLeaderOrAdmin) {
     const myContacts = phoneContactsFromDB.filter(c =>
-      c.assigned_user_email === currentUser?.email
+      c.assigned_user_email === currentUser?.email ||
+      (c.contact_key?.startsWith("manual_") && !c.assigned_user_email && c.created_by === currentUser?.email)
     );
     return (
       <div className="space-y-6">
