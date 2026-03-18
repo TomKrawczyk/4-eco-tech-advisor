@@ -80,6 +80,10 @@ export default function MissingReportsBanner({ currentUser }) {
         const aPhone = normalizePhone(a.client_phone);
         const aName = normalize(a.client_name);
 
+        // Pomiń jeśli spotkanie przełożone na przyszłość
+        const clientKey = aPhone.length >= 7 ? aPhone : aName;
+        if (clientKey && postponedClientKeys.has(clientKey)) return false;
+
         const reportExists = allReports.some(r => {
           const authorMatch = !r.author_email || r.author_email === currentUser.email;
           if (!authorMatch) return false;
