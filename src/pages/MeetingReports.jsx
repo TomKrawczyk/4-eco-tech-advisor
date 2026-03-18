@@ -57,7 +57,7 @@ function PhotoGallery({ photos, onAdd, onRemove, uploading }) {
 }
 
 function MeetingForm({ initialData, onSave, onCancel, saving }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(initialData || {
     client_name: "",
     client_address: "",
     client_phone: "",
@@ -67,7 +67,6 @@ function MeetingForm({ initialData, onSave, onCancel, saving }) {
     next_steps: "",
     status: "planned",
     photos: [],
-    ...initialData,
   });
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
@@ -268,27 +267,18 @@ export default function MeetingReports() {
   const [currentUser, setCurrentUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Sprawdź prefill z URL (po przejściu ze spotkania) — oblicz raz przy mount
-  const [prefill] = useState(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("from_meeting") !== "1") return null;
-    return {
-      client_name: urlParams.get("prefill_client_name") || "",
-      client_phone: urlParams.get("prefill_client_phone") || "",
-      client_address: urlParams.get("prefill_client_address") || "",
-      meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
-      meeting_time: urlParams.get("prefill_meeting_time") || "",
-      description: "",
-      next_steps: "",
-      status: "planned",
-      photos: [],
-    };
-  });
+  // Sprawdź prefill z URL (po przejściu ze spotkania) — hash router: params są w window.location.hash
+  const hashSearch = window.location.hash.includes("?") ? window.location.hash.split("?")[1] : window.location.search;
+  const urlParams = new URLSearchParams(hashSearch);
+  const prefill = urlParams.get("from_meeting") === "1" ? {
+    client_name: urlParams.get("prefill_client_name") || "",
+    client_phone: urlParams.get("prefill_client_phone") || "",
+    client_address: urlParams.get("prefill_client_address") || "",
+    meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
+    meeting_time: urlParams.get("prefill_meeting_time") || "",
+  } : null;
 
-  const [view, setView] = useState(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get("from_meeting") === "1" ? "create" : "list";
-  });
+  const [view, setView] = useState(prefill ? "create" : "list");
 
   useEffect(() => {
     const fetchUser = async () => {
