@@ -252,6 +252,9 @@ export default function PhoneContacts() {
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
+  // Ręcznie dodane kontakty są zawsze widoczne (nie mają statusu z arkusza) – uwzględnij je w filtrze
+  const isManualContact = (c) => c.contact_key?.startsWith("manual_");
+
   // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
