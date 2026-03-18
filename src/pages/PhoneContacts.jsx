@@ -377,6 +377,12 @@ export default function PhoneContacts() {
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
+        <ManualAddModal
+          open={manualAddOpen}
+          onClose={() => setManualAddOpen(false)}
+          currentUser={currentUser}
+          onContactAdded={() => queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] })}
+        />
       </div>
     );
   }
