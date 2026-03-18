@@ -36,6 +36,7 @@ function makeReportUrl(ev, day) {
     prefill_client_phone: ev.client_phone || "",
     prefill_client_address: ev.location || "",
     prefill_meeting_date: ev.event_date || dateStr,
+    prefill_meeting_time: ev.event_time || "",
   });
   return `${createPageUrl("MeetingReports")}?${params.toString()}`;
 }

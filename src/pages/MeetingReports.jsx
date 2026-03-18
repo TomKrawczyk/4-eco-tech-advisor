@@ -293,9 +293,18 @@ export default function MeetingReports() {
     fetchUser();
   }, []);
 
+  const isLeaderOrAdmin = currentUser && (currentUser.role === "admin" || currentUser.role === "group_leader" || currentUser.role === "team_leader");
+
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["meetingReports"],
-    queryFn: () => base44.entities.MeetingReport.list("-created_date", 100),
+    queryKey: ["meetingReports", currentUser?.email, currentUser?.role],
+    queryFn: async () => {
+      const all = await base44.entities.MeetingReport.list("-created_date", 200);
+      // Zwykły user widzi tylko swoje raporty
+      if (!isLeaderOrAdmin) {
+        return all.filter(r => r.author_email === currentUser.email);
+      }
+      return all;
+    },
     enabled: !!currentUser,
   });
 
@@ -330,14 +339,7 @@ export default function MeetingReports() {
     },
   });
 
-  const myReports = React.useMemo(() => {
-    if (!currentUser) return [];
-    const role = currentUser.role;
-    if (role === "admin" || role === "group_leader" || role === "team_leader") return reports;
-    return reports.filter(r => r.author_email === currentUser.email || r.created_by === currentUser.email);
-  }, [reports, currentUser]);
-
-  const filtered = myReports.filter(r =>
+  const filtered = reports.filter(r =>
     (r.client_name || "").toLowerCase().includes(search.toLowerCase()) ||
     (r.client_address || "").toLowerCase().includes(search.toLowerCase()) ||
     (r.client_phone || "").toLowerCase().includes(search.toLowerCase())
@@ -413,9 +415,9 @@ export default function MeetingReports() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { label: "Wszystkie", count: myReports.length, color: "text-gray-900" },
-          { label: "Zaplanowane", count: myReports.filter(r => r.status === "planned").length, color: "text-blue-600" },
-          { label: "Zakończone", count: myReports.filter(r => r.status === "completed").length, color: "text-green-600" },
+          { label: "Wszystkie", count: reports.length, color: "text-gray-900" },
+          { label: "Zaplanowane", count: reports.filter(r => r.status === "planned").length, color: "text-blue-600" },
+          { label: "Zakończone", count: reports.filter(r => r.status === "completed").length, color: "text-green-600" },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-lg border border-gray-200 p-2 text-center">
             <div className={`text-lg font-bold ${stat.color}`}>{stat.count}</div>
