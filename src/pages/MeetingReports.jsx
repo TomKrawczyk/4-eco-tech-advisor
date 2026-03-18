@@ -267,17 +267,27 @@ export default function MeetingReports() {
   const [currentUser, setCurrentUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Sprawdź prefill z URL (po przejściu ze spotkania)
-  const urlParams = new URLSearchParams(window.location.search);
-  const prefill = urlParams.get("from_meeting") === "1" ? {
-    client_name: urlParams.get("prefill_client_name") || "",
-    client_phone: urlParams.get("prefill_client_phone") || "",
-    client_address: urlParams.get("prefill_client_address") || "",
-    meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
-    meeting_time: urlParams.get("prefill_meeting_time") || "",
-  } : null;
+  // Sprawdź prefill z URL (po przejściu ze spotkania) — oblicz raz przy mount
+  const [prefill] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("from_meeting") !== "1") return null;
+    return {
+      client_name: urlParams.get("prefill_client_name") || "",
+      client_phone: urlParams.get("prefill_client_phone") || "",
+      client_address: urlParams.get("prefill_client_address") || "",
+      meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
+      meeting_time: urlParams.get("prefill_meeting_time") || "",
+      description: "",
+      next_steps: "",
+      status: "planned",
+      photos: [],
+    };
+  });
 
-  const [view, setView] = useState(prefill ? "create" : "list");
+  const [view, setView] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("from_meeting") === "1" ? "create" : "list";
+  });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -293,18 +303,9 @@ export default function MeetingReports() {
     fetchUser();
   }, []);
 
-  const isLeaderOrAdmin = currentUser && (currentUser.role === "admin" || currentUser.role === "group_leader" || currentUser.role === "team_leader");
-
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["meetingReports", currentUser?.email, currentUser?.role],
-    queryFn: async () => {
-      const all = await base44.entities.MeetingReport.list("-created_date", 200);
-      // Zwykły user widzi tylko swoje raporty
-      if (!isLeaderOrAdmin) {
-        return all.filter(r => r.author_email === currentUser.email);
-      }
-      return all;
-    },
+    queryKey: ["meetingReports"],
+    queryFn: () => base44.entities.MeetingReport.list("-created_date", 100),
     enabled: !!currentUser,
   });
 
