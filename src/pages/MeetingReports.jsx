@@ -267,9 +267,8 @@ export default function MeetingReports() {
   const [currentUser, setCurrentUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Sprawdź prefill z URL (po przejściu ze spotkania) — HashRouter używa hash, nie search
-  const hashSearch = window.location.hash.includes("?") ? window.location.hash.split("?")[1] : "";
-  const urlParams = new URLSearchParams(hashSearch);
+  // Sprawdź prefill z URL (po przejściu ze spotkania)
+  const urlParams = new URLSearchParams(window.location.search);
   const prefill = urlParams.get("from_meeting") === "1" ? {
     client_name: urlParams.get("prefill_client_name") || "",
     client_phone: urlParams.get("prefill_client_phone") || "",
@@ -331,7 +330,14 @@ export default function MeetingReports() {
     },
   });
 
-  const filtered = reports.filter(r =>
+  const myReports = React.useMemo(() => {
+    if (!currentUser) return [];
+    const role = currentUser.role;
+    if (role === "admin" || role === "group_leader" || role === "team_leader") return reports;
+    return reports.filter(r => r.author_email === currentUser.email || r.created_by === currentUser.email);
+  }, [reports, currentUser]);
+
+  const filtered = myReports.filter(r =>
     (r.client_name || "").toLowerCase().includes(search.toLowerCase()) ||
     (r.client_address || "").toLowerCase().includes(search.toLowerCase()) ||
     (r.client_phone || "").toLowerCase().includes(search.toLowerCase())
