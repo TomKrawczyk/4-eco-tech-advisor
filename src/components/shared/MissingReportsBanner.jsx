@@ -33,6 +33,12 @@ export default function MissingReportsBanner({ currentUser }) {
         base44.entities.CalendarEvent.filter({ owner_email: currentUser.email }),
       ]);
 
+      const ua = allowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+      setIsBlocked(ua?.data?.is_blocked || ua?.is_blocked || false);
+
+      const normalize = s => (s || "").toLowerCase().trim().replace(/\s+/g, " ").replace(/\s*-\s*/g, "-");
+      const normalizePhone = p => (p || "").replace(/\s+/g, "").replace(/[^\d]/g, "");
+
       // Zbiór kluczy klientów których spotkania są przełożone na przyszłość
       const postponedClientKeys = new Set();
       for (const ev of calendarEvents) {
@@ -44,12 +50,6 @@ export default function MissingReportsBanner({ currentUser }) {
         const key = ph.length >= 7 ? ph : nm;
         if (key) postponedClientKeys.add(key);
       }
-
-      const ua = allowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
-      setIsBlocked(ua?.data?.is_blocked || ua?.is_blocked || false);
-
-      const normalize = s => (s || "").toLowerCase().trim().replace(/\s+/g, " ").replace(/\s*-\s*/g, "-");
-      const normalizePhone = p => (p || "").replace(/\s+/g, "").replace(/[^\d]/g, "");
 
       // Łączymy MeetingReports i VisitReports jako dowód spotkania
       const allReports = [
