@@ -43,6 +43,8 @@ function makeReportUrl(ev, day) {
 export default function CalendarDayModal({ day, events, currentUser, viewMode, onClose, onEdit, onDelete, onAdd }) {
   const dayIsPast = isPast(day) && !isToday(day);
   const queryClient = useQueryClient();
+  const [postponeFor, setPostponeFor] = useState(null); // id eventu do przełożenia
+  const [newDate, setNewDate] = useState("");
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.CalendarEvent.update(id, { status }),
@@ -51,6 +53,39 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
       toast.success("Status zaktualizowany");
     },
     onError: () => toast.error("Błąd aktualizacji statusu"),
+  });
+
+  const postponeMutation = useMutation({
+    mutationFn: async ({ event, newDate }) => {
+      // Oznacz stare wydarzenie jako przełożone
+      await base44.entities.CalendarEvent.update(event.id, {
+        status: "postponed",
+        postponed_to: newDate,
+      });
+      // Stwórz nowe wydarzenie na nową datę
+      await base44.entities.CalendarEvent.create({
+        title: event.title,
+        description: event.description,
+        event_date: newDate,
+        event_time: event.event_time,
+        end_time: event.end_time,
+        event_type: event.event_type,
+        status: "planned",
+        client_name: event.client_name,
+        client_phone: event.client_phone,
+        location: event.location,
+        owner_email: event.owner_email,
+        owner_name: event.owner_name,
+        source: "manual",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["calendarEvents"]);
+      toast.success("Spotkanie przełożone — nowe wydarzenie zostało dodane");
+      setPostponeFor(null);
+      setNewDate("");
+    },
+    onError: () => toast.error("Błąd podczas przenoszenia spotkania"),
   });
 
   return (
