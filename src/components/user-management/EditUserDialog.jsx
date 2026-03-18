@@ -49,6 +49,22 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
     onSave(user.id, updates);
   };
 
+  const handleResetReports = async () => {
+    setResettingReports(true);
+    try {
+      await base44.entities.AllowedUser.update(user.id, {
+        missing_reports_count: 0,
+        is_blocked: false,
+        blocked_reason: ""
+      });
+      toast.success('Licznik raportów wyzerowany');
+    } catch (error) {
+      toast.error('Błąd: ' + error.message);
+    } finally {
+      setResettingReports(false);
+    }
+  };
+
   const handleResetPassword = async () => {
     setResettingPassword(true);
     try {
