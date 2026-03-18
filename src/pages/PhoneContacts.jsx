@@ -367,7 +367,12 @@ export default function PhoneContacts() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Kontakt telefoniczny do doradcy" subtitle="Klienci zainteresowani kontaktem z doradcą – aktualizacja co 5 minut" />
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <PageHeader title="Kontakt telefoniczny do doradcy" subtitle="Klienci zainteresowani kontaktem z doradcą – aktualizacja co 5 minut" />
+        <Button onClick={() => setManualAddOpen(true)} className="bg-green-600 hover:bg-green-700 gap-2 shrink-0">
+          <Plus className="w-4 h-4" /> Dodaj ręcznie
+        </Button>
+      </div>
 
       {currentUser?.role === "admin" && showStats && (
         <AssignmentStats onClose={() => setShowStats(false)} />
