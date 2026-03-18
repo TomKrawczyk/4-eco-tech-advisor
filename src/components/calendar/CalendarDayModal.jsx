@@ -219,7 +219,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                       <p className="text-[10px] text-orange-600">Spotkanie zostanie oznaczone jako przełożone, a raport będzie wymagany po nowej dacie.</p>
                     </div>
                   )}
-                </div>
+                  </div>
                 );
               })
           )}
