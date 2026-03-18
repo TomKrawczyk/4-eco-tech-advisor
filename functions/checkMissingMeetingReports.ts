@@ -123,11 +123,10 @@ Deno.serve(async (req) => {
       if (diffDays <= 0) continue; // tylko przeszłe (przyszłe/dzisiejsze → brak wymogu raportu)
 
       // Pomiń jeśli spotkanie zostało przełożone na datę w przyszłości
-      const aPhone = (assignment.client_phone || '').replace(/\s+/g, '').replace(/[^\d]/g, '');
-      const aName = (assignment.client_name || '').toLowerCase().trim();
-      const clientKey = aPhone.length >= 7 ? aPhone : aName;
-      const postponedKey = `${assignment.assigned_user_email}|${clientKey}`;
-      if (postponedKeys.has(postponedKey)) continue;
+      const pPhone = (assignment.client_phone || '').replace(/\s+/g, '').replace(/[^\d]/g, '');
+      const pName = (assignment.client_name || '').toLowerCase().trim();
+      const pKey = pPhone.length >= 7 ? pPhone : pName;
+      if (pKey && postponedKeys.has(`${assignment.assigned_user_email}|${pKey}`)) continue;
 
       const normalize = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/\s*-\s*/g, '-');
       const aName = normalize(assignment.client_name);
