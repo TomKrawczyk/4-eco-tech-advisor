@@ -57,6 +57,7 @@ function CheckItem({ label, value }) {
 }
 
 export default function ReportDetail({ report, onBack, onDelete, onStatusChange, onEdit }) {
+  const navigate = useNavigate();
   const st = statusConfig[report.status || "draft"];
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [emailRecipient, setEmailRecipient] = useState('');
