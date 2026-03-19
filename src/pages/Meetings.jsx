@@ -73,7 +73,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
     <div className="space-y-6">
       <PageHeader
         title="Moje spotkania"
-        subtitle="Spotkania przypisane do Ciebie – dziś i najbliższe 3 dni"
+        subtitle="Spotkania przypisane do Ciebie – najbliższe 14 dni"
       />
       {myAssignedMeetings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -81,7 +81,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
             <Table2 className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="font-semibold text-gray-800 mb-1">Brak przypisanych spotkań</h3>
-          <p className="text-sm text-gray-500">Nie masz żadnych spotkań w ciągu najbliższych 3 dni.</p>
+          <p className="text-sm text-gray-500">Nie masz żadnych spotkań w ciągu najbliższych 14 dni.</p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -271,10 +271,10 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
-  // Okno dat: dziś + 3 dni
+  // Okno dat: dziś + 14 dni dla wszystkich (zwiększone z 3)
   const today = useMemo(() => startOfDay(new Date()), []);
-  const maxDate = useMemo(() => addDays(today, 3), [today]);
-  const maxDateUser = useMemo(() => addDays(today, 3), [today]);
+  const maxDate = useMemo(() => addDays(today, 14), [today]);
+  const maxDateUser = useMemo(() => addDays(today, 14), [today]);
 
   // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
@@ -322,8 +322,16 @@ export default function Meetings() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
+        const email = u.data?.email || u.email;
         if (currentUser?.role === "admin") {
           return true;
+        }
+        // group_leader widzi siebie + użytkowników i team_leaderów swojej grupy
+        if (currentUser?.role === "group_leader") {
+          if (email === currentUser.email) return true; // siebie zawsze
+          if (role !== "user" && role !== "team_leader") return false;
+          const uGroupId = u.data?.group_id || u.group_id;
+          return uGroupId === currentUserGroupId;
         }
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
@@ -462,7 +470,7 @@ export default function Meetings() {
     <div className="space-y-6">
       <PageHeader
         title="Spotkania"
-        subtitle={`Spotkania z datą – dziś i najbliższe 3 dni`}
+        subtitle={`Spotkania z datą – najbliższe 14 dni`}
       />
 
       {/* Statystyki przypisań – tylko admin */}
@@ -585,7 +593,7 @@ export default function Meetings() {
       {/* Licznik */}
       {!isLoading && (
         <div className="text-sm text-gray-500">
-          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (dziś + 3 dni)
+          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (maks. +14 dni od dziś)
           {allMeetings.length > 0 && <span className="ml-1 text-gray-400">z {allMeetings.length} wszystkich</span>}
         </div>
       )}
