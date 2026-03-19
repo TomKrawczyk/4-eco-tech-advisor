@@ -195,17 +195,16 @@ export default function ManualContactModal({ open, onOpenChange, currentUser, gr
           {salespeople && salespeople.length > 0 && (
             <div className="space-y-1.5">
               <Label>Przypisz do doradcy</Label>
-              <Select value={form.assigned_user_email} onValueChange={val => set("assigned_user_email", val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Nie przypisuj (opcjonalne)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Nie przypisuj</SelectItem>
-                  {salespeople.map(s => (
-                    <SelectItem key={s.email} value={s.email}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={form.assigned_user_email}
+                onChange={e => set("assigned_user_email", e.target.value)}
+                className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">Nie przypisuj (opcjonalne)</option>
+                {salespeople.map(s => (
+                  <option key={s.email} value={s.email}>{s.name}</option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -213,17 +212,16 @@ export default function ManualContactModal({ open, onOpenChange, currentUser, gr
           {groups && groups.length > 0 && (currentUser?.role === "admin") && (
             <div className="space-y-1.5">
               <Label>Przypisz do grupy</Label>
-              <Select value={form.assigned_group_id} onValueChange={val => set("assigned_group_id", val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Nie przypisuj (opcjonalne)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Nie przypisuj</SelectItem>
-                  {groups.map(g => (
-                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={form.assigned_group_id}
+                onChange={e => set("assigned_group_id", e.target.value)}
+                className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">Nie przypisuj (opcjonalne)</option>
+                {groups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
             </div>
           )}
         </div>
