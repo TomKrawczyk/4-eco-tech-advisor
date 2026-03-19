@@ -327,8 +327,14 @@ export default function Meetings() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        if (currentUser?.role === "admin") {
-          return true;
+        const email = u.data?.email || u.email;
+        if (currentUser?.role === "admin") return true;
+        // group_leader widzi siebie + użytkowników i team_leaderów swojej grupy
+        if (currentUser?.role === "group_leader") {
+          if (email === currentUser.email) return true;
+          if (role !== "user" && role !== "team_leader") return false;
+          const uGroupId = u.data?.group_id || u.group_id;
+          return uGroupId === currentUserGroupId;
         }
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
