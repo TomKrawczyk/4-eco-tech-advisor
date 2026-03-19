@@ -75,6 +75,16 @@ export default function Checklist() {
     }).catch(err => console.error('Log error:', err));
   }, []);
 
+  // Ładuj raport z URL (tryb edycji z VisitReports)
+  useEffect(() => {
+    if (editReportId && !currentReport) {
+      base44.entities.VisitReport.list().then(reports => {
+        const found = reports.find(r => r.id === editReportId);
+        if (found) setCurrentReport(found);
+      });
+    }
+  }, [editReportId]);
+
   useEffect(() => {
     if (currentReport) {
       setForm({
