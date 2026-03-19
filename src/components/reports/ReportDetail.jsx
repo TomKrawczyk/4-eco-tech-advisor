@@ -173,7 +173,7 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange,
               if (onEdit) {
                 onEdit();
               } else {
-                window.location.href = createPageUrl(`Checklist?edit_report_id=${report.id}`);
+                navigate(`/Checklist?edit_report_id=${report.id}`);
               }
             }}
             variant="outline"
