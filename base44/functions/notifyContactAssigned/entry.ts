@@ -29,16 +29,24 @@ Deno.serve(async (req) => {
 
     const { assignedUserEmail, assignedUserName, clientName, phone, sheet } = await req.json();
 
+    const message = `Masz nowy kontakt telefoniczny do obsłużenia: ${clientName}${phone ? ' (' + phone + ')' : ''} z arkusza ${sheet}.`;
+
     // Powiadomienie in-app
     await base44.asServiceRole.entities.Notification.create({
       user_email: assignedUserEmail,
       type: 'new_report',
       title: '📞 Nowy kontakt telefoniczny przypisany',
-      message: `Masz nowy kontakt telefoniczny do obsłużenia: ${clientName}${phone ? ' (' + phone + ')' : ''} z arkusza ${sheet}.`,
+      message,
       is_read: false,
     });
 
-    // Email wyłączony celowo – powiadomienia tylko in-app
+    // Email
+    await sendBrevoEmail({
+      to: assignedUserEmail,
+      toName: assignedUserName,
+      subject: '📞 Nowy kontakt telefoniczny przypisany – 4-ECO',
+      text: `Cześć ${assignedUserName},\n\n${message}\n\nZaloguj się do aplikacji, aby zobaczyć szczegóły.\n\nPozdrawiamy,\n4-ECO Green Energy`,
+    });
 
     return Response.json({ ok: true });
   } catch (error) {
