@@ -29,16 +29,24 @@ Deno.serve(async (req) => {
 
     const { assignedUserEmail, assignedUserName, clientName, meetingCalendar, sheet } = await req.json();
 
+    const message = `Masz nowe spotkanie z klientem ${clientName} (${sheet}) zaplanowane na ${meetingCalendar}. Pamiętaj o raporcie po spotkaniu!`;
+
     // Utwórz powiadomienie in-app
     await base44.asServiceRole.entities.Notification.create({
       user_email: assignedUserEmail,
       type: 'new_report',
       title: '📅 Nowe spotkanie przypisane',
-      message: `Masz nowe spotkanie z klientem ${clientName} (${sheet}) zaplanowane na ${meetingCalendar}. Pamiętaj o raporcie po spotkaniu!`,
+      message,
       is_read: false,
     });
 
-    // Email wyłączony celowo – powiadomienia tylko in-app
+    // Email
+    await sendBrevoEmail({
+      to: assignedUserEmail,
+      toName: assignedUserName,
+      subject: '📅 Nowe spotkanie przypisane – 4-ECO',
+      text: `Cześć ${assignedUserName},\n\n${message}\n\nZaloguj się do aplikacji, aby zobaczyć szczegóły.\n\nPozdrawiamy,\n4-ECO Green Energy`,
+    });
 
     return Response.json({ ok: true });
   } catch (error) {
