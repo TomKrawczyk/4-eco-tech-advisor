@@ -56,7 +56,7 @@ function CheckItem({ label, value }) {
   );
 }
 
-export default function ReportDetail({ report, onBack, onDelete, onStatusChange }) {
+export default function ReportDetail({ report, onBack, onDelete, onStatusChange, onEdit }) {
   const st = statusConfig[report.status || "draft"];
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [emailRecipient, setEmailRecipient] = useState('');
@@ -166,7 +166,20 @@ export default function ReportDetail({ report, onBack, onDelete, onStatusChange 
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-medium">Wróć</span>
         </button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            onClick={() => {
+              if (onEdit) {
+                onEdit();
+              } else {
+                window.location.href = createPageUrl(`Checklist?edit_report_id=${report.id}`);
+              }
+            }}
+            variant="outline"
+            size="sm"
+          >
+            <Pencil className="w-4 h-4 mr-1" /> Edytuj
+          </Button>
           <Button
             onClick={handleDownloadPDF}
             disabled={downloading}
