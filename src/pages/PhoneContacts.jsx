@@ -116,10 +116,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy
+  // Scal dane z arkusza z przypisaniami z bazy + ręcznie dodane kontakty
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    return rawContacts.map(c => {
+    const sheetContacts = rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -133,6 +133,29 @@ export default function PhoneContacts() {
       }
       return c;
     });
+    const manualContacts = phoneContactsFromDB
+      .filter(db => db.contact_key?.startsWith("manual__"))
+      .map(db => ({
+        id: db.id,
+        contact_key: db.contact_key,
+        sheet: db.sheet || "Ręczne",
+        client_name: db.client_name,
+        phone: db.phone || "",
+        address: db.address || "",
+        date: db.date || "",
+        agent: db.agent || "",
+        contact_calendar: db.contact_calendar || "",
+        contact_date: db.contact_date || "",
+        status: db.status || "Kontakt do doradcy",
+        comments: db.comments || "",
+        interview_data: db.interview_data || null,
+        assigned_user_email: db.assigned_user_email || "",
+        assigned_user_name: db.assigned_user_name || "",
+        assigned_group_id: db.assigned_group_id || "",
+        assigned_group_name: db.assigned_group_name || "",
+        is_manual: true,
+      }));
+    return [...sheetContacts, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
