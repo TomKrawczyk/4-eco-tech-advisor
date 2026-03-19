@@ -603,6 +603,14 @@ export default function PhoneContacts() {
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
       />
+
+      <ManualContactModal
+        open={manualModalOpen}
+        onOpenChange={setManualModalOpen}
+        currentUser={currentUser}
+        groups={groups}
+        salespeople={salespeople}
+      />
     </div>
   );
 }
