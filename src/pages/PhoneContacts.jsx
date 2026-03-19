@@ -513,7 +513,12 @@ export default function PhoneContacts() {
                                 <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
-                                      <div className="font-medium text-gray-800 text-sm truncate">{contact.client_name}</div>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-medium text-gray-800 text-sm">{contact.client_name}</span>
+                                        {contact.is_manual && (
+                                          <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-[10px]">Ręczny</Badge>
+                                        )}
+                                      </div>
                                       {contact.phone && (
                                         <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
                                           <Phone className="w-3 h-3" /> {contact.phone}
