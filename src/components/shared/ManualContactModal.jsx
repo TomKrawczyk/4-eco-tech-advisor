@@ -31,63 +31,69 @@ export default function ManualContactModal({ open, onOpenChange, currentUser, gr
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
+  const resetForm = () => setForm({
+    source_type: "", client_name: "", client_phone: "", client_address: "",
+    date: new Date().toISOString().split("T")[0], time: "", notes: "",
+    assigned_user_email: "", assigned_group_id: "",
+  });
+
   const handleSave = async () => {
-    if (!form.source_type || !form.client_name) return;
+    if (!form.source_type || !form.client_name.trim()) return;
     setSaving(true);
 
-    const isMeeting = form.source_type === "spotkanie";
-    const assignedUser = salespeople?.find(s => s.email === form.assigned_user_email);
-    const assignedGroup = groups?.find(g => g.id === form.assigned_group_id);
+    try {
+      const isMeeting = form.source_type === "spotkanie";
+      const userEmail = form.assigned_user_email && form.assigned_user_email !== "__none__" ? form.assigned_user_email : "";
+      const groupId = form.assigned_group_id && form.assigned_group_id !== "__none__" ? form.assigned_group_id : "";
+      const assignedUser = salespeople?.find(s => s.email === userEmail);
+      const assignedGroup = groups?.find(g => g.id === groupId);
 
-    if (isMeeting) {
-      // Zapisz jako MeetingAssignment (ręczny)
-      const meetingCalendar = form.date && form.time
-        ? `${form.date.split("-").reverse().join(".")} ${form.time}`
-        : form.date?.split("-").reverse().join(".") || "";
+      if (isMeeting) {
+        const meetingCalendar = form.date && form.time
+          ? `${form.date.split("-").reverse().join(".")} ${form.time}`
+          : form.date?.split("-").reverse().join(".") || "";
+        const key = `manual__${form.client_name.trim()}__${Date.now()}`;
+        await base44.entities.MeetingAssignment.create({
+          meeting_key: key,
+          sheet: `Ręczne (${SOURCE_TYPES.find(s => s.value === form.source_type)?.label || form.source_type})`,
+          client_name: form.client_name.trim(),
+          client_phone: form.client_phone,
+          client_address: form.client_address,
+          meeting_calendar: meetingCalendar,
+          meeting_date: form.date || "",
+          notes: form.notes,
+          assigned_user_email: userEmail,
+          assigned_user_name: assignedUser?.name || "",
+          assigned_group_id: groupId,
+          assigned_group_name: assignedGroup?.name || "",
+        });
+        queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
+      } else {
+        const key = `manual__${form.client_name.trim()}__${Date.now()}`;
+        await base44.entities.PhoneContact.create({
+          contact_key: key,
+          sheet: `Ręczne (${SOURCE_TYPES.find(s => s.value === form.source_type)?.label || form.source_type})`,
+          client_name: form.client_name.trim(),
+          phone: form.client_phone,
+          address: form.client_address,
+          contact_date: form.date || "",
+          status: "Kontakt do doradcy",
+          comments: form.notes,
+          assigned_user_email: userEmail,
+          assigned_user_name: assignedUser?.name || "",
+          assigned_group_id: groupId,
+          assigned_group_name: assignedGroup?.name || "",
+        });
+        queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
+      }
 
-      const key = `manual__${form.client_name}__${meetingCalendar || Date.now()}`;
-      await base44.entities.MeetingAssignment.create({
-        meeting_key: key,
-        sheet: `Ręczne (${SOURCE_TYPES.find(s => s.value === form.source_type)?.label || form.source_type})`,
-        client_name: form.client_name,
-        client_phone: form.client_phone,
-        client_address: form.client_address,
-        meeting_calendar: meetingCalendar,
-        meeting_date: form.date || "",
-        notes: form.notes,
-        assigned_user_email: form.assigned_user_email || "",
-        assigned_user_name: assignedUser?.name || "",
-        assigned_group_id: form.assigned_group_id || "",
-        assigned_group_name: assignedGroup?.name || "",
-      });
-      queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
-    } else {
-      // Zapisz jako PhoneContact (ręczny)
-      const key = `manual__${form.client_name}__${Date.now()}`;
-      await base44.entities.PhoneContact.create({
-        contact_key: key,
-        sheet: `Ręczne (${SOURCE_TYPES.find(s => s.value === form.source_type)?.label || form.source_type})`,
-        client_name: form.client_name,
-        phone: form.client_phone,
-        address: form.client_address,
-        contact_date: form.date || "",
-        status: "Kontakt do doradcy",
-        comments: form.notes,
-        assigned_user_email: form.assigned_user_email || "",
-        assigned_user_name: assignedUser?.name || "",
-        assigned_group_id: form.assigned_group_id || "",
-        assigned_group_name: assignedGroup?.name || "",
-      });
-      queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
+      resetForm();
+      onOpenChange(false);
+    } catch (err) {
+      alert("Błąd podczas zapisywania: " + (err?.message || "Nieznany błąd. Spróbuj ponownie."));
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    setForm({
-      source_type: "", client_name: "", client_phone: "", client_address: "",
-      date: new Date().toISOString().split("T")[0], time: "", notes: "",
-      assigned_user_email: "", assigned_group_id: "",
-    });
-    onOpenChange(false);
   };
 
   const isMeeting = form.source_type === "spotkanie";
