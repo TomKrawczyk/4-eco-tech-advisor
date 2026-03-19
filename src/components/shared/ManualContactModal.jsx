@@ -200,7 +200,7 @@ export default function ManualContactModal({ open, onOpenChange, currentUser, gr
                   <SelectValue placeholder="Nie przypisuj (opcjonalne)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>Nie przypisuj</SelectItem>
+                  <SelectItem value="__none__">Nie przypisuj</SelectItem>
                   {salespeople.map(s => (
                     <SelectItem key={s.email} value={s.email}>{s.name}</SelectItem>
                   ))}
