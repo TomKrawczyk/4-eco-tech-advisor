@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ArrowLeft, Trash2, Clock, CheckCircle2, Send, User, MapPin, Phone, Calendar, Zap, Wrench, Download, Mail, Table, Pencil } from "lucide-react";
-import { createPageUrl } from "@/utils";
+import { useNavigate } from "react-router-dom";
 import ReportPhotoGallery from "./ReportPhotoGallery";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
