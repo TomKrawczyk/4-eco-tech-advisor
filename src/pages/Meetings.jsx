@@ -233,30 +233,35 @@ export default function Meetings() {
     queryKey: ["groups"],
     queryFn: () => base44.entities.Group.list(),
     enabled: accessChecked && isLeaderOrAdmin,
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: sheetMappings = [] } = useQuery({
     queryKey: ["sheetMappings"],
     queryFn: () => base44.entities.SheetGroupMapping.list(),
     enabled: accessChecked,
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: allAllowedUsers = [] } = useQuery({
     queryKey: ["allowedUsers"],
     queryFn: () => base44.entities.AllowedUser.list(),
     enabled: accessChecked,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: meetingAssignments = [] } = useQuery({
     queryKey: ["meetingAssignments"],
     queryFn: () => base44.entities.MeetingAssignment.list(),
     enabled: accessChecked,
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: meetingReports = [] } = useQuery({
     queryKey: ["meetingReportsForMeetings"],
     queryFn: () => base44.entities.MeetingReport.list("-created_date", 200),
     enabled: accessChecked && isLeaderOrAdmin,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Dane z arkusza – pobiera admin, group_leader i team_leader (backend wymaga tych ról)
@@ -322,16 +327,8 @@ export default function Meetings() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        const email = u.data?.email || u.email;
         if (currentUser?.role === "admin") {
           return true;
-        }
-        // group_leader widzi siebie + użytkowników i team_leaderów swojej grupy
-        if (currentUser?.role === "group_leader") {
-          if (email === currentUser.email) return true; // siebie zawsze
-          if (role !== "user" && role !== "team_leader") return false;
-          const uGroupId = u.data?.group_id || u.group_id;
-          return uGroupId === currentUserGroupId;
         }
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
