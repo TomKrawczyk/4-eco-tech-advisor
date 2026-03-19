@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -11,39 +11,10 @@ import {
 } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { motion } from "framer-motion";
+import useCurrentUser from "@/components/shared/useCurrentUser";
 
 export default function Dashboard() {
-  const [currentUser, setCurrentUser] = useState(null);
-  
-  // Log page view
-  useEffect(() => {
-    if (currentUser) {
-      base44.functions.invoke('logActivity', {
-        action_type: 'page_view',
-        page_name: 'Dashboard'
-      }).catch(err => console.error('Log error:', err));
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const user = await base44.auth.me();
-      const allowedUsers = await base44.entities.AllowedUser.list();
-      const userAccess = allowedUsers.find(allowed => 
-        (allowed.data?.email || allowed.email) === user.email
-      );
-      
-      if (userAccess) {
-        user.displayName = userAccess.data?.name || userAccess.name;
-        user.role = userAccess.data?.role || userAccess.role;
-        user.allowedUserId = userAccess.id;
-      }
-      
-      setCurrentUser(user);
-    };
-    
-    fetchUserData();
-  }, []);
+  const { currentUser } = useCurrentUser();
 
   const { data: allVisitReports = [] } = useQuery({
     queryKey: ["visitReports"],
