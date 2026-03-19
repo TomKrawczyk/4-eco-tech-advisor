@@ -585,7 +585,7 @@ export default function Meetings() {
       {/* Licznik */}
       {!isLoading && (
         <div className="text-sm text-gray-500">
-          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (maks. +14 dni od dziś)
+          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (dziś + 3 dni)
           {allMeetings.length > 0 && <span className="ml-1 text-gray-400">z {allMeetings.length} wszystkich</span>}
         </div>
       )}
