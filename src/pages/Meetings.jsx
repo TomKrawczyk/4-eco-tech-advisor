@@ -271,8 +271,9 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
-  // Okno dat: dziś + 14 dni dla wszystkich (zwiększone z 3)
+  // Okno dat: ostatnie 90 dni + 14 dni w przód
   const today = useMemo(() => startOfDay(new Date()), []);
+  const minDate = useMemo(() => addDays(today, -90), [today]);
   const maxDate = useMemo(() => addDays(today, 14), [today]);
   const maxDateUser = useMemo(() => addDays(today, 14), [today]);
 
@@ -376,10 +377,8 @@ export default function Meetings() {
           const assignment = meetingAssignments.find(a => a.meeting_key === key);
           const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
           matchRole = isSheetInMyGroup || isAssignedToMyGroup;
-        } else {
-          // Brak przypisanej grupy = nie widzi niczego
-          matchRole = false;
         }
+        // Brak grupy = lider widzi wszystko (np. po świeżym awansie)
       } else if (currentUser?.role === "team_leader") {
         // Team leader widzi spotkania przypisane bezpośrednio do niego lub do członków jego zespołu
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
