@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import PageHeader from "../components/shared/PageHeader";
 import ReportDetail from "../components/reports/ReportDetail";
 import { smartList, smartDelete } from "@/components/offline/offlineSync";
+import useCurrentUser from "@/components/shared/useCurrentUser";
 
 const statusConfig = {
   draft: { label: "Szkic", icon: Clock, color: "bg-gray-100 text-gray-700 border-gray-300" },
@@ -18,53 +19,61 @@ const statusConfig = {
 export default function VisitReports() {
   const [search, setSearch] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser, accessChecked } = useCurrentUser();
   const queryClient = useQueryClient();
 
-  React.useEffect(() => {
-    const fetchUserData = async () => {
-      const user = await base44.auth.me();
-      const allowedUsers = await base44.entities.AllowedUser.list();
-      const userAccess = allowedUsers.find(allowed => 
-        (allowed.data?.email || allowed.email) === user.email
-      );
-      
-      if (userAccess) {
-        user.role = userAccess.data?.role || userAccess.role;
-      }
-      
-      setCurrentUser(user);
-    };
-    
-    fetchUserData();
-  }, []);
+  const { data: allAllowedUsers = [] } = useQuery({
+    queryKey: ["allowedUsers"],
+    queryFn: () => base44.entities.AllowedUser.list(),
+    staleTime: 5 * 60 * 1000,
+    enabled: accessChecked,
+  });
 
   const { data: allReports = [], isLoading } = useQuery({
     queryKey: ["visitReports"],
     queryFn: () => smartList(base44.entities.VisitReport, "VisitReport", "-created_date", 100),
-    enabled: !!currentUser,
-    staleTime: 30000,
+    enabled: accessChecked,
+    staleTime: 2 * 60 * 1000,
   });
 
-  const { data: hierarchyData } = useQuery({
-    queryKey: ["userHierarchy", currentUser?.email],
-    queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
-    enabled: !!currentUser,
-  });
-
-  // Filtruj raporty według hierarchii
+  // Filtruj raporty według hierarchii — bez backend function
   const reports = React.useMemo(() => {
-    if (!currentUser) return [];
+    if (!currentUser || !allAllowedUsers.length) return allReports;
+
     const role = currentUser.role;
-    // Zwykły użytkownik widzi tylko swoje raporty
-    if (role !== "admin" && role !== "group_leader" && role !== "team_leader") {
-      return allReports.filter(r => r.author_email === currentUser.email || r.created_by === currentUser.email);
+
+    if (role === 'admin') return allReports;
+
+    if (role === 'group_leader' || role === 'team_leader') {
+      const me = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+      if (!me) return allReports.filter(r => r.created_by === currentUser.email);
+
+      const allowedEmails = new Set([currentUser.email]);
+      const managedIds = me.data?.managed_users || me.managed_users || [];
+
+      managedIds.forEach(id => {
+        const mu = allAllowedUsers.find(u => u.id === id);
+        if (!mu) return;
+        allowedEmails.add(mu.data?.email || mu.email);
+        // group_leader: też podwładni team leaderów
+        if (role === 'group_leader') {
+          const muRole = mu.data?.role || mu.role;
+          if (muRole === 'team_leader') {
+            const teamIds = mu.data?.managed_users || mu.managed_users || [];
+            teamIds.forEach(tid => {
+              const tu = allAllowedUsers.find(u => u.id === tid);
+              if (tu) allowedEmails.add(tu.data?.email || tu.email);
+            });
+          }
+        }
+      });
+
+      return allReports.filter(r => allowedEmails.has(r.created_by));
     }
-    // Liderzy/admini widzą według hierarchii
-    if (!hierarchyData?.data) return [];
-    const allowedEmails = hierarchyData.data.userEmails || [];
-    return allReports.filter(report => allowedEmails.includes(report.created_by));
-  }, [allReports, hierarchyData, currentUser]);
+
+    // zwykły user — tylko swoje
+    return allReports.filter(r => r.created_by === currentUser.email);
+  }, [allReports, allAllowedUsers, currentUser]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => smartDelete(base44.entities.VisitReport, "VisitReport", id),
