@@ -271,11 +271,10 @@ export default function Meetings() {
   const allMeetings = result?.meetings || [];
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
-  // Okno dat: ostatnie 90 dni + 14 dni w przód
+  // Okno dat: dziś + 3 dni
   const today = useMemo(() => startOfDay(new Date()), []);
-  const minDate = useMemo(() => addDays(today, -90), [today]);
-  const maxDate = useMemo(() => addDays(today, 14), [today]);
-  const maxDateUser = useMemo(() => addDays(today, 14), [today]);
+  const maxDate = useMemo(() => addDays(today, 3), [today]);
+  const maxDateUser = useMemo(() => addDays(today, 3), [today]);
 
   // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
@@ -333,7 +332,7 @@ export default function Meetings() {
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
-  // Filtruj: tylko z datą + w oknie (ostatnie 90 dni + 14 dni w przód)
+  // Filtruj: tylko z datą + w oknie 14 dni
   const meetingsWithDate = useMemo(() => {
     return allMeetings
       .filter(m => {
@@ -341,7 +340,7 @@ export default function Meetings() {
         const d = parseMeetingDate(m.meeting_calendar);
         if (!d) return false;
         const day = startOfDay(d);
-        return day >= minDate && day <= maxDate;
+        return day >= today && day <= maxDate;
       })
       .map(m => ({
         ...m,
@@ -463,7 +462,7 @@ export default function Meetings() {
     <div className="space-y-6">
       <PageHeader
         title="Spotkania"
-        subtitle={`Spotkania z datą – ostatnie 90 dni i najbliższe 14 dni`}
+        subtitle={`Spotkania z datą – najbliższe 14 dni`}
       />
 
       {/* Statystyki przypisań – tylko admin */}
@@ -586,7 +585,7 @@ export default function Meetings() {
       {/* Licznik */}
       {!isLoading && (
         <div className="text-sm text-gray-500">
-          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (ostatnie 90 dni + 14 dni w przód)
+          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (maks. +14 dni od dziś)
           {allMeetings.length > 0 && <span className="ml-1 text-gray-400">z {allMeetings.length} wszystkich</span>}
         </div>
       )}
