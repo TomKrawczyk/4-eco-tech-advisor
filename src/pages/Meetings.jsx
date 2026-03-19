@@ -463,7 +463,7 @@ export default function Meetings() {
     <div className="space-y-6">
       <PageHeader
         title="Spotkania"
-        subtitle={`Spotkania z datą – najbliższe 14 dni`}
+        subtitle={`Spotkania z datą – ostatnie 90 dni i najbliższe 14 dni`}
       />
 
       {/* Statystyki przypisań – tylko admin */}
