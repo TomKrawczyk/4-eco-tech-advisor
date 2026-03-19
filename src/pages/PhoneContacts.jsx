@@ -513,9 +513,12 @@ export default function PhoneContacts() {
                                       </button>
 
                                       {contact.assigned_user_email ? (
-                                        <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
+                                       <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
                                           <User className="w-3 h-3 text-green-600" />
-                                          <span className="text-xs font-medium text-green-700">{contact.assigned_user_name || contact.assigned_user_email}</span>
+                                          <div className="flex flex-col">
+                                            <span className="text-xs font-medium text-green-700 leading-tight">{contact.assigned_user_name || contact.assigned_user_email}</span>
+                                            {contact.assigned_user_name && <span className="text-[10px] text-green-500 leading-tight">{contact.assigned_user_email}</span>}
+                                          </div>
                                           {canAssign && (
                                             <button
                                               onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
