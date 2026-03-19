@@ -43,8 +43,8 @@ export default function ManualContactModal({ open, onOpenChange, currentUser, gr
 
     try {
       const isMeeting = form.source_type === "spotkanie";
-      const userEmail = form.assigned_user_email && form.assigned_user_email !== "__none__" ? form.assigned_user_email : "";
-      const groupId = form.assigned_group_id && form.assigned_group_id !== "__none__" ? form.assigned_group_id : "";
+      const userEmail = form.assigned_user_email || "";
+      const groupId = form.assigned_group_id || "";
       const assignedUser = salespeople?.find(s => s.email === userEmail);
       const assignedGroup = groups?.find(g => g.id === groupId);
 
