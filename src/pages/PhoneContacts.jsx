@@ -412,6 +412,18 @@ export default function PhoneContacts() {
           </Button>
         )}
 
+        {isAdminOrGroupLeader && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 h-11 border-green-200 text-green-700 hover:bg-green-50"
+            onClick={() => setManualModalOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            Dodaj ręcznie
+          </Button>
+        )}
+
         {currentUser?.role === "admin" && (
           <Button
             variant={showStats ? "default" : "outline"}
