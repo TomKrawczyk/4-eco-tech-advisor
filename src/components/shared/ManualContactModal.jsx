@@ -67,11 +67,22 @@ export default function ManualContactModal({ open, onOpenChange, currentUser, gr
           assigned_group_name: assignedGroup?.name || "",
         });
         queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
+        // Powiadomienie dla przypisanego doradcy
+        if (userEmail) {
+          base44.functions.invoke('notifyMeetingAssigned', {
+            assignedUserEmail: userEmail,
+            assignedUserName: assignedUser?.name || userEmail,
+            clientName: form.client_name.trim(),
+            phone: form.client_phone,
+            sheet: `Ręczne (${SOURCE_TYPES.find(s => s.value === form.source_type)?.label || form.source_type})`,
+          }).catch(() => {});
+        }
       } else {
+        const sheet = `Ręczne (${SOURCE_TYPES.find(s => s.value === form.source_type)?.label || form.source_type})`;
         const key = `manual__${form.client_name.trim()}__${Date.now()}`;
         await base44.entities.PhoneContact.create({
           contact_key: key,
-          sheet: `Ręczne (${SOURCE_TYPES.find(s => s.value === form.source_type)?.label || form.source_type})`,
+          sheet,
           client_name: form.client_name.trim(),
           phone: form.client_phone,
           address: form.client_address,
@@ -84,6 +95,16 @@ export default function ManualContactModal({ open, onOpenChange, currentUser, gr
           assigned_group_name: assignedGroup?.name || "",
         });
         queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
+        // Powiadomienie dla przypisanego doradcy
+        if (userEmail) {
+          base44.functions.invoke('notifyContactAssigned', {
+            assignedUserEmail: userEmail,
+            assignedUserName: assignedUser?.name || userEmail,
+            clientName: form.client_name.trim(),
+            phone: form.client_phone,
+            sheet,
+          }).catch(() => {});
+        }
       }
 
       resetForm();
