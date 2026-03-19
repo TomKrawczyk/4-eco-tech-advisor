@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
+import ManualContactModal from "@/components/shared/ManualContactModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -114,12 +115,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy + ręcznie dodane kontakty
+  // Scal dane z arkusza z przypisaniami z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-
-    // Kontakty z arkusza wzbogacone o dane z bazy
-    const sheetContacts = rawContacts.map(c => {
+    return rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -133,32 +132,6 @@ export default function PhoneContacts() {
       }
       return c;
     });
-
-    // Ręcznie dodane kontakty (tylko te z bazy, których nie ma w arkuszu)
-    const manualContacts = phoneContactsFromDB
-      .filter(db => db.contact_key?.startsWith("manual__"))
-      .map(db => ({
-        id: db.id,
-        contact_key: db.contact_key,
-        sheet: db.sheet || "Ręczne",
-        client_name: db.client_name,
-        phone: db.phone,
-        address: db.address,
-        date: db.date,
-        agent: db.agent || "",
-        contact_calendar: db.contact_calendar || "",
-        contact_date: db.contact_date || "",
-        status: db.status || "Kontakt do doradcy",
-        comments: db.comments || "",
-        interview_data: db.interview_data || null,
-        assigned_user_email: db.assigned_user_email || "",
-        assigned_user_name: db.assigned_user_name || "",
-        assigned_group_id: db.assigned_group_id || "",
-        assigned_group_name: db.assigned_group_name || "",
-        is_manual: true,
-      }));
-
-    return [...sheetContacts, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -281,7 +254,7 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      const matchStatus = c.is_manual || c.status === "Kontakt do doradcy" || c.status === "DWS";
+      const matchStatus = c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
   }, [visibleContacts, search, sheetFilter]);
@@ -513,29 +486,16 @@ export default function PhoneContacts() {
                                 <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="font-medium text-gray-800 text-sm">{contact.client_name}</span>
-                                        {contact.is_manual && (
-                                          <Badge className="bg-violet-50 text-violet-700 border border-violet-200 text-[10px]">Ręczny</Badge>
-                                        )}
-                                      </div>
+                                      <div className="font-medium text-gray-800 text-sm truncate">{contact.client_name}</div>
                                       {contact.phone && (
                                         <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
                                           <Phone className="w-3 h-3" /> {contact.phone}
                                         </a>
                                       )}
                                       {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        {contact.status && (
-                                          <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
-                                        )}
-                                        {contact.assigned_user_name && !contact.assigned_user_email && (
-                                          <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">👤 {contact.assigned_user_name}</Badge>
-                                        )}
-                                        {contact.assigned_group_name && (
-                                          <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">🏢 {contact.assigned_group_name}</Badge>
-                                        )}
-                                      </div>
+                                      {contact.status && (
+                                        <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
+                                      )}
                                     </div>
                                     <div className="shrink-0 flex gap-2 flex-wrap">
                                       <button
