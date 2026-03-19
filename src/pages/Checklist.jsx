@@ -53,13 +53,13 @@ const installationOptions = ["PV", "Pompa ciepła", "Magazyn energii"];
 
 export default function Checklist() {
   const urlParams = new URLSearchParams(window.location.search);
+  const editReportId = urlParams.get("edit_report_id");
   const prefillData = urlParams.get("from_meeting") === "1" ? {
     client_name: urlParams.get("prefill_client_name") || "",
     client_phone: urlParams.get("prefill_client_phone") || "",
     client_address: urlParams.get("prefill_client_address") || "",
     visit_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
   } : null;
-  const editReportId = urlParams.get("edit_report_id") || null;
 
   const [currentReport, setCurrentReport] = useState(null);
   const [form, setForm] = useState(prefillData ? { ...initialState, ...prefillData } : initialState);
@@ -75,13 +75,12 @@ export default function Checklist() {
     }).catch(err => console.error('Log error:', err));
   }, []);
 
-  // Ładuj raport z URL (tryb edycji z VisitReports)
+  // Jeśli edit_report_id w URL, załaduj raport automatycznie
   useEffect(() => {
     if (editReportId && !currentReport) {
-      base44.entities.VisitReport.list().then(reports => {
-        const found = reports.find(r => r.id === editReportId);
-        if (found) setCurrentReport(found);
-      });
+      base44.entities.VisitReport.filter({ id: editReportId }).then(results => {
+        if (results && results.length > 0) setCurrentReport(results[0]);
+      }).catch(console.error);
     }
   }, [editReportId]);
 
