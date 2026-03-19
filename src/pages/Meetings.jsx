@@ -73,7 +73,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
     <div className="space-y-6">
       <PageHeader
         title="Moje spotkania"
-        subtitle="Spotkania przypisane do Ciebie – najbliższe 14 dni"
+        subtitle="Spotkania przypisane do Ciebie – dziś i najbliższe 3 dni"
       />
       {myAssignedMeetings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
