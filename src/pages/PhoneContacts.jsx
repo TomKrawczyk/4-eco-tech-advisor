@@ -446,6 +446,17 @@ export default function PhoneContacts() {
             Statystyki
           </Button>
         )}
+
+        {isAdminOrGroupLeader && (
+          <Button
+            size="sm"
+            className="gap-2 h-11 bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => setManualModalOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            Dodaj ręcznie
+          </Button>
+        )}
       </div>
 
       <div className="text-sm text-gray-500">
