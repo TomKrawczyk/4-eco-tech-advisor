@@ -333,7 +333,7 @@ export default function Meetings() {
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
-  // Filtruj: tylko z datą + w oknie 14 dni
+  // Filtruj: tylko z datą + w oknie (ostatnie 90 dni + 14 dni w przód)
   const meetingsWithDate = useMemo(() => {
     return allMeetings
       .filter(m => {
@@ -341,7 +341,7 @@ export default function Meetings() {
         const d = parseMeetingDate(m.meeting_calendar);
         if (!d) return false;
         const day = startOfDay(d);
-        return day >= today && day <= maxDate;
+        return day >= minDate && day <= maxDate;
       })
       .map(m => ({
         ...m,
