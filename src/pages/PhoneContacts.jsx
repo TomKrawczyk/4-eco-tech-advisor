@@ -513,16 +513,29 @@ export default function PhoneContacts() {
                                 <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
-                                      <div className="font-medium text-gray-800 text-sm truncate">{contact.client_name}</div>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-medium text-gray-800 text-sm">{contact.client_name}</span>
+                                        {contact.is_manual && (
+                                          <Badge className="bg-violet-50 text-violet-700 border border-violet-200 text-[10px]">Ręczny</Badge>
+                                        )}
+                                      </div>
                                       {contact.phone && (
                                         <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
                                           <Phone className="w-3 h-3" /> {contact.phone}
                                         </a>
                                       )}
                                       {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
-                                      {contact.status && (
-                                        <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
-                                      )}
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {contact.status && (
+                                          <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
+                                        )}
+                                        {contact.assigned_user_name && !contact.assigned_user_email && (
+                                          <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">👤 {contact.assigned_user_name}</Badge>
+                                        )}
+                                        {contact.assigned_group_name && (
+                                          <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">🏢 {contact.assigned_group_name}</Badge>
+                                        )}
+                                      </div>
                                     </div>
                                     <div className="shrink-0 flex gap-2 flex-wrap">
                                       <button
