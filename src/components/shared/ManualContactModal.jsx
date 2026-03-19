@@ -218,7 +218,7 @@ export default function ManualContactModal({ open, onOpenChange, currentUser, gr
                   <SelectValue placeholder="Nie przypisuj (opcjonalne)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>Nie przypisuj</SelectItem>
+                  <SelectItem value="__none__">Nie przypisuj</SelectItem>
                   {groups.map(g => (
                     <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                   ))}
