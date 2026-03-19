@@ -6,11 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
-import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -49,9 +48,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [manualAddOpen, setManualAddOpen] = useState(false);
-
-  const isManualContact = (c) => c.contact_key?.startsWith("manual_");
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -118,10 +114,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy + dołącz ręcznie dodane
+  // Scal dane z arkusza z przypisaniami z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    const sheetContacts = rawContacts.map(c => {
+    return rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -135,12 +131,6 @@ export default function PhoneContacts() {
       }
       return c;
     });
-    // Ręcznie dodane (prefiks manual_) – tylko te których nie ma już w sheetContacts
-    const manualContacts = phoneContactsFromDB.filter(db =>
-      db.contact_key?.startsWith("manual_") &&
-      !sheetContacts.find(sc => sc.contact_key === db.contact_key)
-    );
-    return [...sheetContacts, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -234,21 +224,22 @@ export default function PhoneContacts() {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts;
+      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
       return contacts.filter(c => {
-        if (isManualContact(c)) return !c.assigned_group_id || c.assigned_group_id === myGroupId;
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
         if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
+        // Fallback: kontakty przypisane do grupy
         if (c.assigned_group_id === myGroupId) return true;
         return false;
       });
     }
     if (currentUser?.role === "team_leader") {
+      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
       return contacts.filter(c => {
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
         if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
+        // Nieprzypisane kontakty z arkuszy grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
-          if (isManualContact(c)) return true;
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
           return sheetMapping?.group_id === currentUserGroupId;
         }
@@ -262,8 +253,7 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      // Ręcznie dodane zawsze pokazuj; z arkusza – tylko z odpowiednim statusem
-      const matchStatus = isManualContact(c) || c.status === "Kontakt do doradcy" || c.status === "DWS";
+      const matchStatus = c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
   }, [visibleContacts, search, sheetFilter]);
@@ -303,20 +293,14 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi swoje przypisane kontakty + własne ręcznie dodane
+  // Zwykły użytkownik widzi swoje przypisane kontakty
   if (!isLeaderOrAdmin) {
     const myContacts = phoneContactsFromDB.filter(c =>
-      c.assigned_user_email === currentUser?.email ||
-      (isManualContact(c) && !c.assigned_user_email && c.created_by === currentUser?.email)
+      c.assigned_user_email === currentUser?.email
     );
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between gap-3">
-          <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
-          <Button onClick={() => setManualAddOpen(true)} className="bg-green-600 hover:bg-green-700 gap-2 shrink-0">
-            <Plus className="w-4 h-4" /> Dodaj ręcznie
-          </Button>
-        </div>
+        <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
         {myContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -355,24 +339,13 @@ export default function PhoneContacts() {
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
-        <ManualAddModal
-          open={manualAddOpen}
-          onClose={() => setManualAddOpen(false)}
-          currentUser={currentUser}
-          onContactAdded={() => queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] })}
-        />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <PageHeader title="Kontakt telefoniczny do doradcy" subtitle="Klienci zainteresowani kontaktem z doradcą – aktualizacja co 5 minut" />
-        <Button onClick={() => setManualAddOpen(true)} className="bg-green-600 hover:bg-green-700 gap-2 shrink-0">
-          <Plus className="w-4 h-4" /> Dodaj ręcznie
-        </Button>
-      </div>
+      <PageHeader title="Kontakt telefoniczny do doradcy" subtitle="Klienci zainteresowani kontaktem z doradcą – aktualizacja co 5 minut" />
 
       {currentUser?.role === "admin" && showStats && (
         <AssignmentStats onClose={() => setShowStats(false)} />
@@ -519,14 +492,9 @@ export default function PhoneContacts() {
                                         </a>
                                       )}
                                       {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        {isManualContact(contact) && (
-                                          <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">Ręcznie dodany</Badge>
-                                        )}
-                                        {contact.status && (
-                                          <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
-                                        )}
-                                      </div>
+                                      {contact.status && (
+                                        <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
+                                      )}
                                     </div>
                                     <div className="shrink-0 flex gap-2 flex-wrap">
                                       <button
@@ -566,7 +534,10 @@ export default function PhoneContacts() {
                                             </SelectTrigger>
                                             <SelectContent>
                                               {salespeople.map(sp => (
-                                                <SelectItem key={sp.email} value={sp.email}>{sp.name}</SelectItem>
+                                                <SelectItem key={sp.email} value={sp.email}>
+                                                  <span>{sp.name}</span>
+                                                  <span className="text-gray-400 text-[10px] ml-1">({sp.email})</span>
+                                                </SelectItem>
                                               ))}
                                             </SelectContent>
                                           </Select>
@@ -621,13 +592,6 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
-      />
-
-      <ManualAddModal
-        open={manualAddOpen}
-        onClose={() => setManualAddOpen(false)}
-        currentUser={currentUser}
-        onContactAdded={() => queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] })}
       />
     </div>
   );
