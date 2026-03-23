@@ -278,6 +278,22 @@ export default function MeetingReports() {
   } : null;
 
   const [view, setView] = useState(prefill ? "create" : "list");
+  const [prefillData, setPrefillData] = useState(prefill);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("from_meeting") === "1") {
+      const data = {
+        client_name: params.get("prefill_client_name") || "",
+        client_phone: params.get("prefill_client_phone") || "",
+        client_address: params.get("prefill_client_address") || "",
+        meeting_date: params.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
+        meeting_time: params.get("prefill_meeting_time") || "",
+      };
+      setPrefillData(data);
+      setView("create");
+    }
+  }, [window.location.search]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -294,13 +310,8 @@ export default function MeetingReports() {
   }, []);
 
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["meetingReports", currentUser?.email],
-    queryFn: () => {
-      if (currentUser?.role === "admin") {
-        return base44.entities.MeetingReport.list("-created_date", 200);
-      }
-      return base44.entities.MeetingReport.filter({ author_email: currentUser.email }, "-created_date", 200);
-    },
+    queryKey: ["meetingReports"],
+    queryFn: () => base44.entities.MeetingReport.list("-created_date", 100),
     enabled: !!currentUser,
   });
 
