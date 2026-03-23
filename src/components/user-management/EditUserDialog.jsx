@@ -240,6 +240,26 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
         </DialogFooter>
       </DialogContent>
 
+      <AlertDialog open={showResetReports} onOpenChange={setShowResetReports}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Zerowanie zaległych raportów</AlertDialogTitle>
+            <AlertDialogDescription>
+              Operacja automatycznie uzupełni wszystkie brakujące raporty dla <strong>{user?.data?.name || user?.name}</strong> ze statusem "zakończone" i odblokuje konto. Baner z zaległościami przestanie się wyświetlać. Czy kontynuować?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetReports}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Tak, zeruj raporty
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={showResetPassword} onOpenChange={setShowResetPassword}>
         <AlertDialogContent>
           <AlertDialogHeader>
