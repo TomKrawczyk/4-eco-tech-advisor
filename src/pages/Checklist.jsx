@@ -75,6 +75,15 @@ export default function Checklist() {
     }).catch(err => console.error('Log error:', err));
   }, []);
 
+  // Jeśli edit_report_id w URL, załaduj raport automatycznie
+  useEffect(() => {
+    if (!editReportId) return;
+    base44.entities.VisitReport.list().then(all => {
+      const found = all.find(r => r.id === editReportId);
+      if (found) setCurrentReport(found);
+    }).catch(console.error);
+  }, [editReportId]);
+
   useEffect(() => {
     if (currentReport) {
       setForm({
