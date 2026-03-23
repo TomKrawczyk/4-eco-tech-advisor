@@ -268,17 +268,30 @@ export default function MeetingReports() {
   const [currentUser, setCurrentUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Sprawdź prefill z URL (po przejściu ze spotkania)
-  const urlParams = new URLSearchParams(window.location.search);
-  const prefill = urlParams.get("from_meeting") === "1" ? {
-    client_name: urlParams.get("prefill_client_name") || "",
-    client_phone: urlParams.get("prefill_client_phone") || "",
-    client_address: urlParams.get("prefill_client_address") || "",
-    meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
-    meeting_time: urlParams.get("prefill_meeting_time") || "",
-  } : null;
+  const location = useLocation();
 
-  const [view, setView] = useState(prefill ? "create" : "list");
+  const parsePrefill = (search) => {
+    const p = new URLSearchParams(search);
+    if (p.get("from_meeting") !== "1") return null;
+    return {
+      client_name: p.get("prefill_client_name") || "",
+      client_phone: p.get("prefill_client_phone") || "",
+      client_address: p.get("prefill_client_address") || "",
+      meeting_date: p.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
+      meeting_time: p.get("prefill_meeting_time") || "",
+    };
+  };
+
+  const [prefillData, setPrefillData] = useState(() => parsePrefill(location.search));
+  const [view, setView] = useState(() => parsePrefill(location.search) ? "create" : "list");
+
+  useEffect(() => {
+    const data = parsePrefill(location.search);
+    if (data) {
+      setPrefillData(data);
+      setView("create");
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const fetchUser = async () => {
