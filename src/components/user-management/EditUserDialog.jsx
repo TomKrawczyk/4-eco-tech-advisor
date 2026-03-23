@@ -18,6 +18,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
     assigned_to: ""
   });
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetReports, setShowResetReports] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
   const [resettingReports, setResettingReports] = useState(false);
 
