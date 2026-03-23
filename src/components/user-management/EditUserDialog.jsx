@@ -52,13 +52,62 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
 
   const handleResetReports = async () => {
     setResettingReports(true);
+    setShowResetReports(false);
     try {
+      const userEmail = user?.email || user?.data?.email;
+      const userName = formData.name || user?.data?.name || user?.name || "";
+
+      // Pobierz wszystkie przypisania spotkań tego użytkownika
+      const [assignments, existingReports] = await Promise.all([
+        base44.entities.MeetingAssignment.filter({ assigned_user_email: userEmail }),
+        base44.entities.MeetingReport.filter({ author_email: userEmail }),
+      ]);
+
+      const today = new Date();
+      const normalizePhone = p => (p || '').replace(/\s+/g, '').replace(/[^\d]/g, '');
+      const normalizeName = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+
+      // Znajdź przypisania bez raportu (przeszłe)
+      const missing = assignments.filter(a => {
+        const dateStr = a.meeting_date || a.meeting_calendar;
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        if (isNaN(d) || d >= today) return false;
+
+        const aPhone = normalizePhone(a.client_phone);
+        const aName = normalizeName(a.client_name);
+
+        return !existingReports.some(r => {
+          const rPhone = normalizePhone(r.client_phone);
+          const rName = normalizeName(r.client_name);
+          const phoneMatch = aPhone.length >= 7 && rPhone.length >= 7 && aPhone === rPhone;
+          const nameMatch = rName === aName || (rName.length > 2 && aName.startsWith(rName)) || (aName.length > 2 && rName.startsWith(aName));
+          return phoneMatch || nameMatch;
+        });
+      });
+
+      // Utwórz raporty completed dla każdego brakującego spotkania
+      await Promise.all(missing.map(a =>
+        base44.entities.MeetingReport.create({
+          client_name: a.client_name,
+          client_phone: a.client_phone || "",
+          client_address: a.client_address || "",
+          meeting_date: a.meeting_date || a.meeting_calendar?.split(' ')[0] || new Date().toISOString().split('T')[0],
+          status: "completed",
+          description: "Raport wyzerowany przez administratora",
+          author_name: userName,
+          author_email: userEmail,
+        })
+      ));
+
+      // Zeruj licznik i odblokuj
       await base44.entities.AllowedUser.update(user.id, {
         missing_reports_count: 0,
         is_blocked: false,
         blocked_reason: ""
       });
-      toast.success('Licznik raportów wyzerowany');
+
+      toast.success(`Licznik wyzerowany. Uzupełniono ${missing.length} brakujących raportów.`);
     } catch (error) {
       toast.error('Błąd: ' + error.message);
     } finally {
