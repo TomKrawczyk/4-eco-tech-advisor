@@ -356,14 +356,14 @@ export default function MeetingReports() {
     return (
       <div className="space-y-6">
         <PageHeader title="Nowy raport po spotkaniu" subtitle="Uzupełnij dane ze spotkania z klientem" />
-        {prefill && (
+        {prefillData && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-blue-700">
             Dane klienta zostały automatycznie uzupełnione ze spotkania.
           </div>
         )}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <MeetingForm
-            initialData={prefill || undefined}
+            initialData={prefillData || undefined}
             onSave={(data) => createMutation.mutate(data)}
             onCancel={() => setView("list")}
             saving={createMutation.isPending}
