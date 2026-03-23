@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -278,22 +279,6 @@ export default function MeetingReports() {
   } : null;
 
   const [view, setView] = useState(prefill ? "create" : "list");
-  const [prefillData, setPrefillData] = useState(prefill);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("from_meeting") === "1") {
-      const data = {
-        client_name: params.get("prefill_client_name") || "",
-        client_phone: params.get("prefill_client_phone") || "",
-        client_address: params.get("prefill_client_address") || "",
-        meeting_date: params.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
-        meeting_time: params.get("prefill_meeting_time") || "",
-      };
-      setPrefillData(data);
-      setView("create");
-    }
-  }, [window.location.search]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -356,14 +341,14 @@ export default function MeetingReports() {
     return (
       <div className="space-y-6">
         <PageHeader title="Nowy raport po spotkaniu" subtitle="Uzupełnij dane ze spotkania z klientem" />
-        {prefillData && (
+        {prefill && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-blue-700">
             Dane klienta zostały automatycznie uzupełnione ze spotkania.
           </div>
         )}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <MeetingForm
-            initialData={prefillData || undefined}
+            initialData={prefill || undefined}
             onSave={(data) => createMutation.mutate(data)}
             onCancel={() => setView("list")}
             saving={createMutation.isPending}
