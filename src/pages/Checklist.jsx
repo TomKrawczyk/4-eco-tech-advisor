@@ -75,15 +75,6 @@ export default function Checklist() {
     }).catch(err => console.error('Log error:', err));
   }, []);
 
-  // Jeśli edit_report_id w URL, załaduj raport automatycznie
-  useEffect(() => {
-    if (editReportId && !currentReport) {
-      base44.entities.VisitReport.filter({ id: editReportId }).then(results => {
-        if (results && results.length > 0) setCurrentReport(results[0]);
-      }).catch(console.error);
-    }
-  }, [editReportId]);
-
   useEffect(() => {
     if (currentReport) {
       setForm({
