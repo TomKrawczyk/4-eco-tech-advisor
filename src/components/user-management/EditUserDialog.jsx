@@ -217,7 +217,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              onClick={handleResetReports}
+              onClick={() => setShowResetReports(true)}
               disabled={resettingReports}
               className="text-blue-600 border-blue-200 hover:bg-blue-50"
             >
