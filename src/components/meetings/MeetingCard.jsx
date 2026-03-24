@@ -276,7 +276,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                     const sp = salespeople.find(s => s.email === val);
                     const count = getAssignmentsCountForUserOnDate(val, meeting.meeting_date);
                     if (count >= 5) {
-                      toast.error(`${sp?.name || val} ma już 5 spotkań tego dnia (maksimum)`);
+                      setOverloadConfirm({ userEmail: val, userName: sp?.name || val, count });
                       return;
                     }
                     if (count >= 3) {
@@ -294,9 +294,9 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                       const full = count >= 5;
                       const warn = count >= 3 && count < 5;
                       return (
-                        <SelectItem key={sp.email} value={sp.email} disabled={full}>
-                          <span className={full ? "text-red-400" : warn ? "text-orange-500" : ""}>
-                            {sp.name} <span className="text-gray-400 text-[10px]">({sp.email})</span>{full ? ` (max ${count}/5)` : count > 0 ? ` (${count}/5)` : ""}
+                        <SelectItem key={sp.email} value={sp.email}>
+                          <span className={full ? "text-red-500 font-medium" : warn ? "text-orange-500" : ""}>
+                            {sp.name} <span className="text-gray-400 text-[10px]">({sp.email})</span>{count > 0 ? ` (${count}/dz.)` : ""}
                           </span>
                         </SelectItem>
                       );
