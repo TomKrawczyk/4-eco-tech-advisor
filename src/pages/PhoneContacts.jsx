@@ -6,11 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
-import ManualContactModal from "@/components/shared/ManualContactModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -49,7 +48,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [manualModalOpen, setManualModalOpen] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -116,10 +114,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy + ręcznie dodane kontakty
+  // Scal dane z arkusza z przypisaniami z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    const sheetContacts = rawContacts.map(c => {
+    return rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -133,29 +131,6 @@ export default function PhoneContacts() {
       }
       return c;
     });
-    const manualContacts = phoneContactsFromDB
-      .filter(db => db.contact_key?.startsWith("manual__"))
-      .map(db => ({
-        id: db.id,
-        contact_key: db.contact_key,
-        sheet: db.sheet || "Ręczne",
-        client_name: db.client_name,
-        phone: db.phone || "",
-        address: db.address || "",
-        date: db.date || "",
-        agent: db.agent || "",
-        contact_calendar: db.contact_calendar || "",
-        contact_date: db.contact_date || "",
-        status: db.status || "Kontakt do doradcy",
-        comments: db.comments || "",
-        interview_data: db.interview_data || null,
-        assigned_user_email: db.assigned_user_email || "",
-        assigned_user_name: db.assigned_user_name || "",
-        assigned_group_id: db.assigned_group_id || "",
-        assigned_group_name: db.assigned_group_name || "",
-        is_manual: true,
-      }));
-    return [...sheetContacts, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -249,13 +224,10 @@ export default function PhoneContacts() {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
+      if (!myGroupId) return []; // brak grupy = nie widzi nic
       return contacts.filter(c => {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
-        if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
-        // Fallback: kontakty przypisane do grupy
-        if (c.assigned_group_id === myGroupId) return true;
-        return false;
+        return sheetMapping?.group_id === myGroupId;
       });
     }
     if (currentUser?.role === "team_leader") {
@@ -278,7 +250,7 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      const matchStatus = c.is_manual || c.status === "Kontakt do doradcy" || c.status === "DWS";
+      const matchStatus = c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
   }, [visibleContacts, search, sheetFilter]);
@@ -444,17 +416,6 @@ export default function PhoneContacts() {
           >
             <BarChart2 className="w-4 h-4" />
             Statystyki
-          </Button>
-        )}
-
-        {isAdminOrGroupLeader && (
-          <Button
-            size="sm"
-            className="gap-2 h-11 bg-green-600 hover:bg-green-700 text-white"
-            onClick={() => setManualModalOpen(true)}
-          >
-            <Plus className="w-4 h-4" />
-            Dodaj ręcznie
           </Button>
         )}
       </div>
@@ -625,15 +586,6 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
-      />
-
-      <ManualContactModal
-        open={manualModalOpen}
-        onOpenChange={setManualModalOpen}
-        currentUser={currentUser}
-        groups={groups}
-        salespeople={salespeople}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] })}
       />
     </div>
   );
