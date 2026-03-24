@@ -309,6 +309,9 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
             <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-xs mt-1">
               <UserCheck className="w-3 h-3 mr-1" />
               {assignment.assigned_user_name || assignment.assigned_user_email}
+              {assignment.assigned_user_name && (
+                <span className="ml-1 text-violet-400 font-normal">({assignment.assigned_user_email})</span>
+              )}
             </Badge>
           )}
 
