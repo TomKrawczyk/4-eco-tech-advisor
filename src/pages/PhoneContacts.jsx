@@ -210,24 +210,27 @@ export default function PhoneContacts() {
       .filter(u => {
         const role = u.data?.role || u.role;
         if (currentUser?.role === "admin") return true;
-        if (role !== "user" && role !== "team_leader") return false;
+        if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
+  const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
+
   // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return [];
+      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
       return contacts.filter(c => {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
-        const isSheetInMyGroup = sheetMapping?.group_id === myGroupId;
-        const isAssignedToMyGroup = c.assigned_group_id === myGroupId;
-        return isSheetInMyGroup || isAssignedToMyGroup;
+        if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
+        // Fallback: kontakty przypisane do grupy
+        if (c.assigned_group_id === myGroupId) return true;
+        return false;
       });
     }
     if (currentUser?.role === "team_leader") {
@@ -245,10 +248,6 @@ export default function PhoneContacts() {
     }
     return contacts;
   }, [contacts, currentUser, currentUserGroupId, sheetMappings, teamMemberEmails]);
-
-  const allSheetTabs = useMemo(() => {
-    return [...new Set(visibleContacts.map(c => c.sheet).filter(Boolean))].sort();
-  }, [visibleContacts]);
 
   const filtered = useMemo(() => {
     return visibleContacts.filter(c => {
