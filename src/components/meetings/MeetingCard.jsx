@@ -257,6 +257,9 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                 <div className="flex items-center gap-2">
                   <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-xs">
                     {assignment.assigned_user_name || assignment.assigned_user_email}
+                    {assignment.assigned_user_name && (
+                      <span className="ml-1 text-violet-400 font-normal">({assignment.assigned_user_email})</span>
+                    )}
                   </Badge>
                   <button
                     onClick={() => unassignMutation.mutate()}
