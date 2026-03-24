@@ -191,6 +191,29 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
       onOpenChange={setDetailsModalOpen}
       data={selectedDetails}
     />
+    <AlertDialog open={!!overloadConfirm} onOpenChange={() => setOverloadConfirm(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Przekroczenie limitu spotkań</AlertDialogTitle>
+          <AlertDialogDescription>
+            <strong>{overloadConfirm?.userName}</strong> ma już <strong>{overloadConfirm?.count}</strong> spotkań tego dnia (limit: 5).
+            Czy na pewno chcesz przypisać kolejne spotkanie?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Anuluj</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-orange-600 hover:bg-orange-700"
+            onClick={() => {
+              assignMutation.mutate({ userEmail: overloadConfirm.userEmail, userName: overloadConfirm.userName });
+              setOverloadConfirm(null);
+            }}
+          >
+            Tak, przypisz mimo to
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
       <div className="flex items-start gap-3 flex-wrap">
         <div className="space-y-1.5 flex-1 min-w-0">
