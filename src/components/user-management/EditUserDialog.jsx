@@ -197,7 +197,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
                   <SelectItem value={null}>Brak przypisania</SelectItem>
                   {availableLeaders.map(leader => (
                     <SelectItem key={leader.id} value={leader.id}>
-                      {leader.data?.name || leader.name} ({leader.data?.role || leader.role})
+                      {leader.data?.name || leader.name} — {leader.data?.email || leader.email} ({leader.data?.role || leader.role})
                     </SelectItem>
                   ))}
                 </SelectContent>
