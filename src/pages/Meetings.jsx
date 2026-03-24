@@ -367,13 +367,14 @@ export default function Meetings() {
         // Admin widzi WSZYSTKO
         matchRole = true;
       } else if (currentUser?.role === "group_leader") {
-        // Group leader widzi TYLKO spotkania z arkuszy przypisanych do jego grupy
         if (currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
           const isSheetInMyGroup = sheetMapping?.group_id === currentUserGroupId;
-          matchRole = isSheetInMyGroup;
+          const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+          const assignment = meetingAssignments.find(a => a.meeting_key === key);
+          const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
+          matchRole = isSheetInMyGroup || isAssignedToMyGroup;
         } else {
-          // Brak grupy = nie widzi nic (nie pokazujemy spotkań z losowych arkuszy)
           matchRole = false;
         }
       } else if (currentUser?.role === "team_leader") {
@@ -432,18 +433,8 @@ export default function Meetings() {
   }, [sheetGroups.length]);
 
   const allSheetTabs = useMemo(() => {
-    const allTabs = [...new Set(allMeetings.map(m => m.sheet).filter(Boolean))].sort();
-    // Group leader widzi tylko arkusze swojej grupy
-    if (currentUser?.role === "group_leader" && currentUserGroupId) {
-      const myGroupSheets = new Set(
-        sheetMappings
-          .filter(sm => sm.group_id === currentUserGroupId)
-          .map(sm => sm.sheet_name)
-      );
-      return allTabs.filter(s => myGroupSheets.has(s));
-    }
-    return allTabs;
-  }, [allMeetings, currentUser, currentUserGroupId, sheetMappings]);
+    return [...new Set(allMeetings.map(m => m.sheet).filter(Boolean))].sort();
+  }, [allMeetings]);
 
   if (!accessChecked) {
     return (
