@@ -217,20 +217,19 @@ export default function PhoneContacts() {
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
-  const allSheetTabs = useMemo(() => {
-    const source = currentUser?.role === "group_leader" ? visibleContacts : contacts;
-    return [...new Set(source.map(c => c.sheet).filter(Boolean))].sort();
-  }, [contacts, visibleContacts, currentUser]);
+  const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
   // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return []; // brak grupy = nie widzi nic
+      if (!myGroupId) return [];
       return contacts.filter(c => {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
-        return sheetMapping?.group_id === myGroupId;
+        const isSheetInMyGroup = sheetMapping?.group_id === myGroupId;
+        const isAssignedToMyGroup = c.assigned_group_id === myGroupId;
+        return isSheetInMyGroup || isAssignedToMyGroup;
       });
     }
     if (currentUser?.role === "team_leader") {
