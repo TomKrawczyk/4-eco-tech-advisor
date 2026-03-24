@@ -246,6 +246,10 @@ export default function PhoneContacts() {
     return contacts;
   }, [contacts, currentUser, currentUserGroupId, sheetMappings, teamMemberEmails]);
 
+  const allSheetTabs = useMemo(() => {
+    return [...new Set(visibleContacts.map(c => c.sheet).filter(Boolean))].sort();
+  }, [visibleContacts]);
+
   const filtered = useMemo(() => {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
