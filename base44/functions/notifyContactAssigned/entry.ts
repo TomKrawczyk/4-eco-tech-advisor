@@ -29,26 +29,83 @@ Deno.serve(async (req) => {
 
     const { assignedUserEmail, assignedUserName, clientName, phone, sheet } = await req.json();
 
-    const message = `Masz nowy kontakt telefoniczny do obsłużenia: ${clientName}${phone ? ' (' + phone + ')' : ''} z arkusza ${sheet}.`;
+    const messageForUser = `Masz nowy kontakt telefoniczny do obsłużenia: ${clientName}${phone ? ' (' + phone + ')' : ''} z arkusza ${sheet}.`;
 
-    // Powiadomienie in-app
-    await base44.asServiceRole.entities.Notification.create({
-      user_email: assignedUserEmail,
-      type: 'new_report',
-      title: '📞 Nowy kontakt telefoniczny przypisany',
-      message,
-      is_read: false,
-    });
+    // Pobierz dane użytkownika i grup równolegle
+    const [allowedUsers, groups] = await Promise.all([
+      base44.asServiceRole.entities.AllowedUser.list(),
+      base44.asServiceRole.entities.Group.list(),
+    ]);
 
-    // Email
-    await sendBrevoEmail({
-      to: assignedUserEmail,
-      toName: assignedUserName,
-      subject: '📞 Nowy kontakt telefoniczny przypisany – 4-ECO',
-      text: `Cześć ${assignedUserName},\n\n${message}\n\nZaloguj się do aplikacji, aby zobaczyć szczegóły.\n\nPozdrawiamy,\n4-ECO Green Energy`,
-    });
+    const assignedAllowedUser = allowedUsers.find(u => (u.data?.email || u.email) === assignedUserEmail);
+    const userGroupId = assignedAllowedUser?.data?.group_id || assignedAllowedUser?.group_id;
 
-    return Response.json({ ok: true });
+    // Zbierz liderów (team leader + group leaderzy)
+    const leaderEmails = new Set();
+
+    const assignedToId = assignedAllowedUser?.data?.assigned_to || assignedAllowedUser?.assigned_to;
+    if (assignedToId) {
+      const teamLeader = allowedUsers.find(u => u.id === assignedToId);
+      if (teamLeader) {
+        const tlEmail = teamLeader.data?.email || teamLeader.email;
+        if (tlEmail && tlEmail !== assignedUserEmail) leaderEmails.add({ email: tlEmail, name: teamLeader.data?.name || teamLeader.name });
+      }
+    }
+
+    if (userGroupId) {
+      const group = groups.find(g => g.id === userGroupId);
+      if (group) {
+        const glIds = [...(group.data?.group_leader_ids || group.group_leader_ids || [])];
+        const legacyId = group.data?.group_leader_id || group.group_leader_id;
+        if (legacyId) glIds.push(legacyId);
+        for (const glId of [...new Set(glIds)]) {
+          const gl = allowedUsers.find(u => u.id === glId);
+          if (gl) {
+            const glEmail = gl.data?.email || gl.email;
+            if (glEmail && glEmail !== assignedUserEmail) leaderEmails.add({ email: glEmail, name: gl.data?.name || gl.name });
+          }
+        }
+      }
+    }
+
+    const leaderMessage = `${assignedUserName} został przypisany do kontaktu telefonicznego z klientem ${clientName}${phone ? ' (' + phone + ')' : ''} z arkusza ${sheet}.`;
+
+    await Promise.all([
+      // Do handlowca
+      base44.asServiceRole.entities.Notification.create({
+        user_email: assignedUserEmail,
+        type: 'new_report',
+        title: '📞 Nowy kontakt telefoniczny przypisany',
+        message: messageForUser,
+        is_read: false,
+      }),
+      sendBrevoEmail({
+        to: assignedUserEmail,
+        toName: assignedUserName,
+        subject: '📞 Nowy kontakt telefoniczny przypisany – 4-ECO',
+        text: `Cześć ${assignedUserName},\n\n${messageForUser}\n\nZaloguj się do aplikacji, aby zobaczyć szczegóły.\n\nPozdrawiamy,\n4-ECO Green Energy`,
+      }),
+      // Do liderów
+      ...[...leaderEmails].map(({ email, name }) =>
+        Promise.all([
+          base44.asServiceRole.entities.Notification.create({
+            user_email: email,
+            type: 'user_activity',
+            title: '📞 Kontakt telefoniczny przypisany w Twoim zespole',
+            message: leaderMessage,
+            is_read: false,
+          }),
+          sendBrevoEmail({
+            to: email,
+            toName: name || email,
+            subject: '📞 Przypisanie kontaktu – 4-ECO',
+            text: `Cześć ${name || ''},\n\n${leaderMessage}\n\nZaloguj się do aplikacji, aby zobaczyć szczegóły.\n\nPozdrawiamy,\n4-ECO Green Energy`,
+          }),
+        ])
+      ),
+    ]);
+
+    return Response.json({ ok: true, notifiedLeaders: [...leaderEmails].map(l => l.email) });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
