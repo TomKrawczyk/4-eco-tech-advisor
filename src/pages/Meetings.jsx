@@ -325,7 +325,7 @@ export default function Meetings() {
         if (currentUser?.role === "admin") {
           return true;
         }
-        if (role !== "user" && role !== "team_leader") return false;
+        if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
       })
@@ -367,16 +367,17 @@ export default function Meetings() {
         // Admin widzi WSZYSTKO
         matchRole = true;
       } else if (currentUser?.role === "group_leader") {
+        // Group leader widzi spotkania z arkuszy przypisanych do jego grupy
         if (currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
           const isSheetInMyGroup = sheetMapping?.group_id === currentUserGroupId;
+          // Lub spotkania przypisane do jego grupy (przez MeetingAssignment)
           const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
           const assignment = meetingAssignments.find(a => a.meeting_key === key);
           const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
           matchRole = isSheetInMyGroup || isAssignedToMyGroup;
-        } else {
-          matchRole = false;
         }
+        // Brak grupy = lider widzi wszystko (np. po świeżym awansie)
       } else if (currentUser?.role === "team_leader") {
         // Team leader widzi spotkania przypisane bezpośrednio do niego lub do członków jego zespołu
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
@@ -433,21 +434,8 @@ export default function Meetings() {
   }, [sheetGroups.length]);
 
   const allSheetTabs = useMemo(() => {
-    const allTabs = [...new Set(allMeetings.map(m => m.sheet).filter(Boolean))].sort();
-    if (currentUser?.role === "group_leader" && currentUserGroupId) {
-      const myGroupSheets = new Set(
-        sheetMappings
-          .filter(sm => sm.group_id === currentUserGroupId)
-          .map(sm => sm.sheet_name)
-      );
-      // Dodaj też arkusze z przypisań do grupy
-      meetingAssignments
-        .filter(a => a.assigned_group_id === currentUserGroupId && a.sheet)
-        .forEach(a => myGroupSheets.add(a.sheet));
-      return allTabs.filter(s => myGroupSheets.has(s));
-    }
-    return allTabs;
-  }, [allMeetings, currentUser, currentUserGroupId, sheetMappings, meetingAssignments]);
+    return [...new Set(allMeetings.map(m => m.sheet).filter(Boolean))].sort();
+  }, [allMeetings]);
 
   if (!accessChecked) {
     return (
