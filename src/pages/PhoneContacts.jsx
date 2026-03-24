@@ -217,8 +217,6 @@ export default function PhoneContacts() {
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
-  const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
-
   // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
