@@ -433,8 +433,21 @@ export default function Meetings() {
   }, [sheetGroups.length]);
 
   const allSheetTabs = useMemo(() => {
-    return [...new Set(allMeetings.map(m => m.sheet).filter(Boolean))].sort();
-  }, [allMeetings]);
+    const allTabs = [...new Set(allMeetings.map(m => m.sheet).filter(Boolean))].sort();
+    if (currentUser?.role === "group_leader" && currentUserGroupId) {
+      const myGroupSheets = new Set(
+        sheetMappings
+          .filter(sm => sm.group_id === currentUserGroupId)
+          .map(sm => sm.sheet_name)
+      );
+      // Dodaj też arkusze z przypisań do grupy
+      meetingAssignments
+        .filter(a => a.assigned_group_id === currentUserGroupId && a.sheet)
+        .forEach(a => myGroupSheets.add(a.sheet));
+      return allTabs.filter(s => myGroupSheets.has(s));
+    }
+    return allTabs;
+  }, [allMeetings, currentUser, currentUserGroupId, sheetMappings, meetingAssignments]);
 
   if (!accessChecked) {
     return (
