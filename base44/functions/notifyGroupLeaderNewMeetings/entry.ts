@@ -89,16 +89,24 @@ Deno.serve(async (req) => {
         const leaderName = leader.data?.name || leader.name;
         if (!leaderEmail) continue;
 
-        // Powiadomienie in-app
-        await base44.asServiceRole.entities.Notification.create({
-          user_email: leaderEmail,
-          type: 'user_activity',
-          title: `📋 Nowe spotkania do przypisania (${groupName})`,
-          message: `W arkuszach Twojej grupy pojawiło się ${groupMeetings.length} spotkań do przypisania handlowcom.`,
-          is_read: false,
-        });
+        const notifMessage = `W arkuszach Twojej grupy pojawiło się ${groupMeetings.length} spotkań do przypisania handlowcom.`;
 
-        // Email wyłączony celowo – powiadomienia tylko in-app
+        await Promise.all([
+          base44.asServiceRole.entities.Notification.create({
+            user_email: leaderEmail,
+            type: 'user_activity',
+            title: `📋 Nowe spotkania do przypisania (${groupName})`,
+            message: notifMessage,
+            is_read: false,
+          }),
+          sendBrevoEmail({
+            to: leaderEmail,
+            toName: leaderName || leaderEmail,
+            subject: `📋 Nowe spotkania do przypisania – ${groupName}`,
+            text: `Cześć ${leaderName || ''},\n\n${notifMessage}\n\nZaloguj się do aplikacji, aby przypisać spotkania handlowcom.\n\nPozdrawiamy,\n4-ECO Green Energy`,
+          }),
+        ]);
+
         notified.push(leaderEmail);
       }
     }
