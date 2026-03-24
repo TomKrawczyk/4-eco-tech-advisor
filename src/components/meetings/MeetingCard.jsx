@@ -29,6 +29,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
   const [showDetail, setShowDetail] = useState(false);
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [overloadConfirm, setOverloadConfirm] = useState(null); // { userEmail, userName, count }
   const queryClient = useQueryClient();
 
   const getAssignmentsCountForUserOnDate = (userEmail, date) => {
