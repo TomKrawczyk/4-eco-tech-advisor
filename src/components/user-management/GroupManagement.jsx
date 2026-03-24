@@ -190,7 +190,7 @@ export default function GroupManagement({ allowedUsers }) {
                         )}
                         {leaders.length > 0 && (
                           <p className="text-xs text-gray-500 mt-1">
-                            Group Leaderzy: {leaders.map(l => l.data?.name || l.name).join(", ")}
+                            Group Leaderzy: {leaders.map(l => `${l.data?.name || l.name} (${l.data?.email || l.email})`).join(", ")}
                           </p>
                         )}
                       </div>
