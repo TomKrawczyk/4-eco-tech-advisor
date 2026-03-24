@@ -69,15 +69,22 @@ Deno.serve(async (req) => {
         ? `W Twojej grupie "${groupName}" jest ${bulkContacts.length} kontaktów telefonicznych do obsługi.`
         : `Kontakt telefoniczny ${clientName}${phone ? ' (' + phone + ')' : ''} z arkusza ${sheet} został przypisany do Twojej grupy.`;
 
-      await base44.asServiceRole.entities.Notification.create({
-        user_email: leaderEmail,
-        type: 'user_activity',
-        title: notifTitle,
-        message: notifMessage,
-        is_read: false,
-      });
+      await Promise.all([
+        base44.asServiceRole.entities.Notification.create({
+          user_email: leaderEmail,
+          type: 'user_activity',
+          title: notifTitle,
+          message: notifMessage,
+          is_read: false,
+        }),
+        sendBrevoEmail({
+          to: leaderEmail,
+          toName: leaderName || leaderEmail,
+          subject: isBulk ? `📞 Nowe kontakty telefoniczne – ${groupName}` : `📞 Nowy kontakt przypisany do grupy – ${groupName}`,
+          text: `Cześć ${leaderName || ''},\n\n${notifMessage}\n\nZaloguj się do aplikacji, aby zarządzać kontaktami.\n\nPozdrawiamy,\n4-ECO Green Energy`,
+        }),
+      ]);
 
-      // Email wyłączony celowo – powiadomienia tylko in-app
       notified.push(leaderEmail);
     }
 
