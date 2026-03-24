@@ -233,35 +233,30 @@ export default function Meetings() {
     queryKey: ["groups"],
     queryFn: () => base44.entities.Group.list(),
     enabled: accessChecked && isLeaderOrAdmin,
-    staleTime: 10 * 60 * 1000,
   });
 
   const { data: sheetMappings = [] } = useQuery({
     queryKey: ["sheetMappings"],
     queryFn: () => base44.entities.SheetGroupMapping.list(),
     enabled: accessChecked,
-    staleTime: 10 * 60 * 1000,
   });
 
   const { data: allAllowedUsers = [] } = useQuery({
     queryKey: ["allowedUsers"],
     queryFn: () => base44.entities.AllowedUser.list(),
     enabled: accessChecked,
-    staleTime: 5 * 60 * 1000,
   });
 
   const { data: meetingAssignments = [] } = useQuery({
     queryKey: ["meetingAssignments"],
     queryFn: () => base44.entities.MeetingAssignment.list(),
     enabled: accessChecked,
-    staleTime: 2 * 60 * 1000,
   });
 
   const { data: meetingReports = [] } = useQuery({
     queryKey: ["meetingReportsForMeetings"],
     queryFn: () => base44.entities.MeetingReport.list("-created_date", 200),
     enabled: accessChecked && isLeaderOrAdmin,
-    staleTime: 5 * 60 * 1000,
   });
 
   // Dane z arkusza – pobiera admin, group_leader i team_leader (backend wymaga tych ról)
@@ -327,14 +322,8 @@ export default function Meetings() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        const email = u.data?.email || u.email;
-        if (currentUser?.role === "admin") return true;
-        // group_leader widzi siebie + użytkowników i team_leaderów swojej grupy
-        if (currentUser?.role === "group_leader") {
-          if (email === currentUser.email) return true;
-          if (role !== "user" && role !== "team_leader") return false;
-          const uGroupId = u.data?.group_id || u.group_id;
-          return uGroupId === currentUserGroupId;
+        if (currentUser?.role === "admin") {
+          return true;
         }
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
@@ -378,17 +367,15 @@ export default function Meetings() {
         // Admin widzi WSZYSTKO
         matchRole = true;
       } else if (currentUser?.role === "group_leader") {
-        // Group leader widzi spotkania z arkuszy przypisanych do jego grupy
+        // Group leader widzi TYLKO spotkania z arkuszy przypisanych do jego grupy
         if (currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
           const isSheetInMyGroup = sheetMapping?.group_id === currentUserGroupId;
-          // Lub spotkania przypisane do jego grupy (przez MeetingAssignment)
-          const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-          const assignment = meetingAssignments.find(a => a.meeting_key === key);
-          const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
-          matchRole = isSheetInMyGroup || isAssignedToMyGroup;
+          matchRole = isSheetInMyGroup;
+        } else {
+          // Brak grupy = nie widzi nic (nie pokazujemy spotkań z losowych arkuszy)
+          matchRole = false;
         }
-        // Brak grupy = lider widzi wszystko (np. po świeżym awansie)
       } else if (currentUser?.role === "team_leader") {
         // Team leader widzi spotkania przypisane bezpośrednio do niego lub do członków jego zespołu
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
