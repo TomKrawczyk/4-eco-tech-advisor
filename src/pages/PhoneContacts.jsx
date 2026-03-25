@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
+import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -48,6 +49,7 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
+  const [manualModalOpen, setManualModalOpen] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -114,10 +116,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy
+  // Scal dane z arkusza z przypisaniami z bazy + dołącz ręcznie dodane
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    return rawContacts.map(c => {
+    const merged = rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -131,6 +133,10 @@ export default function PhoneContacts() {
       }
       return c;
     });
+    // Ręcznie dodane — nie mają odpowiednika w arkuszu
+    const sheetKeys = new Set(rawContacts.map(c => c.contact_key));
+    const manualOnly = phoneContactsFromDB.filter(db => !sheetKeys.has(db.contact_key));
+    return [...merged, ...manualOnly];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -421,6 +427,18 @@ export default function PhoneContacts() {
             Statystyki
           </Button>
         )}
+
+        {isLeaderOrAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 h-11 border-green-200 text-green-700 hover:bg-green-50"
+            onClick={() => setManualModalOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            Dodaj ręcznie
+          </Button>
+        )}
       </div>
 
       <div className="text-sm text-gray-500">
@@ -535,8 +553,7 @@ export default function PhoneContacts() {
                                             <SelectContent>
                                              {salespeople.map(sp => (
                                                <SelectItem key={sp.email} value={sp.email}>
-                                                 <span>{sp.name}</span>
-                                                 <span className="text-gray-400 text-[10px] ml-1">({sp.email})</span>
+                                                 {sp.name} <span className="text-gray-400 text-[10px]">({sp.email})</span>
                                                </SelectItem>
                                              ))}
                                             </SelectContent>
@@ -592,6 +609,13 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
+      />
+
+      <ManualAddModal
+        open={manualModalOpen}
+        onClose={() => setManualModalOpen(false)}
+        currentUser={currentUser}
+        onContactAdded={() => queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] })}
       />
     </div>
   );
