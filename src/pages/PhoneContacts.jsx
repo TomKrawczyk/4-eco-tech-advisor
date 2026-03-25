@@ -116,7 +116,7 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy + dodaj ręcznie wprowadzone (contact_key zaczynający się od "manual_")
+  // Scal dane z arkusza z przypisaniami z bazy + dołącz ręcznie dodane (nie mają odpowiednika w arkuszu)
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
     const merged = rawContacts.map(c => {
@@ -133,12 +133,10 @@ export default function PhoneContacts() {
       }
       return c;
     });
-    // Dodaj ręcznie wprowadzone kontakty (nie mają odpowiednika w arkuszu)
+    // Dołącz rekordy z bazy które nie mają odpowiednika w arkuszu (ręcznie dodane)
     const sheetKeys = new Set(rawContacts.map(c => c.contact_key));
-    const manualContacts = phoneContactsFromDB.filter(db =>
-      db.contact_key?.startsWith("manual_") && !sheetKeys.has(db.contact_key)
-    );
-    return [...merged, ...manualContacts];
+    const manualOnly = phoneContactsFromDB.filter(db => !sheetKeys.has(db.contact_key));
+    return [...merged, ...manualOnly];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
