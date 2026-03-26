@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus, FileText } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, FileText } from "lucide-react";
+import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
+import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
-import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
-import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -118,10 +118,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy + ręcznie dodane
+  // Scal dane z arkusza z przypisaniami z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    const merged = rawContacts.map(c => {
+    return rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -135,9 +135,6 @@ export default function PhoneContacts() {
       }
       return c;
     });
-    const sheetKeys = new Set(rawContacts.map(c => c.contact_key));
-    const manualOnly = phoneContactsFromDB.filter(db => !sheetKeys.has(db.contact_key));
-    return [...merged, ...manualOnly];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -442,18 +439,6 @@ export default function PhoneContacts() {
             Statystyki
           </Button>
         )}
-
-        {isLeaderOrAdmin && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 h-11 border-green-200 text-green-700 hover:bg-green-50"
-            onClick={() => setManualModalOpen(true)}
-          >
-            <Plus className="w-4 h-4" />
-            Dodaj ręcznie
-          </Button>
-        )}
       </div>
 
       <div className="text-sm text-gray-500">
@@ -531,26 +516,25 @@ export default function PhoneContacts() {
                                     </div>
                                     <div className="shrink-0 flex gap-2 flex-wrap">
                                       <button
-                                       onClick={() => {
-                                         setSelectedDetails({
-                                           agent: contact.agent,
-                                           comments: contact.comments,
-                                           interview_data: contact.interview_data || {}
-                                         });
-                                         setDetailsModalOpen(true);
-                                       }}
-                                       className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                       title="Pokaż szczegóły"
+                                        onClick={() => {
+                                          setSelectedDetails({
+                                            agent: contact.agent,
+                                            comments: contact.comments,
+                                            interview_data: contact.interview_data || {}
+                                          });
+                                          setDetailsModalOpen(true);
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                        title="Pokaż szczegóły"
                                       >
-                                       Szczegóły
+                                        Szczegóły
                                       </button>
 
                                       <button
-                                       onClick={() => setReportContact(contact)}
-                                       className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
-                                       title="Raporty kontaktu"
+                                        onClick={() => setReportContact(contact)}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
                                       >
-                                       <FileText className="w-3 h-3" /> Raport
+                                        <FileText className="w-3 h-3" /> Raport
                                       </button>
 
                                       {contact.assigned_user_email ? (
