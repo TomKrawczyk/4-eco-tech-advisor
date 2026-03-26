@@ -119,9 +119,12 @@ export default function PhoneContacts() {
   }, [currentUser, allAllowedUsers]);
 
   // Scal dane z arkusza z przypisaniami z bazy
+  // Dodaj też kontakty ręczne (z bazy, bez odpowiednika w arkuszu)
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    return rawContacts.map(c => {
+
+    // Kontakty z arkusza wzbogacone o dane z bazy
+    const sheetContacts = rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -135,6 +138,32 @@ export default function PhoneContacts() {
       }
       return c;
     });
+
+    // Kontakty dodane ręcznie (contact_key zaczyna się od "manual_")
+    const sheetKeys = new Set(rawContacts.map(c => c.contact_key));
+    const manualContacts = phoneContactsFromDB
+      .filter(db => db.contact_key?.startsWith("manual_") && !sheetKeys.has(db.contact_key))
+      .map(db => ({
+        contact_key: db.contact_key,
+        sheet: db.sheet || "Ręcznie",
+        client_name: db.client_name,
+        phone: db.phone,
+        address: db.address,
+        date: db.date,
+        agent: db.agent,
+        contact_calendar: db.contact_calendar,
+        status: db.status || "Kontakt do doradcy",
+        comments: db.comments,
+        interview_data: db.interview_data || {},
+        assigned_user_email: db.assigned_user_email,
+        assigned_user_name: db.assigned_user_name,
+        assigned_group_id: db.assigned_group_id,
+        assigned_group_name: db.assigned_group_name,
+        contact_date: db.contact_date,
+        id: db.id,
+      }));
+
+    return [...sheetContacts, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -228,21 +257,18 @@ export default function PhoneContacts() {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
+      if (!myGroupId) return contacts;
       return contacts.filter(c => {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
         if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
-        // Fallback: kontakty przypisane do grupy
         if (c.assigned_group_id === myGroupId) return true;
         return false;
       });
     }
     if (currentUser?.role === "team_leader") {
-      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
       return contacts.filter(c => {
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
         if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
-        // Nieprzypisane kontakty z arkuszy grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
           return sheetMapping?.group_id === currentUserGroupId;
@@ -330,19 +356,33 @@ export default function PhoneContacts() {
                     <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
                   )}
                 </div>
-                {(c.comments || c.agent) && (
+                <div className="flex gap-2 mt-2">
+                  {(c.comments || c.agent) && (
+                    <button
+                      onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                      className="px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                    >
+                      Szczegóły
+                    </button>
+                  )}
                   <button
-                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
-                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                    onClick={() => setReportContact(c)}
+                    className="px-2 py-1 rounded text-xs bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
                   >
-                    Szczegóły
+                    <FileText className="w-3 h-3" /> Raport
                   </button>
-                )}
+                </div>
               </div>
             ))}
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
+        <PhoneContactReportModal
+          contact={reportContact}
+          currentUser={currentUser}
+          open={!!reportContact}
+          onClose={() => setReportContact(null)}
+        />
       </div>
     );
   }
@@ -512,7 +552,7 @@ export default function PhoneContacts() {
                                         <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
                                       )}
                                     </div>
-                                    <div className="shrink-0 flex gap-2 flex-wrap">
+                                    <div className="shrink-0 flex gap-2 flex-wrap justify-end">
                                       <button
                                         onClick={() => {
                                           setSelectedDetails({
@@ -523,7 +563,6 @@ export default function PhoneContacts() {
                                           setDetailsModalOpen(true);
                                         }}
                                         className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                        title="Pokaż szczegóły"
                                       >
                                         Szczegóły
                                       </button>
