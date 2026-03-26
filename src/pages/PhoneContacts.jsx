@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, FileText } from "lucide-react";
-import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
-import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, FileText, Plus } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
+import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
+import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -330,33 +330,19 @@ export default function PhoneContacts() {
                     <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
                   )}
                 </div>
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {(c.comments || c.agent) && (
-                    <button
-                      onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
-                      className="px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                    >
-                      Szczegóły
-                    </button>
-                  )}
+                {(c.comments || c.agent) && (
                   <button
-                    onClick={() => setReportContact(c)}
-                    className="px-2 py-1 rounded text-xs bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
+                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                   >
-                    <FileText className="w-3 h-3" /> Raport
+                    Szczegóły
                   </button>
-                </div>
+                )}
               </div>
             ))}
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
-        <PhoneContactReportModal
-          contact={reportContact}
-          currentUser={currentUser}
-          open={!!reportContact}
-          onClose={() => setReportContact(null)}
-        />
       </div>
     );
   }
@@ -437,6 +423,18 @@ export default function PhoneContacts() {
           >
             <BarChart2 className="w-4 h-4" />
             Statystyki
+          </Button>
+        )}
+
+        {isLeaderOrAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 h-11 border-green-200 text-green-700 hover:bg-green-50"
+            onClick={() => setManualModalOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            Dodaj ręcznie
           </Button>
         )}
       </div>
