@@ -84,11 +84,12 @@ export default function GroupManagement({ allowedUsers }) {
     });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editFormData.name) {
       toast.error("Nazwa grupy jest wymagana");
       return;
     }
+    const nameChanged = editFormData.name !== editingGroup.name;
     updateGroupMutation.mutate({
       id: editingGroup.id,
       data: {
@@ -97,6 +98,10 @@ export default function GroupManagement({ allowedUsers }) {
         group_leader_ids: editFormData.group_leader_ids.length > 0 ? editFormData.group_leader_ids : undefined
       }
     });
+    // Jeśli nazwa się zmieniła, zsynchronizuj cache w powiązanych encjach
+    if (nameChanged) {
+      base44.functions.invoke("syncGroupName", { groupId: editingGroup.id, newName: editFormData.name }).catch(() => {});
+    }
   };
 
   const toggleGroupExpanded = (groupId) => {
