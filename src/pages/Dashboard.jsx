@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -11,15 +11,50 @@ import {
 } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { motion } from "framer-motion";
-import useCurrentUser from "@/components/shared/useCurrentUser";
 
 export default function Dashboard() {
-  const { currentUser } = useCurrentUser();
+  const [currentUser, setCurrentUser] = useState(null);
+  
+  // Log page view
+  useEffect(() => {
+    if (currentUser) {
+      base44.functions.invoke('logActivity', {
+        action_type: 'page_view',
+        page_name: 'Dashboard'
+      }).catch(err => console.error('Log error:', err));
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const user = await base44.auth.me();
+      const allowedUsers = await base44.entities.AllowedUser.list();
+      const userAccess = allowedUsers.find(allowed => 
+        (allowed.data?.email || allowed.email) === user.email
+      );
+      
+      if (userAccess) {
+        user.displayName = userAccess.data?.name || userAccess.name;
+        user.role = userAccess.data?.role || userAccess.role;
+        user.allowedUserId = userAccess.id;
+      }
+      
+      setCurrentUser(user);
+    };
+    
+    fetchUserData();
+  }, []);
 
   const { data: allVisitReports = [] } = useQuery({
     queryKey: ["visitReports"],
     queryFn: () => base44.entities.VisitReport.list("-created_date", 20),
     enabled: !!currentUser,
+  });
+
+  const { data: allMeetingReports = [] } = useQuery({
+    queryKey: ["meetingReports"],
+    queryFn: () => base44.entities.MeetingReport.list("-created_date", 200),
+    enabled: !!currentUser && currentUser?.role === "admin",
   });
 
   const { data: hierarchyData } = useQuery({
@@ -151,16 +186,15 @@ export default function Dashboard() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs uppercase tracking-wider font-semibold text-gray-500 mb-2">Aktywność</p>
-                    <div className="text-3xl font-bold text-gray-900">
-                      {visitReports.filter(r => {
+                    <p className="text-xs uppercase tracking-wider font-semibold text-gray-500 mb-2">Raporty po spotkaniu</p>
+                    <div className="text-3xl font-bold text-gray-900">{allMeetingReports.length}</div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {allMeetingReports.filter(r => {
                         const date = new Date(r.created_date);
                         const now = new Date();
-                        const diffDays = (now - date) / (1000 * 60 * 60 * 24);
-                        return diffDays <= 7;
-                      }).length}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">Raportów w tym tygodniu</p>
+                        return (now - date) / (1000 * 60 * 60 * 24) <= 7;
+                      }).length} w tym tygodniu
+                    </p>
                   </div>
                   <BarChart3 className="w-10 h-10 text-purple-500 opacity-20" />
                 </div>
