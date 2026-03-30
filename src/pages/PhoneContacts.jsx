@@ -6,11 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
-import ManualContactModal from "@/components/shared/ManualContactModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -49,7 +48,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [manualModalOpen, setManualModalOpen] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -116,10 +114,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy + ręcznie dodane
+  // Scal dane z arkusza z przypisaniami z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    const sheetContacts = rawContacts.map(c => {
+    return rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -133,29 +131,6 @@ export default function PhoneContacts() {
       }
       return c;
     });
-    const manualContacts = phoneContactsFromDB
-      .filter(db => db.contact_key?.startsWith("manual__"))
-      .map(db => ({
-        id: db.id,
-        contact_key: db.contact_key,
-        sheet: db.sheet || "Ręcznie dodane",
-        client_name: db.client_name,
-        phone: db.phone,
-        address: db.address,
-        date: db.date,
-        agent: db.agent,
-        contact_calendar: db.contact_calendar,
-        contact_date: db.contact_date,
-        status: db.status || "Kontakt do doradcy",
-        comments: db.comments,
-        interview_data: db.interview_data,
-        assigned_user_email: db.assigned_user_email,
-        assigned_user_name: db.assigned_user_name,
-        assigned_group_id: db.assigned_group_id,
-        assigned_group_name: db.assigned_group_name,
-        _isManual: true,
-      }));
-    return [...sheetContacts, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -278,7 +253,7 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      const matchStatus = c._isManual || c.status === "Kontakt do doradcy" || c.status === "DWS";
+      const matchStatus = c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
   }, [visibleContacts, search, sheetFilter]);
@@ -446,18 +421,6 @@ export default function PhoneContacts() {
             Statystyki
           </Button>
         )}
-
-        {isLeaderOrAdmin && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 h-11 border-green-300 text-green-700 hover:bg-green-50"
-            onClick={() => setManualModalOpen(true)}
-          >
-            <Plus className="w-4 h-4" />
-            Dodaj ręcznie
-          </Button>
-        )}
       </div>
 
       <div className="text-sm text-gray-500">
@@ -519,10 +482,10 @@ export default function PhoneContacts() {
                             </div>
                             <div className="space-y-2">
                               {items.map((contact, i) => (
-                                <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100 space-y-2">
-                                  {/* Dane klienta – pełna szerokość */}
-                                  <div>
-                                    <div className="font-semibold text-gray-900 text-sm">{contact.client_name}</div>
+                                <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                  {/* Górna sekcja: dane klienta (pełna szerokość) */}
+                                  <div className="mb-2">
+                                    <div className="font-medium text-gray-800 text-sm">{contact.client_name}</div>
                                     {contact.phone && (
                                       <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
                                         <Phone className="w-3 h-3" /> {contact.phone}
@@ -533,76 +496,80 @@ export default function PhoneContacts() {
                                       <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
                                     )}
                                   </div>
-                                  {/* Akcje – osobny wiersz, zawijane */}
-                                  <div className="flex flex-wrap gap-2 items-center pt-1 border-t border-gray-200">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedDetails({
-                                          agent: contact.agent,
-                                          comments: contact.comments,
-                                          interview_data: contact.interview_data || {}
-                                        });
-                                        setDetailsModalOpen(true);
-                                      }}
-                                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                    >
-                                      Szczegóły
-                                    </button>
+                                  {/* Dolna sekcja: przyciski w kolumnie po prawej */}
+                                  <div className="flex justify-end">
+                                    <div className="flex flex-col gap-1.5 items-end">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedDetails({
+                                            agent: contact.agent,
+                                            comments: contact.comments,
+                                            interview_data: contact.interview_data || {}
+                                          });
+                                          setDetailsModalOpen(true);
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors w-full text-center"
+                                      >
+                                        Szczegóły
+                                      </button>
 
-                                    {contact.assigned_user_email ? (
-                                      <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
-                                        <User className="w-3 h-3 text-green-600" />
-                                        <span className="text-xs font-medium text-green-700">{contact.assigned_user_name || contact.assigned_user_email}</span>
-                                        {canAssign && (
-                                          <button
-                                            onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
-                                            className="ml-1 text-gray-400 hover:text-red-500 text-xs"
-                                          >×</button>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      canAssign && (
-                                        <Select onValueChange={(val) => {
-                                          const sp = salespeople.find(s => s.email === val);
-                                          if (sp) assignMutation.mutate({ contact, email: sp.email, name: sp.name });
-                                        }}>
-                                          <SelectTrigger className="h-8 text-xs w-44">
-                                            <SelectValue placeholder="Przypisz doradcę" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {salespeople.map(sp => (
-                                              <SelectItem key={sp.email} value={sp.email}>{sp.name}</SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      )
-                                    )}
-
-                                    {canManageGroups && (
-                                      contact.assigned_group_id ? (
-                                        <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
-                                          <span className="text-xs font-medium text-blue-700">{contact.assigned_group_name}</span>
-                                          <button
-                                            onClick={() => assignGroupMutation.mutate({ contact, groupId: "", groupName: "" })}
-                                            className="ml-1 text-gray-400 hover:text-red-500 text-xs"
-                                          >×</button>
+                                      {contact.assigned_user_email ? (
+                                        <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
+                                          <User className="w-3 h-3 text-green-600" />
+                                          <span className="text-xs font-medium text-green-700">{contact.assigned_user_name || contact.assigned_user_email}</span>
+                                          {canAssign && (
+                                            <button
+                                              onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
+                                              className="ml-1 text-gray-400 hover:text-red-500 text-xs"
+                                            >×</button>
+                                          )}
                                         </div>
                                       ) : (
-                                        <Select onValueChange={(val) => {
-                                          const g = groups.find(gr => gr.id === val);
-                                          if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
-                                        }}>
-                                          <SelectTrigger className="h-8 text-xs w-44">
-                                            <SelectValue placeholder="Przypisz grupę" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {groups.map(g => (
-                                              <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      )
-                                    )}
+                                        canAssign && (
+                                          <Select onValueChange={(val) => {
+                                            const sp = salespeople.find(s => s.email === val);
+                                            if (sp) assignMutation.mutate({ contact, email: sp.email, name: sp.name });
+                                          }}>
+                                            <SelectTrigger className="h-8 text-xs w-[160px]">
+                                              <SelectValue placeholder="Przypisz doradcę" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {salespeople.map(sp => (
+                                                <SelectItem key={sp.email} value={sp.email}>{sp.name}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        )
+                                      )}
+
+                                      {canManageGroups && (
+                                        <>
+                                          {contact.assigned_group_id ? (
+                                            <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
+                                              <span className="text-xs font-medium text-blue-700">{contact.assigned_group_name}</span>
+                                              <button
+                                                onClick={() => assignGroupMutation.mutate({ contact, groupId: "", groupName: "" })}
+                                                className="ml-1 text-gray-400 hover:text-red-500 text-xs"
+                                              >×</button>
+                                            </div>
+                                          ) : (
+                                            <Select onValueChange={(val) => {
+                                              const g = groups.find(gr => gr.id === val);
+                                              if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
+                                            }}>
+                                              <SelectTrigger className="h-8 text-xs w-[160px]">
+                                                <SelectValue placeholder="Przypisz grupę" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {groups.map(g => (
+                                                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               ))}
@@ -623,19 +590,6 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
-      />
-
-      <ManualContactModal
-        open={manualModalOpen}
-        onOpenChange={setManualModalOpen}
-        currentUser={currentUser}
-        groups={groups}
-        allAllowedUsers={allAllowedUsers}
-        defaultType="phone_contact"
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
-          setManualModalOpen(false);
-        }}
       />
     </div>
   );
