@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -74,7 +74,6 @@ export default function PhoneContacts() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
-  // Zawsze pobieramy przypisania z bazy - potrzebne dla każdej roli
   const { data: phoneContactsFromDB = [] } = useQuery({
     queryKey: ["phoneContactsDB"],
     queryFn: () => base44.entities.PhoneContact.list(),
@@ -97,14 +96,12 @@ export default function PhoneContacts() {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
     if (!currentUser) return null;
     if (currentUser.role === "admin") return null;
     return currentUser.groupId || null;
   }, [currentUser]);
 
-  // Ustal emaile zespołu team_leadera
   const teamMemberEmails = useMemo(() => {
     if (!currentUser || currentUser.role !== "team_leader") return [];
     const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
@@ -116,9 +113,11 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy + ręcznie dodane
+  // Scal kontakty z arkusza + ręcznie dodane z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
+
+    // Kontakty z arkusza wzbogacone o dane z bazy
     const sheetContacts = rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
@@ -133,6 +132,8 @@ export default function PhoneContacts() {
       }
       return c;
     });
+
+    // Ręcznie dodane kontakty (mają klucz zaczynający się od "manual__")
     const manualContacts = phoneContactsFromDB
       .filter(db => db.contact_key?.startsWith("manual__"))
       .map(db => ({
@@ -155,6 +156,7 @@ export default function PhoneContacts() {
         assigned_group_name: db.assigned_group_name,
         _isManual: true,
       }));
+
     return [...sheetContacts, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
@@ -229,7 +231,6 @@ export default function PhoneContacts() {
     },
   });
 
-  // Handlowcy do przypisania – filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
     return allAllowedUsers
       .filter(u => {
@@ -244,26 +245,24 @@ export default function PhoneContacts() {
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
-  // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
+      if (!myGroupId) return contacts;
       return contacts.filter(c => {
+        if (c._isManual && c.assigned_group_id === myGroupId) return true;
+        if (c._isManual && !c.assigned_group_id) return true; // ręczne bez grupy widzi group leader
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
         if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
-        // Fallback: kontakty przypisane do grupy
         if (c.assigned_group_id === myGroupId) return true;
         return false;
       });
     }
     if (currentUser?.role === "team_leader") {
-      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
       return contacts.filter(c => {
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
         if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
-        // Nieprzypisane kontakty z arkuszy grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
           return sheetMapping?.group_id === currentUserGroupId;
@@ -278,12 +277,12 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
+      // Ręcznie dodane zawsze pokazujemy (pomijamy filtr statusu)
       const matchStatus = c._isManual || c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
   }, [visibleContacts, search, sheetFilter]);
 
-  // Grupuj po zakładce, potem po dacie
   const sheetGroups = useMemo(() => {
     const bySheet = {};
     filtered.forEach(c => {
@@ -532,8 +531,11 @@ export default function PhoneContacts() {
                                     {contact.status && (
                                       <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
                                     )}
+                                    {contact._isManual && (
+                                      <Badge className="mt-1 ml-1 bg-green-50 text-green-700 border-green-200 text-[10px]">Ręcznie dodany</Badge>
+                                    )}
                                   </div>
-                                  {/* Przyciski – kolumna po prawej */}
+                                  {/* Przyciski – wyrównane do prawej */}
                                   <div className="flex justify-end">
                                     <div className="flex flex-col gap-1.5 items-stretch w-[160px]">
                                       <button
@@ -632,8 +634,7 @@ export default function PhoneContacts() {
         onOpenChange={setManualModalOpen}
         currentUser={currentUser}
         groups={groups}
-        allAllowedUsers={allAllowedUsers}
-        defaultType="phone_contact"
+        salespeople={salespeople}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
           setManualModalOpen(false);

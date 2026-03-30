@@ -13,7 +13,7 @@ const SOURCE_TYPES = [
   { value: "infolinia", label: "Kontakt z infolinii" },
 ];
 
-export default function ManualContactModal({ open, onOpenChange, currentUser, groups, salespeople }) {
+export default function ManualContactModal({ open, onOpenChange, currentUser, groups, salespeople, onSuccess }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -108,7 +108,8 @@ export default function ManualContactModal({ open, onOpenChange, currentUser, gr
       }
 
       resetForm();
-      onOpenChange(false);
+      if (onSuccess) onSuccess();
+      else onOpenChange(false);
     } catch (err) {
       alert("Błąd podczas zapisywania: " + (err?.message || "Nieznany błąd. Spróbuj ponownie."));
     } finally {
