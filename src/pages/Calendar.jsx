@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/shared/PageHeader";
-import { ChevronLeft, ChevronRight, Plus, Users, LayoutGrid, Phone } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Users, LayoutGrid, X, Phone, MapPin, Clock } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, isSameDay, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import CalendarEventModal from "@/components/calendar/CalendarEventModal.jsx";
@@ -23,6 +23,112 @@ function parseMeetingDate(str) {
   return null;
 }
 
+// Modal z listą spotkań/kontaktów dla danego dnia w trybie grup
+function GroupDayModal({ day, items, groupName, onClose }) {
+  const meetings = items.filter(i => i.type === "meeting");
+  const contacts = items.filter(i => i.type === "phone_contact");
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 sticky top-0 bg-white z-10">
+          <div>
+            <h2 className="font-bold text-gray-900 text-base">{format(day, "d MMMM yyyy", { locale: pl })}</h2>
+            <p className="text-xs text-gray-500">{groupName}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <X className="w-4 h-4 text-gray-600" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {items.length === 0 && (
+            <p className="text-sm text-gray-500 text-center py-4">Brak spotkań i kontaktów</p>
+          )}
+
+          {meetings.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">
+                Spotkania ({meetings.length})
+              </h3>
+              <div className="space-y-2">
+                {meetings.map((m, i) => (
+                  <div key={i} className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-1">
+                    <div className="font-semibold text-gray-900 text-sm">{m.client_name}</div>
+                    {m.event_time && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <Clock className="w-3 h-3" /> {m.event_time}
+                      </div>
+                    )}
+                    {m.client_phone && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <Phone className="w-3 h-3" /> {m.client_phone}
+                      </div>
+                    )}
+                    {m.location && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <MapPin className="w-3 h-3" /> {m.location}
+                      </div>
+                    )}
+                    {m.agent && (
+                      <div className="text-xs text-gray-500">Agent: {m.agent}</div>
+                    )}
+                    {m.comments && (
+                      <div className="text-xs text-gray-500 italic">{m.comments}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {contacts.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">
+                Kontakty telefoniczne ({contacts.length})
+              </h3>
+              <div className="space-y-2">
+                {contacts.map((c, i) => (
+                  <div key={i} className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1">
+                    <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
+                    {c.event_time && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <Clock className="w-3 h-3" /> {c.event_time}
+                      </div>
+                    )}
+                    {c.client_phone && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <Phone className="w-3 h-3" /> {c.client_phone}
+                      </div>
+                    )}
+                    {c.address && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <MapPin className="w-3 h-3" /> {c.address}
+                      </div>
+                    )}
+                    {c.agent && (
+                      <div className="text-xs text-gray-500">Agent: {c.agent}</div>
+                    )}
+                    {c.status && (
+                      <div className="text-xs text-gray-500">Status: {c.status}</div>
+                    )}
+                    {c.comments && (
+                      <div className="text-xs text-gray-500 italic">{c.comments}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [currentUser, setCurrentUser] = useState(null);
@@ -30,10 +136,11 @@ export default function Calendar() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState(null); // dla trybu groups
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [groupDaySelected, setGroupDaySelected] = useState(null); // { day, items }
   const queryClient = useQueryClient();
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchUser = async () => {
       const user = await base44.auth.me();
       const allowedUsers = await base44.entities.AllowedUser.list();
@@ -63,7 +170,6 @@ export default function Calendar() {
     enabled: !!currentUser,
   });
 
-  // Pobierz spotkania z arkuszy (dla liderów/admin) i przypisania
   const { data: sheetResult } = useQuery({
     queryKey: ["sheetMeetings"],
     queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data),
@@ -84,33 +190,27 @@ export default function Calendar() {
   });
 
   const { data: groups = [] } = useQuery({
-    queryKey: ["groups"],
+    queryKey: ["groupsCalendar"],
     queryFn: () => base44.entities.Group.list(),
     enabled: !!currentUser && currentUser?.role === "admin",
   });
 
-  // Kontakty telefoniczne z bazy (dla admina w trybie grup)
   const { data: phoneContactsDB = [] } = useQuery({
-    queryKey: ["phoneContactsDB"],
-    queryFn: () => base44.entities.PhoneContact.list(),
+    queryKey: ["phoneContactsCalendar"],
+    queryFn: () => base44.entities.PhoneContact.list("-contact_date", 2000),
     enabled: !!currentUser && currentUser?.role === "admin",
   });
-
-  // Kontakty telefoniczne z arkusza (dla admina w trybie grup)
-  const { data: sheetContactsResult } = useQuery({
-    queryKey: ["phoneContacts"],
-    queryFn: () => base44.functions.invoke("getMeetingsFromSheets"),
-    select: (r) => (r.data?.phoneContacts || []).filter(c =>
-      c.status === "Kontakt do doradcy" || c.status === "DWS"
-    ),
-    enabled: !!currentUser && currentUser?.role === "admin",
-    staleTime: 5 * 60 * 1000,
-  });
-  const allSheetContacts = sheetContactsResult || [];
 
   const allSheetMeetings = sheetResult?.meetings || [];
+  const allSheetContacts = sheetResult?.contacts || [];
 
-  // Filtruj użytkowników w grupie lidera
+  // Ustaw domyślną grupę gdy wchodzi w tryb groups
+  useEffect(() => {
+    if (viewMode === "groups" && !selectedGroup && groups.length > 0) {
+      setSelectedGroup(groups[0].id);
+    }
+  }, [viewMode, groups, selectedGroup]);
+
   const groupUserEmails = useMemo(() => {
     if (!currentUser || !isLeaderOrAdmin) return [];
     if (currentUser.role === "admin") return allUsers.map(u => u.data?.email || u.email);
@@ -119,7 +219,6 @@ export default function Calendar() {
       .map(u => u.data?.email || u.email);
   }, [allUsers, currentUser, isLeaderOrAdmin]);
 
-  // Emaile zespołu team_leadera
   const teamMemberEmails = useMemo(() => {
     if (!currentUser || currentUser.role !== "team_leader") return [];
     const myAllowedUser = allUsers.find(u => (u.data?.email || u.email) === currentUser.email);
@@ -131,10 +230,8 @@ export default function Calendar() {
     return emails;
   }, [allUsers, currentUser]);
 
-  // Konwertuj spotkania z arkuszy na pseudo-eventy kalendarza (dla wyświetlania)
   const sheetMeetingEvents = useMemo(() => {
     if (!currentUser || !isLeaderOrAdmin) return [];
-
     const currentUserGroupId = currentUser.role === "admin" ? null : (currentUser.groupId || null);
 
     return allSheetMeetings
@@ -142,15 +239,10 @@ export default function Calendar() {
         if (!m.meeting_calendar) return false;
         const d = parseMeetingDate(m.meeting_calendar);
         if (!d) return false;
-
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
         const assignment = meetingAssignments.find(a => a.meeting_key === key);
-
-        // Sprawdź czy to spotkanie już ma CalendarEvent (żeby nie duplikować)
         const hasCalendarEvent = events.some(e => e.meeting_assignment_id === key);
         if (hasCalendarEvent) return false;
-
-        // Filtruj wg roli
         if (currentUser.role === "admin") return true;
         if (currentUser.role === "group_leader") {
           if (!currentUserGroupId) return true;
@@ -164,7 +256,6 @@ export default function Calendar() {
             if (teamMemberEmails.includes(assignment.assigned_user_email)) return true;
             if (currentUserGroupId && assignment.assigned_group_id === currentUserGroupId) return true;
           }
-          // Nieprzypisane z arkuszy grupy
           if (!assignment && currentUserGroupId) {
             const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
             return sheetMapping?.group_id === currentUserGroupId;
@@ -179,7 +270,6 @@ export default function Calendar() {
         const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : "";
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
         const assignment = meetingAssignments.find(a => a.meeting_key === key);
-
         return {
           id: `sheet_${key}`,
           title: `📋 ${m.client_name}`,
@@ -187,7 +277,7 @@ export default function Calendar() {
           event_date: d ? format(d, "yyyy-MM-dd") : "",
           event_time: time,
           event_type: "meeting",
-          status: assignment ? "planned" : "planned",
+          status: "planned",
           client_name: m.client_name,
           client_phone: m.phone || "",
           location: m.address || "",
@@ -199,75 +289,8 @@ export default function Calendar() {
       });
   }, [allSheetMeetings, currentUser, isLeaderOrAdmin, meetingAssignments, events, sheetMappings, teamMemberEmails]);
 
-  // Ustaw domyślną grupę gdy wchodzi w tryb groups
-  useEffect(() => {
-    if (viewMode === "groups" && !selectedGroup && groups.length > 0) {
-      setSelectedGroup(groups[0].id);
-    }
-  }, [viewMode, groups, selectedGroup]);
-
-  // Kontakty telefoniczne scalone (arkusz + baza) dla trybu grup
-  const mergedPhoneContacts = useMemo(() => {
-    return allSheetContacts.map(c => {
-      const db = phoneContactsDB.find(d => d.contact_key === c.contact_key);
-      return db ? { ...c, assigned_group_id: db.assigned_group_id || c.assigned_group_id, assigned_group_name: db.assigned_group_name || c.assigned_group_name } : c;
-    });
-  }, [allSheetContacts, phoneContactsDB]);
-
-  // Spotkania z arkuszy dla wybranej grupy (tryb groups)
-  const groupMeetingsForDay = (day, groupId) => {
-    const mapping = sheetMappings.filter(sm => sm.group_id === groupId).map(sm => sm.sheet_name);
-    return allSheetMeetings.filter(m => {
-      if (!m.meeting_calendar) return false;
-      const d = parseMeetingDate(m.meeting_calendar);
-      if (!d) return false;
-      if (!isSameDay(d, day)) return false;
-      const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-      const assignment = meetingAssignments.find(a => a.meeting_key === key);
-      if (assignment) return assignment.assigned_group_id === groupId;
-      return mapping.includes(m.sheet);
-    }).map(m => {
-      const d = parseMeetingDate(m.meeting_calendar);
-      const timeMatch = m.meeting_calendar?.match(/(\d{1,2}):(\d{2})/);
-      const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : "";
-      return {
-        id: `sheet_${m.sheet}__${m.client_name}__${m.meeting_calendar}`,
-        title: `📋 ${m.client_name}`,
-        event_date: format(d, "yyyy-MM-dd"),
-        event_time: time,
-        event_type: "meeting",
-        client_phone: m.phone || "",
-        location: m.address || "",
-        is_sheet_meeting: true,
-        source: "sheet",
-      };
-    });
-  };
-
-  // Kontakty telefoniczne dla wybranej grupy na dany dzień (tryb groups)
-  const groupContactsForDay = (day, groupId) => {
-    const mapping = sheetMappings.filter(sm => sm.group_id === groupId).map(sm => sm.sheet_name);
-    return mergedPhoneContacts.filter(c => {
-      const d = parseMeetingDate(c.contact_calendar || c.contact_date || c.date);
-      if (!d) return false;
-      if (!isSameDay(d, day)) return false;
-      if (c.assigned_group_id) return c.assigned_group_id === groupId;
-      return mapping.includes(c.sheet);
-    }).map(c => ({
-      id: `phone_${c.contact_key}`,
-      title: `📞 ${c.client_name}`,
-      event_date: format(parseMeetingDate(c.contact_calendar || c.contact_date || c.date), "yyyy-MM-dd"),
-      event_time: c.contact_calendar?.match(/(\d{1,2}):(\d{2})/)?.[0] || "",
-      event_type: "phone_contact",
-      client_phone: c.phone || "",
-      is_phone_contact: true,
-    }));
-  };
-
-  // Filtruj wydarzenia wg trybu + dodaj spotkania z arkuszy
   const visibleEvents = useMemo(() => {
     if (!currentUser) return [];
-
     let calEvents;
     if (viewMode === "team" && isLeaderOrAdmin) {
       if (currentUser.role === "admin") {
@@ -282,12 +305,9 @@ export default function Calendar() {
     } else {
       calEvents = events.filter(e => e.owner_email === currentUser.email);
     }
-
-    // W trybie zespołu, dodaj spotkania z arkuszy
     if (viewMode === "team" && isLeaderOrAdmin) {
       return [...calEvents, ...sheetMeetingEvents];
     }
-
     return calEvents;
   }, [events, currentUser, viewMode, groupUserEmails, isLeaderOrAdmin, sheetMeetingEvents, teamMemberEmails]);
 
@@ -301,12 +321,64 @@ export default function Calendar() {
   const getEventsForDay = (day) =>
     visibleEvents.filter(e => {
       if (!e.event_date) return false;
-      try {
-        return isSameDay(parseISO(e.event_date), day);
-      } catch {
-        return false;
-      }
+      try { return isSameDay(parseISO(e.event_date), day); } catch { return false; }
     });
+
+  // Buduje listę spotkań i kontaktów dla danego dnia i grupy (tryb groups)
+  const getGroupItemsForDay = (day, groupId) => {
+    const sheetsForGroup = sheetMappings
+      .filter(sm => sm.group_id === groupId)
+      .map(sm => sm.sheet_name);
+
+    const meetings = allSheetMeetings.filter(m => {
+      if (!m.meeting_calendar) return false;
+      const d = parseMeetingDate(m.meeting_calendar);
+      if (!d || !isSameDay(d, day)) return false;
+      const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+      const assignment = meetingAssignments.find(a => a.meeting_key === key);
+      if (assignment) return assignment.assigned_group_id === groupId;
+      return sheetsForGroup.includes(m.sheet);
+    }).map(m => {
+      const d = parseMeetingDate(m.meeting_calendar);
+      const timeMatch = m.meeting_calendar?.match(/(\d{1,2}):(\d{2})/);
+      const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : "";
+      return {
+        type: "meeting",
+        client_name: m.client_name,
+        event_time: time,
+        client_phone: m.client_phone || m.phone || "",
+        location: m.address || "",
+        agent: m.agent || "",
+        comments: m.comments || "",
+      };
+    });
+
+    const contacts = allSheetContacts.filter(c => {
+      const dateStr = c.contact_calendar || c.contact_date || c.date;
+      const d = parseMeetingDate(dateStr);
+      if (!d || !isSameDay(d, day)) return false;
+      const dbRecord = phoneContactsDB.find(db => db.contact_key === c.contact_key);
+      const assignedGroupId = dbRecord?.assigned_group_id || c.assigned_group_id;
+      if (assignedGroupId) return assignedGroupId === groupId;
+      return sheetsForGroup.includes(c.sheet);
+    }).map(c => {
+      const dateStr = c.contact_calendar || c.contact_date || c.date;
+      const timeMatch = dateStr?.match(/(\d{1,2}):(\d{2})/);
+      const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : "";
+      return {
+        type: "phone_contact",
+        client_name: c.client_name,
+        event_time: time,
+        client_phone: c.phone || "",
+        address: c.address || "",
+        agent: c.agent || "",
+        status: c.status || "",
+        comments: c.comments || "",
+      };
+    });
+
+    return [...meetings, ...contacts];
+  };
 
   const typeColors = {
     meeting: "bg-violet-500",
@@ -319,6 +391,8 @@ export default function Calendar() {
     mutationFn: (id) => base44.entities.CalendarEvent.delete(id),
     onSuccess: () => queryClient.invalidateQueries(["calendarEvents"]),
   });
+
+  const selectedGroupObj = groups.find(g => g.id === selectedGroup);
 
   return (
     <div className="space-y-4">
@@ -364,70 +438,19 @@ export default function Calendar() {
               )}
             </div>
           )}
-          <Button
-            onClick={() => { setEditingEvent(null); setShowEventModal(true); }}
-            className="bg-green-600 hover:bg-green-700 gap-1.5 text-sm"
-          >
-            <Plus className="w-4 h-4" /> Dodaj
-          </Button>
+          {viewMode !== "groups" && (
+            <Button
+              onClick={() => { setEditingEvent(null); setShowEventModal(true); }}
+              className="bg-green-600 hover:bg-green-700 gap-1.5 text-sm"
+            >
+              <Plus className="w-4 h-4" /> Dodaj
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Kalendarz — ukryj w trybie grup */}
-      {viewMode !== "groups" && <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {/* Nagłówki dni */}
-        <div className="grid grid-cols-7 border-b border-gray-200">
-          {["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"].map(d => (
-            <div key={d} className="py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {d}
-            </div>
-          ))}
-        </div>
-
-        {/* Dni */}
-        <div className="grid grid-cols-7">
-          {calDays.map((day, idx) => {
-            const dayEvents = getEventsForDay(day);
-            const isCurrentMonth = isSameMonth(day, currentMonth);
-            const isCurrentDay = isToday(day);
-            return (
-              <div
-                key={idx}
-                onClick={() => setSelectedDay(day)}
-                className={`min-h-[80px] p-1.5 border-b border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  !isCurrentMonth ? "bg-gray-50/60" : ""
-                } ${idx % 7 === 6 ? "border-r-0" : ""}`}
-              >
-                <div className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1 ${
-                  isCurrentDay ? "bg-green-600 text-white" : isCurrentMonth ? "text-gray-700" : "text-gray-400"
-                }`}>
-                  {format(day, "d")}
-                </div>
-                <div className="space-y-0.5">
-                  {dayEvents.slice(0, 3).map((ev, i) => (
-                    <div
-                      key={i}
-                      className={`text-[10px] text-white rounded px-1 py-0.5 truncate ${
-                        ev.is_sheet_meeting ? "bg-emerald-500" : (typeColors[ev.event_type] || "bg-gray-400")
-                      }`}
-                      title={ev.title}
-                    >
-                      {ev.event_time && <span className="opacity-80">{ev.event_time} </span>}
-                      {ev.title}
-                    </div>
-                  ))}
-                  {dayEvents.length > 3 && (
-                    <div className="text-[10px] text-gray-500 pl-1">+{dayEvents.length - 3} więcej</div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>}
-
       {/* Widok grup (tylko admin) */}
-      {viewMode === "groups" && currentUser?.role === "admin" && (
+      {viewMode === "groups" && currentUser?.role === "admin" ? (
         <div className="space-y-3">
           {/* Selector grupy */}
           {groups.length > 0 && (
@@ -457,15 +480,20 @@ export default function Calendar() {
               </div>
               <div className="grid grid-cols-7">
                 {calDays.map((day, idx) => {
-                  const meetings = groupMeetingsForDay(day, selectedGroup);
-                  const contacts = groupContactsForDay(day, selectedGroup);
-                  const allItems = [...meetings, ...contacts];
+                  const items = getGroupItemsForDay(day, selectedGroup);
+                  const meetingItems = items.filter(i => i.type === "meeting");
+                  const contactItems = items.filter(i => i.type === "phone_contact");
                   const isCurrentMonth = isSameMonth(day, currentMonth);
                   const isCurrentDay = isToday(day);
                   return (
                     <div
                       key={idx}
-                      className={`min-h-[80px] p-1.5 border-b border-r border-gray-100 ${!isCurrentMonth ? "bg-gray-50/60" : ""} ${idx % 7 === 6 ? "border-r-0" : ""}`}
+                      onClick={() => {
+                        if (items.length > 0) setGroupDaySelected({ day, items });
+                      }}
+                      className={`min-h-[80px] p-1.5 border-b border-r border-gray-100 transition-colors ${
+                        !isCurrentMonth ? "bg-gray-50/60" : ""
+                      } ${idx % 7 === 6 ? "border-r-0" : ""} ${items.length > 0 ? "cursor-pointer hover:bg-gray-50" : ""}`}
                     >
                       <div className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1 ${
                         isCurrentDay ? "bg-green-600 text-white" : isCurrentMonth ? "text-gray-700" : "text-gray-400"
@@ -473,18 +501,20 @@ export default function Calendar() {
                         {format(day, "d")}
                       </div>
                       <div className="space-y-0.5">
-                        {allItems.slice(0, 3).map((ev, i) => (
-                          <div
-                            key={i}
-                            className={`text-[10px] text-white rounded px-1 py-0.5 truncate ${ev.is_phone_contact ? "bg-blue-500" : "bg-emerald-500"}`}
-                            title={ev.title}
-                          >
-                            {ev.event_time && <span className="opacity-80">{ev.event_time} </span>}
-                            {ev.title}
+                        {meetingItems.slice(0, 2).map((m, i) => (
+                          <div key={i} className="text-[10px] text-white rounded px-1 py-0.5 truncate bg-emerald-500" title={m.client_name}>
+                            {m.event_time && <span className="opacity-80">{m.event_time} </span>}
+                            📋 {m.client_name}
                           </div>
                         ))}
-                        {allItems.length > 3 && (
-                          <div className="text-[10px] text-gray-500 pl-1">+{allItems.length - 3} więcej</div>
+                        {contactItems.slice(0, 2).map((c, i) => (
+                          <div key={i} className="text-[10px] text-white rounded px-1 py-0.5 truncate bg-blue-500" title={c.client_name}>
+                            {c.event_time && <span className="opacity-80">{c.event_time} </span>}
+                            📞 {c.client_name}
+                          </div>
+                        ))}
+                        {items.length > 4 && (
+                          <div className="text-[10px] text-gray-500 pl-1">+{items.length - 4} więcej</div>
                         )}
                       </div>
                     </div>
@@ -499,28 +529,78 @@ export default function Calendar() {
             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Kontakt telefoniczny</div>
           </div>
         </div>
-      )}
-
-      {/* Legenda */}
-      {viewMode !== "groups" && (
-        <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-          {[
-            { color: "bg-violet-500", label: "Spotkanie" },
-            { color: "bg-amber-500", label: "Zadanie" },
-            { color: "bg-pink-500", label: "Przypomnienie" },
-            { color: "bg-gray-500", label: "Inne" },
-            ...(isLeaderOrAdmin ? [{ color: "bg-emerald-500", label: "Z arkusza (nieprzypisane)" }] : []),
-          ].map(l => (
-            <div key={l.label} className="flex items-center gap-1.5">
-              <div className={`w-2.5 h-2.5 rounded-full ${l.color}`} />
-              {l.label}
+      ) : (
+        <>
+          {/* Standardowy kalendarz */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="grid grid-cols-7 border-b border-gray-200">
+              {["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"].map(d => (
+                <div key={d} className="py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  {d}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+            <div className="grid grid-cols-7">
+              {calDays.map((day, idx) => {
+                const dayEvents = getEventsForDay(day);
+                const isCurrentMonth = isSameMonth(day, currentMonth);
+                const isCurrentDay = isToday(day);
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedDay(day)}
+                    className={`min-h-[80px] p-1.5 border-b border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      !isCurrentMonth ? "bg-gray-50/60" : ""
+                    } ${idx % 7 === 6 ? "border-r-0" : ""}`}
+                  >
+                    <div className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1 ${
+                      isCurrentDay ? "bg-green-600 text-white" : isCurrentMonth ? "text-gray-700" : "text-gray-400"
+                    }`}>
+                      {format(day, "d")}
+                    </div>
+                    <div className="space-y-0.5">
+                      {dayEvents.slice(0, 3).map((ev, i) => (
+                        <div
+                          key={i}
+                          className={`text-[10px] text-white rounded px-1 py-0.5 truncate ${
+                            ev.is_sheet_meeting ? "bg-emerald-500" : (typeColors[ev.event_type] || "bg-gray-400")
+                          }`}
+                          title={ev.title}
+                        >
+                          {ev.event_time && <span className="opacity-80">{ev.event_time} </span>}
+                          {ev.title}
+                        </div>
+                      ))}
+                      {dayEvents.length > 3 && (
+                        <div className="text-[10px] text-gray-500 pl-1">+{dayEvents.length - 3} więcej</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Legenda */}
+          <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+            {[
+              { color: "bg-violet-500", label: "Spotkanie" },
+              { color: "bg-amber-500", label: "Zadanie" },
+              { color: "bg-pink-500", label: "Przypomnienie" },
+              { color: "bg-gray-500", label: "Inne" },
+              ...(isLeaderOrAdmin ? [{ color: "bg-emerald-500", label: "Z arkusza (nieprzypisane)" }] : []),
+            ].map(l => (
+              <div key={l.label} className="flex items-center gap-1.5">
+                <div className={`w-2.5 h-2.5 rounded-full ${l.color}`} />
+                {l.label}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Modals */}
-      {selectedDay && (
+      {selectedDay && viewMode !== "groups" && (
         <CalendarDayModal
           day={selectedDay}
           events={getEventsForDay(selectedDay)}
@@ -528,13 +608,13 @@ export default function Calendar() {
           viewMode={viewMode}
           onClose={() => setSelectedDay(null)}
           onEdit={(ev) => {
-            if (ev.is_sheet_meeting) return; // Nie można edytować spotkań z arkusza
+            if (ev.is_sheet_meeting) return;
             setEditingEvent(ev);
             setShowEventModal(true);
             setSelectedDay(null);
           }}
           onDelete={(id) => {
-            if (typeof id === "string" && id.startsWith("sheet_")) return; // Nie można usunąć spotkań z arkusza
+            if (typeof id === "string" && id.startsWith("sheet_")) return;
             deleteMutation.mutate(id);
           }}
           onAdd={() => { setEditingEvent({ event_date: format(selectedDay, "yyyy-MM-dd") }); setShowEventModal(true); setSelectedDay(null); }}
@@ -547,6 +627,16 @@ export default function Calendar() {
           currentUser={currentUser}
           onClose={() => { setShowEventModal(false); setEditingEvent(null); }}
           onSaved={() => queryClient.invalidateQueries(["calendarEvents"])}
+        />
+      )}
+
+      {/* Modal dnia w trybie grup */}
+      {groupDaySelected && (
+        <GroupDayModal
+          day={groupDaySelected.day}
+          items={groupDaySelected.items}
+          groupName={selectedGroupObj?.name || ""}
+          onClose={() => setGroupDaySelected(null)}
         />
       )}
     </div>
