@@ -117,7 +117,6 @@ export default function PhoneContacts() {
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
 
-    // Kontakty z arkusza wzbogacone o dane z bazy
     const sheetContacts = rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
@@ -133,7 +132,7 @@ export default function PhoneContacts() {
       return c;
     });
 
-    // Ręcznie dodane kontakty (mają klucz zaczynający się od "manual__")
+    // Ręcznie dodane kontakty (klucz zaczyna się od "manual__")
     const manualContacts = phoneContactsFromDB
       .filter(db => db.contact_key?.startsWith("manual__"))
       .map(db => ({
@@ -252,7 +251,7 @@ export default function PhoneContacts() {
       if (!myGroupId) return contacts;
       return contacts.filter(c => {
         if (c._isManual && c.assigned_group_id === myGroupId) return true;
-        if (c._isManual && !c.assigned_group_id) return true; // ręczne bez grupy widzi group leader
+        if (c._isManual && !c.assigned_group_id) return true;
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
         if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
         if (c.assigned_group_id === myGroupId) return true;
@@ -528,16 +527,19 @@ export default function PhoneContacts() {
                                       </a>
                                     )}
                                     {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
-                                    {contact.status && (
-                                      <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
-                                    )}
-                                    {contact._isManual && (
-                                      <Badge className="mt-1 ml-1 bg-green-50 text-green-700 border-green-200 text-[10px]">Ręcznie dodany</Badge>
-                                    )}
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {contact.status && (
+                                        <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
+                                      )}
+                                      {contact._isManual && (
+                                        <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">Ręcznie dodany</Badge>
+                                      )}
+                                    </div>
                                   </div>
+
                                   {/* Przyciski – wyrównane do prawej */}
                                   <div className="flex justify-end">
-                                    <div className="flex flex-col gap-1.5 items-stretch w-[160px]">
+                                    <div className="flex flex-col gap-1.5 items-stretch w-[180px]">
                                       <button
                                         onClick={() => {
                                           setSelectedDetails({
@@ -555,7 +557,10 @@ export default function PhoneContacts() {
                                       {contact.assigned_user_email ? (
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
                                           <User className="w-3 h-3 text-green-600 shrink-0" />
-                                          <span className="text-xs font-medium text-green-700 truncate">{contact.assigned_user_name || contact.assigned_user_email}</span>
+                                          <div className="min-w-0">
+                                            <div className="text-xs font-medium text-green-700 truncate">{contact.assigned_user_name || contact.assigned_user_email}</div>
+                                            <div className="text-[10px] text-green-500 truncate">{contact.assigned_user_email}</div>
+                                          </div>
                                           {canAssign && (
                                             <button
                                               onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
@@ -574,7 +579,12 @@ export default function PhoneContacts() {
                                             </SelectTrigger>
                                             <SelectContent>
                                               {salespeople.map(sp => (
-                                                <SelectItem key={sp.email} value={sp.email}>{sp.name}</SelectItem>
+                                                <SelectItem key={sp.email} value={sp.email}>
+                                                  <div>
+                                                    <div className="text-sm font-medium">{sp.name}</div>
+                                                    <div className="text-xs text-gray-400">{sp.email}</div>
+                                                  </div>
+                                                </SelectItem>
                                               ))}
                                             </SelectContent>
                                           </Select>
