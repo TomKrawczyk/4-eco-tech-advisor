@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus, FileText } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
 import ManualContactModal from "@/components/shared/ManualContactModal";
+import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -50,6 +51,7 @@ export default function PhoneContacts() {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
   const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [reportContact, setReportContact] = useState(null);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -113,7 +115,7 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal kontakty z arkusza + ręcznie dodane z bazy
+  // Scal dane z arkusza + ręcznie dodane z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
 
@@ -250,8 +252,7 @@ export default function PhoneContacts() {
       const myGroupId = currentUserGroupId;
       if (!myGroupId) return contacts;
       return contacts.filter(c => {
-        if (c._isManual && c.assigned_group_id === myGroupId) return true;
-        if (c._isManual && !c.assigned_group_id) return true;
+        if (c._isManual) return true; // ręczne zawsze widoczne dla group leadera
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
         if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
         if (c.assigned_group_id === myGroupId) return true;
@@ -276,7 +277,7 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      // Ręcznie dodane zawsze pokazujemy (pomijamy filtr statusu)
+      // Ręcznie dodane zawsze pokazuj, z arkusza tylko "Kontakt do doradcy" / "DWS"
       const matchStatus = c._isManual || c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
@@ -316,7 +317,7 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi swoje przypisane kontakty
+  // Widok zwykłego użytkownika – jego przypisane kontakty + możliwość raportowania
   if (!isLeaderOrAdmin) {
     const myContacts = phoneContactsFromDB.filter(c =>
       c.assigned_user_email === currentUser?.email
@@ -349,19 +350,33 @@ export default function PhoneContacts() {
                     <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
                   )}
                 </div>
-                {(c.comments || c.agent) && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {(c.comments || c.agent) && (
+                    <button
+                      onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                      className="px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                    >
+                      Szczegóły
+                    </button>
+                  )}
                   <button
-                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
-                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                    onClick={() => setReportContact(c)}
+                    className="px-2 py-1 rounded text-xs bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
                   >
-                    Szczegóły
+                    <FileText className="w-3 h-3" /> Raport
                   </button>
-                )}
+                </div>
               </div>
             ))}
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
+        <PhoneContactReportModal
+          contact={reportContact}
+          currentUser={currentUser}
+          open={!!reportContact}
+          onClose={() => setReportContact(null)}
+        />
       </div>
     );
   }
@@ -518,8 +533,8 @@ export default function PhoneContacts() {
                             <div className="space-y-2">
                               {items.map((contact, i) => (
                                 <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                  {/* Dane klienta – pełna szerokość */}
-                                  <div className="mb-3">
+                                  {/* Dane klienta */}
+                                  <div className="mb-2">
                                     <div className="font-medium text-gray-800 text-sm">{contact.client_name}</div>
                                     {contact.phone && (
                                       <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
@@ -537,9 +552,10 @@ export default function PhoneContacts() {
                                     </div>
                                   </div>
 
-                                  {/* Przyciski – wyrównane do prawej */}
+                                  {/* Przyciski akcji */}
                                   <div className="flex justify-end">
                                     <div className="flex flex-col gap-1.5 items-stretch w-[180px]">
+                                      {/* Szczegóły */}
                                       <button
                                         onClick={() => {
                                           setSelectedDetails({
@@ -554,17 +570,26 @@ export default function PhoneContacts() {
                                         Szczegóły
                                       </button>
 
+                                      {/* Raport */}
+                                      <button
+                                        onClick={() => setReportContact(contact)}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors text-center flex items-center justify-center gap-1"
+                                      >
+                                        <FileText className="w-3 h-3" /> Raport
+                                      </button>
+
+                                      {/* Przypisz doradcę */}
                                       {contact.assigned_user_email ? (
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
                                           <User className="w-3 h-3 text-green-600 shrink-0" />
-                                          <div className="min-w-0">
+                                          <div className="min-w-0 flex-1">
                                             <div className="text-xs font-medium text-green-700 truncate">{contact.assigned_user_name || contact.assigned_user_email}</div>
                                             <div className="text-[10px] text-green-500 truncate">{contact.assigned_user_email}</div>
                                           </div>
                                           {canAssign && (
                                             <button
                                               onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
-                                              className="ml-auto text-gray-400 hover:text-red-500 text-xs shrink-0"
+                                              className="text-gray-400 hover:text-red-500 text-xs shrink-0"
                                             >×</button>
                                           )}
                                         </div>
@@ -591,13 +616,14 @@ export default function PhoneContacts() {
                                         )
                                       )}
 
+                                      {/* Przypisz grupę */}
                                       {canManageGroups && (
                                         contact.assigned_group_id ? (
                                           <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
-                                            <span className="text-xs font-medium text-blue-700 truncate">{contact.assigned_group_name}</span>
+                                            <span className="text-xs font-medium text-blue-700 truncate flex-1">{contact.assigned_group_name}</span>
                                             <button
                                               onClick={() => assignGroupMutation.mutate({ contact, groupId: "", groupName: "" })}
-                                              className="ml-auto text-gray-400 hover:text-red-500 text-xs shrink-0"
+                                              className="text-gray-400 hover:text-red-500 text-xs shrink-0"
                                             >×</button>
                                           </div>
                                         ) : (
@@ -649,6 +675,13 @@ export default function PhoneContacts() {
           queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
           setManualModalOpen(false);
         }}
+      />
+
+      <PhoneContactReportModal
+        contact={reportContact}
+        currentUser={currentUser}
+        open={!!reportContact}
+        onClose={() => setReportContact(null)}
       />
     </div>
   );
