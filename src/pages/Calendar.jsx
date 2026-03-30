@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/shared/PageHeader";
-import { ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Users, LayoutGrid, Phone } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, isSameDay, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import CalendarEventModal from "@/components/calendar/CalendarEventModal.jsx";
@@ -26,10 +26,11 @@ function parseMeetingDate(str) {
 export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [currentUser, setCurrentUser] = useState(null);
-  const [viewMode, setViewMode] = useState("own"); // "own" | "team"
+  const [viewMode, setViewMode] = useState("own"); // "own" | "team" | "groups"
   const [selectedDay, setSelectedDay] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null); // dla trybu groups
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -81,6 +82,31 @@ export default function Calendar() {
     queryFn: () => base44.entities.SheetGroupMapping.list(),
     enabled: !!currentUser && isLeaderOrAdmin,
   });
+
+  const { data: groups = [] } = useQuery({
+    queryKey: ["groups"],
+    queryFn: () => base44.entities.Group.list(),
+    enabled: !!currentUser && currentUser?.role === "admin",
+  });
+
+  // Kontakty telefoniczne z bazy (dla admina w trybie grup)
+  const { data: phoneContactsDB = [] } = useQuery({
+    queryKey: ["phoneContactsDB"],
+    queryFn: () => base44.entities.PhoneContact.list(),
+    enabled: !!currentUser && currentUser?.role === "admin",
+  });
+
+  // Kontakty telefoniczne z arkusza (dla admina w trybie grup)
+  const { data: sheetContactsResult } = useQuery({
+    queryKey: ["phoneContacts"],
+    queryFn: () => base44.functions.invoke("getMeetingsFromSheets"),
+    select: (r) => (r.data?.phoneContacts || []).filter(c =>
+      c.status === "Kontakt do doradcy" || c.status === "DWS"
+    ),
+    enabled: !!currentUser && currentUser?.role === "admin",
+    staleTime: 5 * 60 * 1000,
+  });
+  const allSheetContacts = sheetContactsResult || [];
 
   const allSheetMeetings = sheetResult?.meetings || [];
 
@@ -173,6 +199,71 @@ export default function Calendar() {
       });
   }, [allSheetMeetings, currentUser, isLeaderOrAdmin, meetingAssignments, events, sheetMappings, teamMemberEmails]);
 
+  // Ustaw domyślną grupę gdy wchodzi w tryb groups
+  useEffect(() => {
+    if (viewMode === "groups" && !selectedGroup && groups.length > 0) {
+      setSelectedGroup(groups[0].id);
+    }
+  }, [viewMode, groups, selectedGroup]);
+
+  // Kontakty telefoniczne scalone (arkusz + baza) dla trybu grup
+  const mergedPhoneContacts = useMemo(() => {
+    return allSheetContacts.map(c => {
+      const db = phoneContactsDB.find(d => d.contact_key === c.contact_key);
+      return db ? { ...c, assigned_group_id: db.assigned_group_id || c.assigned_group_id, assigned_group_name: db.assigned_group_name || c.assigned_group_name } : c;
+    });
+  }, [allSheetContacts, phoneContactsDB]);
+
+  // Spotkania z arkuszy dla wybranej grupy (tryb groups)
+  const groupMeetingsForDay = (day, groupId) => {
+    const mapping = sheetMappings.filter(sm => sm.group_id === groupId).map(sm => sm.sheet_name);
+    return allSheetMeetings.filter(m => {
+      if (!m.meeting_calendar) return false;
+      const d = parseMeetingDate(m.meeting_calendar);
+      if (!d) return false;
+      if (!isSameDay(d, day)) return false;
+      const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+      const assignment = meetingAssignments.find(a => a.meeting_key === key);
+      if (assignment) return assignment.assigned_group_id === groupId;
+      return mapping.includes(m.sheet);
+    }).map(m => {
+      const d = parseMeetingDate(m.meeting_calendar);
+      const timeMatch = m.meeting_calendar?.match(/(\d{1,2}):(\d{2})/);
+      const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : "";
+      return {
+        id: `sheet_${m.sheet}__${m.client_name}__${m.meeting_calendar}`,
+        title: `📋 ${m.client_name}`,
+        event_date: format(d, "yyyy-MM-dd"),
+        event_time: time,
+        event_type: "meeting",
+        client_phone: m.phone || "",
+        location: m.address || "",
+        is_sheet_meeting: true,
+        source: "sheet",
+      };
+    });
+  };
+
+  // Kontakty telefoniczne dla wybranej grupy na dany dzień (tryb groups)
+  const groupContactsForDay = (day, groupId) => {
+    const mapping = sheetMappings.filter(sm => sm.group_id === groupId).map(sm => sm.sheet_name);
+    return mergedPhoneContacts.filter(c => {
+      const d = parseMeetingDate(c.contact_calendar || c.contact_date || c.date);
+      if (!d) return false;
+      if (!isSameDay(d, day)) return false;
+      if (c.assigned_group_id) return c.assigned_group_id === groupId;
+      return mapping.includes(c.sheet);
+    }).map(c => ({
+      id: `phone_${c.contact_key}`,
+      title: `📞 ${c.client_name}`,
+      event_date: format(parseMeetingDate(c.contact_calendar || c.contact_date || c.date), "yyyy-MM-dd"),
+      event_time: c.contact_calendar?.match(/(\d{1,2}):(\d{2})/)?.[0] || "",
+      event_type: "phone_contact",
+      client_phone: c.phone || "",
+      is_phone_contact: true,
+    }));
+  };
+
   // Filtruj wydarzenia wg trybu + dodaj spotkania z arkuszy
   const visibleEvents = useMemo(() => {
     if (!currentUser) return [];
@@ -263,10 +354,18 @@ export default function Calendar() {
               >
                 <Users className="w-3 h-3" /> Zespół
               </button>
+              {currentUser?.role === "admin" && (
+                <button
+                  onClick={() => setViewMode("groups")}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 ${viewMode === "groups" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+                >
+                  <LayoutGrid className="w-3 h-3" /> Grupy
+                </button>
+              )}
             </div>
           )}
           <Button
-            onClick={() => { setEditingEvent({}); setShowEventModal(true); }}
+            onClick={() => { setEditingEvent(null); setShowEventModal(true); }}
             className="bg-green-600 hover:bg-green-700 gap-1.5 text-sm"
           >
             <Plus className="w-4 h-4" /> Dodaj
@@ -274,8 +373,8 @@ export default function Calendar() {
         </div>
       </div>
 
-      {/* Kalendarz */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Kalendarz — ukryj w trybie grup */}
+      {viewMode !== "groups" && <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Nagłówki dni */}
         <div className="grid grid-cols-7 border-b border-gray-200">
           {["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"].map(d => (
@@ -325,23 +424,100 @@ export default function Calendar() {
             );
           })}
         </div>
-      </div>
+      </div>}
+
+      {/* Widok grup (tylko admin) */}
+      {viewMode === "groups" && currentUser?.role === "admin" && (
+        <div className="space-y-3">
+          {/* Selector grupy */}
+          {groups.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {groups.map(g => (
+                <button
+                  key={g.id}
+                  onClick={() => setSelectedGroup(g.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    selectedGroup === g.id
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-white text-gray-700 border-gray-200 hover:border-green-300 hover:bg-green-50"
+                  }`}
+                >
+                  {g.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {selectedGroup && (
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="grid grid-cols-7 border-b border-gray-200">
+                {["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"].map(d => (
+                  <div key={d} className="py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">{d}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7">
+                {calDays.map((day, idx) => {
+                  const meetings = groupMeetingsForDay(day, selectedGroup);
+                  const contacts = groupContactsForDay(day, selectedGroup);
+                  const allItems = [...meetings, ...contacts];
+                  const isCurrentMonth = isSameMonth(day, currentMonth);
+                  const isCurrentDay = isToday(day);
+                  return (
+                    <div
+                      key={idx}
+                      className={`min-h-[80px] p-1.5 border-b border-r border-gray-100 ${!isCurrentMonth ? "bg-gray-50/60" : ""} ${idx % 7 === 6 ? "border-r-0" : ""}`}
+                    >
+                      <div className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1 ${
+                        isCurrentDay ? "bg-green-600 text-white" : isCurrentMonth ? "text-gray-700" : "text-gray-400"
+                      }`}>
+                        {format(day, "d")}
+                      </div>
+                      <div className="space-y-0.5">
+                        {allItems.slice(0, 3).map((ev, i) => (
+                          <div
+                            key={i}
+                            className={`text-[10px] text-white rounded px-1 py-0.5 truncate ${ev.is_phone_contact ? "bg-blue-500" : "bg-emerald-500"}`}
+                            title={ev.title}
+                          >
+                            {ev.event_time && <span className="opacity-80">{ev.event_time} </span>}
+                            {ev.title}
+                          </div>
+                        ))}
+                        {allItems.length > 3 && (
+                          <div className="text-[10px] text-gray-500 pl-1">+{allItems.length - 3} więcej</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Spotkanie (arkusz)</div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Kontakt telefoniczny</div>
+          </div>
+        </div>
+      )}
 
       {/* Legenda */}
-      <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-        {[
-          { color: "bg-violet-500", label: "Spotkanie" },
-          { color: "bg-amber-500", label: "Zadanie" },
-          { color: "bg-pink-500", label: "Przypomnienie" },
-          { color: "bg-gray-500", label: "Inne" },
-          ...(isLeaderOrAdmin ? [{ color: "bg-emerald-500", label: "Z arkusza (nieprzypisane)" }] : []),
-        ].map(l => (
-          <div key={l.label} className="flex items-center gap-1.5">
-            <div className={`w-2.5 h-2.5 rounded-full ${l.color}`} />
-            {l.label}
-          </div>
-        ))}
-      </div>
+      {viewMode !== "groups" && (
+        <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+          {[
+            { color: "bg-violet-500", label: "Spotkanie" },
+            { color: "bg-amber-500", label: "Zadanie" },
+            { color: "bg-pink-500", label: "Przypomnienie" },
+            { color: "bg-gray-500", label: "Inne" },
+            ...(isLeaderOrAdmin ? [{ color: "bg-emerald-500", label: "Z arkusza (nieprzypisane)" }] : []),
+          ].map(l => (
+            <div key={l.label} className="flex items-center gap-1.5">
+              <div className={`w-2.5 h-2.5 rounded-full ${l.color}`} />
+              {l.label}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Modals */}
       {selectedDay && (
@@ -361,14 +537,7 @@ export default function Calendar() {
             if (typeof id === "string" && id.startsWith("sheet_")) return; // Nie można usunąć spotkań z arkusza
             deleteMutation.mutate(id);
           }}
-          onAdd={() => {
-            const date = format(selectedDay, "yyyy-MM-dd");
-            setSelectedDay(null);
-            setTimeout(() => {
-              setEditingEvent({ event_date: date });
-              setShowEventModal(true);
-            }, 50);
-          }}
+          onAdd={() => { setEditingEvent({ event_date: format(selectedDay, "yyyy-MM-dd") }); setShowEventModal(true); setSelectedDay(null); }}
         />
       )}
 
