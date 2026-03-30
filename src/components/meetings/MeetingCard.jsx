@@ -215,7 +215,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
       </AlertDialogContent>
     </AlertDialog>
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
-      <div className="flex items-start gap-3 flex-wrap">
+      <div className="flex items-start gap-3">
         <div className="space-y-1.5 flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap cursor-pointer" onClick={() => setShowDetail(true)}>
             <User className="w-4 h-4 text-gray-400 shrink-0" />
@@ -276,7 +276,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
 
           {/* Przypisanie handlowca */}
           {canAssign && (
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               <UserCheck className="w-4 h-4 text-gray-400 shrink-0" />
               {assignment?.assigned_user_email ? (
                 <div className="flex items-center gap-2">
@@ -308,7 +308,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                     assignMutation.mutate({ userEmail: val, userName: sp?.name || val });
                   }}
                 >
-                  <SelectTrigger className="h-7 text-xs w-48">
+                  <SelectTrigger className="h-8 text-xs w-44 max-w-full">
                     <SelectValue placeholder="Przypisz handlowca..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -342,7 +342,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
 
           {/* Przypisanie do grupy – admin i group_leader */}
           {canManageGroups && groups.length > 0 && (
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               <Users className="w-4 h-4 text-gray-400 shrink-0" />
               {assignment?.assigned_group_id ? (
                 <div className="flex items-center gap-2">
@@ -363,7 +363,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                     assignGroupMutation.mutate({ groupId: val, groupName: g?.name || g?.data?.name || val });
                   }}
                 >
-                  <SelectTrigger className="h-7 text-xs w-48">
+                  <SelectTrigger className="h-8 text-xs w-44 max-w-full">
                     <SelectValue placeholder="Przypisz do grupy..." />
                   </SelectTrigger>
                   <SelectContent>

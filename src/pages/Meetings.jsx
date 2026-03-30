@@ -325,7 +325,7 @@ export default function Meetings() {
         if (currentUser?.role === "admin") {
           return true;
         }
-        if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
+        if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
       })
@@ -667,34 +667,16 @@ export default function Meetings() {
                                 const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
                                 const assignment = meetingAssignments.find(a => a.meeting_key === key);
                                 return (
-                                  <div key={i} className="flex gap-2 items-start">
-                                    {(assignment?.comments || assignment?.agent || meeting.agent || meeting.interview_data) && (
-                                      <button
-                                        onClick={() => {
-                                           setSelectedDetails({
-                                             agent: meeting.agent || assignment?.agent,
-                                             comments: assignment?.comments || meeting.comments,
-                                             interview_data: meeting.interview_data || {}
-                                           });
-                                           setDetailsModalOpen(true);
-                                         }}
-                                        className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors shrink-0 mt-0.5"
-                                        title="Pokaż szczegóły"
-                                      >
-                                        <MessageSquare className="w-4 h-4" />
-                                      </button>
-                                    )}
-                                    <div className="flex-1">
-                                      <MeetingCard
-                                       meeting={meeting}
-                                       assignment={assignment}
-                                       salespeople={salespeople}
-                                       assignmentsForDate={meetingAssignments.filter(a => a.meeting_date === meeting.meeting_date)}
-                                       currentUserRole={currentUser?.role}
-                                       meetingReports={meetingReports}
-                                       groups={groups}
-                                      />
-                                    </div>
+                                  <div key={i} className="w-full">
+                                    <MeetingCard
+                                     meeting={meeting}
+                                     assignment={assignment}
+                                     salespeople={salespeople}
+                                     assignmentsForDate={meetingAssignments.filter(a => a.meeting_date === meeting.meeting_date)}
+                                     currentUserRole={currentUser?.role}
+                                     meetingReports={meetingReports}
+                                     groups={groups}
+                                    />
                                   </div>
                                 );
                               })}
