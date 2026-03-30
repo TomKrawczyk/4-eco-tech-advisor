@@ -7,10 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
-import ManualContactModal from "@/components/shared/ManualContactModal";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
+import ManualContactModal from "@/components/shared/ManualContactModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -116,10 +116,11 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy
+  // Scal dane z arkusza z przypisaniami z bazy + dołącz ręcznie dodane
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    return rawContacts.map(c => {
+    // Arkuszowe kontakty z nadpisanymi przypisaniami z DB
+    const sheetContacts = rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -133,6 +134,30 @@ export default function PhoneContacts() {
       }
       return c;
     });
+    // Ręcznie dodane kontakty (contact_key zaczyna się od "manual__")
+    const manualContacts = phoneContactsFromDB
+      .filter(db => db.contact_key?.startsWith("manual__"))
+      .map(db => ({
+        id: db.id,
+        contact_key: db.contact_key,
+        sheet: db.sheet || "Ręcznie dodane",
+        client_name: db.client_name,
+        phone: db.phone,
+        address: db.address,
+        date: db.date,
+        agent: db.agent,
+        contact_calendar: db.contact_calendar,
+        contact_date: db.contact_date,
+        status: db.status || "Kontakt do doradcy",
+        comments: db.comments,
+        interview_data: db.interview_data,
+        assigned_user_email: db.assigned_user_email,
+        assigned_user_name: db.assigned_user_name,
+        assigned_group_id: db.assigned_group_id,
+        assigned_group_name: db.assigned_group_name,
+        _isManual: true,
+      }));
+    return [...sheetContacts, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -255,7 +280,7 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      const matchStatus = c.status === "Kontakt do doradcy" || c.status === "DWS";
+      const matchStatus = c._isManual || c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
   }, [visibleContacts, search, sheetFilter]);
