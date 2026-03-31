@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 import MeetingCard from "@/components/meetings/MeetingCard";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
+import MeetingAcceptanceModal from "@/components/meetings/MeetingAcceptanceModal";
 import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -51,6 +52,13 @@ function extractTime(calStr) {
 
 // Widok spotkań dla zwykłego użytkownika – z pełnymi szczegółami i akcjami
 function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen }) {
+  const [acceptanceModal, setAcceptanceModal] = useState(null);
+
+  const { data: myAcceptances = [] } = useQuery({
+    queryKey: ["myMeetingAcceptances"],
+    queryFn: () => base44.entities.MeetingAcceptance.list(),
+  });
+
   const groupedByDate = useMemo(() => {
     const groups = {};
     myAssignedMeetings.forEach(a => {
@@ -111,8 +119,14 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
 
                   const hasDetails = a.agent || a.comments || a.notes || a.interview_data;
 
+                  const hasAccepted = myAcceptances.find(acc => acc.meeting_assignment_id === a.id && acc.status === 'accepted');
+                  const hasRejected = myAcceptances.find(acc => acc.meeting_assignment_id === a.id && acc.status === 'rejected');
+                  const needsDecision = !hasAccepted && !hasRejected;
+
                   return (
-                    <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
+                    <div key={i} className={`bg-white rounded-xl border-2 p-4 hover:shadow-sm transition-all ${
+                      needsDecision ? "border-orange-200 bg-orange-50" : hasAccepted ? "border-green-200" : "border-red-200 bg-red-50"
+                    }`}>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <User className="w-4 h-4 text-gray-400 shrink-0" />
@@ -175,6 +189,36 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                           </button>
                         )}
 
+                        {/* Przyciski akceptacji/odrzucenia */}
+                        {needsDecision && (
+                          <div className="flex gap-2 mt-3 pt-2 border-t border-orange-200">
+                            <button
+                              onClick={() => setAcceptanceModal(a)}
+                              className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                            >
+                              ✓ Akceptuję
+                            </button>
+                            <button
+                              onClick={() => setAcceptanceModal(a)}
+                              className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+                            >
+                              ✕ Odrzucam
+                            </button>
+                          </div>
+                        )}
+
+                        {hasAccepted && (
+                          <div className="px-3 py-2 rounded-lg text-xs font-medium bg-green-100 text-green-800 text-center mt-2">
+                            ✓ Zaakceptowane
+                          </div>
+                        )}
+
+                        {hasRejected && (
+                          <div className="px-3 py-2 rounded-lg text-xs font-medium bg-red-100 text-red-800 text-center mt-2">
+                            ✕ Odrzucone
+                          </div>
+                        )}
+
                         <div className="pt-2 border-t border-gray-100 mt-2">
                           <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">Utwórz dokument</p>
                           <div className="grid grid-cols-2 gap-2">
@@ -209,6 +253,12 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
+      />
+
+      <MeetingAcceptanceModal
+        meeting={acceptanceModal}
+        open={!!acceptanceModal}
+        onOpenChange={(isOpen) => !isOpen && setAcceptanceModal(null)}
       />
     </div>
   );

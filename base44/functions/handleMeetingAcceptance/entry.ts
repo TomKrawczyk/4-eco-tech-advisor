@@ -4,126 +4,79 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { meeting_assignment_id, status, rejection_reason } = await req.json();
+    const { assignmentId, status, reason } = await req.json();
 
-    if (!meeting_assignment_id || !status || !['accepted', 'rejected'].includes(status)) {
-      return Response.json({ error: 'Invalid input' }, { status: 400 });
+    if (!assignmentId || !status) {
+      return Response.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
-    if (status === 'rejected' && !rejection_reason?.trim()) {
-      return Response.json({ error: 'Rejection reason required' }, { status: 400 });
-    }
-
-    // Pobierz przypisanie spotkania
-    const assignment = await base44.entities.MeetingAssignment.get(meeting_assignment_id);
+    const assignment = await base44.asServiceRole.entities.MeetingAssignment.get(assignmentId);
     if (!assignment) {
-      return Response.json({ error: 'Meeting assignment not found' }, { status: 404 });
+      return Response.json({ error: 'Assignment not found' }, { status: 404 });
     }
+
+    // Sprawdź czy to przypisanie dotyczy obecnego usera
+    if (assignment.assigned_user_email !== user.email) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Policz poprzednie odrzucenia dla tego spotkania
+    const previousRejections = await base44.asServiceRole.entities.MeetingAcceptance.filter({
+      meeting_assignment_id: assignmentId,
+      status: 'rejected'
+    });
+    const rejectionCount = previousRejections.length + (status === 'rejected' ? 1 : 0);
 
     // Stwórz rekord akceptacji/odrzucenia
-    const acceptance = {
-      meeting_assignment_id,
+    await base44.asServiceRole.entities.MeetingAcceptance.create({
+      meeting_assignment_id: assignmentId,
       assigned_user_email: user.email,
-      assigned_user_name: user.full_name,
-      status
-    };
+      assigned_user_name: user.displayName || user.full_name,
+      status: status,
+      rejection_reason: status === 'rejected' ? reason : null,
+      rejection_timestamp: status === 'rejected' ? new Date().toISOString() : null,
+      rejection_count: rejectionCount,
+      in_rejected_pool: rejectionCount >= 2,
+    });
 
+    // Jeśli odrzucono, usuń przypisanie do handlowca
     if (status === 'rejected') {
-      acceptance.rejection_reason = rejection_reason;
-      acceptance.rejection_timestamp = new Date().toISOString();
-
-      // Pobierz poprzednie odrzucenia
-      const previousRejections = await base44.entities.MeetingAcceptance.filter({
-        meeting_assignment_id,
-        status: 'rejected'
+      await base44.asServiceRole.entities.MeetingAssignment.update(assignmentId, {
+        assigned_user_email: null,
+        assigned_user_name: null,
       });
 
-      const rejectionCount = previousRejections.length + 1;
-      acceptance.rejection_count = rejectionCount;
-
-      // Jeśli 2+ odrzucenia → do puli dla admina
-      if (rejectionCount >= 2) {
-        acceptance.in_rejected_pool = true;
-        // Odjąć z przypisania
-        await base44.entities.MeetingAssignment.update(meeting_assignment_id, {
-          assigned_user_email: null,
-          assigned_user_name: null,
-          assigned_group_id: null,
-          assigned_group_name: null
-        });
-      } else {
-        // Pierwsze odrzucenie - wróć do menadżera/lidera
-        const allowedUsers = await base44.entities.AllowedUser.filter({
-          email: user.email
-        });
-        const currentUser = allowedUsers[0];
-
-        if (currentUser?.assigned_to) {
-          acceptance.returned_to_email = currentUser.assigned_to;
-          // Przywróć do menadżera/lidera
-          const manager = await base44.entities.AllowedUser.get(currentUser.assigned_to);
-          await base44.entities.MeetingAssignment.update(meeting_assignment_id, {
-            assigned_user_email: manager?.email,
-            assigned_user_name: manager?.name
-          });
-        }
+      // Jeśli to pierwsze odrzucenie, powiadom lidera grupy
+      if (rejectionCount === 1 && assignment.assigned_group_id) {
+         const group = await base44.asServiceRole.entities.Group.get(assignment.assigned_group_id);
+         if (group && group.group_leader_ids && group.group_leader_ids.length > 0) {
+            const leaders = await base44.asServiceRole.entities.AllowedUser.filter({
+                id: { $in: group.group_leader_ids }
+            });
+            for (const leader of leaders) {
+                await base44.asServiceRole.integrations.Core.SendEmail({
+                    to: leader.email,
+                    subject: `Spotkanie odrzucone: ${assignment.client_name}`,
+                    body: `Handlowiec ${user.displayName} odrzucił spotkanie z ${assignment.client_name} (${assignment.meeting_calendar}). Powód: ${reason}. Spotkanie wróciło do puli grupy.`
+                });
+            }
+         }
       }
-
-      // Zlicz odrzucenia użytkownika w tym miesiącu
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-
-      const monthlyRejections = await base44.entities.MeetingAcceptance.filter({
-        assigned_user_email: user.email,
-        status: 'rejected'
-      });
-
-      const thisMonthCount = monthlyRejections.filter(r => {
-        const rejDate = r.rejection_timestamp?.split('T')[0];
-        return rejDate >= monthStart && rejDate <= monthEnd;
-      }).length + 1; // +1 dla bieżącego
-
-      // Jeśli 6+ odrzuceń → blokuj dostęp
-      if (thisMonthCount >= 6) {
-        const userRecord = await base44.entities.AllowedUser.filter({
-          email: user.email
-        });
-        if (userRecord[0]) {
-          await base44.entities.AllowedUser.update(userRecord[0].id, {
-            is_blocked: true,
-            blocked_reason: `Zbyt wiele odrzuceń spotkań (${thisMonthCount}) w tym miesiącu`,
-            missing_reports_count: thisMonthCount
-          });
-        }
-      } else if (thisMonthCount >= 5) {
-        // Wyślij ostrzeżenie
-        await base44.integrations.Core.SendEmail({
-          to: user.email,
-          subject: '⚠️ Ostrzeżenie: Wysokie liczba odrzuceń spotkań',
-          body: `Odrzuciłeś już ${thisMonthCount} spotkań(a) w tym miesiącu. Po 6 odrzuceniach zostanie zablokowany Twój dostęp do aplikacji. Bądź ostrożny!`
-        });
+      // Jeśli drugie lub kolejne, powiadom admina
+      else if (rejectionCount >= 2) {
+         await base44.asServiceRole.integrations.Core.SendEmail({
+            to: 'admin@4-eco.pl',
+            subject: `🚨 Spotkanie w puli odrzuconych: ${assignment.client_name}`,
+            body: `Spotkanie z ${assignment.client_name} (${assignment.meeting_calendar}) zostało odrzucone ${rejectionCount} razy i trafiło do puli "Odrzucone spotkania".`
+         });
       }
-    } else {
-      // Akceptacja - oznacz przypisanie jako zaakceptowane
-      await base44.entities.MeetingAssignment.update(meeting_assignment_id, {
-        notes: (assignment.notes || '') + `\n[ACCEPTED: ${new Date().toLocaleString('pl-PL')}]`
-      });
     }
 
-    await base44.entities.MeetingAcceptance.create(acceptance);
-
-    return Response.json({
-      success: true,
-      status,
-      rejection_count: acceptance.rejection_count,
-      in_rejected_pool: acceptance.in_rejected_pool
-    });
+    return Response.json({ success: true });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
