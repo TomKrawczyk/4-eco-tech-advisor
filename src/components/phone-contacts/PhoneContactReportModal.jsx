@@ -94,6 +94,7 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
   const queryClient = useQueryClient();
   const [view, setView] = useState("list"); // list | create | edit
   const [editingReport, setEditingReport] = useState(null);
+  const [reportSaved, setReportSaved] = useState(false);
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["phoneContactReports", contact?.contact_key],
@@ -114,6 +115,7 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
     onSuccess: () => {
       queryClient.invalidateQueries(["phoneContactReports", contact.contact_key]);
       toast.success("Raport zapisany");
+      setReportSaved(true);
       setView("list");
     },
   });
@@ -123,15 +125,18 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
     onSuccess: () => {
       queryClient.invalidateQueries(["phoneContactReports", contact.contact_key]);
       toast.success("Raport zaktualizowany");
+      setReportSaved(true);
       setView("list");
       setEditingReport(null);
     },
   });
 
   const handleClose = () => {
+    const saved = reportSaved;
     setView("list");
     setEditingReport(null);
-    onClose();
+    setReportSaved(false);
+    onClose(saved);
   };
 
   return (

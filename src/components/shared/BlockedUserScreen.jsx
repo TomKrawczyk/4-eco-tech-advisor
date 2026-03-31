@@ -224,10 +224,12 @@ export default function BlockedUserScreen({ currentUser }) {
         contact={reportContact}
         currentUser={currentUser}
         open={!!reportContact}
-        onClose={() => {
+        onClose={(reportSaved) => {
+          const contact = reportContact;
           setReportContact(null);
-          // Odśwież listę po złożeniu raportu
-          setMissingPhoneContacts(prev => prev.filter(c => c.id !== reportContact?.id));
+          if (reportSaved) {
+            setMissingPhoneContacts(prev => prev.filter(c => c !== contact));
+          }
         }}
       />
     </div>
