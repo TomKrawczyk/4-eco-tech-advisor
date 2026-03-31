@@ -48,12 +48,12 @@ export default function RejectedMeetings() {
       })
       .filter(Boolean)
       .filter(m => {
-        const matchesUser = !selectedUser || users.find(u => u.email === selectedUser)?.id === selectedUser;
+        const matchesUser = !selectedUser || m.assigned_user_email === selectedUser;
         const matchesGroup = !selectedGroup || m.assigned_group_id === selectedGroup;
         const matchesSearch = !searchTerm || 
           m.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           m.client_phone?.includes(searchTerm);
-        return matchesGroup && matchesSearch;
+        return matchesUser && matchesGroup && matchesSearch;
       });
   }, [acceptances, assignments, selectedUser, selectedGroup, searchTerm, users]);
 
