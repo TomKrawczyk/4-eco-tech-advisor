@@ -108,7 +108,8 @@ export default function BlockedUserScreen({ currentUser }) {
               blocked_reason: "",
               missing_reports_count: 0,
             });
-            window.location.reload();
+            sessionStorage.removeItem('layout_user_cache');
+            window.location.href = window.location.origin + '/';
           }
         } catch (_) {}
       }
@@ -257,7 +258,8 @@ export default function BlockedUserScreen({ currentUser }) {
                     blocked_reason: "",
                     missing_reports_count: 0,
                   });
-                  window.location.reload();
+                  sessionStorage.removeItem('layout_user_cache');
+                  window.location.href = window.location.origin + '/';
                 }
               } catch (_) {}
             }
