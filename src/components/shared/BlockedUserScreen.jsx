@@ -4,6 +4,7 @@ import { AlertTriangle, FileText, Calendar, Phone, MapPin, ChevronRight } from "
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { startOfDay } from "date-fns";
+import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
 
 const BLOCK_AFTER_DAYS = 7;
 
@@ -20,6 +21,7 @@ export default function BlockedUserScreen({ currentUser }) {
   const [missingMeetings, setMissingMeetings] = useState([]);
   const [missingPhoneContacts, setMissingPhoneContacts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reportContact, setReportContact] = useState(null);
 
   useEffect(() => {
     if (!currentUser?.email) return;
@@ -177,10 +179,10 @@ export default function BlockedUserScreen({ currentUser }) {
             </div>
             <div className="divide-y divide-gray-100">
               {missingPhoneContacts.map((c, i) => (
-                <Link
+                <button
                   key={i}
-                  to={createPageUrl("PhoneContacts")}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-orange-50 transition-colors group"
+                  onClick={() => setReportContact(c)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-orange-50 transition-colors group text-left"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-sm text-gray-900">{c.client_name}</div>
@@ -190,11 +192,11 @@ export default function BlockedUserScreen({ currentUser }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 text-orange-600 text-xs font-medium shrink-0 group-hover:gap-2 transition-all">
-                    <Phone className="w-3.5 h-3.5" />
-                    <span>Zadzwoń i zaraportuj</span>
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Złóż raport</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </div>
-                </Link>
+                </button>
               ))}
             </div>
           </div>
@@ -210,6 +212,17 @@ export default function BlockedUserScreen({ currentUser }) {
           Po uzupełnieniu wszystkich raportów konto zostanie odblokowane automatycznie.
         </p>
       </div>
+
+      <PhoneContactReportModal
+        contact={reportContact}
+        currentUser={currentUser}
+        open={!!reportContact}
+        onClose={() => {
+          setReportContact(null);
+          // Odśwież listę po złożeniu raportu
+          setMissingPhoneContacts(prev => prev.filter(c => c.id !== reportContact?.id));
+        }}
+      />
     </div>
   );
 }
