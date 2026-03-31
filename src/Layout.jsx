@@ -267,7 +267,7 @@ export default function Layout({ children, currentPageName }) {
                     </div>
                   </Link>
                   <button
-                    onClick={() => base44.auth.logout()}
+                    onClick={() => { sessionStorage.removeItem('layout_user_cache'); base44.auth.logout(); }}
                     className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
                     title="Wyloguj"
                   >
@@ -401,7 +401,7 @@ export default function Layout({ children, currentPageName }) {
                   </button>
                 </Link>
                 <button
-                  onClick={() => base44.auth.logout()}
+                  onClick={() => { sessionStorage.removeItem('layout_user_cache'); base44.auth.logout(); }}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
