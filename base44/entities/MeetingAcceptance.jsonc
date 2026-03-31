@@ -1,0 +1,54 @@
+{
+  "name": "MeetingAcceptance",
+  "type": "object",
+  "properties": {
+    "meeting_assignment_id": {
+      "type": "string",
+      "description": "ID przypisania spotkania (MeetingAssignment)"
+    },
+    "assigned_user_email": {
+      "type": "string",
+      "description": "Email u\u017cytkownika, kt\u00f3remu przypisano spotkanie"
+    },
+    "assigned_user_name": {
+      "type": "string",
+      "description": "Imi\u0119 u\u017cytkownika (cache)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "rejected"
+      ],
+      "description": "Przyj\u0119te czy odrzucone"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Pow\u00f3d odrzucenia (je\u015bli status=rejected)"
+    },
+    "rejection_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kiedy zosta\u0142o odrzucone"
+    },
+    "returned_to_email": {
+      "type": "string",
+      "description": "Do kt\u00f3rego menad\u017cera/lidera wr\u00f3ci\u0142o (je\u015bli odrzucone)"
+    },
+    "rejection_count": {
+      "type": "number",
+      "default": 1,
+      "description": "Ile razy spotkanie zosta\u0142o odrzucone (1, 2, etc.)"
+    },
+    "in_rejected_pool": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy spotkanie jest w puli nieprzyj\u0119tych (2+ odrzucenia)"
+    }
+  },
+  "required": [
+    "meeting_assignment_id",
+    "assigned_user_email",
+    "status"
+  ]
+}

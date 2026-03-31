@@ -77,6 +77,7 @@ const navStructure = [
     items: [
       { name: "VisitReports", label: "Raporty wizytowe" },
       { name: "MeetingReports", label: "Raporty po spotkaniu" },
+      { name: "RejectedMeetings", label: "Odrzucone spotkania", adminOnly: true },
     ]
   },
   {

@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 import MeetingCard from "@/components/meetings/MeetingCard";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
+import MeetingAcceptanceModal from "@/components/meetings/MeetingAcceptanceModal";
 import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -175,7 +176,28 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                           </button>
                         )}
 
-                        <div className="pt-2 border-t border-gray-100 mt-2">
+                        <div className="pt-2 border-t border-gray-100 mt-2 space-y-2">
+                          <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">Akcje</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedMeetingForAcceptance(a);
+                                setAcceptanceModalOpen(true);
+                              }}
+                              className="flex-1 px-3 py-2 rounded-lg font-medium text-xs bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
+                            >
+                              ✓ Akceptuj
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedMeetingForAcceptance(a);
+                                setAcceptanceModalOpen(true);
+                              }}
+                              className="flex-1 px-3 py-2 rounded-lg font-medium text-xs bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors"
+                            >
+                              ✕ Odrzuć
+                            </button>
+                          </div>
                           <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">Utwórz dokument</p>
                           <div className="grid grid-cols-2 gap-2">
                             {actions.map(({ label, icon: Icon, color, page, desc }) => (
@@ -210,6 +232,20 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
       />
+
+      {!isLeaderOrAdmin && (
+        <MeetingAcceptanceModal
+          meeting={selectedMeetingForAcceptance}
+          open={acceptanceModalOpen}
+          onClose={(saved) => {
+            setAcceptanceModalOpen(false);
+            setSelectedMeetingForAcceptance(null);
+            if (saved) {
+              window.location.reload();
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -225,6 +261,8 @@ export default function Meetings() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
+  const [acceptanceModalOpen, setAcceptanceModalOpen] = useState(false);
+  const [selectedMeetingForAcceptance, setSelectedMeetingForAcceptance] = useState(null);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -667,16 +705,34 @@ export default function Meetings() {
                                 const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
                                 const assignment = meetingAssignments.find(a => a.meeting_key === key);
                                 return (
-                                  <div key={i} className="w-full">
-                                    <MeetingCard
-                                     meeting={meeting}
-                                     assignment={assignment}
-                                     salespeople={salespeople}
-                                     assignmentsForDate={meetingAssignments.filter(a => a.meeting_date === meeting.meeting_date)}
-                                     currentUserRole={currentUser?.role}
-                                     meetingReports={meetingReports}
-                                     groups={groups}
-                                    />
+                                  <div key={i} className="flex gap-2 items-start">
+                                    {(assignment?.comments || assignment?.agent || meeting.agent || meeting.interview_data) && (
+                                      <button
+                                        onClick={() => {
+                                           setSelectedDetails({
+                                             agent: meeting.agent || assignment?.agent,
+                                             comments: assignment?.comments || meeting.comments,
+                                             interview_data: meeting.interview_data || {}
+                                           });
+                                           setDetailsModalOpen(true);
+                                         }}
+                                        className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors shrink-0 mt-0.5"
+                                        title="Pokaż szczegóły"
+                                      >
+                                        <MessageSquare className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                    <div className="flex-1">
+                                      <MeetingCard
+                                       meeting={meeting}
+                                       assignment={assignment}
+                                       salespeople={salespeople}
+                                       assignmentsForDate={meetingAssignments.filter(a => a.meeting_date === meeting.meeting_date)}
+                                       currentUserRole={currentUser?.role}
+                                       meetingReports={meetingReports}
+                                       groups={groups}
+                                      />
+                                    </div>
                                   </div>
                                 );
                               })}
