@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, FileText, AlertCircle, Users, X, CheckCheck } from "lucide-react";
+import { Bell, FileText, AlertCircle, Users, X, CheckCheck, XCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -12,12 +12,16 @@ const typeIcons = {
   new_report: FileText,
   system_error: AlertCircle,
   user_activity: Users,
+  meeting_rejection: XCircle,
+  meeting_rejection_critical: AlertCircle,
 };
 
 const typeColors = {
   new_report: "text-green-600 bg-green-50",
   system_error: "text-red-600 bg-red-50",
   user_activity: "text-blue-600 bg-blue-50",
+  meeting_rejection: "text-orange-600 bg-orange-50",
+  meeting_rejection_critical: "text-red-600 bg-red-50",
 };
 
 export default function NotificationPanel({ currentUser }) {
@@ -141,7 +145,7 @@ export default function NotificationPanel({ currentUser }) {
                                 <span className="inline-block w-2 h-2 bg-blue-500 rounded-full ml-2"></span>
                               )}
                             </h4>
-                            <p className="text-xs text-gray-600 line-clamp-2">{notification.message}</p>
+                            <p className="text-xs text-gray-600">{notification.message}</p>
                             <p className="text-xs text-gray-400 mt-1">
                               {new Date(notification.created_date).toLocaleString("pl-PL")}
                             </p>
