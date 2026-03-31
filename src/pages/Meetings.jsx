@@ -13,7 +13,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 import MeetingCard from "@/components/meetings/MeetingCard";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
-import MeetingAcceptanceModal from "@/components/meetings/MeetingAcceptanceModal";
 import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -176,28 +175,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                           </button>
                         )}
 
-                        <div className="pt-2 border-t border-gray-100 mt-2 space-y-2">
-                          <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">Akcje</p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                setSelectedMeetingForAcceptance(a);
-                                setAcceptanceModalOpen(true);
-                              }}
-                              className="flex-1 px-3 py-2 rounded-lg font-medium text-xs bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
-                            >
-                              ✓ Akceptuj
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedMeetingForAcceptance(a);
-                                setAcceptanceModalOpen(true);
-                              }}
-                              className="flex-1 px-3 py-2 rounded-lg font-medium text-xs bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors"
-                            >
-                              ✕ Odrzuć
-                            </button>
-                          </div>
+                        <div className="pt-2 border-t border-gray-100 mt-2">
                           <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">Utwórz dokument</p>
                           <div className="grid grid-cols-2 gap-2">
                             {actions.map(({ label, icon: Icon, color, page, desc }) => (
@@ -232,20 +210,6 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
       />
-
-      {!isLeaderOrAdmin && (
-        <MeetingAcceptanceModal
-          meeting={selectedMeetingForAcceptance}
-          open={acceptanceModalOpen}
-          onClose={(saved) => {
-            setAcceptanceModalOpen(false);
-            setSelectedMeetingForAcceptance(null);
-            if (saved) {
-              window.location.reload();
-            }
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -261,8 +225,6 @@ export default function Meetings() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [acceptanceModalOpen, setAcceptanceModalOpen] = useState(false);
-  const [selectedMeetingForAcceptance, setSelectedMeetingForAcceptance] = useState(null);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
