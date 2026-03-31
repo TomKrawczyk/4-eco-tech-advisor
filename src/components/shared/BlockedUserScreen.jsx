@@ -102,7 +102,7 @@ export default function BlockedUserScreen({ currentUser }) {
         try {
           const allowedUsers = await base44.entities.AllowedUser.filter({ email: currentUser.email });
           const ua = allowedUsers[0];
-          if (ua && ua.is_blocked) {
+          if (ua) {
             await base44.entities.AllowedUser.update(ua.id, {
               is_blocked: false,
               blocked_reason: "",
@@ -251,7 +251,7 @@ export default function BlockedUserScreen({ currentUser }) {
               try {
                 const allowedUsers = await base44.entities.AllowedUser.filter({ email: currentUser.email });
                 const ua = allowedUsers[0];
-                if (ua && ua.is_blocked) {
+                if (ua) {
                   await base44.entities.AllowedUser.update(ua.id, {
                     is_blocked: false,
                     blocked_reason: "",
