@@ -50,6 +50,20 @@ Deno.serve(async (req) => {
         assigned_user_name: null,
       });
 
+      // Powiadom wszystkich adminów o odrzuceniu
+      const admins = await base44.asServiceRole.entities.AllowedUser.filter({
+        role: 'admin'
+      });
+
+      for (const admin of admins) {
+        await base44.asServiceRole.functions.invoke('sendNotification', {
+          user_email: admin.email,
+          title: 'Użytkownik odrzucił spotkanie',
+          message: `${user.full_name} (${user.email}) odrzucił(a) spotkanie z ${assignment.client_name}. Powód: ${reason || 'brak podanego powodu'}`,
+          type: 'meeting_rejection'
+        });
+      }
+
       // Jeśli to pierwsze odrzucenie, powiadom lidera grupy
       if (rejectionCount === 1 && assignment.assigned_group_id) {
          const group = await base44.asServiceRole.entities.Group.get(assignment.assigned_group_id);
