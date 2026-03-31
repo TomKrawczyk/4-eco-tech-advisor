@@ -96,6 +96,22 @@ export default function BlockedUserScreen({ currentUser }) {
 
       setMissingPhoneContacts(missingPhones);
       setLoading(false);
+
+      // Jeśli brak zaległości → odblokuj konto natychmiast
+      if (missing.length === 0 && missingPhones.length === 0) {
+        try {
+          const allowedUsers = await base44.entities.AllowedUser.filter({ email: currentUser.email });
+          const ua = allowedUsers[0];
+          if (ua && ua.is_blocked) {
+            await base44.entities.AllowedUser.update(ua.id, {
+              is_blocked: false,
+              blocked_reason: "",
+              missing_reports_count: 0,
+            });
+            window.location.reload();
+          }
+        } catch (_) {}
+      }
     };
     load();
   }, [currentUser?.email]);
@@ -224,11 +240,27 @@ export default function BlockedUserScreen({ currentUser }) {
         contact={reportContact}
         currentUser={currentUser}
         open={!!reportContact}
-        onClose={(reportSaved) => {
+        onClose={async (reportSaved) => {
           const contact = reportContact;
           setReportContact(null);
           if (reportSaved) {
-            setMissingPhoneContacts(prev => prev.filter(c => c !== contact));
+            const newList = missingPhoneContacts.filter(c => c !== contact);
+            setMissingPhoneContacts(newList);
+            // Jeśli wszystkie zaległości uzupełnione → odblokuj konto
+            if (newList.length === 0 && missingMeetings.length === 0) {
+              try {
+                const allowedUsers = await base44.entities.AllowedUser.filter({ email: currentUser.email });
+                const ua = allowedUsers[0];
+                if (ua && ua.is_blocked) {
+                  await base44.entities.AllowedUser.update(ua.id, {
+                    is_blocked: false,
+                    blocked_reason: "",
+                    missing_reports_count: 0,
+                  });
+                  window.location.reload();
+                }
+              } catch (_) {}
+            }
           }
         }}
       />
