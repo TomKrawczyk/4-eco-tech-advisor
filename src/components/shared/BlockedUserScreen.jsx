@@ -109,8 +109,8 @@ export default function BlockedUserScreen({ currentUser }) {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Konto zablokowane</h2>
           <p className="text-gray-600 text-sm">
-            Twój dostęp do aplikacji został ograniczony z powodu braku raportów po spotkaniach.<br />
-            Uzupełnij wszystkie brakujące raporty aby odblokować konto.
+            Twój dostęp do aplikacji został ograniczony z powodu brakujących raportów.<br />
+            Uzupełnij wszystkie zaległości poniżej aby odblokować konto.
           </p>
         </div>
 
@@ -169,7 +169,7 @@ export default function BlockedUserScreen({ currentUser }) {
         )}
 
         {/* Lista brakujących kontaktów telefonicznych */}
-        {!loading && missingPhoneContacts.length > 0 && (
+        {(loading || missingPhoneContacts.length > 0) && (
           <div className="bg-white rounded-xl border border-orange-200 shadow-sm overflow-hidden mb-4">
             <div className="bg-orange-50 px-4 py-3 border-b border-orange-200">
               <h3 className="font-semibold text-orange-800 text-sm flex items-center gap-2">
@@ -177,6 +177,11 @@ export default function BlockedUserScreen({ currentUser }) {
                 Kontakty telefoniczne bez raportu ({missingPhoneContacts.length})
               </h3>
             </div>
+            {loading ? (
+              <div className="p-6 text-center">
+                <div className="w-6 h-6 border-2 border-orange-400 border-t-transparent rounded-full animate-spin mx-auto" />
+              </div>
+            ) : (
             <div className="divide-y divide-gray-100">
               {missingPhoneContacts.map((c, i) => (
                 <button
@@ -199,6 +204,7 @@ export default function BlockedUserScreen({ currentUser }) {
                 </button>
               ))}
             </div>
+            )}
           </div>
         )}
 
