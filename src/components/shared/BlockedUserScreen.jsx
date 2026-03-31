@@ -76,10 +76,11 @@ export default function BlockedUserScreen({ currentUser }) {
 
       setMissingMeetings(missing);
 
-      // Brakujące kontakty telefoniczne (>= 7 dni od przypisania)
+      // Brakujące kontakty telefoniczne (>= 7 dni od daty kontaktu lub przypisania)
       const missingPhones = phoneContacts.filter(c => {
-        const assignedDate = new Date(c.updated_date || c.created_date);
-        const assignedDay = startOfDay(assignedDate);
+        // Użyj contact_date jeśli dostępny, potem created_date (nie updated_date – to metadata systemowa)
+        const dateStr = c.contact_date || c.created_date;
+        const assignedDay = startOfDay(new Date(dateStr));
         const daysAgo = Math.floor((today - assignedDay) / 86400000);
         if (daysAgo < BLOCK_AFTER_DAYS) return false;
         const cPhone = normalizePhone(c.phone || c.client_phone);
