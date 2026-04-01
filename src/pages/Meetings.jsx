@@ -325,12 +325,6 @@ export default function Meetings() {
         if (currentUser?.role === "admin") {
           return true;
         }
-        // group_leader może przypisać do siebie
-        if (currentUser?.role === "group_leader") {
-          if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
-          const uGroupId = u.data?.group_id || u.group_id;
-          return uGroupId === currentUserGroupId;
-        }
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
@@ -590,9 +584,23 @@ export default function Meetings() {
 
       {/* Licznik */}
       {!isLoading && (
-        <div className="text-sm text-gray-500">
-          Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (maks. +14 dni od dziś)
+        <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
+          <span>Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> spotkań z datą (maks. +14 dni od dziś)
           {allMeetings.length > 0 && <span className="ml-1 text-gray-400">z {allMeetings.length} wszystkich</span>}
+          </span>
+          {(() => {
+            const unassigned = filtered.filter(m => {
+              const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+              const assignment = meetingAssignments.find(a => a.meeting_key === key);
+              return !assignment?.assigned_user_email;
+            }).length;
+            return unassigned > 0 ? (
+              <span className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-1 font-semibold text-xs">
+                <User className="w-3.5 h-3.5" />
+                {unassigned} nieprzypisanych
+              </span>
+            ) : null;
+          })()}
         </div>
       )}
 
@@ -623,6 +631,11 @@ export default function Meetings() {
               ? expandedSheets[sheet]
               : false;
             const total = dates.reduce((acc, d) => acc + d.meetings.length, 0);
+            const unassignedInSheet = dates.reduce((acc, d) => acc + d.meetings.filter(m => {
+              const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+              const assignment = meetingAssignments.find(a => a.meeting_key === key);
+              return !assignment?.assigned_user_email;
+            }).length, 0);
 
             return (
               <div key={sheet} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
@@ -636,6 +649,11 @@ export default function Meetings() {
                     <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">
                       {total} spotkań
                     </Badge>
+                    {unassignedInSheet > 0 && (
+                      <Badge className="bg-red-50 text-red-700 border border-red-200 text-[10px]">
+                        {unassignedInSheet} nieprzypisanych
+                      </Badge>
+                    )}
                     {(() => {
                       const mapping = sheetMappings.find(sm => sm.sheet_name === sheet);
                       return mapping?.group_name ? (
