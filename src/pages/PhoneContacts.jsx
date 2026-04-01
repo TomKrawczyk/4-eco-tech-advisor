@@ -6,12 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus, FileText } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
-import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
-import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -50,8 +48,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [reportModalContact, setReportModalContact] = useState(null);
-  const [manualAddOpen, setManualAddOpen] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -118,10 +114,11 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy
+  // Scal dane z arkusza z przypisaniami z bazy + dodaj ręcznie dodane kontakty
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    return rawContacts.map(c => {
+    // Kontakty z arkusza wzbogacone o dane z bazy
+    const fromSheet = rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -135,6 +132,29 @@ export default function PhoneContacts() {
       }
       return c;
     });
+    // Kontakty dodane ręcznie (contact_key zaczyna się od "manual_") – nie ma ich w arkuszu
+    const sheetKeys = new Set(rawContacts.map(c => c.contact_key));
+    const manualContacts = phoneContactsFromDB
+      .filter(db => db.contact_key?.startsWith("manual_") && !sheetKeys.has(db.contact_key))
+      .map(db => ({
+        contact_key: db.contact_key,
+        sheet: db.sheet || "Ręczne",
+        client_name: db.client_name || "",
+        phone: db.phone || "",
+        address: db.address || "",
+        date: db.date || "",
+        contact_date: db.contact_date || "",
+        contact_calendar: db.contact_calendar || "",
+        status: db.status || "Kontakt do doradcy",
+        comments: db.comments || "",
+        agent: db.agent || "",
+        id: db.id,
+        assigned_user_email: db.assigned_user_email || "",
+        assigned_user_name: db.assigned_user_name || "",
+        assigned_group_id: db.assigned_group_id || "",
+        assigned_group_name: db.assigned_group_name || "",
+      }));
+    return [...fromSheet, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -375,13 +395,6 @@ export default function PhoneContacts() {
           </Select>
         )}
 
-        {canAssign && (
-          <Button onClick={() => setManualAddOpen(true)} className="gap-2 h-11 bg-green-600 hover:bg-green-700">
-            <Plus className="w-4 h-4" />
-            Dodaj ręcznie
-          </Button>
-        )}
-
         <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           Odśwież
@@ -523,15 +536,6 @@ export default function PhoneContacts() {
                                         Szczegóły
                                       </button>
 
-                                      <button
-                                        onClick={() => setReportModalContact(contact)}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
-                                        title="Raporty kontaktu"
-                                      >
-                                        <FileText className="w-3 h-3" />
-                                        Raport
-                                      </button>
-
                                       {contact.assigned_user_email ? (
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
                                           <User className="w-3 h-3 text-green-600" />
@@ -609,25 +613,6 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
-      />
-
-      {reportModalContact && (
-        <PhoneContactReportModal
-          contact={reportModalContact}
-          currentUser={currentUser}
-          open={!!reportModalContact}
-          onClose={() => setReportModalContact(null)}
-        />
-      )}
-
-      <ManualAddModal
-        open={manualAddOpen}
-        onClose={() => setManualAddOpen(false)}
-        currentUser={currentUser}
-        onContactAdded={() => {
-          queryClient.invalidateQueries(["phoneContactsDB"]);
-          refetch();
-        }}
       />
     </div>
   );
