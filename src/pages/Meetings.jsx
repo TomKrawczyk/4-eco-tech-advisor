@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList } from "lucide-react";
+import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList, Plus } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
+import ManualContactModal from "@/components/shared/ManualContactModal";
 import { motion, AnimatePresence } from "framer-motion";
 import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 import MeetingCard from "@/components/meetings/MeetingCard";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
-import MeetingAcceptanceModal from "@/components/meetings/MeetingAcceptanceModal";
 import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -52,13 +52,6 @@ function extractTime(calStr) {
 
 // Widok spotkań dla zwykłego użytkownika – z pełnymi szczegółami i akcjami
 function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen }) {
-  const [acceptanceModal, setAcceptanceModal] = useState(null);
-
-  const { data: myAcceptances = [] } = useQuery({
-    queryKey: ["myMeetingAcceptances"],
-    queryFn: () => base44.entities.MeetingAcceptance.list(),
-  });
-
   const groupedByDate = useMemo(() => {
     const groups = {};
     myAssignedMeetings.forEach(a => {
@@ -119,14 +112,8 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
 
                   const hasDetails = a.agent || a.comments || a.notes || a.interview_data;
 
-                  const hasAccepted = myAcceptances.find(acc => acc.meeting_assignment_id === a.id && acc.status === 'accepted');
-                  const hasRejected = myAcceptances.find(acc => acc.meeting_assignment_id === a.id && acc.status === 'rejected');
-                  const needsDecision = !hasAccepted && !hasRejected;
-
                   return (
-                    <div key={i} className={`bg-white rounded-xl border-2 p-4 hover:shadow-sm transition-all ${
-                      needsDecision ? "border-orange-200 bg-orange-50" : hasAccepted ? "border-green-200" : "border-red-200 bg-red-50"
-                    }`}>
+                    <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <User className="w-4 h-4 text-gray-400 shrink-0" />
@@ -189,36 +176,6 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                           </button>
                         )}
 
-                        {/* Przyciski akceptacji/odrzucenia */}
-                        {needsDecision && (
-                          <div className="flex gap-2 mt-3 pt-2 border-t border-orange-200">
-                            <button
-                              onClick={() => setAcceptanceModal(a)}
-                              className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
-                            >
-                              ✓ Akceptuję
-                            </button>
-                            <button
-                              onClick={() => setAcceptanceModal(a)}
-                              className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
-                            >
-                              ✕ Odrzucam
-                            </button>
-                          </div>
-                        )}
-
-                        {hasAccepted && (
-                          <div className="px-3 py-2 rounded-lg text-xs font-medium bg-green-100 text-green-800 text-center mt-2">
-                            ✓ Zaakceptowane
-                          </div>
-                        )}
-
-                        {hasRejected && (
-                          <div className="px-3 py-2 rounded-lg text-xs font-medium bg-red-100 text-red-800 text-center mt-2">
-                            ✕ Odrzucone
-                          </div>
-                        )}
-
                         <div className="pt-2 border-t border-gray-100 mt-2">
                           <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">Utwórz dokument</p>
                           <div className="grid grid-cols-2 gap-2">
@@ -255,10 +212,13 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
         data={selectedDetails}
       />
 
-      <MeetingAcceptanceModal
-        meeting={acceptanceModal}
-        open={!!acceptanceModal}
-        onOpenChange={(isOpen) => !isOpen && setAcceptanceModal(null)}
+      <ManualContactModal
+        open={showManualModal}
+        onOpenChange={setShowManualModal}
+        currentUser={currentUser}
+        groups={groups}
+        salespeople={salespeople}
+        onSuccess={() => setShowManualModal(false)}
       />
     </div>
   );
@@ -275,6 +235,7 @@ export default function Meetings() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -372,9 +333,12 @@ export default function Meetings() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
+        const uEmail = u.data?.email || u.email;
         if (currentUser?.role === "admin") {
           return true;
         }
+        // Group leader może przypisać siebie
+        if (currentUser?.role === "group_leader" && uEmail === currentUser.email) return true;
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
@@ -609,6 +573,18 @@ export default function Meetings() {
           >
             <Bell className={`w-4 h-4 ${notifySending ? "animate-pulse" : ""}`} />
             {notifySending ? "Wysyłanie..." : "Wyślij powiadomienia"}
+          </Button>
+        )}
+
+        {isLeaderOrAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 h-11 border-green-200 text-green-700 hover:bg-green-50"
+            onClick={() => setShowManualModal(true)}
+          >
+            <Plus className="w-4 h-4" />
+            Dodaj ręcznie
           </Button>
         )}
 
