@@ -115,7 +115,7 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza + ręcznie dodane kontakty z bazy
+  // Scal dane z arkusza + ręcznie dodane z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
     const fromSheet = rawContacts.map(c => {
@@ -132,7 +132,8 @@ export default function PhoneContacts() {
       }
       return c;
     });
-    // Kontakty dodane ręcznie (nie z arkusza)
+
+    // Ręcznie dodane (nie z arkusza)
     const sheetKeys = new Set(rawContacts.map(c => c.contact_key));
     const manualContacts = phoneContactsFromDB
       .filter(db => db.contact_key?.startsWith("manual_") && !sheetKeys.has(db.contact_key))
@@ -154,6 +155,7 @@ export default function PhoneContacts() {
         assigned_group_id: db.assigned_group_id || "",
         assigned_group_name: db.assigned_group_name || "",
       }));
+
     return [...fromSheet, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
@@ -228,7 +230,7 @@ export default function PhoneContacts() {
     },
   });
 
-  // Handlowcy do przypisania – dla group_leadera DODAJ SIEBIE
+  // Handlowcy do przypisania – group_leader widzi siebie na liście
   const salespeople = useMemo(() => {
     const list = allAllowedUsers
       .filter(u => {
@@ -240,7 +242,6 @@ export default function PhoneContacts() {
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
 
-    // Upewnij się że group_leader widzi siebie na liście
     if (currentUser?.role === "group_leader") {
       const alreadyIn = list.some(s => s.email === currentUser.email);
       if (!alreadyIn) {
@@ -250,36 +251,49 @@ export default function PhoneContacts() {
     return list;
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
-  const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
+  // Zbiór arkuszy przypisanych do grupy bieżącego usera
+  const myGroupSheetNames = useMemo(() => {
+    if (!currentUserGroupId) return new Set();
+    return new Set(
+      sheetMappings
+        .filter(sm => sm.group_id === currentUserGroupId)
+        .map(sm => sm.sheet_name)
+    );
+  }, [sheetMappings, currentUserGroupId]);
 
   // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
+
     if (currentUser?.role === "group_leader") {
-      const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts;
+      if (!currentUserGroupId) return contacts; // brak grupy = widzi wszystko
       return contacts.filter(c => {
-        const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
-        if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
-        if (c.assigned_group_id === myGroupId) return true;
-        // Ręcznie dodane przez tego lidera
-        if (c.contact_key?.startsWith("manual_")) return true;
+        // Arkusz przypisany do mojej grupy
+        if (myGroupSheetNames.has(c.sheet)) return true;
+        // Kontakt jawnie przypisany do mojej grupy
+        if (c.assigned_group_id === currentUserGroupId) return true;
+        // Ręcznie dodany przez tego użytkownika (brak grupy w kluczu)
+        if (c.contact_key?.startsWith("manual_") && !c.assigned_group_id) return true;
         return false;
       });
     }
+
     if (currentUser?.role === "team_leader") {
       return contacts.filter(c => {
+        // Przypisany do mnie lub do mojego zespołu
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
+        // Przypisany do mojej grupy
         if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
+        // Nieprzypisane kontakty z arkuszy mojej grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
-          const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
-          return sheetMapping?.group_id === currentUserGroupId;
+          return myGroupSheetNames.has(c.sheet);
         }
         return false;
       });
     }
+
     return contacts;
-  }, [contacts, currentUser, currentUserGroupId, sheetMappings, teamMemberEmails]);
+  }, [contacts, currentUser, currentUserGroupId, myGroupSheetNames, teamMemberEmails]);
 
   const filtered = useMemo(() => {
     return visibleContacts.filter(c => {
@@ -292,6 +306,8 @@ export default function PhoneContacts() {
 
   // Licznik nieprzypisanych
   const unassignedCount = useMemo(() => filtered.filter(c => !c.assigned_user_email).length, [filtered]);
+
+  const allSheetTabs = useMemo(() => [...new Set(filtered.map(c => c.sheet).filter(Boolean))].sort(), [filtered]);
 
   const sheetGroups = useMemo(() => {
     const bySheet = {};
@@ -411,9 +427,9 @@ export default function PhoneContacts() {
               <SelectValue placeholder="Wszystkie arkusze" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszystkie arkusze ({contacts.length})</SelectItem>
+              <SelectItem value="all">Wszystkie arkusze ({filtered.length})</SelectItem>
               {allSheetTabs.map(sheet => (
-                <SelectItem key={sheet} value={sheet}>{sheet} ({contacts.filter(c => c.sheet === sheet).length})</SelectItem>
+                <SelectItem key={sheet} value={sheet}>{sheet} ({filtered.filter(c => c.sheet === sheet).length})</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -471,7 +487,7 @@ export default function PhoneContacts() {
       </div>
 
       {/* Liczniki */}
-      <div className="flex items-center gap-4 text-sm text-gray-500">
+      <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
         <span>Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> kontaktów</span>
         {unassignedCount > 0 && (
           <span className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-1 font-semibold text-xs">
@@ -605,7 +621,7 @@ export default function PhoneContacts() {
                                         )
                                       )}
 
-                                      {/* Przypisanie grupy */}
+                                      {/* Przypisanie grupy – tylko admin */}
                                       {canManageGroups && (
                                         <>
                                           {contact.assigned_group_id ? (
@@ -617,19 +633,21 @@ export default function PhoneContacts() {
                                               >×</button>
                                             </div>
                                           ) : (
-                                            <Select onValueChange={(val) => {
-                                              const g = groups.find(gr => gr.id === val);
-                                              if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
-                                            }}>
-                                              <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
-                                                <SelectValue placeholder="Przypisz grupę" />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                {groups.map(g => (
-                                                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
+                                            currentUser?.role === "admin" && (
+                                              <Select onValueChange={(val) => {
+                                                const g = groups.find(gr => gr.id === val);
+                                                if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
+                                              }}>
+                                                <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
+                                                  <SelectValue placeholder="Przypisz grupę" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {groups.map(g => (
+                                                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            )
                                           )}
                                         </>
                                       )}
@@ -650,11 +668,7 @@ export default function PhoneContacts() {
         </div>
       )}
 
-      <DetailsModal
-        open={detailsModalOpen}
-        onOpenChange={setDetailsModalOpen}
-        data={selectedDetails}
-      />
+      <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
 
       {reportModalContact && (
         <PhoneContactReportModal
