@@ -449,6 +449,7 @@ export default function PhoneContacts() {
           {sheetGroups.map(({ sheet, dates }) => {
             const isOpen = expandedSheets[sheet] ?? false;
             const total = dates.reduce((acc, d) => acc + d.items.length, 0);
+            const unassigned = dates.reduce((acc, d) => acc + d.items.filter(c => !c.assigned_user_email).length, 0);
             return (
               <div key={sheet} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
                 <button
@@ -458,12 +459,9 @@ export default function PhoneContacts() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-800 text-sm">{sheet}</span>
                     <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{total} kontaktów</Badge>
-                    {(() => {
-                      const unassigned = dates.reduce((acc, d) => acc + d.items.filter(c => !c.assigned_user_email).length, 0);
-                      return unassigned > 0 ? (
-                        <Badge className="bg-red-50 text-red-600 border border-red-200 text-[10px]">{unassigned} nieprzypisanych</Badge>
-                      ) : null;
-                    })()}
+                    {unassigned > 0 && (
+                      <Badge className="bg-red-50 text-red-600 border border-red-200 text-[10px]">{unassigned} nieprzypisanych</Badge>
+                    )}
                   </div>
                   {isOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </button>
