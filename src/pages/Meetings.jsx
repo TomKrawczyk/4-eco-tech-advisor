@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList, Plus } from "lucide-react";
+import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
-import ManualContactModal from "@/components/shared/ManualContactModal";
 import { motion, AnimatePresence } from "framer-motion";
 import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 import MeetingCard from "@/components/meetings/MeetingCard";
@@ -211,15 +210,6 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
       />
-
-      <ManualContactModal
-        open={showManualModal}
-        onOpenChange={setShowManualModal}
-        currentUser={currentUser}
-        groups={groups}
-        salespeople={salespeople}
-        onSuccess={() => setShowManualModal(false)}
-      />
     </div>
   );
 }
@@ -235,7 +225,6 @@ export default function Meetings() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [showManualModal, setShowManualModal] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -333,13 +322,9 @@ export default function Meetings() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        const uEmail = u.data?.email || u.email;
-        if (currentUser?.role === "admin") {
-          return true;
-        }
-        // Group leader może przypisać siebie
-        if (currentUser?.role === "group_leader" && uEmail === currentUser.email) return true;
-        if (role !== "user" && role !== "team_leader") return false;
+        if (currentUser?.role === "admin") return true;
+        // Dla group_leader/team_leader: show users, team_leaders i group_leaders z tej samej grupy
+        if (!["user", "team_leader", "group_leader"].includes(role)) return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
       })
@@ -573,18 +558,6 @@ export default function Meetings() {
           >
             <Bell className={`w-4 h-4 ${notifySending ? "animate-pulse" : ""}`} />
             {notifySending ? "Wysyłanie..." : "Wyślij powiadomienia"}
-          </Button>
-        )}
-
-        {isLeaderOrAdmin && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 h-11 border-green-200 text-green-700 hover:bg-green-50"
-            onClick={() => setShowManualModal(true)}
-          >
-            <Plus className="w-4 h-4" />
-            Dodaj ręcznie
           </Button>
         )}
 

@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
-import ManualContactModal from "@/components/shared/ManualContactModal";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
@@ -49,7 +48,6 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
-  const [showManualModal, setShowManualModal] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -116,11 +114,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy + dodaj kontakty ręczne z bazy
+  // Scal dane z arkusza z przypisaniami z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    // Dane z arkusza wzbogacone o przypisania z bazy
-    const fromSheets = rawContacts.map(c => {
+    return rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -134,13 +131,6 @@ export default function PhoneContacts() {
       }
       return c;
     });
-    // Kontakty ręczne z bazy (których nie ma w arkuszu)
-    const sheetKeys = new Set(rawContacts.map(c => c.contact_key));
-    const manualContacts = phoneContactsFromDB.filter(db =>
-      !sheetKeys.has(db.contact_key) &&
-      db.contact_key?.startsWith("manual")
-    );
-    return [...fromSheets, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -219,11 +209,9 @@ export default function PhoneContacts() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        const uEmail = u.data?.email || u.email;
         if (currentUser?.role === "admin") return true;
-        // Group leader może przypisać siebie
-        if (currentUser?.role === "group_leader" && uEmail === currentUser.email) return true;
-        if (role !== "user" && role !== "team_leader") return false;
+        // Dla group_leader/team_leader: show users, team_leaders i group_leaders z tej samej grupy
+        if (!["user", "team_leader", "group_leader"].includes(role)) return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
       })
@@ -388,18 +376,6 @@ export default function PhoneContacts() {
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           Odśwież
         </Button>
-
-        {isLeaderOrAdmin && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 h-11 border-green-200 text-green-700 hover:bg-green-50"
-            onClick={() => setShowManualModal(true)}
-          >
-            <Plus className="w-4 h-4" />
-            Dodaj ręcznie
-          </Button>
-        )}
 
         {isAdminOrGroupLeader && filtered.length > 0 && (
           <Button
@@ -614,15 +590,6 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
-      />
-
-      <ManualContactModal
-        open={showManualModal}
-        onOpenChange={setShowManualModal}
-        currentUser={currentUser}
-        groups={groups}
-        salespeople={salespeople}
-        onSuccess={() => setShowManualModal(false)}
       />
     </div>
   );
