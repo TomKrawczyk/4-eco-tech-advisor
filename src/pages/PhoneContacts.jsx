@@ -76,7 +76,6 @@ export default function PhoneContacts() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
-  // Zawsze pobieramy przypisania z bazy - potrzebne dla każdej roli
   const { data: phoneContactsFromDB = [] } = useQuery({
     queryKey: ["phoneContactsDB"],
     queryFn: () => base44.entities.PhoneContact.list(),
@@ -99,14 +98,12 @@ export default function PhoneContacts() {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
     if (!currentUser) return null;
     if (currentUser.role === "admin") return null;
     return currentUser.groupId || null;
   }, [currentUser]);
 
-  // Ustal emaile zespołu team_leadera
   const teamMemberEmails = useMemo(() => {
     if (!currentUser || currentUser.role !== "team_leader") return [];
     const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
@@ -118,10 +115,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy
+  // Scal dane z arkusza + ręcznie dodane kontakty z bazy
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    return rawContacts.map(c => {
+    const fromSheet = rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -135,6 +132,29 @@ export default function PhoneContacts() {
       }
       return c;
     });
+    // Kontakty dodane ręcznie (nie z arkusza)
+    const sheetKeys = new Set(rawContacts.map(c => c.contact_key));
+    const manualContacts = phoneContactsFromDB
+      .filter(db => db.contact_key?.startsWith("manual_") && !sheetKeys.has(db.contact_key))
+      .map(db => ({
+        contact_key: db.contact_key,
+        sheet: db.sheet || "Ręczne",
+        client_name: db.client_name || "",
+        phone: db.phone || "",
+        address: db.address || "",
+        date: db.date || "",
+        contact_date: db.contact_date || "",
+        contact_calendar: db.contact_calendar || "",
+        status: db.status || "Kontakt do doradcy",
+        comments: db.comments || "",
+        agent: db.agent || "",
+        id: db.id,
+        assigned_user_email: db.assigned_user_email || "",
+        assigned_user_name: db.assigned_user_name || "",
+        assigned_group_id: db.assigned_group_id || "",
+        assigned_group_name: db.assigned_group_name || "",
+      }));
+    return [...fromSheet, ...manualContacts];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -208,17 +228,26 @@ export default function PhoneContacts() {
     },
   });
 
-  // Handlowcy do przypisania – filtruj wg grupy dla liderów
+  // Handlowcy do przypisania – dla group_leadera DODAJ SIEBIE
   const salespeople = useMemo(() => {
-    return allAllowedUsers
+    const list = allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
         if (currentUser?.role === "admin") return true;
-        if (role !== "user" && role !== "team_leader") return false;
+        if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
+
+    // Upewnij się że group_leader widzi siebie na liście
+    if (currentUser?.role === "group_leader") {
+      const alreadyIn = list.some(s => s.email === currentUser.email);
+      if (!alreadyIn) {
+        list.unshift({ email: currentUser.email, name: currentUser.displayName || currentUser.full_name || currentUser.email });
+      }
+    }
+    return list;
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
@@ -228,21 +257,20 @@ export default function PhoneContacts() {
     if (currentUser?.role === "admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
+      if (!myGroupId) return contacts;
       return contacts.filter(c => {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
         if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
-        // Fallback: kontakty przypisane do grupy
         if (c.assigned_group_id === myGroupId) return true;
+        // Ręcznie dodane przez tego lidera
+        if (c.contact_key?.startsWith("manual_")) return true;
         return false;
       });
     }
     if (currentUser?.role === "team_leader") {
-      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
       return contacts.filter(c => {
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
         if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
-        // Nieprzypisane kontakty z arkuszy grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
           return sheetMapping?.group_id === currentUserGroupId;
@@ -262,7 +290,9 @@ export default function PhoneContacts() {
     });
   }, [visibleContacts, search, sheetFilter]);
 
-  // Grupuj po zakładce, potem po dacie
+  // Licznik nieprzypisanych
+  const unassignedCount = useMemo(() => filtered.filter(c => !c.assigned_user_email).length, [filtered]);
+
   const sheetGroups = useMemo(() => {
     const bySheet = {};
     filtered.forEach(c => {
@@ -297,11 +327,9 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi swoje przypisane kontakty
+  // Zwykły użytkownik
   if (!isLeaderOrAdmin) {
-    const myContacts = phoneContactsFromDB.filter(c =>
-      c.assigned_user_email === currentUser?.email
-    );
+    const myContacts = phoneContactsFromDB.filter(c => c.assigned_user_email === currentUser?.email);
     return (
       <div className="space-y-6">
         <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
@@ -330,19 +358,35 @@ export default function PhoneContacts() {
                     <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
                   )}
                 </div>
-                {(c.comments || c.agent) && (
+                <div className="flex gap-2 mt-2">
+                  {(c.comments || c.agent) && (
+                    <button
+                      onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                      className="px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                    >
+                      Szczegóły
+                    </button>
+                  )}
                   <button
-                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
-                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                    onClick={() => setReportModalContact(c)}
+                    className="px-2 py-1 rounded text-xs bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
                   >
-                    Szczegóły
+                    <FileText className="w-3 h-3" /> Raport
                   </button>
-                )}
+                </div>
               </div>
             ))}
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
+        {reportModalContact && (
+          <PhoneContactReportModal
+            contact={reportModalContact}
+            currentUser={currentUser}
+            open={!!reportModalContact}
+            onClose={() => setReportModalContact(null)}
+          />
+        )}
       </div>
     );
   }
@@ -398,18 +442,10 @@ export default function PhoneContacts() {
               const groupId = currentUser.role === "group_leader" ? currentUserGroupId : null;
               if (groupId) {
                 const g = groups.find(gr => gr.id === groupId);
-                await base44.functions.invoke("notifyGroupLeaderNewContacts", {
-                  groupId,
-                  groupName: g?.name || "",
-                  bulkMode: true,
-                });
+                await base44.functions.invoke("notifyGroupLeaderNewContacts", { groupId, groupName: g?.name || "", bulkMode: true });
               } else {
                 for (const g of groups) {
-                  await base44.functions.invoke("notifyGroupLeaderNewContacts", {
-                    groupId: g.id,
-                    groupName: g.name,
-                    bulkMode: true,
-                  });
+                  await base44.functions.invoke("notifyGroupLeaderNewContacts", { groupId: g.id, groupName: g.name, bulkMode: true });
                 }
               }
               setNotifySending(false);
@@ -434,8 +470,15 @@ export default function PhoneContacts() {
         )}
       </div>
 
-      <div className="text-sm text-gray-500">
-        Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> kontaktów
+      {/* Liczniki */}
+      <div className="flex items-center gap-4 text-sm text-gray-500">
+        <span>Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> kontaktów</span>
+        {unassignedCount > 0 && (
+          <span className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-1 font-semibold text-xs">
+            <User className="w-3.5 h-3.5" />
+            {unassignedCount} nieprzypisanych
+          </span>
+        )}
       </div>
 
       {isLoading ? (
@@ -460,6 +503,7 @@ export default function PhoneContacts() {
           {sheetGroups.map(({ sheet, dates }) => {
             const isOpen = expandedSheets[sheet] ?? false;
             const total = dates.reduce((acc, d) => acc + d.items.length, 0);
+            const unassignedInSheet = dates.reduce((acc, d) => acc + d.items.filter(c => !c.assigned_user_email).length, 0);
             return (
               <div key={sheet} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
                 <button
@@ -469,6 +513,9 @@ export default function PhoneContacts() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-800 text-sm">{sheet}</span>
                     <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{total} kontaktów</Badge>
+                    {unassignedInSheet > 0 && (
+                      <Badge className="bg-red-50 text-red-700 border border-red-200 text-[10px]">{unassignedInSheet} nieprzypisanych</Badge>
+                    )}
                   </div>
                   {isOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </button>
@@ -493,7 +540,7 @@ export default function PhoneContacts() {
                             </div>
                             <div className="space-y-2">
                               {items.map((contact, i) => (
-                                <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                <div key={i} className={`rounded-lg p-3 border ${contact.assigned_user_email ? "bg-gray-50 border-gray-100" : "bg-red-50/30 border-red-100"}`}>
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
                                       <div className="font-medium text-gray-800 text-sm truncate">{contact.client_name}</div>
@@ -507,31 +554,28 @@ export default function PhoneContacts() {
                                         <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
                                       )}
                                     </div>
-                                    <div className="shrink-0 flex gap-2 flex-wrap">
+                                    <div className="shrink-0 flex gap-2 flex-wrap justify-end">
+                                      {/* Szczegóły */}
                                       <button
                                         onClick={() => {
-                                          setSelectedDetails({
-                                            agent: contact.agent,
-                                            comments: contact.comments,
-                                            interview_data: contact.interview_data || {}
-                                          });
+                                          setSelectedDetails({ agent: contact.agent, comments: contact.comments, interview_data: contact.interview_data || {} });
                                           setDetailsModalOpen(true);
                                         }}
                                         className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                        title="Pokaż szczegóły"
                                       >
                                         Szczegóły
                                       </button>
 
+                                      {/* Raport */}
                                       <button
                                         onClick={() => setReportModalContact(contact)}
                                         className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
-                                        title="Raporty kontaktu"
                                       >
                                         <FileText className="w-3 h-3" />
                                         Raport
                                       </button>
 
+                                      {/* Przypisanie doradcy */}
                                       {contact.assigned_user_email ? (
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
                                           <User className="w-3 h-3 text-green-600" />
@@ -561,6 +605,7 @@ export default function PhoneContacts() {
                                         )
                                       )}
 
+                                      {/* Przypisanie grupy */}
                                       {canManageGroups && (
                                         <>
                                           {contact.assigned_group_id ? (
@@ -624,9 +669,7 @@ export default function PhoneContacts() {
         open={manualAddOpen}
         onClose={() => setManualAddOpen(false)}
         currentUser={currentUser}
-        onContactAdded={() => {
-          queryClient.invalidateQueries(["phoneContactsDB"]);
-        }}
+        onContactAdded={() => queryClient.invalidateQueries(["phoneContactsDB"])}
       />
     </div>
   );
