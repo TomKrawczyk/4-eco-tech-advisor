@@ -325,6 +325,12 @@ export default function Meetings() {
         if (currentUser?.role === "admin") {
           return true;
         }
+        // group_leader może przypisać do siebie
+        if (currentUser?.role === "group_leader") {
+          if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
+          const uGroupId = u.data?.group_id || u.group_id;
+          return uGroupId === currentUserGroupId;
+        }
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
@@ -617,11 +623,6 @@ export default function Meetings() {
               ? expandedSheets[sheet]
               : false;
             const total = dates.reduce((acc, d) => acc + d.meetings.length, 0);
-            const unassigned = dates.reduce((acc, d) => acc + d.meetings.filter(m => {
-              const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-              const asgn = meetingAssignments.find(a => a.meeting_key === key);
-              return !asgn?.assigned_user_email;
-            }).length, 0);
 
             return (
               <div key={sheet} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
@@ -635,11 +636,6 @@ export default function Meetings() {
                     <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">
                       {total} spotkań
                     </Badge>
-                    {unassigned > 0 && (
-                      <Badge className="bg-red-50 text-red-600 border border-red-200 text-[10px]">
-                        {unassigned} nieprzypisanych
-                      </Badge>
-                    )}
                     {(() => {
                       const mapping = sheetMappings.find(sm => sm.sheet_name === sheet);
                       return mapping?.group_name ? (

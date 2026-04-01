@@ -71,9 +71,13 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.Notification.list(),
     ]);
 
+    // Zwolnieni z raportowania + group_leaderzy (nie są handlowcami)
     const exemptEmails = new Set(
       allowedUsers
-        .filter(u => u.data?.exempt_from_reports || u.exempt_from_reports)
+        .filter(u => {
+          const role = u.data?.role || u.role;
+          return (u.data?.exempt_from_reports || u.exempt_from_reports) || role === 'group_leader';
+        })
         .map(u => u.data?.email || u.email)
     );
 
