@@ -115,7 +115,7 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Zbiór arkuszy przypisanych do grupy bieżącego usera
+  // Zbiór nazw arkuszy przypisanych do grupy bieżącego użytkownika
   const myGroupSheetNames = useMemo(() => {
     if (!currentUserGroupId) return new Set();
     return new Set(
@@ -240,39 +240,37 @@ export default function PhoneContacts() {
     },
   });
 
-  // Handlowcy do przypisania – group_leader widzi siebie na liście
   const salespeople = useMemo(() => {
-    const list = allAllowedUsers
+    return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
         if (currentUser?.role === "admin") return true;
-        if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
+        if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
-
-    if (currentUser?.role === "group_leader") {
-      const alreadyIn = list.some(s => s.email === currentUser.email);
-      if (!alreadyIn) {
-        list.unshift({ email: currentUser.email, name: currentUser.displayName || currentUser.full_name || currentUser.email });
-      }
-    }
-    return list;
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
   // Filtr hierarchiczny wg roli
+  // KLUCZOWA LOGIKA: kontakt jest widoczny dla group_leadera TYLKO jeśli:
+  //   1. Pochodzi z arkusza przypisanego do jego grupy (sheetMapping) ORAZ nie ma przypisanej INNEJ grupy
+  //   2. LUB ma jawnie ustawione assigned_group_id równe jego grupie
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin") return contacts;
 
     if (currentUser?.role === "group_leader") {
       if (!currentUserGroupId) return contacts;
       return contacts.filter(c => {
-        if (myGroupSheetNames.has(c.sheet)) return true;
-        if (c.assigned_group_id === currentUserGroupId) return true;
-        // Ręcznie dodane bez przypisania do grupy – lider widzi swoje
-        if (c.contact_key?.startsWith("manual_") && !c.assigned_group_id) return true;
-        return false;
+        const sheetBelongsToMyGroup = myGroupSheetNames.has(c.sheet);
+        const assignedToOtherGroup = c.assigned_group_id && c.assigned_group_id !== currentUserGroupId;
+        const assignedToMyGroup = c.assigned_group_id === currentUserGroupId;
+
+        // Jeśli kontakt jest jawnie przypisany do INNEJ grupy – nie pokazuj
+        if (assignedToOtherGroup) return false;
+
+        // Jeśli arkusz należy do mojej grupy LUB kontakt jest jawnie przypisany do mojej grupy
+        return sheetBelongsToMyGroup || assignedToMyGroup;
       });
     }
 
@@ -300,7 +298,6 @@ export default function PhoneContacts() {
   }, [visibleContacts, search, sheetFilter]);
 
   const unassignedCount = useMemo(() => filtered.filter(c => !c.assigned_user_email).length, [filtered]);
-
   const allSheetTabs = useMemo(() => [...new Set(filtered.map(c => c.sheet).filter(Boolean))].sort(), [filtered]);
 
   const sheetGroups = useMemo(() => {
@@ -337,7 +334,7 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik
+  // Zwykły użytkownik widzi swoje przypisane kontakty
   if (!isLeaderOrAdmin) {
     const myContacts = phoneContactsFromDB.filter(c => c.assigned_user_email === currentUser?.email);
     return (
@@ -368,7 +365,7 @@ export default function PhoneContacts() {
                     <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
                   )}
                 </div>
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 mt-2 flex-wrap">
                   {(c.comments || c.agent) && (
                     <button
                       onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
@@ -480,7 +477,6 @@ export default function PhoneContacts() {
         )}
       </div>
 
-      {/* Liczniki */}
       <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
         <span>Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> kontaktów</span>
         {unassignedCount > 0 && (
@@ -520,7 +516,7 @@ export default function PhoneContacts() {
                   onClick={() => toggleSheet(sheet)}
                   className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-gray-800 text-sm">{sheet}</span>
                     <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{total} kontaktów</Badge>
                     {unassignedInSheet > 0 && (
@@ -623,7 +619,7 @@ export default function PhoneContacts() {
                                       )}
 
                                       {/* Przypisanie grupy – tylko admin */}
-                                      {canManageGroups && (
+                                      {currentUser?.role === "admin" && (
                                         <>
                                           {contact.assigned_group_id ? (
                                             <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
@@ -634,21 +630,19 @@ export default function PhoneContacts() {
                                               >×</button>
                                             </div>
                                           ) : (
-                                            currentUser?.role === "admin" && (
-                                              <Select onValueChange={(val) => {
-                                                const g = groups.find(gr => gr.id === val);
-                                                if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
-                                              }}>
-                                                <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
-                                                  <SelectValue placeholder="Przypisz grupę" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                  {groups.map(g => (
-                                                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                                  ))}
-                                                </SelectContent>
-                                              </Select>
-                                            )
+                                            <Select onValueChange={(val) => {
+                                              const g = groups.find(gr => gr.id === val);
+                                              if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
+                                            }}>
+                                              <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
+                                                <SelectValue placeholder="Przypisz grupę" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {groups.map(g => (
+                                                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
                                           )}
                                         </>
                                       )}
