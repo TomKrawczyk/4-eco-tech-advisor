@@ -619,8 +619,8 @@ export default function Meetings() {
             const total = dates.reduce((acc, d) => acc + d.meetings.length, 0);
             const unassigned = dates.reduce((acc, d) => acc + d.meetings.filter(m => {
               const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-              const assignment = meetingAssignments.find(a => a.meeting_key === key);
-              return !assignment?.assigned_user_email;
+              const asgn = meetingAssignments.find(a => a.meeting_key === key);
+              return !asgn?.assigned_user_email;
             }).length, 0);
 
             return (
