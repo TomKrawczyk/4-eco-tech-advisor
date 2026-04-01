@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -264,45 +263,35 @@ function MeetingDetail({ report, onBack, onDelete, onEdit }) {
 
 export default function MeetingReports() {
   const [search, setSearch] = useState("");
+  const [userFilter, setUserFilter] = useState("all");
   const [selectedReport, setSelectedReport] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [allowedUsers, setAllowedUsers] = useState([]);
   const queryClient = useQueryClient();
 
-  const location = useLocation();
+  // Sprawdź prefill z URL (po przejściu ze spotkania)
+  const urlParams = new URLSearchParams(window.location.search);
+  const prefill = urlParams.get("from_meeting") === "1" ? {
+    client_name: urlParams.get("prefill_client_name") || "",
+    client_phone: urlParams.get("prefill_client_phone") || "",
+    client_address: urlParams.get("prefill_client_address") || "",
+    meeting_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
+    meeting_time: urlParams.get("prefill_meeting_time") || "",
+  } : null;
 
-  const parsePrefill = (search) => {
-    const p = new URLSearchParams(search);
-    if (p.get("from_meeting") !== "1") return null;
-    return {
-      client_name: p.get("prefill_client_name") || "",
-      client_phone: p.get("prefill_client_phone") || "",
-      client_address: p.get("prefill_client_address") || "",
-      meeting_date: p.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
-      meeting_time: p.get("prefill_meeting_time") || "",
-    };
-  };
-
-  const [prefillData, setPrefillData] = useState(() => parsePrefill(location.search));
-  const [view, setView] = useState(() => parsePrefill(location.search) ? "create" : "list");
-
-  useEffect(() => {
-    const data = parsePrefill(location.search);
-    if (data) {
-      setPrefillData(data);
-      setView("create");
-    }
-  }, [location.search]);
+  const [view, setView] = useState(prefill ? "create" : "list");
 
   useEffect(() => {
     const fetchUser = async () => {
       const user = await base44.auth.me();
-      const allowedUsers = await base44.entities.AllowedUser.list();
-      const ua = allowedUsers.find(a => (a.data?.email || a.email) === user.email);
+      const aus = await base44.entities.AllowedUser.list();
+      const ua = aus.find(a => (a.data?.email || a.email) === user.email);
       if (ua) {
         user.role = ua.data?.role || ua.role;
         user.displayName = ua.data?.name || ua.name;
       }
       setCurrentUser(user);
+      setAllowedUsers(aus);
     };
     fetchUser();
   }, []);
@@ -344,24 +333,33 @@ export default function MeetingReports() {
     },
   });
 
-  const filtered = reports.filter(r =>
-    (r.client_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.client_address || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.client_phone || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
+
+  const reportAuthors = isLeaderOrAdmin
+    ? [...new Map(reports.filter(r => r.author_email).map(r => [r.author_email, r.author_name || r.author_email])).entries()]
+    : [];
+
+  const filtered = reports.filter(r => {
+    const matchSearch =
+      (r.client_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.client_address || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.client_phone || "").toLowerCase().includes(search.toLowerCase());
+    const matchUser = !isLeaderOrAdmin || userFilter === "all" || r.author_email === userFilter;
+    return matchSearch && matchUser;
+  });
 
   if (view === "create") {
     return (
       <div className="space-y-6">
         <PageHeader title="Nowy raport po spotkaniu" subtitle="Uzupełnij dane ze spotkania z klientem" />
-        {prefillData && (
+        {prefill && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-blue-700">
             Dane klienta zostały automatycznie uzupełnione ze spotkania.
           </div>
         )}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <MeetingForm
-            initialData={prefillData || undefined}
+            initialData={prefill || undefined}
             onSave={(data) => createMutation.mutate(data)}
             onCancel={() => setView("list")}
             saving={createMutation.isPending}
@@ -402,8 +400,8 @@ export default function MeetingReports() {
     <div className="space-y-6">
       <PageHeader title="Raporty po spotkaniach" subtitle="Dokumentacja spotkań z klientami" />
 
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap gap-2">
+        <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <Input
             value={search}
@@ -412,6 +410,18 @@ export default function MeetingReports() {
             className="pl-10 h-11"
           />
         </div>
+        {isLeaderOrAdmin && reportAuthors.length > 0 && (
+          <select
+            value={userFilter}
+            onChange={e => setUserFilter(e.target.value)}
+            className="border border-gray-200 rounded-md px-3 h-11 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="all">Wszyscy użytkownicy</option>
+            {reportAuthors.map(([email, name]) => (
+              <option key={email} value={email}>{name}</option>
+            ))}
+          </select>
+        )}
         <Button onClick={() => setView("create")} className="bg-green-600 hover:bg-green-700 gap-2 shrink-0">
           <Plus className="w-4 h-4" /> Nowy raport
         </Button>
@@ -493,6 +503,9 @@ export default function MeetingReports() {
                           {report.author_name.charAt(0)}
                         </div>
                         <span className="text-xs text-gray-400">{report.author_name}</span>
+                        {report.author_email && (
+                          <span className="text-xs text-gray-400">({report.author_email})</span>
+                        )}
                       </div>
                     )}
                   </div>
