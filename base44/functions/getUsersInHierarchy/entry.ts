@@ -23,16 +23,28 @@ Deno.serve(async (req) => {
             // Admin widzi wszystkich
             userEmails = allowedUsers.map(u => u.data?.email || u.email);
         } else if (role === 'group_leader') {
-            // Group leader widzi siebie, swoich team leaderów i ich użytkowników
+            // Group leader widzi wszystkich użytkowników w swojej grupie (po group_id)
+            // oraz przez managed_users (stary mechanizm)
             userEmails = [user.email];
-            
+
+            const groupId = currentUserData.data?.group_id || currentUserData.group_id;
+
+            // Zbierz wszystkich z tej samej grupy
+            if (groupId) {
+                allowedUsers.forEach(u => {
+                    const uGroupId = u.data?.group_id || u.group_id;
+                    if (uGroupId === groupId) {
+                        userEmails.push(u.data?.email || u.email);
+                    }
+                });
+            }
+
+            // Fallback: managed_users (stary mechanizm)
             const managedUsers = currentUserData.data?.managed_users || currentUserData.managed_users || [];
             managedUsers.forEach(managedId => {
                 const managedUser = allowedUsers.find(u => u.id === managedId);
                 if (managedUser) {
                     userEmails.push(managedUser.data?.email || managedUser.email);
-                    
-                    // Jeśli to team leader, dodaj jego użytkowników
                     const mRole = managedUser.data?.role || managedUser.role;
                     if (mRole === 'team_leader') {
                         const teamUsers = managedUser.data?.managed_users || managedUser.managed_users || [];
