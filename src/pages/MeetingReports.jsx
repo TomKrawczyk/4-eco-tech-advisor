@@ -263,10 +263,8 @@ function MeetingDetail({ report, onBack, onDelete, onEdit }) {
 
 export default function MeetingReports() {
   const [search, setSearch] = useState("");
-  const [userFilter, setUserFilter] = useState("all");
   const [selectedReport, setSelectedReport] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [allowedUsers, setAllowedUsers] = useState([]);
   const queryClient = useQueryClient();
 
   // Sprawdź prefill z URL (po przejściu ze spotkania)
@@ -284,21 +282,20 @@ export default function MeetingReports() {
   useEffect(() => {
     const fetchUser = async () => {
       const user = await base44.auth.me();
-      const aus = await base44.entities.AllowedUser.list();
-      const ua = aus.find(a => (a.data?.email || a.email) === user.email);
+      const allowedUsers = await base44.entities.AllowedUser.list();
+      const ua = allowedUsers.find(a => (a.data?.email || a.email) === user.email);
       if (ua) {
         user.role = ua.data?.role || ua.role;
         user.displayName = ua.data?.name || ua.name;
       }
       setCurrentUser(user);
-      setAllowedUsers(aus);
     };
     fetchUser();
   }, []);
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["meetingReports"],
-    queryFn: () => base44.entities.MeetingReport.list("-created_date", 100),
+    queryFn: () => base44.entities.MeetingReport.list("-created_date", 2000),
     enabled: !!currentUser,
   });
 
@@ -333,20 +330,11 @@ export default function MeetingReports() {
     },
   });
 
-  const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
-
-  const reportAuthors = isLeaderOrAdmin
-    ? [...new Map(reports.filter(r => r.author_email).map(r => [r.author_email, r.author_name || r.author_email])).entries()]
-    : [];
-
-  const filtered = reports.filter(r => {
-    const matchSearch =
-      (r.client_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (r.client_address || "").toLowerCase().includes(search.toLowerCase()) ||
-      (r.client_phone || "").toLowerCase().includes(search.toLowerCase());
-    const matchUser = !isLeaderOrAdmin || userFilter === "all" || r.author_email === userFilter;
-    return matchSearch && matchUser;
-  });
+  const filtered = reports.filter(r =>
+    (r.client_name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (r.client_address || "").toLowerCase().includes(search.toLowerCase()) ||
+    (r.client_phone || "").toLowerCase().includes(search.toLowerCase())
+  );
 
   if (view === "create") {
     return (
@@ -400,8 +388,8 @@ export default function MeetingReports() {
     <div className="space-y-6">
       <PageHeader title="Raporty po spotkaniach" subtitle="Dokumentacja spotkań z klientami" />
 
-      <div className="flex flex-wrap gap-2">
-        <div className="relative flex-1 min-w-[180px]">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <Input
             value={search}
@@ -410,18 +398,6 @@ export default function MeetingReports() {
             className="pl-10 h-11"
           />
         </div>
-        {isLeaderOrAdmin && reportAuthors.length > 0 && (
-          <select
-            value={userFilter}
-            onChange={e => setUserFilter(e.target.value)}
-            className="border border-gray-200 rounded-md px-3 h-11 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="all">Wszyscy użytkownicy</option>
-            {reportAuthors.map(([email, name]) => (
-              <option key={email} value={email}>{name}</option>
-            ))}
-          </select>
-        )}
         <Button onClick={() => setView("create")} className="bg-green-600 hover:bg-green-700 gap-2 shrink-0">
           <Plus className="w-4 h-4" /> Nowy raport
         </Button>
@@ -503,9 +479,6 @@ export default function MeetingReports() {
                           {report.author_name.charAt(0)}
                         </div>
                         <span className="text-xs text-gray-400">{report.author_name}</span>
-                        {report.author_email && (
-                          <span className="text-xs text-gray-400">({report.author_email})</span>
-                        )}
                       </div>
                     )}
                   </div>
