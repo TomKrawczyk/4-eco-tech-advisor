@@ -119,11 +119,10 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
     }
   };
 
-  const isAdminBlocked = (() => {
-    const until = user?.data?.blocked_until || user?.blocked_until;
-    if (!until) return false;
-    return new Date(until) >= new Date(new Date().toISOString().split("T")[0]);
-  })();
+  const blockedUntilValue = user?.data?.blocked_until || user?.blocked_until || "";
+  const isAdminBlocked = blockedUntilValue
+    ? new Date(blockedUntilValue) >= new Date(new Date().toISOString().split("T")[0])
+    : false;
 
   const handleAdminBlock = async () => {
     if (!blockUntilDate) return;
@@ -134,6 +133,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
         blocked_until: blockUntilDate,
         blocked_reason: blockReason || "Blokada administracyjna",
       });
+      sessionStorage.removeItem('layout_user_cache');
       toast.success(`Użytkownik zablokowany do ${blockUntilDate}`);
       setShowBlockDialog(false);
       setBlockUntilDate("");
@@ -154,6 +154,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
         blocked_until: "",
         blocked_reason: "",
       });
+      sessionStorage.removeItem('layout_user_cache');
       toast.success("Blokada administracyjna zdjęta");
       onRefresh();
     } catch (error) {

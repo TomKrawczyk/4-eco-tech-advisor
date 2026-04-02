@@ -222,11 +222,12 @@ export default function UserManagement() {
     }
   };
 
-  // Synchronizuj editingUser ze świeżymi danymi po każdym odświeżeniu allowedUsers
+  // Synchronizuj editingUser ze świeżymi danymi po odświeżeniu allowedUsers
   React.useEffect(() => {
-    if (editingUser) {
-      const fresh = allowedUsers.find(u => u.id === editingUser.id);
-      if (fresh) setEditingUser(fresh);
+    if (!editingUser) return;
+    const fresh = allowedUsers.find(u => u.id === editingUser.id);
+    if (fresh && (fresh.data?.blocked_until || fresh.blocked_until || "") !== (editingUser.data?.blocked_until || editingUser.blocked_until || "")) {
+      setEditingUser(fresh);
     }
   }, [allowedUsers]);
 
