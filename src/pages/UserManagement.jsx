@@ -222,26 +222,15 @@ export default function UserManagement() {
     }
   };
 
-  // Synchronizuj editingUser ze świeżymi danymi
-  React.useEffect(() => {
-    if (!editingUser) return;
-    const fresh = allowedUsers.find(u => u.id === editingUser.id);
-    if (fresh && JSON.stringify(fresh) !== JSON.stringify(editingUser)) {
-      setEditingUser(fresh);
-    }
-  }, [allowedUsers]);
-
   const handleEditUser = (userId, updates) => {
     const user = allowedUsers.find(u => u.id === userId);
     const oldAssignedTo = user.data?.assigned_to || user.assigned_to;
     updateUserMutation.mutate({ userId, updates, oldAssignedTo });
   };
 
-  // Przełącz blokadę automatyczną (is_blocked) — niezależnie od blokady admina
   const toggleAutoBlockMutation = useMutation({
     mutationFn: async (user) => {
       const isBlocked = user.data?.is_blocked || user.is_blocked || false;
-      // Nie pozwól odblokować gdy aktywna blokada admina (blocked_until)
       const blockedUntil = user.data?.blocked_until || user.blocked_until;
       const todayStr = new Date().toISOString().split("T")[0];
       if (isBlocked && blockedUntil && blockedUntil >= todayStr) {
@@ -619,7 +608,6 @@ export default function UserManagement() {
                         "Użytkownik"
                       }
                     </span>
-                    {/* Znaczniki blokad */}
                     {(() => {
                       const blockedUntil = user.data?.blocked_until || user.blocked_until;
                       const todayStr = new Date().toISOString().split("T")[0];
@@ -639,14 +627,11 @@ export default function UserManagement() {
                   )}
                 </div>
                 <div className="flex gap-1 items-center">
-                  {/* Przycisk blokady auto (is_blocked) */}
-                  {(() => {
+                  {(user.data?.role || user.role) !== "admin" && (() => {
                     const isAutoBlocked = user.data?.is_blocked || user.is_blocked || false;
                     const blockedUntil = user.data?.blocked_until || user.blocked_until;
                     const todayStr = new Date().toISOString().split("T")[0];
                     const adminBlocked = blockedUntil && blockedUntil >= todayStr;
-                    // Nie pokazuj przycisku dla adminów
-                    if ((user.data?.role || user.role) === "admin") return null;
                     return (
                       <Button
                         variant="ghost"
@@ -654,11 +639,11 @@ export default function UserManagement() {
                         onClick={() => toggleAutoBlockMutation.mutate(user)}
                         disabled={toggleAutoBlockMutation.isPending || !!adminBlocked}
                         className="shrink-0"
-                        title={adminBlocked ? "Blokada administracyjna aktywna — edytuj użytkownika" : isAutoBlocked ? "Odblokuj (auto-blokada)" : "Zablokuj (auto-blokada)"}
+                        title={adminBlocked ? "Blokada administracyjna aktywna — edytuj użytkownika" : isAutoBlocked ? "Odblokuj" : "Zablokuj"}
                       >
                         {isAutoBlocked
                           ? <LockOpen className="w-4 h-4 text-orange-500" />
-                          : <Lock className="w-4 h-4 text-gray-400 hover:text-orange-500" />
+                          : <Lock className="w-4 h-4 text-gray-400" />
                         }
                       </Button>
                     );
@@ -725,7 +710,6 @@ export default function UserManagement() {
         open={!!editingUser}
         onClose={() => setEditingUser(null)}
         onSave={handleEditUser}
-        onRefresh={() => queryClient.invalidateQueries(["allowedUsers"])}
         allUsers={allowedUsers}
         groups={groups}
       />
