@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, Lock, LockOpen } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
@@ -222,11 +222,11 @@ export default function UserManagement() {
     }
   };
 
-  // Synchronizuj editingUser ze świeżymi danymi po odświeżeniu allowedUsers
+  // Synchronizuj editingUser ze świeżymi danymi
   React.useEffect(() => {
     if (!editingUser) return;
     const fresh = allowedUsers.find(u => u.id === editingUser.id);
-    if (fresh && (fresh.data?.blocked_until || fresh.blocked_until || "") !== (editingUser.data?.blocked_until || editingUser.blocked_until || "")) {
+    if (fresh && JSON.stringify(fresh) !== JSON.stringify(editingUser)) {
       setEditingUser(fresh);
     }
   }, [allowedUsers]);
@@ -236,6 +236,32 @@ export default function UserManagement() {
     const oldAssignedTo = user.data?.assigned_to || user.assigned_to;
     updateUserMutation.mutate({ userId, updates, oldAssignedTo });
   };
+
+  // Przełącz blokadę automatyczną (is_blocked) — niezależnie od blokady admina
+  const toggleAutoBlockMutation = useMutation({
+    mutationFn: async (user) => {
+      const isBlocked = user.data?.is_blocked || user.is_blocked || false;
+      // Nie pozwól odblokować gdy aktywna blokada admina (blocked_until)
+      const blockedUntil = user.data?.blocked_until || user.blocked_until;
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (isBlocked && blockedUntil && blockedUntil >= todayStr) {
+        throw new Error("Aktywna blokada administracyjna — usuń ją w edycji użytkownika.");
+      }
+      await base44.entities.AllowedUser.update(user.id, {
+        is_blocked: !isBlocked,
+        blocked_reason: isBlocked ? "" : "Zablokowany ręcznie przez administratora",
+        missing_reports_count: isBlocked ? 0 : (user.data?.missing_reports_count || user.missing_reports_count || 0),
+      });
+      sessionStorage.removeItem('layout_user_cache');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["allowedUsers"]);
+      toast.success("Status blokady zaktualizowany");
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
 
   const approveRequestMutation = useMutation({
     mutationFn: async (request) => {
@@ -577,7 +603,7 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
                     <span className={`text-xs px-2 py-0.5 rounded w-fit ${
@@ -593,6 +619,16 @@ export default function UserManagement() {
                         "Użytkownik"
                       }
                     </span>
+                    {/* Znaczniki blokad */}
+                    {(() => {
+                      const blockedUntil = user.data?.blocked_until || user.blocked_until;
+                      const todayStr = new Date().toISOString().split("T")[0];
+                      const adminBlocked = blockedUntil && blockedUntil >= todayStr;
+                      const autoBlocked = user.data?.is_blocked || user.is_blocked;
+                      if (adminBlocked) return <span className="text-xs px-2 py-0.5 rounded w-fit bg-red-100 text-red-700 flex items-center gap-1"><Lock className="w-2.5 h-2.5" />Admin do {blockedUntil}</span>;
+                      if (autoBlocked) return <span className="text-xs px-2 py-0.5 rounded w-fit bg-orange-100 text-orange-700 flex items-center gap-1"><Lock className="w-2.5 h-2.5" />Auto-blokada</span>;
+                      return null;
+                    })()}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
@@ -602,7 +638,31 @@ export default function UserManagement() {
                     <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.data?.notes || user.notes}</p>
                   )}
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 items-center">
+                  {/* Przycisk blokady auto (is_blocked) */}
+                  {(() => {
+                    const isAutoBlocked = user.data?.is_blocked || user.is_blocked || false;
+                    const blockedUntil = user.data?.blocked_until || user.blocked_until;
+                    const todayStr = new Date().toISOString().split("T")[0];
+                    const adminBlocked = blockedUntil && blockedUntil >= todayStr;
+                    // Nie pokazuj przycisku dla adminów
+                    if ((user.data?.role || user.role) === "admin") return null;
+                    return (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => toggleAutoBlockMutation.mutate(user)}
+                        disabled={toggleAutoBlockMutation.isPending || !!adminBlocked}
+                        className="shrink-0"
+                        title={adminBlocked ? "Blokada administracyjna aktywna — edytuj użytkownika" : isAutoBlocked ? "Odblokuj (auto-blokada)" : "Zablokuj (auto-blokada)"}
+                      >
+                        {isAutoBlocked
+                          ? <LockOpen className="w-4 h-4 text-orange-500" />
+                          : <Lock className="w-4 h-4 text-gray-400 hover:text-orange-500" />
+                        }
+                      </Button>
+                    );
+                  })()}
                   <Button
                     variant="ghost"
                     size="icon"
