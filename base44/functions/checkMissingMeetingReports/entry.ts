@@ -177,7 +177,17 @@ Deno.serve(async (req) => {
       const ua = allowedUsers.find(u => (u.data?.email || u.email) === email);
       if (ua) {
         const currentlyBlocked = ua.data?.is_blocked || ua.is_blocked || false;
-        if (shouldBlock && !currentlyBlocked) {
+        // Sprawdź czy aktywna blokada administracyjna — jeśli tak, nie zmieniamy is_blocked
+        const blockedUntil = ua.data?.blocked_until || ua.blocked_until;
+        const todayDateStr = today.toISOString().split('T')[0];
+        const hasAdminBlock = blockedUntil && blockedUntil >= todayDateStr;
+
+        if (hasAdminBlock) {
+          // Tylko aktualizuj licznik braków, nie ruszaj blokady admina
+          await base44.asServiceRole.entities.AllowedUser.update(ua.id, {
+            missing_reports_count: missing.length,
+          });
+        } else if (shouldBlock && !currentlyBlocked) {
           await base44.asServiceRole.entities.AllowedUser.update(ua.id, {
             is_blocked: true,
             blocked_reason: `Brak raportów po ${missing.length} spotkaniach (max opóźnienie: ${maxDays} dni)`,
@@ -185,7 +195,7 @@ Deno.serve(async (req) => {
           });
           usersBlocked++;
         } else if (!shouldBlock && currentlyBlocked) {
-          // Odblokuj jeśli wszystkie raporty zostały złożone (nie powinno tu wejść, ale na wszelki wypadek)
+          // Odblokuj jeśli wszystkie raporty zostały złożone
           await base44.asServiceRole.entities.AllowedUser.update(ua.id, {
             is_blocked: false,
             blocked_reason: '',
@@ -235,11 +245,17 @@ Deno.serve(async (req) => {
     }
 
     // Odblokuj użytkowników którzy już złożyli wszystkie raporty
+    // (ale NIE tych z aktywną blokadą administracyjną blocked_until)
     for (const ua of allowedUsers) {
       const email = ua.data?.email || ua.email;
       const currentlyBlocked = ua.data?.is_blocked || ua.is_blocked || false;
       if (!currentlyBlocked) continue;
       if (missingByUser[email]) continue; // nadal ma braki
+
+      // Sprawdź czy blokada administracyjna jest aktywna — jeśli tak, nie dotykaj is_blocked
+      const blockedUntil = ua.data?.blocked_until || ua.blocked_until;
+      const todayDateStr = today.toISOString().split('T')[0];
+      if (blockedUntil && blockedUntil >= todayDateStr) continue; // blokada admina aktywna
 
       await base44.asServiceRole.entities.AllowedUser.update(ua.id, {
         is_blocked: false,
