@@ -9,7 +9,7 @@ import { base44 } from "@/api/base44Client";
 import { Key, Loader2, RotateCcw, Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 
-export default function EditUserDialog({ user, open, onClose, onSave, allUsers, groups }) {
+export default function EditUserDialog({ user, open, onClose, onSave, onRefresh, allUsers, groups }) {
   const [formData, setFormData] = useState({
     name: "",
     role: "user",
@@ -138,6 +138,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
       setShowBlockDialog(false);
       setBlockUntilDate("");
       setBlockReason("");
+      onRefresh();
     } catch (error) {
       toast.error("Błąd: " + error.message);
     } finally {
@@ -154,6 +155,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
         blocked_reason: "",
       });
       toast.success("Blokada administracyjna zdjęta");
+      onRefresh();
     } catch (error) {
       toast.error("Błąd: " + error.message);
     } finally {
