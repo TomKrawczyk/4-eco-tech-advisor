@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Key, Loader2, RotateCcw } from "lucide-react";
+import { Key, Loader2, RotateCcw, Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EditUserDialog({ user, open, onClose, onSave, allUsers, groups }) {
@@ -21,6 +21,10 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
   const [showResetReports, setShowResetReports] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
   const [resettingReports, setResettingReports] = useState(false);
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
+  const [blockUntilDate, setBlockUntilDate] = useState("");
+  const [blockReason, setBlockReason] = useState("");
+  const [savingBlock, setSavingBlock] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -112,6 +116,48 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
       toast.error('Błąd: ' + error.message);
     } finally {
       setResettingReports(false);
+    }
+  };
+
+  const isAdminBlocked = (() => {
+    const until = user?.data?.blocked_until || user?.blocked_until;
+    if (!until) return false;
+    return new Date(until) >= new Date(new Date().toISOString().split("T")[0]);
+  })();
+
+  const handleAdminBlock = async () => {
+    if (!blockUntilDate) return;
+    setSavingBlock(true);
+    try {
+      await base44.entities.AllowedUser.update(user.id, {
+        is_blocked: true,
+        blocked_until: blockUntilDate,
+        blocked_reason: blockReason || "Blokada administracyjna",
+      });
+      toast.success(`Użytkownik zablokowany do ${blockUntilDate}`);
+      setShowBlockDialog(false);
+      setBlockUntilDate("");
+      setBlockReason("");
+    } catch (error) {
+      toast.error("Błąd: " + error.message);
+    } finally {
+      setSavingBlock(false);
+    }
+  };
+
+  const handleAdminUnblock = async () => {
+    setSavingBlock(true);
+    try {
+      await base44.entities.AllowedUser.update(user.id, {
+        is_blocked: false,
+        blocked_until: "",
+        blocked_reason: "",
+      });
+      toast.success("Blokada administracyjna zdjęta");
+    } catch (error) {
+      toast.error("Błąd: " + error.message);
+    } finally {
+      setSavingBlock(false);
     }
   };
 
@@ -213,8 +259,17 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
             />
           </div>
         </div>
-        <DialogFooter className="flex items-center justify-between">
-          <div className="flex gap-2">
+        {isAdminBlocked && (
+          <div className="mx-0 mb-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
+            <Lock className="w-4 h-4 shrink-0" />
+            <span>
+              Blokada administracyjna aktywna do <strong>{user?.data?.blocked_until || user?.blocked_until}</strong>
+              {(user?.data?.blocked_reason || user?.blocked_reason) && ` — ${user?.data?.blocked_reason || user?.blocked_reason}`}
+            </span>
+          </div>
+        )}
+        <DialogFooter className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap">
             <Button 
               variant="outline" 
               onClick={() => setShowResetReports(true)}
@@ -232,6 +287,26 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
               <Key className="w-4 h-4 mr-2" />
               Resetuj hasło
             </Button>
+            {isAdminBlocked ? (
+              <Button
+                variant="outline"
+                onClick={handleAdminUnblock}
+                disabled={savingBlock}
+                className="text-green-600 border-green-200 hover:bg-green-50"
+              >
+                {savingBlock ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LockOpen className="w-4 h-4 mr-2" />}
+                Odblokuj
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => setShowBlockDialog(true)}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                <Lock className="w-4 h-4 mr-2" />
+                Zablokuj czasowo
+              </Button>
+            )}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Anuluj</Button>
@@ -255,6 +330,50 @@ export default function EditUserDialog({ user, open, onClose, onSave, allUsers, 
               className="bg-blue-600 hover:bg-blue-700"
             >
               Tak, zeruj raporty
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Blokada czasowa użytkownika</AlertDialogTitle>
+            <AlertDialogDescription>
+              Użytkownik <strong>{user?.data?.name || user?.name}</strong> zostanie zablokowany do wybranej daty włącznie. Blokada działa niezależnie od raportów – nawet jeśli uzupełni wszystkie, nie odzyska dostępu przed tą datą.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-sm mb-1 block">Zablokuj do daty *</Label>
+              <input
+                type="date"
+                value={blockUntilDate}
+                onChange={e => setBlockUntilDate(e.target.value)}
+                min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <div>
+              <Label className="text-sm mb-1 block">Powód blokady (opcjonalnie)</Label>
+              <input
+                type="text"
+                value={blockReason}
+                onChange={e => setBlockReason(e.target.value)}
+                placeholder="np. naruszenie regulaminu, nieobecność..."
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setBlockUntilDate(""); setBlockReason(""); }}>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleAdminBlock}
+              disabled={!blockUntilDate || savingBlock}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {savingBlock && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Zablokuj
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

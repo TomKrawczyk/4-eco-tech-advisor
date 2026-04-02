@@ -1,0 +1,78 @@
+{
+  "name": "AllowedUser",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email u\u017cytkownika z dost\u0119pem"
+    },
+    "name": {
+      "type": "string",
+      "description": "Imi\u0119 u\u017cytkownika"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "user",
+        "team_leader",
+        "group_leader",
+        "admin"
+      ],
+      "default": "user",
+      "description": "Rola u\u017cytkownika"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notatki o u\u017cytkowniku"
+    },
+    "group_id": {
+      "type": "string",
+      "description": "ID grupy do kt\u00f3rej nale\u017cy u\u017cytkownik"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "ID team leadera lub group leadera, do kt\u00f3rego przypisany jest u\u017cytkownik"
+    },
+    "managed_users": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista ID u\u017cytkownik\u00f3w zarz\u0105dzanych przez team/group leadera"
+    },
+    "last_activity": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Ostatnia aktywno\u015b\u0107 u\u017cytkownika"
+    },
+    "is_blocked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy u\u017cytkownik jest zablokowany za brak raport\u00f3w"
+    },
+    "blocked_reason": {
+      "type": "string",
+      "description": "Pow\u00f3d blokady"
+    },
+    "blocked_until": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do kiedy obowi\u0105zuje blokada administracyjna (YYYY-MM-DD). Je\u015bli ustawiona i nie min\u0119\u0142a, dost\u0119p jest zablokowany niezale\u017cnie od raport\u00f3w."
+    },
+    "missing_reports_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Liczba brakuj\u0105cych raport\u00f3w"
+    },
+    "exempt_from_reports": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy u\u017cytkownik jest zwolniony z obowi\u0105zku raportowania (system pomija braki)"
+    }
+  },
+  "required": [
+    "email",
+    "name"
+  ]
+}

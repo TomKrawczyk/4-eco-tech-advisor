@@ -132,7 +132,11 @@ export default function Layout({ children, currentPageName }) {
         if (userAccess) {
           user.role = userAccess.data?.role || userAccess.role;
           user.displayName = userAccess.data?.name || userAccess.name;
-          user.is_blocked = (userAccess.data?.is_blocked || userAccess.is_blocked) === true;
+          const blockedUntil = userAccess.data?.blocked_until || userAccess.blocked_until;
+          const adminBlocked = blockedUntil && new Date(blockedUntil) >= new Date(new Date().toISOString().split("T")[0]);
+          user.blocked_until = blockedUntil || null;
+          user.blocked_reason = userAccess.data?.blocked_reason || userAccess.blocked_reason || "";
+          user.is_blocked = adminBlocked || (userAccess.data?.is_blocked || userAccess.is_blocked) === true;
 
           let pendingTraining = null;
           if (user.role !== 'admin') {

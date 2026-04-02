@@ -23,7 +23,14 @@ export default function BlockedUserScreen({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [reportContact, setReportContact] = useState(null);
 
+  // Sprawdź czy to blokada administracyjna (blocked_until ustawione i data nie minęła)
+  const adminBlockedUntil = currentUser?.blocked_until;
+  const isAdminBlocked = adminBlockedUntil && new Date(adminBlockedUntil) >= new Date(new Date().toISOString().split("T")[0]);
+  const adminBlockReason = currentUser?.blocked_reason;
+
   useEffect(() => {
+    // Jeśli blokada administracyjna — nie sprawdzaj raportów
+    if (isAdminBlocked) { setLoading(false); return; }
     if (!currentUser?.email) return;
     const load = async () => {
       const today = startOfDay(new Date());
@@ -97,7 +104,7 @@ export default function BlockedUserScreen({ currentUser }) {
       setMissingPhoneContacts(missingPhones);
       setLoading(false);
 
-      // Jeśli brak zaległości → odblokuj konto natychmiast
+      // Jeśli brak zaległości → odblokuj konto natychmiast (tylko gdy NIE ma blokady admina)
       if (missing.length === 0 && missingPhones.length === 0) {
         try {
           const allowedUsers = await base44.entities.AllowedUser.filter({ email: currentUser.email });
@@ -116,6 +123,29 @@ export default function BlockedUserScreen({ currentUser }) {
     };
     load();
   }, [currentUser?.email]);
+
+  if (isAdminBlocked) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Konto zablokowane</h2>
+          <p className="text-gray-600 text-sm mb-4">
+            Twój dostęp do aplikacji został zablokowany przez administratora.
+          </p>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800 space-y-1">
+            <div><span className="font-semibold">Zablokowany do:</span> {new Date(adminBlockedUntil).toLocaleDateString("pl-PL", { day: "2-digit", month: "long", year: "numeric" })}</div>
+            {adminBlockReason && <div><span className="font-semibold">Powód:</span> {adminBlockReason}</div>}
+          </div>
+          <p className="text-center text-xs text-gray-400 mt-4">
+            Skontaktuj się z administratorem w razie pytań.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center px-4">
