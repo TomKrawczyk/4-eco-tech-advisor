@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -293,23 +293,27 @@ export default function MeetingReports() {
     fetchUser();
   }, []);
 
-  const { data: allReports = [], isLoading } = useQuery({
-    queryKey: ["meetingReports"],
-    queryFn: () => base44.entities.MeetingReport.list("-created_date", 200),
+  const { data: hierarchyEmails = null } = useQuery({
+    queryKey: ["hierarchyEmails", currentUser?.email],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("getUsersInHierarchy", {});
+      return res.data?.userEmails || [currentUser?.email];
+    },
     enabled: !!currentUser,
   });
 
-  const { data: hierarchyData } = useQuery({
-    queryKey: ["userHierarchy", currentUser?.email],
-    queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
-    enabled: !!currentUser,
+  const { data: reports = [], isLoading } = useQuery({
+    queryKey: ["meetingReports", hierarchyEmails],
+    queryFn: async () => {
+      const all = await base44.entities.MeetingReport.list("-created_date", 500);
+      if (!hierarchyEmails) return all;
+      // Admin widzi wszystko (gdy hierarchyEmails obejmuje wielu użytkowników)
+      if (currentUser?.role === "admin") return all;
+      // Filtruj po emailu autora
+      return all.filter(r => !r.author_email || hierarchyEmails.includes(r.author_email));
+    },
+    enabled: !!currentUser && hierarchyEmails !== null,
   });
-
-  const reports = React.useMemo(() => {
-    if (!currentUser || !hierarchyData?.data) return [];
-    const allowedEmails = hierarchyData.data.userEmails || [];
-    return allReports.filter(r => allowedEmails.includes(r.author_email) || allowedEmails.includes(r.created_by));
-  }, [allReports, hierarchyData, currentUser]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MeetingReport.create({
