@@ -267,8 +267,9 @@ export default function MeetingReports() {
   const [currentUser, setCurrentUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Sprawdź prefill z URL (po przejściu ze spotkania)
-  const urlParams = new URLSearchParams(window.location.search);
+  // Sprawdź prefill z URL (po przejściu ze spotkania) — HashRouter trzyma params w hash
+  const hashSearch = window.location.hash.includes("?") ? window.location.hash.split("?")[1] : window.location.search;
+  const urlParams = new URLSearchParams(hashSearch);
   const prefill = urlParams.get("from_meeting") === "1" ? {
     client_name: urlParams.get("prefill_client_name") || "",
     client_phone: urlParams.get("prefill_client_phone") || "",
@@ -293,26 +294,10 @@ export default function MeetingReports() {
     fetchUser();
   }, []);
 
-  const { data: hierarchyEmails = null } = useQuery({
-    queryKey: ["hierarchyEmails", currentUser?.email],
-    queryFn: async () => {
-      const res = await base44.functions.invoke("getUsersInHierarchy", {});
-      return res.data?.userEmails || [currentUser?.email];
-    },
-    enabled: !!currentUser,
-  });
-
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["meetingReports", hierarchyEmails],
-    queryFn: async () => {
-      const all = await base44.entities.MeetingReport.list("-created_date", 500);
-      if (!hierarchyEmails) return all;
-      // Admin widzi wszystko (gdy hierarchyEmails obejmuje wielu użytkowników)
-      if (currentUser?.role === "admin") return all;
-      // Filtruj po emailu autora
-      return all.filter(r => !r.author_email || hierarchyEmails.includes(r.author_email));
-    },
-    enabled: !!currentUser && hierarchyEmails !== null,
+    queryKey: ["meetingReports"],
+    queryFn: () => base44.entities.MeetingReport.list("-created_date", 100),
+    enabled: !!currentUser,
   });
 
   const createMutation = useMutation({
