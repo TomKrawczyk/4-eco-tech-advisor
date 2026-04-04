@@ -327,6 +327,11 @@ export default function Meetings() {
         }
         if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
+        // group_leader może przypisać sobie – dopuść jeśli należy do tej samej grupy LUB to bieżący user
+        const email = u.data?.email || u.email;
+        if (role === "group_leader") {
+          return uGroupId === currentUserGroupId || email === currentUser?.email;
+        }
         return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));

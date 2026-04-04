@@ -278,6 +278,9 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           {canAssign && (
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <UserCheck className="w-4 h-4 text-gray-400 shrink-0" />
+              {!assignment?.assigned_user_email && (
+                <Badge className="bg-red-50 text-red-600 border border-red-200 text-[10px]">Nieprzypisane</Badge>
+              )}
               {assignment?.assigned_user_email ? (
                 <div className="flex items-center gap-2">
                   <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-xs">
