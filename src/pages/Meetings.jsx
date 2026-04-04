@@ -324,7 +324,6 @@ export default function Meetings() {
     }
 
     if (currentUser?.role === "group_leader") {
-      // Zbierz wszystkich z tej samej grupy (user, team_leader, inni group_leaderzy)
       const myGroup = groups.find(g => g.id === currentUserGroupId);
       const groupLeaderIds = myGroup?.data?.group_leader_ids || myGroup?.group_leader_ids || [];
 
@@ -333,22 +332,18 @@ export default function Meetings() {
           const uEmail = u.data?.email || u.email;
           const uGroupId = u.data?.group_id || u.group_id;
           const uRole = u.data?.role || u.role;
-          // Należy do grupy przez group_id
           if (uGroupId === currentUserGroupId) return true;
-          // Lub jest group_leaderem tej grupy (wpisanym w group_leader_ids)
           if (uRole === "group_leader" && (groupLeaderIds.includes(u.id) || groupLeaderIds.includes(uEmail))) return true;
           return false;
         })
         .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
 
-      // Dodaj siebie jeśli jeszcze nie ma
       if (!list.some(s => s.email === currentUser.email)) {
         list.unshift({ email: currentUser.email, name: currentUser.displayName || currentUser.full_name || currentUser.email });
       }
       return list;
     }
 
-    // team_leader – tylko użytkownicy z jego grupy
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
@@ -652,11 +647,23 @@ export default function Meetings() {
                   onClick={() => toggleSheet(sheet)}
                   className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-gray-800 text-sm">{sheet}</span>
                     <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">
                       {total} spotkań
                     </Badge>
+                    {(() => {
+                      const unassigned = dates.flatMap(d => d.meetings).filter(m => {
+                        const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+                        const a = meetingAssignments.find(x => x.meeting_key === key);
+                        return !a?.assigned_user_email;
+                      }).length;
+                      return unassigned > 0 ? (
+                        <Badge className="bg-red-50 text-red-600 border border-red-200 text-[10px]">
+                          {unassigned} nieprzypisanych
+                        </Badge>
+                      ) : null;
+                    })()}
                     {(() => {
                       const mapping = sheetMappings.find(sm => sm.sheet_name === sheet);
                       return mapping?.group_name ? (
