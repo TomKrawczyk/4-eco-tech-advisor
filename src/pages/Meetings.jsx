@@ -325,13 +325,8 @@ export default function Meetings() {
         if (currentUser?.role === "admin") {
           return true;
         }
-        if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
+        if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
-        // group_leader może przypisać sobie – dopuść jeśli należy do tej samej grupy LUB to bieżący user
-        const email = u.data?.email || u.email;
-        if (role === "group_leader") {
-          return uGroupId === currentUserGroupId || email === currentUser?.email;
-        }
         return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
@@ -630,11 +625,24 @@ export default function Meetings() {
                   onClick={() => toggleSheet(sheet)}
                   className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-gray-800 text-sm">{sheet}</span>
                     <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">
                       {total} spotkań
                     </Badge>
+                    {(() => {
+                      const allDates = dates.flatMap(d => d.meetings);
+                      const unassigned = allDates.filter(m => {
+                        const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+                        const a = meetingAssignments.find(x => x.meeting_key === key);
+                        return !a?.assigned_user_email;
+                      }).length;
+                      return unassigned > 0 ? (
+                        <Badge className="bg-red-50 text-red-600 border border-red-200 text-[10px]">
+                          {unassigned} nieprzypisanych
+                        </Badge>
+                      ) : null;
+                    })()}
                     {(() => {
                       const mapping = sheetMappings.find(sm => sm.sheet_name === sheet);
                       return mapping?.group_name ? (
