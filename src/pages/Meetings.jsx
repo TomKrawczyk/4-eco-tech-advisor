@@ -319,20 +319,25 @@ export default function Meetings() {
 
   // Handlowcy do przypisania: filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
-    return allAllowedUsers
+    const list = allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        if (currentUser?.role === "admin") {
-          return true;
-        }
-        const uEmail = u.data?.email || u.email;
-        // Lider grupy może przypisać siebie
-        if (currentUser?.role === "group_leader" && uEmail === currentUser.email) return true;
+        if (currentUser?.role === "admin") return true;
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
+
+    // Lider grupy może przypisać spotkanie do siebie
+    if (currentUser?.role === "group_leader" && currentUser.email) {
+      const alreadyIn = list.some(s => s.email === currentUser.email);
+      if (!alreadyIn) {
+        list.unshift({ email: currentUser.email, name: currentUser.displayName || currentUser.full_name || currentUser.email });
+      }
+    }
+
+    return list;
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
   // Filtruj: tylko z datą + w oknie 14 dni
