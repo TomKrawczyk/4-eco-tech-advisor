@@ -325,6 +325,9 @@ export default function Meetings() {
         if (currentUser?.role === "admin") {
           return true;
         }
+        const uEmail = u.data?.email || u.email;
+        // Lider grupy może przypisać siebie
+        if (currentUser?.role === "group_leader" && uEmail === currentUser.email) return true;
         if (role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
@@ -631,8 +634,7 @@ export default function Meetings() {
                       {total} spotkań
                     </Badge>
                     {(() => {
-                      const allDates = dates.flatMap(d => d.meetings);
-                      const unassigned = allDates.filter(m => {
+                      const unassigned = dates.flatMap(d => d.meetings).filter(m => {
                         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
                         const a = meetingAssignments.find(x => x.meeting_key === key);
                         return !a?.assigned_user_email;
