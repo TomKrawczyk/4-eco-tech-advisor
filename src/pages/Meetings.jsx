@@ -1,19 +1,18 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList, AlertCircle } from "lucide-react";
+import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
 import { motion, AnimatePresence } from "framer-motion";
 import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 import MeetingCard from "@/components/meetings/MeetingCard";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
-import MeetingAcceptanceModal from "@/components/meetings/MeetingAcceptanceModal";
 import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -50,11 +49,8 @@ function extractTime(calStr) {
   return match ? `${match[1].padStart(2, "0")}:${match[2]}` : "";
 }
 
-// Widok spotkań dla zwykłego użytkownika – z wymuszeniem akceptacji
-function UserMeetingsView({ myAssignedMeetings, acceptances, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen }) {
-  const [acceptanceModal, setAcceptanceModal] = useState(null); // assignment object
-  const queryClient = useQueryClient();
-
+// Widok spotkań dla zwykłego użytkownika – z pełnymi szczegółami i akcjami
+function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen }) {
   const groupedByDate = useMemo(() => {
     const groups = {};
     myAssignedMeetings.forEach(a => {
@@ -73,29 +69,12 @@ function UserMeetingsView({ myAssignedMeetings, acceptances, selectedDetails, se
     { label: "Raport wizyty", icon: ClipboardList, color: "bg-orange-600", page: "VisitReports", desc: "Szczegółowy raport wizyty" },
   ];
 
-  // Ile spotkań czeka na decyzję
-  const pendingCount = myAssignedMeetings.filter(a => !acceptances[a.id]).length;
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Moje spotkania"
         subtitle="Spotkania przypisane do Ciebie – najbliższe 14 dni"
       />
-
-      {/* Baner z info o oczekujących akceptacjach */}
-      {pendingCount > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-orange-500 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-orange-800">
-              {pendingCount === 1 ? "1 spotkanie wymaga Twojej decyzji" : `${pendingCount} spotkania wymagają Twojej decyzji`}
-            </p>
-            <p className="text-xs text-orange-600 mt-0.5">Zaakceptuj lub odrzuć każde spotkanie, aby odblokować pełne szczegóły i dokumenty.</p>
-          </div>
-        </div>
-      )}
-
       {myAssignedMeetings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -121,7 +100,6 @@ function UserMeetingsView({ myAssignedMeetings, acceptances, selectedDetails, se
 
               <div className="space-y-3">
                 {meetings.map((a, i) => {
-                  const isAccepted = !!acceptances[a.id];
                   const clientParams = new URLSearchParams({
                     prefill_client_name: a.client_name || "",
                     prefill_client_phone: a.client_phone || a.phone || "",
@@ -134,35 +112,17 @@ function UserMeetingsView({ myAssignedMeetings, acceptances, selectedDetails, se
                   const hasDetails = a.agent || a.comments || a.notes || a.interview_data;
 
                   return (
-                    <div key={i} className={`bg-white rounded-xl border p-4 transition-all ${isAccepted ? "border-gray-200 hover:border-green-200 hover:shadow-sm" : "border-orange-300 bg-orange-50/30"}`}>
-                      {/* Header z decyzją */}
-                      {!isAccepted && (
-                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-orange-200">
-                          <div className="flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 text-orange-500" />
-                            <span className="text-xs font-semibold text-orange-700">Wymagana Twoja decyzja</span>
-                          </div>
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs bg-orange-500 hover:bg-orange-600 text-white"
-                            onClick={() => setAcceptanceModal(a)}
-                          >
-                            Potwierdź / Odrzuć
-                          </Button>
-                        </div>
-                      )}
-
-                      {isAccepted && (
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">✓ Zaakceptowane</Badge>
-                        </div>
-                      )}
-
+                    <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <User className="w-4 h-4 text-gray-400 shrink-0" />
                           <span className="font-semibold text-gray-900 text-sm">{a.client_name}</span>
                           <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{a.sheet}</Badge>
+                          {a.assigned_user_email && (
+                            <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-[10px]">
+                              Przypisane do Ciebie
+                            </Badge>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 text-xs font-semibold text-green-700 bg-green-50 rounded-md px-2 py-1.5 w-fit">
@@ -170,84 +130,71 @@ function UserMeetingsView({ myAssignedMeetings, acceptances, selectedDetails, se
                           {a.meeting_calendar}
                         </div>
 
-                        {/* Szczegóły tylko po akceptacji */}
-                        {isAccepted && (
-                          <>
-                            {(a.client_address || a.address) && (
-                              <div className="flex items-center gap-2 text-xs text-gray-600">
-                                <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                {a.client_address || a.address}
-                              </div>
-                            )}
-
-                            {(a.client_phone || a.phone) && (
-                              <div className="flex items-center gap-2 text-xs text-gray-600">
-                                <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                <a href={`tel:${a.client_phone || a.phone}`} className="hover:text-green-600 transition-colors font-medium">
-                                  {a.client_phone || a.phone}
-                                </a>
-                              </div>
-                            )}
-
-                            {a.agent && (
-                              <div className="flex items-center gap-2 text-xs text-gray-500">
-                                <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                Agent: {a.agent}
-                              </div>
-                            )}
-
-                            {a.notes && (
-                              <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">{a.notes}</p>
-                            )}
-
-                            {hasDetails && (
-                              <button
-                                onClick={() => {
-                                  setSelectedDetails({
-                                    phone: a.client_phone || a.phone,
-                                    agent: a.agent,
-                                    comments: a.comments || a.notes,
-                                    interview_data: a.interview_data || {}
-                                  });
-                                  setDetailsModalOpen(true);
-                                }}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
-                              >
-                                <MessageSquare className="w-3 h-3" />
-                                Szczegóły kontaktu
-                              </button>
-                            )}
-
-                            <div className="pt-2 border-t border-gray-100 mt-2">
-                              <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">Utwórz dokument</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                {actions.map(({ label, icon: Icon, color, page, desc }) => (
-                                  <Link
-                                    key={page}
-                                    to={`${createPageUrl(page)}?${clientParams}`}
-                                    className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all"
-                                  >
-                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${color} shrink-0`}>
-                                      <Icon className="w-3.5 h-3.5 text-white" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <div className="text-xs font-medium text-gray-800 truncate">{label}</div>
-                                      <div className="text-[10px] text-gray-400 truncate">{desc}</div>
-                                    </div>
-                                  </Link>
-                                ))}
-                              </div>
-                            </div>
-                          </>
-                        )}
-
-                        {/* Zablokowane szczegóły gdy nieakceptowane */}
-                        {!isAccepted && (
-                          <div className="pt-2 text-xs text-gray-400 flex items-center gap-1.5">
-                            <AlertCircle className="w-3.5 h-3.5" />
-                            Potwierdź spotkanie, aby zobaczyć szczegóły i dokumenty.
+                        {(a.client_address || a.address) && (
+                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                            {a.client_address || a.address}
                           </div>
                         )}
+
+                        {(a.client_phone || a.phone) && (
+                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                            <a href={`tel:${a.client_phone || a.phone}`} className="hover:text-green-600 transition-colors font-medium">
+                              {a.client_phone || a.phone}
+                            </a>
+                          </div>
+                        )}
+
+                        {a.agent && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                            Agent: {a.agent}
+                          </div>
+                        )}
+
+                        {a.notes && (
+                          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">{a.notes}</p>
+                        )}
+
+                        {hasDetails && (
+                          <button
+                            onClick={() => {
+                              setSelectedDetails({
+                                phone: a.client_phone || a.phone,
+                                agent: a.agent,
+                                comments: a.comments || a.notes,
+                                interview_data: a.interview_data || {}
+                              });
+                              setDetailsModalOpen(true);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                          >
+                            <MessageSquare className="w-3 h-3" />
+                            Szczegóły kontaktu
+                          </button>
+                        )}
+
+                        <div className="pt-2 border-t border-gray-100 mt-2">
+                          <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-2">Utwórz dokument</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {actions.map(({ label, icon: Icon, color, page, desc }) => (
+                              <Link
+                                key={page}
+                                to={`${createPageUrl(page)}?${clientParams}`}
+                                className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all"
+                              >
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${color} shrink-0`}>
+                                  <Icon className="w-3.5 h-3.5 text-white" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs font-medium text-gray-800 truncate">{label}</div>
+                                  <div className="text-[10px] text-gray-400 truncate">{desc}</div>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -262,21 +209,6 @@ function UserMeetingsView({ myAssignedMeetings, acceptances, selectedDetails, se
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
-      />
-
-      {/* Modal akceptacji – nie można go zamknąć bez decyzji */}
-      <MeetingAcceptanceModal
-        meeting={acceptanceModal}
-        open={!!acceptanceModal}
-        onOpenChange={(open) => {
-          // Nie pozwól zamknąć bez decyzji (kliknięcie poza / escape)
-          if (!open) return;
-        }}
-        onDecisionMade={() => {
-          setAcceptanceModal(null);
-          queryClient.invalidateQueries({ queryKey: ["meetingAcceptances"] });
-          queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
-        }}
       />
     </div>
   );
@@ -363,23 +295,6 @@ export default function Meetings() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Pobierz acceptances dla bieżącego usera (tylko dla roli user)
-  const { data: rawAcceptances = [] } = useQuery({
-    queryKey: ["meetingAcceptances", currentUser?.email],
-    queryFn: () => base44.entities.MeetingAcceptance.filter({ assigned_user_email: currentUser.email }),
-    enabled: accessChecked && !!currentUser && !isLeaderOrAdmin,
-    staleTime: 60 * 1000,
-  });
-
-  // Mapa: assignmentId -> acceptance record (tylko accepted)
-  const acceptances = useMemo(() => {
-    const map = {};
-    rawAcceptances.forEach(a => {
-      if (a.status === "accepted") map[a.meeting_assignment_id] = a;
-    });
-    return map;
-  }, [rawAcceptances]);
-
   // Zwykły user widzi swoje przypisane spotkania
   const myAssignedMeetings = useMemo(() => {
     if (!currentUser || isLeaderOrAdmin) return [];
@@ -410,7 +325,7 @@ export default function Meetings() {
         if (currentUser?.role === "admin") {
           return true;
         }
-        if (role !== "user" && role !== "team_leader") return false;
+        if (role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
       })
@@ -535,7 +450,6 @@ export default function Meetings() {
     return (
       <UserMeetingsView
         myAssignedMeetings={myAssignedMeetings}
-        acceptances={acceptances}
         selectedDetails={selectedDetails}
         setSelectedDetails={setSelectedDetails}
         detailsModalOpen={detailsModalOpen}
