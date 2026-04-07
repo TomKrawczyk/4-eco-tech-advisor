@@ -97,7 +97,6 @@ export default function Checklist() {
   const [currentReport, setCurrentReport] = useState(null);
   const [form, setForm] = useState(prefillData ? { ...pvInitialState, ...prefillData } : pvInitialState);
   const [completedItems, setCompletedItems] = useState({});
-  const [pvSignature, setPvSignature] = useState("");
   const [pvPhotos, setPvPhotos] = useState([]);
   const pvSaveRef = useRef(null);
 
@@ -116,6 +115,7 @@ export default function Checklist() {
   const [saving, setSaving] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pcSaveStatus, setPcSaveStatus] = useState(""); // "", "saving", "saved"
+  const [savingPcReport, setSavingPcReport] = useState(false);
 
   useEffect(() => {
     base44.functions.invoke('logActivity', { action_type: 'page_view', page_name: 'Checklist' }).catch(() => {});
@@ -148,12 +148,11 @@ export default function Checklist() {
       additional_notes: currentReport.additional_notes || "",
       client_signature: currentReport.client_signature || "",
     });
-    if (currentReport.client_signature_image) setPvSignature(currentReport.client_signature_image);
     if (currentReport.photos) setPvPhotos(currentReport.photos);
   }, [currentReport]);
 
   // ── PV auto-save ─────────────────────────────────────────────────────────
-  const pvAutoSave = (updatedForm, sig, photos) => {
+  const pvAutoSave = (updatedForm, photos) => {
     if (!currentReport) return;
     if (pvSaveRef.current) clearTimeout(pvSaveRef.current);
     pvSaveRef.current = setTimeout(async () => {
@@ -161,7 +160,6 @@ export default function Checklist() {
       if (data.annual_production_kwh) data.annual_production_kwh = parseFloat(data.annual_production_kwh);
       if (data.energy_imported_kwh) data.energy_imported_kwh = parseFloat(data.energy_imported_kwh);
       if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
-      data.client_signature_image = sig;
       data.photos = photos;
       await smartUpdate(base44.entities.VisitReport, "VisitReport", currentReport.id, data);
     }, 1000);
@@ -182,11 +180,10 @@ export default function Checklist() {
       }
     }
     setForm(newForm);
-    pvAutoSave(newForm, pvSignature, pvPhotos);
+    pvAutoSave(newForm, pvPhotos);
   };
 
-  const handlePvSig = (s) => { setPvSignature(s); pvAutoSave(form, s, pvPhotos); };
-  const handlePvPhotos = (p) => { setPvPhotos(p); pvAutoSave(form, pvSignature, p); };
+  const handlePvPhotos = (p) => { setPvPhotos(p); pvAutoSave(form, p); };
   const toggleInstallation = (type) => {
     const types = form.installation_types.includes(type)
       ? form.installation_types.filter(t => t !== type)
@@ -195,25 +192,28 @@ export default function Checklist() {
   };
   const toggleCompleted = (key) => setCompletedItems(p => ({ ...p, [key]: !p[key] }));
 
-  // ── PC auto-save to ServiceReport ────────────────────────────────────────
+  // ── PC helpers ────────────────────────────────────────────────────────────
+  const buildPcData = (fields, photos, workerSig, clientSig, name, phone, address) => ({
+    client_name: name,
+    client_phone: phone,
+    client_address: address,
+    service_date: fields.pc_data_przegladu || new Date().toISOString().split("T")[0],
+    report_type: "PC",
+    fields,
+    photos,
+    worker_signature: workerSig,
+    client_signature: clientSig,
+    status: "draft",
+    author_name: currentUser?.displayName || currentUser?.full_name || "",
+    author_email: currentUser?.email || "",
+  });
+
+  // ── PC auto-save (draft) ──────────────────────────────────────────────────
   const pcAutoSave = (fields, photos, workerSig, clientSig, name, phone, address) => {
     if (pcSaveRef.current) clearTimeout(pcSaveRef.current);
     setPcSaveStatus("saving");
     pcSaveRef.current = setTimeout(async () => {
-      const data = {
-        client_name: name || pcClientName,
-        client_phone: phone || pcClientPhone,
-        client_address: address || pcClientAddress,
-        service_date: fields.pc_data_przegladu || new Date().toISOString().split("T")[0],
-        report_type: "PC",
-        fields,
-        photos,
-        worker_signature: workerSig,
-        client_signature: clientSig,
-        status: "draft",
-        author_name: currentUser?.displayName || currentUser?.full_name || "",
-        author_email: currentUser?.email || "",
-      };
+      const data = buildPcData(fields, photos, workerSig, clientSig, name, phone, address);
       if (pcReportId) {
         await base44.entities.ServiceReport.update(pcReportId, data);
       } else {
@@ -222,6 +222,21 @@ export default function Checklist() {
       }
       setPcSaveStatus("saved");
     }, 1200);
+  };
+
+  // ── PC manual save (completed) ────────────────────────────────────────────
+  const handleSavePcReport = async () => {
+    setSavingPcReport(true);
+    const data = buildPcData(pcForm, pcPhotos, pcWorkerSig, pcClientSig, pcClientName, pcClientPhone, pcClientAddress);
+    data.status = "completed";
+    if (pcReportId) {
+      await base44.entities.ServiceReport.update(pcReportId, data);
+    } else {
+      const created = await base44.entities.ServiceReport.create(data);
+      setPcReportId(created.id);
+    }
+    setPcSaveStatus("saved");
+    setSavingPcReport(false);
   };
 
   const updatePc = (key, value) => {
@@ -323,7 +338,7 @@ export default function Checklist() {
           <ModeToggle />
           <div className="text-xs text-gray-500">
             {pcSaveStatus === "saving" && <span className="text-orange-500">Zapisywanie...</span>}
-            {pcSaveStatus === "saved" && <span className="text-green-600">✓ Zapisano w systemie</span>}
+            {pcSaveStatus === "saved" && <span className="text-green-600">✓ Zapisano automatycznie</span>}
             {pcReportId && <span className="ml-2 text-gray-400">ID: {pcReportId.slice(-6)}</span>}
           </div>
         </div>
@@ -407,14 +422,20 @@ export default function Checklist() {
 
         {/* Akcje */}
         <div className="flex gap-3">
+          <Button onClick={handleSavePcReport} disabled={savingPcReport}
+            className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
+            {savingPcReport
+              ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : "Zapisz raport"}
+          </Button>
           <Button onClick={handleGeneratePcPdf} disabled={generatingPdf}
             className="flex-1 h-12 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg">
             {generatingPdf
               ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              : "Generuj PDF protokołu"}
+              : "Generuj PDF"}
           </Button>
         </div>
-        <div className="text-center text-sm text-gray-500">Raport zapisuje się automatycznie w systemie</div>
+        <div className="text-center text-sm text-gray-500">Dane zapisują się automatycznie jako szkic</div>
       </div>
     );
   }
@@ -512,7 +533,7 @@ export default function Checklist() {
 
       {/* Podpis */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <SignaturePad value={pvSignature} onChange={handlePvSig} label="Podpis klienta" />
+        <SignaturePad value="" onChange={() => {}} label="Podpis klienta" />
       </div>
 
       {/* Akcje */}
