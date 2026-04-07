@@ -51,9 +51,54 @@ const checklistItems = [
 
 const installationOptions = ["PV", "Pompa ciepła", "Magazyn energii"];
 
+// Pola audytu PC (Pompa ciepła / Kocioł)
+const pcAuditFields = [
+  // DANE KLIENTA/INSTALACJI
+  { key: "pc_data_przegladu", label: "Data realizowanego przeglądu", section: "Dane klienta/instalacji", type: "date" },
+  { key: "pc_data_ostatniego", label: "Data ostatniego przeglądu", section: "Dane klienta/instalacji", type: "date" },
+  { key: "pc_nazwa_adres", label: "Nazwa i adres firmy wykonującej", section: "Dane osoby wykonującej przegląd", placeholder: "np. 4-Eco Green Energy" },
+  { key: "pc_imie_nazwisko", label: "Imię i nazwisko wykonawcy", section: "Dane osoby wykonującej przegląd", placeholder: "np. Jan Kowalski" },
+  // LISTA CZYNNOŚCI
+  { key: "pc_opis_czynnosci", label: "Opis czynności do wykonania / opis przeglądu", section: "Lista wykonanych czynności podczas przeglądu serwisowego", placeholder: "Wykonano przegląd pompy ciepła, sprawdzono...", multiline: true },
+  { key: "pc_uwagi_serwisowe", label: "Uwagi serwisowe / stwierdzone usterki", section: "Lista wykonanych czynności podczas przeglądu serwisowego", placeholder: "np. Brak dostępu do filtra magnetycznego, brak osłony przewodów", multiline: true },
+  // ODBIÓR PRAC
+  { key: "pc_opis_wykonanych", label: "Opis wykonanych czynności (podsumowanie)", section: "Odbiór prac", placeholder: "np. Zostały odebrane bez zastrzeżeń, instalacja działa poprawnie", multiline: true },
+  { key: "pc_godz_przyjazdu", label: "Godzina przyjazdu", section: "Czas wykonania audytu/przeglądu", placeholder: "np. 08:00", type: "time" },
+  { key: "pc_godz_wyjazdu", label: "Godzina wyjazdu", section: "Czas wykonania audytu/przeglądu", placeholder: "np. 09:00", type: "time" },
+  // STAN TECHNICZNY
+  { key: "pc_stan_pompy", label: "Stan ogólny pompy ciepła / kotła", section: "Stan techniczny urządzenia", placeholder: "np. Urządzenie w dobrym stanie technicznym" },
+  { key: "pc_filtr_magnetyczny", label: "Stan filtra magnetycznego", section: "Stan techniczny urządzenia", placeholder: "np. Filtr czysty, sprawny" },
+  { key: "pc_oslona_przewodow", label: "Osłona przewodów przed promieniowaniem UV", section: "Stan techniczny urządzenia", placeholder: "np. Brak osłony – zalecany montaż" },
+  { key: "pc_cisnienie_czynnika", label: "Ciśnienie czynnika chłodniczego", section: "Stan techniczny urządzenia", placeholder: "np. 18 bar – prawidłowe" },
+  { key: "pc_temperatura_pracy", label: "Temperatura pracy / odczyt sterownika", section: "Stan techniczny urządzenia", placeholder: "np. CWU: 55°C, CO: 45°C" },
+  { key: "pc_gwarancja", label: "Status gwarancji", section: "Stan techniczny urządzenia", placeholder: "np. Urządzenie na gwarancji / NIE zgłoszona na gwarancję" },
+  // REKOMENDACJE
+  { key: "pc_rekomendacje", label: "Rekomendacje i zalecenia serwisowe", section: "Rekomendacje", placeholder: "np. Zalecany montaż osłon UV, czyszczenie wymiennika", multiline: true },
+  { key: "pc_dodatkowe_uwagi", label: "Dodatkowe uwagi", section: "Rekomendacje", placeholder: "np. Kolejny przegląd za 12 miesięcy", multiline: true },
+];
+
+const pcInitialState = {
+  pc_data_przegladu: new Date().toISOString().split("T")[0],
+  pc_data_ostatniego: "",
+  pc_nazwa_adres: "4-Eco Green Energy",
+  pc_imie_nazwisko: "",
+  pc_opis_czynnosci: "",
+  pc_uwagi_serwisowe: "",
+  pc_opis_wykonanych: "",
+  pc_godz_przyjazdu: "",
+  pc_godz_wyjazdu: "",
+  pc_stan_pompy: "",
+  pc_filtr_magnetyczny: "",
+  pc_oslona_przewodow: "",
+  pc_cisnienie_czynnika: "",
+  pc_temperatura_pracy: "",
+  pc_gwarancja: "",
+  pc_rekomendacje: "",
+  pc_dodatkowe_uwagi: "",
+};
+
 export default function Checklist() {
   const urlParams = new URLSearchParams(window.location.search);
-  const editReportId = urlParams.get("edit_report_id");
   const prefillData = urlParams.get("from_meeting") === "1" ? {
     client_name: urlParams.get("prefill_client_name") || "",
     client_phone: urlParams.get("prefill_client_phone") || "",
@@ -66,6 +111,9 @@ export default function Checklist() {
   const [saving, setSaving] = useState(false);
   const [completedItems, setCompletedItems] = useState({});
   const [saveTimeout, setSaveTimeout] = useState(null);
+  const [checklistMode, setChecklistMode] = useState("PV"); // "PV" | "PC"
+  const [pcForm, setPcForm] = useState(pcInitialState);
+  const [pcCompleted, setPcCompleted] = useState({});
   
   // Log page view
   useEffect(() => {
@@ -74,15 +122,6 @@ export default function Checklist() {
       page_name: 'Checklist'
     }).catch(err => console.error('Log error:', err));
   }, []);
-
-  // Jeśli edit_report_id w URL, załaduj raport automatycznie
-  useEffect(() => {
-    if (!editReportId) return;
-    base44.entities.VisitReport.list().then(all => {
-      const found = all.find(r => r.id === editReportId);
-      if (found) setCurrentReport(found);
-    }).catch(console.error);
-  }, [editReportId]);
 
   useEffect(() => {
     if (currentReport) {
@@ -188,6 +227,37 @@ export default function Checklist() {
   const totalItems = checklistItems.length;
   const progress = totalItems > 0 ? (completedCount / totalItems) * 100 : 0;
 
+  const updatePc = (key, value) => {
+    const newForm = { ...pcForm, [key]: value };
+    setPcForm(newForm);
+  };
+
+  const togglePcCompleted = (key) => {
+    setPcCompleted(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const pcSections = [...new Set(pcAuditFields.map(f => f.section))];
+  const pcCompletedCount = Object.values(pcCompleted).filter(Boolean).length;
+  const pcProgress = pcAuditFields.length > 0 ? (pcCompletedCount / pcAuditFields.length) * 100 : 0;
+
+  const ModeToggle = () => (
+    <div className="flex items-center bg-gray-100 rounded-xl p-1 w-fit">
+      {["PV", "PC"].map(mode => (
+        <button
+          key={mode}
+          onClick={() => setChecklistMode(mode)}
+          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+            checklistMode === mode
+              ? "bg-white text-green-700 shadow-sm border border-green-200"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          {mode === "PV" ? "🌞 Fotowoltaika (PV)" : "🔥 Pompa ciepła (PC)"}
+        </button>
+      ))}
+    </div>
+  );
+
   if (!currentReport) {
     return (
       <div className="space-y-6">
@@ -195,7 +265,127 @@ export default function Checklist() {
           title="Checklista Doradcy Technicznego"
           subtitle="Analiza i modernizacja instalacji"
         />
+        <ModeToggle />
         <ReportSelector onSelectReport={setCurrentReport} currentReport={null} />
+      </div>
+    );
+  }
+
+  // Tryb PC – protokół przeglądu pompy ciepła
+  if (checklistMode === "PC") {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Protokół Przeglądu/Audytu PC"
+          subtitle="Pompa ciepła / Kocioł"
+        />
+        <ModeToggle />
+        <ReportSelector onSelectReport={setCurrentReport} currentReport={currentReport} />
+
+        {/* Progress PC */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-gray-600">Postęp protokołu</span>
+            <span className="text-sm font-semibold text-orange-600">{pcCompletedCount}/{pcAuditFields.length}</span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-orange-500 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${pcProgress}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
+        </div>
+
+        {/* Dane klienta (wspólne z raportem) */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+          <h3 className="text-base font-semibold text-gray-900">Dane klienta</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-gray-700 text-xs mb-1">Imię i nazwisko klienta</Label>
+              <Input value={form.client_name} onChange={(e) => update("client_name", e.target.value)} placeholder="Jan Kowalski" />
+            </div>
+            <div>
+              <Label className="text-gray-700 text-xs mb-1">Telefon</Label>
+              <Input value={form.client_phone} onChange={(e) => update("client_phone", e.target.value)} placeholder="600 123 456" />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-gray-700 text-xs mb-1">Adres obiektu</Label>
+              <Input value={form.client_address} onChange={(e) => update("client_address", e.target.value)} placeholder="ul. Słoneczna 12, 00-000 Warszawa" />
+            </div>
+          </div>
+        </div>
+
+        {/* Sekcje protokołu PC */}
+        {pcSections.map(section => {
+          const fields = pcAuditFields.filter(f => f.section === section);
+          return (
+            <div key={section} className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+              <h3 className="text-base font-semibold text-gray-900 uppercase tracking-wide text-orange-700">{section}</h3>
+              {fields.map(field => (
+                <motion.div
+                  key={field.key}
+                  className={`rounded-lg border p-4 transition-all ${
+                    pcCompleted[field.key] ? "bg-orange-50 border-orange-200" : "bg-white border-gray-200"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={() => togglePcCompleted(field.key)}
+                      className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all ${
+                        pcCompleted[field.key]
+                          ? "bg-orange-500 border-orange-500"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                    >
+                      {pcCompleted[field.key] && <Check />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <Label className="text-gray-700 text-sm font-medium">{field.label}</Label>
+                      {field.multiline ? (
+                        <textarea
+                          value={pcForm[field.key]}
+                          onChange={(e) => updatePc(field.key, e.target.value)}
+                          placeholder={field.placeholder || ""}
+                          rows={3}
+                          className="mt-2 w-full text-sm border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"
+                        />
+                      ) : (
+                        <Input
+                          type={field.type || "text"}
+                          value={pcForm[field.key]}
+                          onChange={(e) => updatePc(field.key, e.target.value)}
+                          placeholder={field.placeholder || ""}
+                          className="mt-2 text-sm"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          );
+        })}
+
+        {/* Podpisy */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+          <h3 className="text-base font-semibold text-gray-900">Podpisy</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-gray-700 text-xs mb-1">Podpis pracownika (imię i nazwisko)</Label>
+              <Input value={pcForm.pc_imie_nazwisko} onChange={(e) => updatePc("pc_imie_nazwisko", e.target.value)} placeholder="Imię i nazwisko" />
+            </div>
+            <div>
+              <Label className="text-gray-700 text-xs mb-1">Podpis klienta (imię i nazwisko)</Label>
+              <Input value={form.client_signature} onChange={(e) => update("client_signature", e.target.value)} placeholder="Imię i nazwisko klienta" />
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center text-sm text-gray-500">
+          Zaznaczaj punkty jako wykonane klikając w kwadrat po lewej stronie
+        </div>
       </div>
     );
   }
@@ -206,7 +396,7 @@ export default function Checklist() {
         title="Checklista Doradcy Technicznego"
         subtitle="Analiza i modernizacja instalacji"
       />
-      
+      <ModeToggle />
       <ReportSelector onSelectReport={setCurrentReport} currentReport={currentReport} />
 
       {/* Progress */}
