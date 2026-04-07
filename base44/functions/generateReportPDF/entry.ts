@@ -248,27 +248,35 @@ Deno.serve(async (req) => {
         y += aLines.length * 5 + 4;
         });
 
-        if (report.client_signature) {
-        if (y > 260) {
-         doc.addPage();
-         y = 15;
-        }
+        // Podpis klienta – obrazek (canvas) lub tekst
+        const sigImg = report.client_signature_image;
+        const sigText = report.client_signature;
+        if (sigImg || sigText) {
+          if (y > 255) { doc.addPage(); y = 15; }
+          y += 10;
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...grayDark);
+          doc.text('Client signature:', 20, y);
+          y += 4;
 
-        y += 10;
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...grayDark);
-        doc.text('Client signature:', 20, y);
+          if (sigImg && sigImg.startsWith('data:image')) {
+            try {
+              const b64 = sigImg.split(',')[1];
+              doc.addImage(b64, 'PNG', 20, y, 90, 28);
+              y += 30;
+            } catch (_) {}
+          } else if (sigText) {
+            doc.setFontSize(11);
+            doc.setTextColor(...black);
+            doc.text(c(sigText), 20, y + 5);
+            y += 10;
+          }
 
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...black);
-        doc.text(c(report.client_signature), 20, y + 6);
-
-        // Line under signature
-        doc.setDrawColor(...grayLight);
-        doc.setLineWidth(0.5);
-        doc.line(20, y + 10, 100, y + 10);
+          doc.setDrawColor(...grayLight);
+          doc.setLineWidth(0.5);
+          doc.line(20, y + 2, 110, y + 2);
+          y += 8;
         }
     }
     
