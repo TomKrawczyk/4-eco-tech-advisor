@@ -49,18 +49,25 @@ export default function PhotoUploader({ photos = [], onChange, label = "Zdjęcia
       </div>
 
       {photos.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-wrap gap-2">
           {photos.map((url, i) => (
-            <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+            <div key={i} className="relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-100" style={{ width: 80, height: 80 }}>
               <img src={url} alt={`Zdjęcie ${i + 1}`} className="w-full h-full object-cover" />
               <button
                 onClick={() => remove(url)}
-                className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none"
+                className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none"
               >
                 ×
               </button>
             </div>
           ))}
+          <div
+            onClick={() => inputRef.current?.click()}
+            className="flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors text-gray-400 text-xl"
+            style={{ width: 80, height: 80 }}
+          >
+            +
+          </div>
         </div>
       )}
 

@@ -1,0 +1,73 @@
+{
+  "name": "ServiceReport",
+  "type": "object",
+  "properties": {
+    "client_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko klienta"
+    },
+    "client_phone": {
+      "type": "string",
+      "description": "Telefon klienta"
+    },
+    "client_address": {
+      "type": "string",
+      "description": "Adres obiektu"
+    },
+    "service_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data przegl\u0105du"
+    },
+    "report_type": {
+      "type": "string",
+      "enum": [
+        "PC",
+        "PV"
+      ],
+      "default": "PC",
+      "description": "Typ protoko\u0142u"
+    },
+    "fields": {
+      "type": "object",
+      "description": "Dane formularza protoko\u0142u"
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URL-e zdj\u0119\u0107"
+    },
+    "worker_signature": {
+      "type": "string",
+      "description": "Podpis pracownika (dataURL)"
+    },
+    "client_signature": {
+      "type": "string",
+      "description": "Podpis klienta (dataURL)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "completed"
+      ],
+      "default": "draft",
+      "description": "Status raportu"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Imi\u0119 autora"
+    },
+    "author_email": {
+      "type": "string",
+      "description": "Email autora"
+    }
+  },
+  "required": [
+    "client_name",
+    "service_date",
+    "report_type"
+  ]
+}

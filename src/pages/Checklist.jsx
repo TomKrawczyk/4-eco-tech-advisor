@@ -11,7 +11,11 @@ import useCurrentUser from "@/components/shared/useCurrentUser";
 import SignaturePad from "@/components/shared/SignaturePad";
 import PhotoUploader from "@/components/shared/PhotoUploader";
 
-const Check = () => <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>;
+const Check = () => (
+  <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+  </svg>
+);
 
 // ── PV ──────────────────────────────────────────────────────────────────────
 
@@ -65,10 +69,15 @@ const pcAuditFields = [
 ];
 
 const pcInitialState = Object.fromEntries(
-  pcAuditFields.map(f => [f.key, f.key === "pc_data_przegladu" ? new Date().toISOString().split("T")[0] : f.key === "pc_nazwa_adres" ? "4-Eco Green Energy" : ""])
+  pcAuditFields.map(f => [
+    f.key,
+    f.key === "pc_data_przegladu" ? new Date().toISOString().split("T")[0]
+    : f.key === "pc_nazwa_adres" ? "4-Eco Green Energy"
+    : ""
+  ])
 );
 
-// ── Main component ───────────────────────────────────────────────────────────
+// ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Checklist() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -82,77 +91,80 @@ export default function Checklist() {
   const { currentUser } = useCurrentUser();
   const isAdmin = currentUser?.role === "admin";
 
-  const [currentReport, setCurrentReport] = useState(null);
   const [checklistMode, setChecklistMode] = useState("PV");
 
-  // PV state
+  // ── PV state ────────────────────────────────────────────────────────────
+  const [currentReport, setCurrentReport] = useState(null);
   const [form, setForm] = useState(prefillData ? { ...pvInitialState, ...prefillData } : pvInitialState);
   const [completedItems, setCompletedItems] = useState({});
   const [pvSignature, setPvSignature] = useState("");
   const [pvPhotos, setPvPhotos] = useState([]);
-  const saveTimeoutRef = useRef(null);
+  const pvSaveRef = useRef(null);
 
-  // PC state
+  // ── PC state ────────────────────────────────────────────────────────────
   const [pcForm, setPcForm] = useState(pcInitialState);
   const [pcCompleted, setPcCompleted] = useState({});
   const [pcClientName, setPcClientName] = useState("");
   const [pcClientPhone, setPcClientPhone] = useState("");
   const [pcClientAddress, setPcClientAddress] = useState("");
-  const [pcWorkerSignature, setPcWorkerSignature] = useState("");
-  const [pcClientSignature, setPcClientSignature] = useState("");
+  const [pcWorkerSig, setPcWorkerSig] = useState("");
+  const [pcClientSig, setPcClientSig] = useState("");
   const [pcPhotos, setPcPhotos] = useState([]);
+  const [pcReportId, setPcReportId] = useState(null);
+  const pcSaveRef = useRef(null);
 
   const [saving, setSaving] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pcSaveStatus, setPcSaveStatus] = useState(""); // "", "saving", "saved"
 
   useEffect(() => {
     base44.functions.invoke('logActivity', { action_type: 'page_view', page_name: 'Checklist' }).catch(() => {});
   }, []);
 
+  // Load PV report into form
   useEffect(() => {
-    if (currentReport) {
-      setForm({
-        client_name: currentReport.client_name || "",
-        client_address: currentReport.client_address || "",
-        client_phone: currentReport.client_phone || "",
-        visit_date: currentReport.visit_date || new Date().toISOString().split("T")[0],
-        installation_types: currentReport.installation_types || [],
-        launch_date: currentReport.launch_date || "",
-        contractor: currentReport.contractor || "",
-        annual_production_kwh: currentReport.annual_production_kwh || "",
-        energy_imported_kwh: currentReport.energy_imported_kwh || "",
-        energy_exported_kwh: currentReport.energy_exported_kwh || "",
-        autoconsumption_rating: currentReport.autoconsumption_rating || "",
-        panels_condition: currentReport.panels_condition || "",
-        mounting_condition: currentReport.mounting_condition || "",
-        cables_condition: currentReport.cables_condition || "",
-        protection_condition: currentReport.protection_condition || "",
-        inverter_reading: currentReport.inverter_reading || "",
-        grounding_condition: currentReport.grounding_condition || "",
-        expansion_possibilities: currentReport.expansion_possibilities || "",
-        modernization_potential: currentReport.modernization_potential || "",
-        recommendations: currentReport.recommendations || "",
-        additional_notes: currentReport.additional_notes || "",
-        client_signature: currentReport.client_signature || "",
-      });
-      if (currentReport.client_signature_image) setPvSignature(currentReport.client_signature_image);
-      if (currentReport.photos) setPvPhotos(currentReport.photos);
-    }
+    if (!currentReport) return;
+    setForm({
+      client_name: currentReport.client_name || "",
+      client_address: currentReport.client_address || "",
+      client_phone: currentReport.client_phone || "",
+      visit_date: currentReport.visit_date || new Date().toISOString().split("T")[0],
+      installation_types: currentReport.installation_types || [],
+      launch_date: currentReport.launch_date || "",
+      contractor: currentReport.contractor || "",
+      annual_production_kwh: currentReport.annual_production_kwh || "",
+      energy_imported_kwh: currentReport.energy_imported_kwh || "",
+      energy_exported_kwh: currentReport.energy_exported_kwh || "",
+      autoconsumption_rating: currentReport.autoconsumption_rating || "",
+      panels_condition: currentReport.panels_condition || "",
+      mounting_condition: currentReport.mounting_condition || "",
+      cables_condition: currentReport.cables_condition || "",
+      protection_condition: currentReport.protection_condition || "",
+      inverter_reading: currentReport.inverter_reading || "",
+      grounding_condition: currentReport.grounding_condition || "",
+      expansion_possibilities: currentReport.expansion_possibilities || "",
+      modernization_potential: currentReport.modernization_potential || "",
+      recommendations: currentReport.recommendations || "",
+      additional_notes: currentReport.additional_notes || "",
+      client_signature: currentReport.client_signature || "",
+    });
+    if (currentReport.client_signature_image) setPvSignature(currentReport.client_signature_image);
+    if (currentReport.photos) setPvPhotos(currentReport.photos);
   }, [currentReport]);
 
-  const autoSave = async (updatedForm, sigImg, photos) => {
+  // ── PV auto-save ─────────────────────────────────────────────────────────
+  const pvAutoSave = (updatedForm, sig, photos) => {
     if (!currentReport) return;
-    const data = { ...updatedForm };
-    if (data.annual_production_kwh) data.annual_production_kwh = parseFloat(data.annual_production_kwh);
-    if (data.energy_imported_kwh) data.energy_imported_kwh = parseFloat(data.energy_imported_kwh);
-    if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
-    if (sigImg !== undefined) data.client_signature_image = sigImg;
-    if (photos !== undefined) data.photos = photos;
-    await smartUpdate(base44.entities.VisitReport, "VisitReport", currentReport.id, data);
-    base44.functions.invoke('logActivity', {
-      action_type: 'checklist_save', page_name: 'Checklist', report_id: currentReport.id,
-      details: { client_name: data.client_name }
-    }).catch(() => {});
+    if (pvSaveRef.current) clearTimeout(pvSaveRef.current);
+    pvSaveRef.current = setTimeout(async () => {
+      const data = { ...updatedForm };
+      if (data.annual_production_kwh) data.annual_production_kwh = parseFloat(data.annual_production_kwh);
+      if (data.energy_imported_kwh) data.energy_imported_kwh = parseFloat(data.energy_imported_kwh);
+      if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
+      data.client_signature_image = sig;
+      data.photos = photos;
+      await smartUpdate(base44.entities.VisitReport, "VisitReport", currentReport.id, data);
+    }, 1000);
   };
 
   const update = (key, value) => {
@@ -163,40 +175,70 @@ export default function Checklist() {
       const imported = parseFloat(key === "energy_imported_kwh" ? value : newForm.energy_imported_kwh) || 0;
       if (production > 0) {
         const selfUsed = production - exported;
-        const totalConsumption = selfUsed + imported;
+        const total = selfUsed + imported;
         const ac = (selfUsed / production) * 100;
-        const ss = totalConsumption > 0 ? (selfUsed / totalConsumption) * 100 : 0;
+        const ss = total > 0 ? (selfUsed / total) * 100 : 0;
         newForm.autoconsumption_rating = `Autokonsumpcja: ${ac.toFixed(1)}%, Samowystarczalność: ${ss.toFixed(1)}%, Pobór z sieci: ${imported} kWh`;
       }
     }
     setForm(newForm);
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => autoSave(newForm, pvSignature, pvPhotos), 1000);
+    pvAutoSave(newForm, pvSignature, pvPhotos);
   };
 
-  const handlePvSignatureChange = (sig) => {
-    setPvSignature(sig);
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => autoSave(form, sig, pvPhotos), 1000);
-  };
-
-  const handlePvPhotosChange = (photos) => {
-    setPvPhotos(photos);
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => autoSave(form, pvSignature, photos), 1000);
-  };
-
+  const handlePvSig = (s) => { setPvSignature(s); pvAutoSave(form, s, pvPhotos); };
+  const handlePvPhotos = (p) => { setPvPhotos(p); pvAutoSave(form, pvSignature, p); };
   const toggleInstallation = (type) => {
     const types = form.installation_types.includes(type)
       ? form.installation_types.filter(t => t !== type)
       : [...form.installation_types, type];
     update("installation_types", types);
   };
-
   const toggleCompleted = (key) => setCompletedItems(p => ({ ...p, [key]: !p[key] }));
-  const togglePcCompleted = (key) => setPcCompleted(p => ({ ...p, [key]: !p[key] }));
-  const updatePc = (key, value) => setPcForm(p => ({ ...p, [key]: value }));
 
+  // ── PC auto-save to ServiceReport ────────────────────────────────────────
+  const pcAutoSave = (fields, photos, workerSig, clientSig, name, phone, address) => {
+    if (pcSaveRef.current) clearTimeout(pcSaveRef.current);
+    setPcSaveStatus("saving");
+    pcSaveRef.current = setTimeout(async () => {
+      const data = {
+        client_name: name || pcClientName,
+        client_phone: phone || pcClientPhone,
+        client_address: address || pcClientAddress,
+        service_date: fields.pc_data_przegladu || new Date().toISOString().split("T")[0],
+        report_type: "PC",
+        fields,
+        photos,
+        worker_signature: workerSig,
+        client_signature: clientSig,
+        status: "draft",
+        author_name: currentUser?.displayName || currentUser?.full_name || "",
+        author_email: currentUser?.email || "",
+      };
+      if (pcReportId) {
+        await base44.entities.ServiceReport.update(pcReportId, data);
+      } else {
+        const created = await base44.entities.ServiceReport.create(data);
+        setPcReportId(created.id);
+      }
+      setPcSaveStatus("saved");
+    }, 1200);
+  };
+
+  const updatePc = (key, value) => {
+    const newFields = { ...pcForm, [key]: value };
+    setPcForm(newFields);
+    pcAutoSave(newFields, pcPhotos, pcWorkerSig, pcClientSig, pcClientName, pcClientPhone, pcClientAddress);
+  };
+  const togglePcCompleted = (key) => setPcCompleted(p => ({ ...p, [key]: !p[key] }));
+
+  const handlePcClientName = (v) => { setPcClientName(v); pcAutoSave(pcForm, pcPhotos, pcWorkerSig, pcClientSig, v, pcClientPhone, pcClientAddress); };
+  const handlePcClientPhone = (v) => { setPcClientPhone(v); pcAutoSave(pcForm, pcPhotos, pcWorkerSig, pcClientSig, pcClientName, v, pcClientAddress); };
+  const handlePcClientAddress = (v) => { setPcClientAddress(v); pcAutoSave(pcForm, pcPhotos, pcWorkerSig, pcClientSig, pcClientName, pcClientPhone, v); };
+  const handlePcPhotos = (p) => { setPcPhotos(p); pcAutoSave(pcForm, p, pcWorkerSig, pcClientSig, pcClientName, pcClientPhone, pcClientAddress); };
+  const handlePcWorkerSig = (s) => { setPcWorkerSig(s); pcAutoSave(pcForm, pcPhotos, s, pcClientSig, pcClientName, pcClientPhone, pcClientAddress); };
+  const handlePcClientSig = (s) => { setPcClientSig(s); pcAutoSave(pcForm, pcPhotos, pcWorkerSig, s, pcClientName, pcClientPhone, pcClientAddress); };
+
+  // ── Eksport PV ───────────────────────────────────────────────────────────
   const handleExport = async () => {
     if (!currentReport) return;
     setSaving(true);
@@ -205,7 +247,7 @@ export default function Checklist() {
     setSaving(false);
   };
 
-  const handleGeneratePdf = async () => {
+  const handleGeneratePvPdf = async () => {
     if (!currentReport) return;
     setGeneratingPdf(true);
     try {
@@ -224,14 +266,9 @@ export default function Checklist() {
     setGeneratingPdf(true);
     try {
       const payload = {
-        mode: "PC",
-        client_name: pcClientName,
-        client_phone: pcClientPhone,
-        client_address: pcClientAddress,
-        worker_signature: pcWorkerSignature,
-        client_signature: pcClientSignature,
-        photos: pcPhotos,
-        fields: pcForm,
+        client_name: pcClientName, client_phone: pcClientPhone, client_address: pcClientAddress,
+        worker_signature: pcWorkerSig, client_signature: pcClientSig,
+        photos: pcPhotos, fields: pcForm,
       };
       const res = await base44.functions.invoke('generateChecklistPCPDF', payload);
       if (res.data?.pdf_base64) {
@@ -252,6 +289,7 @@ export default function Checklist() {
   const pcCompletedCount = Object.values(pcCompleted).filter(Boolean).length;
   const pcProgress = (pcCompletedCount / pcAuditFields.length) * 100;
 
+  // ── Mode Toggle ──────────────────────────────────────────────────────────
   const ModeToggle = () => (
     <div className="flex items-center bg-gray-100 rounded-xl p-1 w-fit">
       {["PV", "PC"].map(mode => (
@@ -265,7 +303,7 @@ export default function Checklist() {
     </div>
   );
 
-  // ── NO REPORT SELECTED ────────────────────────────────────────────────────
+  // ── No report selected (PV mode) ─────────────────────────────────────────
   if (!currentReport && checklistMode === "PV") {
     return (
       <div className="space-y-6">
@@ -276,12 +314,19 @@ export default function Checklist() {
     );
   }
 
-  // ── PC MODE ───────────────────────────────────────────────────────────────
+  // ── PC MODE ──────────────────────────────────────────────────────────────
   if (checklistMode === "PC" && isAdmin) {
     return (
       <div className="space-y-6">
         <PageHeader title="Protokół Przeglądu / Audytu PC" subtitle="Pompa ciepła / Kocioł" />
-        <ModeToggle />
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <ModeToggle />
+          <div className="text-xs text-gray-500">
+            {pcSaveStatus === "saving" && <span className="text-orange-500">Zapisywanie...</span>}
+            {pcSaveStatus === "saved" && <span className="text-green-600">✓ Zapisano w systemie</span>}
+            {pcReportId && <span className="ml-2 text-gray-400">ID: {pcReportId.slice(-6)}</span>}
+          </div>
+        </div>
 
         {/* Progress */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -300,15 +345,15 @@ export default function Checklist() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <Label className="text-gray-700 text-xs mb-1">Imię i nazwisko klienta</Label>
-              <Input value={pcClientName} onChange={e => setPcClientName(e.target.value)} placeholder="Jan Kowalski" />
+              <Input value={pcClientName} onChange={e => handlePcClientName(e.target.value)} placeholder="Jan Kowalski" />
             </div>
             <div>
               <Label className="text-gray-700 text-xs mb-1">Telefon</Label>
-              <Input value={pcClientPhone} onChange={e => setPcClientPhone(e.target.value)} placeholder="600 123 456" />
+              <Input value={pcClientPhone} onChange={e => handlePcClientPhone(e.target.value)} placeholder="600 123 456" />
             </div>
             <div className="md:col-span-2">
               <Label className="text-gray-700 text-xs mb-1">Adres obiektu</Label>
-              <Input value={pcClientAddress} onChange={e => setPcClientAddress(e.target.value)} placeholder="ul. Słoneczna 12, 00-000 Warszawa" />
+              <Input value={pcClientAddress} onChange={e => handlePcClientAddress(e.target.value)} placeholder="ul. Słoneczna 12, 00-000 Warszawa" />
             </div>
           </div>
         </div>
@@ -350,14 +395,14 @@ export default function Checklist() {
 
         {/* Zdjęcia */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <PhotoUploader photos={pcPhotos} onChange={setPcPhotos} label="Zdjęcia z przeglądu" />
+          <PhotoUploader photos={pcPhotos} onChange={handlePcPhotos} label="Zdjęcia z przeglądu" />
         </div>
 
         {/* Podpisy */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-6">
           <h3 className="text-base font-semibold text-gray-900">Podpisy</h3>
-          <SignaturePad value={pcWorkerSignature} onChange={setPcWorkerSignature} label="Podpis pracownika" />
-          <SignaturePad value={pcClientSignature} onChange={setPcClientSignature} label="Podpis klienta" />
+          <SignaturePad value={pcWorkerSig} onChange={handlePcWorkerSig} label="Podpis pracownika" />
+          <SignaturePad value={pcClientSig} onChange={handlePcClientSig} label="Podpis klienta" />
         </div>
 
         {/* Akcje */}
@@ -369,12 +414,12 @@ export default function Checklist() {
               : "Generuj PDF protokołu"}
           </Button>
         </div>
-        <div className="text-center text-sm text-gray-500">Protokół PC – tylko administratorzy</div>
+        <div className="text-center text-sm text-gray-500">Raport zapisuje się automatycznie w systemie</div>
       </div>
     );
   }
 
-  // ── PV MODE ───────────────────────────────────────────────────────────────
+  // ── PV MODE ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <PageHeader title="Checklista Doradcy Technicznego" subtitle="Analiza i modernizacja instalacji" />
@@ -396,22 +441,14 @@ export default function Checklist() {
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
         <h3 className="text-base font-semibold text-gray-900">Dane klienta</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <Label className="text-gray-700 text-xs mb-1">Imię i nazwisko *</Label>
-            <Input value={form.client_name} onChange={e => update("client_name", e.target.value)} placeholder="Jan Kowalski" />
-          </div>
-          <div>
-            <Label className="text-gray-700 text-xs mb-1">Telefon</Label>
-            <Input value={form.client_phone} onChange={e => update("client_phone", e.target.value)} placeholder="600 123 456" />
-          </div>
-          <div className="md:col-span-2">
-            <Label className="text-gray-700 text-xs mb-1">Adres</Label>
-            <Input value={form.client_address} onChange={e => update("client_address", e.target.value)} placeholder="ul. Słoneczna 12, 00-000 Warszawa" />
-          </div>
-          <div>
-            <Label className="text-gray-700 text-xs mb-1">Data wizyty</Label>
-            <Input type="date" value={form.visit_date} onChange={e => update("visit_date", e.target.value)} />
-          </div>
+          <div><Label className="text-gray-700 text-xs mb-1">Imię i nazwisko *</Label>
+            <Input value={form.client_name} onChange={e => update("client_name", e.target.value)} placeholder="Jan Kowalski" /></div>
+          <div><Label className="text-gray-700 text-xs mb-1">Telefon</Label>
+            <Input value={form.client_phone} onChange={e => update("client_phone", e.target.value)} placeholder="600 123 456" /></div>
+          <div className="md:col-span-2"><Label className="text-gray-700 text-xs mb-1">Adres</Label>
+            <Input value={form.client_address} onChange={e => update("client_address", e.target.value)} placeholder="ul. Słoneczna 12, 00-000 Warszawa" /></div>
+          <div><Label className="text-gray-700 text-xs mb-1">Data wizyty</Label>
+            <Input type="date" value={form.visit_date} onChange={e => update("visit_date", e.target.value)} /></div>
         </div>
         <div>
           <Label className="text-gray-700 text-xs mb-2 block">Rodzaj instalacji</Label>
@@ -470,12 +507,12 @@ export default function Checklist() {
 
       {/* Zdjęcia */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <PhotoUploader photos={pvPhotos} onChange={handlePvPhotosChange} label="Zdjęcia z wizyty" />
+        <PhotoUploader photos={pvPhotos} onChange={handlePvPhotos} label="Zdjęcia z wizyty" />
       </div>
 
       {/* Podpis */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <SignaturePad value={pvSignature} onChange={handlePvSignatureChange} label="Podpis klienta" />
+        <SignaturePad value={pvSignature} onChange={handlePvSig} label="Podpis klienta" />
       </div>
 
       {/* Akcje */}
@@ -484,7 +521,7 @@ export default function Checklist() {
           className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
           {saving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Zapisz do Sheets"}
         </Button>
-        <Button onClick={handleGeneratePdf} disabled={generatingPdf}
+        <Button onClick={handleGeneratePvPdf} disabled={generatingPdf}
           className="flex-1 h-12 bg-gray-800 hover:bg-gray-900 text-white font-semibold rounded-lg">
           {generatingPdf ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Generuj PDF"}
         </Button>
