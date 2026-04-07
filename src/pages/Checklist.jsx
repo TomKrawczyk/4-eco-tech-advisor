@@ -7,6 +7,7 @@ import { base44 } from "@/api/base44Client";
 import PageHeader from "../components/shared/PageHeader";
 import ReportSelector from "../components/reports/ReportSelector";
 import { smartUpdate } from "@/components/offline/offlineSync";
+import useCurrentUser from "@/components/shared/useCurrentUser";
 
 const Check = () => <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>;
 
@@ -53,49 +54,26 @@ const installationOptions = ["PV", "Pompa ciepła", "Magazyn energii"];
 
 // Pola audytu PC (Pompa ciepła / Kocioł)
 const pcAuditFields = [
-  // DANE KLIENTA/INSTALACJI
   { key: "pc_data_przegladu", label: "Data realizowanego przeglądu", section: "Dane klienta/instalacji", type: "date" },
   { key: "pc_data_ostatniego", label: "Data ostatniego przeglądu", section: "Dane klienta/instalacji", type: "date" },
   { key: "pc_nazwa_adres", label: "Nazwa i adres firmy wykonującej", section: "Dane osoby wykonującej przegląd", placeholder: "np. 4-Eco Green Energy" },
   { key: "pc_imie_nazwisko", label: "Imię i nazwisko wykonawcy", section: "Dane osoby wykonującej przegląd", placeholder: "np. Jan Kowalski" },
-  // LISTA CZYNNOŚCI
   { key: "pc_opis_czynnosci", label: "Opis czynności do wykonania / opis przeglądu", section: "Lista wykonanych czynności podczas przeglądu serwisowego", placeholder: "Wykonano przegląd pompy ciepła, sprawdzono...", multiline: true },
   { key: "pc_uwagi_serwisowe", label: "Uwagi serwisowe / stwierdzone usterki", section: "Lista wykonanych czynności podczas przeglądu serwisowego", placeholder: "np. Brak dostępu do filtra magnetycznego, brak osłony przewodów", multiline: true },
-  // ODBIÓR PRAC
-  { key: "pc_opis_wykonanych", label: "Opis wykonanych czynności (podsumowanie)", section: "Odbiór prac", placeholder: "np. Zostały odebrane bez zastrzeżeń, instalacja działa poprawnie", multiline: true },
-  { key: "pc_godz_przyjazdu", label: "Godzina przyjazdu", section: "Czas wykonania audytu/przeglądu", placeholder: "np. 08:00", type: "time" },
-  { key: "pc_godz_wyjazdu", label: "Godzina wyjazdu", section: "Czas wykonania audytu/przeglądu", placeholder: "np. 09:00", type: "time" },
-  // STAN TECHNICZNY
   { key: "pc_stan_pompy", label: "Stan ogólny pompy ciepła / kotła", section: "Stan techniczny urządzenia", placeholder: "np. Urządzenie w dobrym stanie technicznym" },
   { key: "pc_filtr_magnetyczny", label: "Stan filtra magnetycznego", section: "Stan techniczny urządzenia", placeholder: "np. Filtr czysty, sprawny" },
   { key: "pc_oslona_przewodow", label: "Osłona przewodów przed promieniowaniem UV", section: "Stan techniczny urządzenia", placeholder: "np. Brak osłony – zalecany montaż" },
   { key: "pc_cisnienie_czynnika", label: "Ciśnienie czynnika chłodniczego", section: "Stan techniczny urządzenia", placeholder: "np. 18 bar – prawidłowe" },
   { key: "pc_temperatura_pracy", label: "Temperatura pracy / odczyt sterownika", section: "Stan techniczny urządzenia", placeholder: "np. CWU: 55°C, CO: 45°C" },
   { key: "pc_gwarancja", label: "Status gwarancji", section: "Stan techniczny urządzenia", placeholder: "np. Urządzenie na gwarancji / NIE zgłoszona na gwarancję" },
-  // REKOMENDACJE
+  { key: "pc_opis_wykonanych", label: "Opis wykonanych czynności (podsumowanie)", section: "Odbiór prac", placeholder: "np. Zostały odebrane bez zastrzeżeń, instalacja działa poprawnie", multiline: true },
+  { key: "pc_godz_przyjazdu", label: "Godzina przyjazdu", section: "Czas wykonania audytu/przeglądu", placeholder: "np. 08:00", type: "time" },
+  { key: "pc_godz_wyjazdu", label: "Godzina wyjazdu", section: "Czas wykonania audytu/przeglądu", placeholder: "np. 09:00", type: "time" },
   { key: "pc_rekomendacje", label: "Rekomendacje i zalecenia serwisowe", section: "Rekomendacje", placeholder: "np. Zalecany montaż osłon UV, czyszczenie wymiennika", multiline: true },
   { key: "pc_dodatkowe_uwagi", label: "Dodatkowe uwagi", section: "Rekomendacje", placeholder: "np. Kolejny przegląd za 12 miesięcy", multiline: true },
 ];
 
-const pcInitialState = {
-  pc_data_przegladu: new Date().toISOString().split("T")[0],
-  pc_data_ostatniego: "",
-  pc_nazwa_adres: "4-Eco Green Energy",
-  pc_imie_nazwisko: "",
-  pc_opis_czynnosci: "",
-  pc_uwagi_serwisowe: "",
-  pc_opis_wykonanych: "",
-  pc_godz_przyjazdu: "",
-  pc_godz_wyjazdu: "",
-  pc_stan_pompy: "",
-  pc_filtr_magnetyczny: "",
-  pc_oslona_przewodow: "",
-  pc_cisnienie_czynnika: "",
-  pc_temperatura_pracy: "",
-  pc_gwarancja: "",
-  pc_rekomendacje: "",
-  pc_dodatkowe_uwagi: "",
-};
+const pcInitialState = Object.fromEntries(pcAuditFields.map(f => [f.key, f.key === "pc_data_przegladu" ? new Date().toISOString().split("T")[0] : f.key === "pc_nazwa_adres" ? "4-Eco Green Energy" : ""]));
 
 export default function Checklist() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -106,21 +84,23 @@ export default function Checklist() {
     visit_date: urlParams.get("prefill_meeting_date") || new Date().toISOString().split("T")[0],
   } : null;
 
+  const { currentUser } = useCurrentUser();
+  const isAdmin = currentUser?.role === "admin";
+
   const [currentReport, setCurrentReport] = useState(null);
   const [form, setForm] = useState(prefillData ? { ...initialState, ...prefillData } : initialState);
   const [saving, setSaving] = useState(false);
   const [completedItems, setCompletedItems] = useState({});
   const [saveTimeout, setSaveTimeout] = useState(null);
-  const [checklistMode, setChecklistMode] = useState("PV"); // "PV" | "PC"
+  const [checklistMode, setChecklistMode] = useState("PV");
   const [pcForm, setPcForm] = useState(pcInitialState);
   const [pcCompleted, setPcCompleted] = useState({});
-  
-  // Log page view
+
   useEffect(() => {
     base44.functions.invoke('logActivity', {
       action_type: 'page_view',
       page_name: 'Checklist'
-    }).catch(err => console.error('Log error:', err));
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -154,48 +134,34 @@ export default function Checklist() {
 
   const autoSave = async (updatedForm) => {
     if (!currentReport) return;
-    
     const data = { ...updatedForm };
     if (data.annual_production_kwh) data.annual_production_kwh = parseFloat(data.annual_production_kwh);
     if (data.energy_imported_kwh) data.energy_imported_kwh = parseFloat(data.energy_imported_kwh);
     if (data.energy_exported_kwh) data.energy_exported_kwh = parseFloat(data.energy_exported_kwh);
-    
     await smartUpdate(base44.entities.VisitReport, "VisitReport", currentReport.id, data);
-    
-    // Log activity
     base44.functions.invoke('logActivity', {
       action_type: 'checklist_save',
       page_name: 'Checklist',
       report_id: currentReport.id,
-      details: {
-        client_name: data.client_name,
-        fields_filled: Object.keys(data).filter(k => data[k]).length
-      }
-    }).catch(err => console.error('Log error:', err));
+      details: { client_name: data.client_name, fields_filled: Object.keys(data).filter(k => data[k]).length }
+    }).catch(() => {});
   };
 
   const update = (key, value) => {
     const newForm = { ...form, [key]: value };
-    
-    // Automatyczne wyliczanie autokonsumpcji
     if (key === 'annual_production_kwh' || key === 'energy_exported_kwh' || key === 'energy_imported_kwh') {
       const production = parseFloat(key === 'annual_production_kwh' ? value : newForm.annual_production_kwh) || 0;
       const exported = parseFloat(key === 'energy_exported_kwh' ? value : newForm.energy_exported_kwh) || 0;
       const imported = parseFloat(key === 'energy_imported_kwh' ? value : newForm.energy_imported_kwh) || 0;
-      
       if (production > 0) {
         const selfUsed = production - exported;
         const totalConsumption = selfUsed + imported;
         const autoconsumptionRate = (selfUsed / production) * 100;
         const selfSufficiency = totalConsumption > 0 ? (selfUsed / totalConsumption) * 100 : 0;
-        
         newForm.autoconsumption_rating = `Autokonsumpcja: ${autoconsumptionRate.toFixed(1)}%, Samowystarczalność: ${selfSufficiency.toFixed(1)}%, Pobór z sieci: ${imported} kWh`;
       }
     }
-    
     setForm(newForm);
-    
-    // Auto-save z debounce
     if (saveTimeout) clearTimeout(saveTimeout);
     const timeout = setTimeout(() => autoSave(newForm), 1000);
     setSaveTimeout(timeout);
@@ -208,9 +174,9 @@ export default function Checklist() {
     update("installation_types", types);
   };
 
-  const toggleCompleted = (key) => {
-    setCompletedItems({ ...completedItems, [key]: !completedItems[key] });
-  };
+  const toggleCompleted = (key) => setCompletedItems(prev => ({ ...prev, [key]: !prev[key] }));
+  const togglePcCompleted = (key) => setPcCompleted(prev => ({ ...prev, [key]: !prev[key] }));
+  const updatePc = (key, value) => setPcForm(prev => ({ ...prev, [key]: value }));
 
   const handleExport = async () => {
     if (!currentReport) return;
@@ -226,15 +192,6 @@ export default function Checklist() {
   const completedCount = Object.values(completedItems).filter(Boolean).length;
   const totalItems = checklistItems.length;
   const progress = totalItems > 0 ? (completedCount / totalItems) * 100 : 0;
-
-  const updatePc = (key, value) => {
-    const newForm = { ...pcForm, [key]: value };
-    setPcForm(newForm);
-  };
-
-  const togglePcCompleted = (key) => {
-    setPcCompleted(prev => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const pcSections = [...new Set(pcAuditFields.map(f => f.section))];
   const pcCompletedCount = Object.values(pcCompleted).filter(Boolean).length;
@@ -252,7 +209,7 @@ export default function Checklist() {
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          {mode === "PV" ? "🌞 Fotowoltaika (PV)" : "🔥 Pompa ciepła (PC)"}
+          {mode === "PV" ? "Fotowoltaika (PV)" : "Pompa ciepła (PC)"}
         </button>
       ))}
     </div>
@@ -261,24 +218,18 @@ export default function Checklist() {
   if (!currentReport) {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Checklista Doradcy Technicznego"
-          subtitle="Analiza i modernizacja instalacji"
-        />
-        <ModeToggle />
+        <PageHeader title="Checklista Doradcy Technicznego" subtitle="Analiza i modernizacja instalacji" />
+        {isAdmin && <ModeToggle />}
         <ReportSelector onSelectReport={setCurrentReport} currentReport={null} />
       </div>
     );
   }
 
-  // Tryb PC – protokół przeglądu pompy ciepła
-  if (checklistMode === "PC") {
+  // Tryb PC – widoczny tylko dla admina
+  if (checklistMode === "PC" && isAdmin) {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Protokół Przeglądu/Audytu PC"
-          subtitle="Pompa ciepła / Kocioł"
-        />
+        <PageHeader title="Protokół Przeglądu/Audytu PC" subtitle="Pompa ciepła / Kocioł" />
         <ModeToggle />
         <ReportSelector onSelectReport={setCurrentReport} currentReport={currentReport} />
 
@@ -298,7 +249,7 @@ export default function Checklist() {
           </div>
         </div>
 
-        {/* Dane klienta (wspólne z raportem) */}
+        {/* Dane klienta */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
           <h3 className="text-base font-semibold text-gray-900">Dane klienta</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -322,21 +273,17 @@ export default function Checklist() {
           const fields = pcAuditFields.filter(f => f.section === section);
           return (
             <div key={section} className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-              <h3 className="text-base font-semibold text-gray-900 uppercase tracking-wide text-orange-700">{section}</h3>
+              <h3 className="text-base font-semibold text-orange-700 uppercase tracking-wide">{section}</h3>
               {fields.map(field => (
                 <motion.div
                   key={field.key}
-                  className={`rounded-lg border p-4 transition-all ${
-                    pcCompleted[field.key] ? "bg-orange-50 border-orange-200" : "bg-white border-gray-200"
-                  }`}
+                  className={`rounded-lg border p-4 transition-all ${pcCompleted[field.key] ? "bg-orange-50 border-orange-200" : "bg-white border-gray-200"}`}
                 >
                   <div className="flex items-start gap-3">
                     <button
                       onClick={() => togglePcCompleted(field.key)}
                       className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all ${
-                        pcCompleted[field.key]
-                          ? "bg-orange-500 border-orange-500"
-                          : "border-gray-300 hover:border-gray-400"
+                        pcCompleted[field.key] ? "bg-orange-500 border-orange-500" : "border-gray-300 hover:border-gray-400"
                       }`}
                     >
                       {pcCompleted[field.key] && <Check />}
@@ -390,13 +337,11 @@ export default function Checklist() {
     );
   }
 
+  // Tryb PV (domyślny)
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Checklista Doradcy Technicznego"
-        subtitle="Analiza i modernizacja instalacji"
-      />
-      <ModeToggle />
+      <PageHeader title="Checklista Doradcy Technicznego" subtitle="Analiza i modernizacja instalacji" />
+      {isAdmin && <ModeToggle />}
       <ReportSelector onSelectReport={setCurrentReport} currentReport={currentReport} />
 
       {/* Progress */}
@@ -491,18 +436,14 @@ export default function Checklist() {
           <motion.div
             key={ci.key}
             className={`rounded-lg border p-4 transition-all ${
-              completedItems[ci.key]
-                ? "bg-green-50 border-green-200"
-                : "bg-white border-gray-200"
+              completedItems[ci.key] ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
             }`}
           >
             <div className="flex items-start gap-3">
               <button
                 onClick={() => toggleCompleted(ci.key)}
                 className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all ${
-                  completedItems[ci.key]
-                    ? "bg-green-500 border-green-500"
-                    : "border-gray-300 hover:border-gray-400"
+                  completedItems[ci.key] ? "bg-green-500 border-green-500" : "border-gray-300 hover:border-gray-400"
                 }`}
               >
                 {completedItems[ci.key] && <Check />}
@@ -547,7 +488,7 @@ export default function Checklist() {
           )}
         </Button>
       </div>
-      
+
       <div className="text-center text-sm text-gray-500">
         Zmiany zapisują się automatycznie
       </div>
