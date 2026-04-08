@@ -330,6 +330,8 @@ export default function UserManagement() {
     );
   }
 
+  const isHrAdmin = currentUser?.role === "hr_admin";
+
   return (
     <div>
       <PageHeader 
@@ -338,17 +340,19 @@ export default function UserManagement() {
       />
 
       <Tabs defaultValue="users" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="requests">
-            Prośby
-            {registrationRequests.length > 0 && (
-              <Badge variant="destructive" className="ml-2">{registrationRequests.length}</Badge>
-            )}
-          </TabsTrigger>
+        <TabsList className={`grid w-full ${isHrAdmin ? "grid-cols-1" : "grid-cols-5"}`}>
+          {!isHrAdmin && (
+            <TabsTrigger value="requests">
+              Prośby
+              {registrationRequests.length > 0 && (
+                <Badge variant="destructive" className="ml-2">{registrationRequests.length}</Badge>
+              )}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="users">Użytkownicy</TabsTrigger>
-          <TabsTrigger value="profiles">Profile</TabsTrigger>
-          <TabsTrigger value="groups">Grupy</TabsTrigger>
-          <TabsTrigger value="activity"><Activity className="w-3 h-3 mr-1" />Aktywność</TabsTrigger>
+          {!isHrAdmin && <TabsTrigger value="profiles">Profile</TabsTrigger>}
+          {!isHrAdmin && <TabsTrigger value="groups">Grupy</TabsTrigger>}
+          {!isHrAdmin && <TabsTrigger value="activity"><Activity className="w-3 h-3 mr-1" />Aktywność</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="requests" className="space-y-4">
@@ -419,7 +423,7 @@ export default function UserManagement() {
 
         <TabsContent value="users" className="space-y-6">
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 mb-6">
+      {!isHrAdmin && <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 mb-6">
         <h3 className="text-base md:text-lg font-semibold mb-4">Dodaj użytkownika</h3>
         <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
           <div>
@@ -501,12 +505,12 @@ export default function UserManagement() {
             )}
           </Button>
         </form>
-      </div>
+      </div>}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <h3 className="text-base md:text-lg font-semibold">Lista użytkowników ({filteredUsers.length})</h3>
-          {selectedUsers.length > 0 && (
+          {!isHrAdmin && selectedUsers.length > 0 && (
             <Button
               variant="destructive"
               size="sm"
@@ -550,23 +554,23 @@ export default function UserManagement() {
           <p className="text-gray-500">Brak użytkowników</p>
         ) : (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 p-3 border-b border-gray-200">
+            {!isHrAdmin && <div className="flex items-center gap-2 p-3 border-b border-gray-200">
               <Checkbox
                 checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
                 onCheckedChange={toggleSelectAll}
               />
               <span className="text-sm text-gray-600 font-medium">Zaznacz wszystkie</span>
-            </div>
+            </div>}
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
                 className="flex items-start sm:items-center gap-2 sm:gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300"
               >
-                <Checkbox
+                {!isHrAdmin && <Checkbox
                   checked={selectedUsers.includes(user.id)}
                   onCheckedChange={() => toggleUserSelection(user.id)}
                   className="mt-1 sm:mt-0"
-                />
+                />}
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
@@ -594,7 +598,7 @@ export default function UserManagement() {
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button
+                  {!isHrAdmin && <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => resendInviteMutation.mutate(user)}
@@ -602,15 +606,15 @@ export default function UserManagement() {
                     title="Wyślij zaproszenie ponownie"
                   >
                     <Mail className="w-4 h-4 text-blue-500" />
-                  </Button>
-                  <Button
+                  </Button>}
+                  {!isHrAdmin && <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setUserToDelete(user)}
                     className="shrink-0"
                   >
                     <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
+                  </Button>}
                   <Button
                     variant="ghost"
                     size="icon"
