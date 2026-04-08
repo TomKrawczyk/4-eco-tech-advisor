@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, LockOpen } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
@@ -31,6 +31,7 @@ export default function UserManagement() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [unblockingUserId, setUnblockingUserId] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -136,6 +137,19 @@ export default function UserManagement() {
     },
     onError: (error) => {
       toast.error(`Błąd: ${error.message}`);
+    },
+  });
+
+  const unblockUserMutation = useMutation({
+    mutationFn: (userId) => base44.entities.AllowedUser.update(userId, { is_blocked: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["allowedUsers"]);
+      setUnblockingUserId(null);
+      toast.success("Użytkownik odblokowany");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
+      setUnblockingUserId(null);
     },
   });
 
@@ -318,7 +332,7 @@ export default function UserManagement() {
     }
   };
 
-  if (currentUser?.role !== "admin" && currentUser?.role !== "hr_admin") {
+  if (currentUser?.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -452,14 +466,9 @@ export default function UserManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">Użytkownik</SelectItem>
-                <SelectItem value="advisor">Doradca</SelectItem>
                 <SelectItem value="team_leader">Team Leader</SelectItem>
-                <SelectItem value="group_leader">Lider grupy</SelectItem>
+                <SelectItem value="group_leader">Group Leader</SelectItem>
                 <SelectItem value="admin">Administrator</SelectItem>
-                <SelectItem value="hr_admin">Administrator HR</SelectItem>
-                <SelectItem value="serviceman">Serwisant</SelectItem>
-                <SelectItem value="auditor">Audytor</SelectItem>
-                <SelectItem value="test_user">Użytkownik testowy</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -542,14 +551,9 @@ export default function UserManagement() {
             <SelectContent>
               <SelectItem value="all">Wszystkie role</SelectItem>
               <SelectItem value="user">Użytkownik</SelectItem>
-              <SelectItem value="advisor">Doradca</SelectItem>
               <SelectItem value="team_leader">Team Leader</SelectItem>
-              <SelectItem value="group_leader">Lider grupy</SelectItem>
+              <SelectItem value="group_leader">Group Leader</SelectItem>
               <SelectItem value="admin">Administrator</SelectItem>
-              <SelectItem value="hr_admin">Administrator HR</SelectItem>
-              <SelectItem value="serviceman">Serwisant</SelectItem>
-              <SelectItem value="auditor">Audytor</SelectItem>
-              <SelectItem value="test_user">Użytkownik testowy</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -581,29 +585,19 @@ export default function UserManagement() {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                    <Badge className={
-                       (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
-                       (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
-                       (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
-                       (user.data?.role || user.role) === "hr_admin" ? "bg-orange-100 text-orange-700" :
-                       (user.data?.role || user.role) === "serviceman" ? "bg-indigo-100 text-indigo-700" :
-                       (user.data?.role || user.role) === "auditor" ? "bg-cyan-100 text-cyan-700" :
-                       (user.data?.role || user.role) === "test_user" ? "bg-yellow-100 text-yellow-700" :
-                       (user.data?.role || user.role) === "advisor" ? "bg-teal-100 text-teal-700" :
-                       "bg-gray-100 text-gray-700"
-                     }>
-                       {
-                         (user.data?.role || user.role) === "admin" ? "Administrator" :
-                         (user.data?.role || user.role) === "group_leader" ? "Lider grupy" :
-                         (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
-                         (user.data?.role || user.role) === "hr_admin" ? "Administrator HR" :
-                         (user.data?.role || user.role) === "serviceman" ? "Serwisant" :
-                         (user.data?.role || user.role) === "auditor" ? "Audytor" :
-                         (user.data?.role || user.role) === "test_user" ? "Użytkownik testowy" :
-                         (user.data?.role || user.role) === "advisor" ? "Doradca" :
-                         "Użytkownik"
-                       }
-                    </Badge>
+                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
+                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
+                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
+                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
+                      "bg-gray-100 text-gray-700"
+                    }`}>
+                      {
+                        (user.data?.role || user.role) === "admin" ? "Admin" :
+                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
+                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
+                        "Użytkownik"
+                      }
+                    </span>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
@@ -627,8 +621,11 @@ export default function UserManagement() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => unblockUserMutation.mutate(user.id)}
-                      disabled={unblockingUserId === user.id}
+                      onClick={() => {
+                        setUnblockingUserId(user.id);
+                        unblockUserMutation.mutate(user.id);
+                      }}
+                      disabled={unblockingUserId === user.id || unblockUserMutation.isPending}
                       className="shrink-0"
                       title="Odblokuj użytkownika"
                     >
@@ -664,7 +661,7 @@ export default function UserManagement() {
       <TabsContent value="profiles">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <h3 className="text-base md:text-lg font-semibold mb-4">Podgląd profili użytkowników</h3>
-          {currentUser?.role === "admin" || currentUser?.role === "hr_admin" ? (
+          {currentUser?.role === "admin" ? (
             <UserProfilesPreview allowedUsers={allowedUsers} groups={groups} />
           ) : (
             <div className="text-center py-12">
