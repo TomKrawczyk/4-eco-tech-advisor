@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, LockOpen } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
@@ -587,15 +587,27 @@ export default function UserManagement() {
                     {(() => {
                       const blockedUntil = user.data?.blocked_until || user.blocked_until;
                       const adminBlocked = blockedUntil && new Date(blockedUntil) >= new Date(new Date().toISOString().split("T")[0]);
-                      const autoBlocked = (user.data?.is_blocked || user.is_blocked) === true;
+                      const autoBlocked = !adminBlocked && (user.data?.is_blocked || user.is_blocked) === true;
                       if (adminBlocked) return (
-                        <span className="text-xs px-2 py-0.5 rounded w-fit bg-red-100 text-red-700 font-medium">
+                        <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 font-medium">
                           🔒 Blokada do {blockedUntil}
                         </span>
                       );
                       if (autoBlocked) return (
-                        <span className="text-xs px-2 py-0.5 rounded w-fit bg-orange-100 text-orange-700 font-medium">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">
                           ⚠️ Autoblokada
+                          <button
+                            title="Odblokuj autoblokadę"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await base44.entities.AllowedUser.update(user.id, { is_blocked: false, blocked_reason: "", missing_reports_count: 0 });
+                              queryClient.invalidateQueries(["allowedUsers"]);
+                              toast.success("Autoblokada zdjęta");
+                            }}
+                            className="hover:text-green-700 transition-colors"
+                          >
+                            <LockOpen className="w-3 h-3" />
+                          </button>
                         </span>
                       );
                       return null;
