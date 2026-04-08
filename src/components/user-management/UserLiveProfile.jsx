@@ -3,15 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Phone, Bell, Users, ArrowLeft, Shield, Crown, User, BellRing, CheckCircle, Clock } from "lucide-react";
+import { Calendar, Phone, Bell, Users, ArrowLeft, BellRing, CheckCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
-
-const roleConfig = {
-  admin: { label: "Admin", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Shield },
-  group_leader: { label: "Group Leader", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Crown },
-  team_leader: { label: "Team Leader", color: "bg-green-100 text-green-700 border-green-200", icon: Users },
-  user: { label: "Handlowiec", color: "bg-gray-100 text-gray-700 border-gray-200", icon: User },
-};
+import { RoleBadge, StatusBadge } from "./RoleBadge";
 
 export default function UserLiveProfile({ user, groups, allUsers, onBack }) {
   const email = user.data?.email || user.email;
@@ -19,9 +13,6 @@ export default function UserLiveProfile({ user, groups, allUsers, onBack }) {
   const role = user.data?.role || user.role;
   const groupId = user.data?.group_id || user.group_id;
   const userId = user.id;
-
-  const rc = roleConfig[role] || roleConfig.user;
-  const Icon = rc.icon;
 
   const group = groups.find(g => g.id === groupId);
   const groupName = group?.data?.name || group?.name;
@@ -85,30 +76,29 @@ export default function UserLiveProfile({ user, groups, allUsers, onBack }) {
       </Button>
 
       {/* User header */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <div className="flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 ${rc.color}`}>
-            <Icon className="w-7 h-7" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xl font-bold text-gray-900">{name}</span>
-              <Badge className={`border ${rc.color}`}>{rc.label}</Badge>
-              {groupName && (
-                <Badge className="bg-orange-50 text-orange-700 border-orange-200">{groupName}</Badge>
-              )}
-            </div>
-            <div className="text-sm text-gray-500 mt-1">{email}</div>
-            {managedGroups.length > 0 && (
-              <div className="flex gap-1 mt-1 flex-wrap">
-                {managedGroups.map(g => (
-                  <Badge key={g.id} className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
-                    Zarządza: {g.data?.name || g.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
+       <div className="bg-white border border-gray-200 rounded-xl p-5">
+         <div className="flex items-center gap-4">
+           <RoleBadge user={user} variant="icon-only" />
+           <div className="flex-1 min-w-0">
+             <div className="flex items-center gap-2 flex-wrap">
+               <span className="text-xl font-bold text-gray-900">{name}</span>
+               <RoleBadge user={user} />
+               <StatusBadge user={user} />
+               {groupName && (
+                 <Badge className="bg-orange-50 text-orange-700 border-orange-200">{groupName}</Badge>
+               )}
+             </div>
+             <div className="text-sm text-gray-500 mt-1">{email}</div>
+             {managedGroups.length > 0 && (
+               <div className="flex gap-1 mt-1 flex-wrap">
+                 {managedGroups.map(g => (
+                   <Badge key={g.id} className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                     Zarządza: {g.data?.name || g.name}
+                   </Badge>
+                 ))}
+               </div>
+             )}
+           </div>
           {/* Stats */}
           <div className="flex gap-4 shrink-0">
             <div className="text-center">

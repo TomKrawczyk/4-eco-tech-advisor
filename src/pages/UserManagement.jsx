@@ -31,7 +31,6 @@ export default function UserManagement() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [unblockingUserId, setUnblockingUserId] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -137,19 +136,6 @@ export default function UserManagement() {
     },
     onError: (error) => {
       toast.error(`Błąd: ${error.message}`);
-    },
-  });
-
-  const unblockUserMutation = useMutation({
-    mutationFn: (userId) => base44.entities.AllowedUser.update(userId, { is_blocked: false }),
-    onSuccess: () => {
-      queryClient.invalidateQueries(["allowedUsers"]);
-      setUnblockingUserId(null);
-      toast.success("Użytkownik odblokowany");
-    },
-    onError: (error) => {
-      toast.error(`Błąd: ${error.message}`);
-      setUnblockingUserId(null);
     },
   });
 
@@ -582,31 +568,20 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
-                    <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
-                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
-                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
-                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
-                      "bg-gray-100 text-gray-700"
-                    }`}>
-                      {
-                        (user.data?.role || user.role) === "admin" ? "Admin" :
-                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
-                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
-                        "Użytkownik"
-                      }
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    <Clock className="w-3 h-3 inline mr-1" />
-                    Ostatnia aktywność: {formatLastActivity(user.data?.last_activity || user.last_activity)}
-                  </div>
-                  {(user.data?.notes || user.notes) && (
-                    <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.data?.notes || user.notes}</p>
-                  )}
-                </div>
+                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
+                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
+                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
+                     <RoleBadge user={user} />
+                     <StatusBadge user={user} />
+                   </div>
+                   <div className="text-xs text-gray-500 mt-1">
+                     <Clock className="w-3 h-3 inline mr-1" />
+                     Ostatnia aktywność: {formatLastActivity(user.data?.last_activity || user.last_activity)}
+                   </div>
+                   {(user.data?.notes || user.notes) && (
+                     <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.data?.notes || user.notes}</p>
+                   )}
+                 </div>
                 <div className="flex gap-1">
                   <Button
                     variant="ghost"
@@ -617,21 +592,14 @@ export default function UserManagement() {
                   >
                     <Mail className="w-4 h-4 text-blue-500" />
                   </Button>
-                  {(user.data?.is_blocked || user.is_blocked) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setUnblockingUserId(user.id);
-                        unblockUserMutation.mutate(user.id);
-                      }}
-                      disabled={unblockingUserId === user.id || unblockUserMutation.isPending}
-                      className="shrink-0"
-                      title="Odblokuj użytkownika"
-                    >
-                      <LockOpen className="w-4 h-4 text-green-600" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setUserToDelete(user)}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -640,15 +608,6 @@ export default function UserManagement() {
                     title="Edytuj użytkownika"
                   >
                     <Edit className="w-4 h-4 text-blue-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setUserToDelete(user)}
-                    className="shrink-0"
-                    title="Usuń użytkownika"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
                   </Button>
                 </div>
               </div>

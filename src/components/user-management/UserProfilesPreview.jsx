@@ -4,15 +4,9 @@ import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Phone, Users, User, ChevronRight, Search, Shield, Crown, Bell } from "lucide-react";
+import { Calendar, Phone, ChevronRight, Search, Bell } from "lucide-react";
 import UserLiveProfile from "./UserLiveProfile";
-
-const roleConfig = {
-  admin: { label: "Admin", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Shield },
-  group_leader: { label: "Group Leader", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Crown },
-  team_leader: { label: "Team Leader", color: "bg-green-100 text-green-700 border-green-200", icon: Users },
-  user: { label: "Handlowiec", color: "bg-gray-100 text-gray-700 border-gray-200", icon: User },
-};
+import { RoleBadge, StatusBadge } from "./RoleBadge";
 
 function UserRow({ user, meetings, contacts, notifications, groups, onClick }) {
   const email = user.data?.email || user.email;
@@ -20,9 +14,6 @@ function UserRow({ user, meetings, contacts, notifications, groups, onClick }) {
   const role = user.data?.role || user.role;
   const groupId = user.data?.group_id || user.group_id;
   const userId = user.id;
-
-  const rc = roleConfig[role] || roleConfig.user;
-  const Icon = rc.icon;
 
   const group = groups.find(g => g.id === groupId);
   const groupName = group?.data?.name || group?.name;
@@ -56,13 +47,12 @@ function UserRow({ user, meetings, contacts, notifications, groups, onClick }) {
       className="w-full bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-green-300 hover:shadow-sm transition-all flex items-center gap-3"
       onClick={() => onClick(user)}
     >
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${rc.color}`}>
-        <Icon className="w-5 h-5" />
-      </div>
+      <RoleBadge user={user} variant="icon-only" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-gray-900 text-sm">{name}</span>
-          <Badge className={`text-[10px] border ${rc.color}`}>{rc.label}</Badge>
+          <RoleBadge user={user} />
+          <StatusBadge user={user} />
           {groupName && (
             <Badge className="text-[10px] bg-orange-50 text-orange-700 border-orange-200">{groupName}</Badge>
           )}
