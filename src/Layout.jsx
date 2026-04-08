@@ -140,7 +140,7 @@ export default function Layout({ children, currentPageName }) {
           user.is_blocked = adminBlocked || (userAccess.data?.is_blocked || userAccess.is_blocked) === true;
 
           let pendingTraining = null;
-          if (user.role !== 'admin') {
+          if (user.role !== 'admin' && user.role !== 'hr_admin') {
             const [trainings, views] = await Promise.all([
               base44.entities.Training.list('order'),
               base44.entities.TrainingView.filter({ user_email: user.email })
@@ -436,7 +436,7 @@ export default function Layout({ children, currentPageName }) {
       </AnimatePresence>
 
       <OfflineBanner />
-      {currentUser && currentUser.role === "user" && (
+      {currentUser && (currentUser.role === "advisor" || currentUser.role === "user") && (
         <div className="fixed top-14 left-0 right-0 z-40">
           <MissingReportsBanner currentUser={currentUser} />
         </div>
