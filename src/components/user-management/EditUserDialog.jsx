@@ -124,6 +124,25 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
   const isAdminBlocked = blockedUntilValue
     ? new Date(blockedUntilValue) >= new Date(new Date().toISOString().split("T")[0])
     : false;
+  const isAutoBlocked = !isAdminBlocked && (user?.data?.is_blocked || user?.is_blocked);
+
+  const handleAutoUnblock = async () => {
+    setSavingBlock(true);
+    try {
+      await base44.entities.AllowedUser.update(user.id, {
+        is_blocked: false,
+        blocked_reason: "",
+        missing_reports_count: 0,
+      });
+      sessionStorage.removeItem('layout_user_cache');
+      toast.success("Użytkownik odblokowany");
+      onRefresh();
+    } catch (error) {
+      toast.error("Błąd: " + error.message);
+    } finally {
+      setSavingBlock(false);
+    }
+  };
 
   const handleAdminBlock = async () => {
     if (!blockUntilDate) return;
@@ -300,6 +319,16 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
               <Button
                 variant="outline"
                 onClick={handleAdminUnblock}
+                disabled={savingBlock}
+                className="text-green-600 border-green-200 hover:bg-green-50"
+              >
+                {savingBlock ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LockOpen className="w-4 h-4 mr-2" />}
+                Odblokuj
+              </Button>
+            ) : isAutoBlocked ? (
+              <Button
+                variant="outline"
+                onClick={handleAutoUnblock}
                 disabled={savingBlock}
                 className="text-green-600 border-green-200 hover:bg-green-50"
               >
