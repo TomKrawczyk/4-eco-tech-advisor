@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, LockOpen } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
@@ -568,49 +568,36 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
-                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
-                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
-                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
-                      "bg-gray-100 text-gray-700"
-                    }`}>
-                      {
-                        (user.data?.role || user.role) === "admin" ? "Admin" :
-                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
-                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
-                        "Użytkownik"
-                      }
-                    </span>
                     {(() => {
-                      const blockedUntil = user.data?.blocked_until || user.blocked_until;
-                      const adminBlocked = blockedUntil && new Date(blockedUntil) >= new Date(new Date().toISOString().split("T")[0]);
-                      const autoBlocked = !adminBlocked && (user.data?.is_blocked || user.is_blocked) === true;
-                      if (adminBlocked) return (
-                        <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 font-medium">
-                          🔒 Blokada do {blockedUntil}
+                      const r = user.data?.role || user.role;
+                      const roleLabel = {
+                        admin: "Administrator",
+                        hr_admin: "Admin HR",
+                        group_leader: "Group Leader",
+                        team_leader: "Team Leader",
+                        advisor: "Doradca",
+                        test_user: "Użytkownik testowy",
+                        serviceman: "Serwisant",
+                        auditor: "Audytor",
+                      }[r] || r || "Brak roli";
+                      const roleColor = {
+                        admin: "bg-purple-100 text-purple-700",
+                        hr_admin: "bg-purple-100 text-purple-600",
+                        group_leader: "bg-blue-100 text-blue-700",
+                        team_leader: "bg-green-100 text-green-700",
+                        advisor: "bg-gray-100 text-gray-700",
+                        test_user: "bg-yellow-100 text-yellow-700",
+                        serviceman: "bg-cyan-100 text-cyan-700",
+                        auditor: "bg-indigo-100 text-indigo-700",
+                      }[r] || "bg-gray-100 text-gray-500";
+                      return (
+                        <span className={`text-xs px-2 py-0.5 rounded w-fit ${roleColor}`}>
+                          {roleLabel}
                         </span>
                       );
-                      if (autoBlocked) return (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">
-                          ⚠️ Autoblokada
-                          <button
-                            title="Odblokuj autoblokadę"
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              await base44.entities.AllowedUser.update(user.id, { is_blocked: false, blocked_reason: "", missing_reports_count: 0 });
-                              queryClient.invalidateQueries(["allowedUsers"]);
-                              toast.success("Autoblokada zdjęta");
-                            }}
-                            className="hover:text-green-700 transition-colors"
-                          >
-                            <LockOpen className="w-3 h-3" />
-                          </button>
-                        </span>
-                      );
-                      return null;
                     })()}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
