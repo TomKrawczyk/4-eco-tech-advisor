@@ -158,7 +158,7 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setShowAddDialog(false);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false, visible_to_test_users: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
       setUploadedVideoUrl("");
       setUploadProgress(0);
       setUploadMode("url");
@@ -174,7 +174,7 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setEditingTraining(null);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false, visible_to_test_users: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
       setUploadedVideoUrl("");
       setUploadProgress(0);
       setUploadMode("url");
@@ -240,12 +240,10 @@ export default function Education() {
 
   const isCompleted = (trainingId) => myViews.some(v => v.training_id === trainingId);
 
-  const filteredTrainings = trainings.filter(t => {
-    if (t.is_published === false) return false;
-    if (currentUser?.role === "test_user" && !t.visible_to_test_users) return false;
-    if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
-    return true;
-  });
+  const filteredTrainings = trainings.filter(t =>
+    t.is_published !== false &&
+    (categoryFilter === "all" || t.category === categoryFilter)
+  );
 
   const completedCount = trainings.filter(t => isCompleted(t.id)).length;
 
@@ -528,9 +526,6 @@ export default function Education() {
                           </Badge>
                           {training.is_required && (
                             <Badge className="bg-red-100 text-red-700">Obowiązkowe</Badge>
-                          )}
-                          {training.visible_to_test_users && currentUser?.role === 'admin' && (
-                            <Badge className="bg-yellow-100 text-yellow-700">Test</Badge>
                           )}
                           {completed && (
                             <Badge className="bg-green-100 text-green-700">
