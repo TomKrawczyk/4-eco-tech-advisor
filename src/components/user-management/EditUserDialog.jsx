@@ -12,7 +12,7 @@ import { toast } from "sonner";
 export default function EditUserDialog({ user, open, onClose, onSave, onRefresh, allUsers, groups }) {
   const [formData, setFormData] = useState({
     name: "",
-    role: "user",
+    role: "advisor",
     notes: "",
     group_id: "",
     assigned_to: ""
@@ -30,7 +30,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
     if (user) {
       setFormData({
         name: user.data?.name || user.name || "",
-        role: user.data?.role || user.role || "user",
+        role: user.data?.role || user.role || "advisor",
         notes: user.data?.notes || user.notes || "",
         group_id: user.data?.group_id || user.group_id || "",
         assigned_to: user.data?.assigned_to || user.assigned_to || ""
@@ -41,7 +41,8 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
   const availableLeaders = allUsers.filter(u => {
     if (u.id === user?.id) return false;
     const userRole = u.data?.role || u.role;
-    if (formData.role === "user") return userRole === "team_leader" || userRole === "group_leader";
+    const subordinateRoles = ["advisor", "test_user", "serviceman", "auditor"];
+    if (subordinateRoles.includes(formData.role)) return userRole === "team_leader" || userRole === "group_leader";
     if (formData.role === "team_leader") return userRole === "group_leader";
     return false;
   });
@@ -201,18 +202,23 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
           <div>
             <Label>Rola</Label>
             <Select value={formData.role} onValueChange={(val) => {
-              setFormData({ ...formData, role: val });
-              if (val === "admin" || val === "group_leader") {
-                setFormData(prev => ({ ...prev, assigned_to: "" }));
-              }
+              setFormData(prev => ({
+                ...prev,
+                role: val,
+                assigned_to: (val === "admin" || val === "group_leader" || val === "hr_admin") ? "" : prev.assigned_to
+              }));
             }}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">Użytkownik</SelectItem>
+                <SelectItem value="advisor">Doradca</SelectItem>
                 <SelectItem value="team_leader">Team Leader</SelectItem>
-                <SelectItem value="group_leader">Group Leader</SelectItem>
+                <SelectItem value="group_leader">Lider grupy</SelectItem>
+                <SelectItem value="hr_admin">Administrator HR</SelectItem>
+                <SelectItem value="test_user">Użytkownik testowy</SelectItem>
+                <SelectItem value="serviceman">Serwisant</SelectItem>
+                <SelectItem value="auditor">Audytor</SelectItem>
                 <SelectItem value="admin">Administrator</SelectItem>
               </SelectContent>
             </Select>
@@ -235,9 +241,9 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
               </Select>
             </div>
           )}
-          {(formData.role === "user" || formData.role === "team_leader") && availableLeaders.length > 0 && (
+          {(["advisor","team_leader","test_user","serviceman","auditor"].includes(formData.role)) && availableLeaders.length > 0 && (
             <div>
-              <Label>Przypisz do {formData.role === "user" ? "Team/Group Leadera" : "Group Leadera"}</Label>
+              <Label>Przypisz do {formData.role === "team_leader" ? "Group Leadera" : "Team/Group Leadera"}</Label>
               <Select value={formData.assigned_to} onValueChange={(val) => setFormData({ ...formData, assigned_to: val })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Wybierz..." />

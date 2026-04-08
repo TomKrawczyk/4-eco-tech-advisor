@@ -184,8 +184,14 @@ export default function Layout({ children, currentPageName }) {
   }, []);
 
   const isItemVisible = (item) => {
-    if (item.adminOnly && currentUser?.role !== "admin") return false;
+    if (item.adminOnly && currentUser?.role !== "admin" && currentUser?.role !== "hr_admin") return false;
     if (item.roles && !item.roles.includes(currentUser?.role)) return false;
+    // Użytkownik testowy widzi tylko Szkolenia
+    if (currentUser?.role === "test_user") {
+      const allowed = ["Education", "Dashboard"];
+      if (item.group) return item.items?.some(i => allowed.includes(i.name));
+      return allowed.includes(item.name);
+    }
     return true;
   };
 
@@ -267,9 +273,14 @@ export default function Layout({ children, currentPageName }) {
                   <Link to={createPageUrl("UserProfile")} className="text-right hover:opacity-75 transition-opacity">
                     <div className="text-xs font-semibold text-gray-800 leading-tight">{currentUser.displayName}</div>
                     <div className="text-[10px] text-gray-400 leading-tight">
-                      {currentUser.role === "admin" ? "Administrator" :
-                       currentUser.role === "group_leader" ? "Group Leader" :
-                       currentUser.role === "team_leader" ? "Team Leader" : "Użytkownik"}
+                    {currentUser.role === "admin" ? "Administrator" :
+                     currentUser.role === "group_leader" ? "Lider grupy" :
+                     currentUser.role === "team_leader" ? "Team Leader" :
+                     currentUser.role === "hr_admin" ? "Administrator HR" :
+                     currentUser.role === "test_user" ? "Użytkownik testowy" :
+                     currentUser.role === "serviceman" ? "Serwisant" :
+                     currentUser.role === "auditor" ? "Audytor" :
+                     "Doradca"}
                     </div>
                   </Link>
                   <button
@@ -343,8 +354,13 @@ export default function Layout({ children, currentPageName }) {
                       <div className="text-[11px] text-green-700 flex items-center gap-1 mt-0.5">
                         <Shield className="w-3 h-3" />
                         {currentUser.role === "admin" ? "Administrator" :
-                         currentUser.role === "group_leader" ? "Group Leader" :
-                         currentUser.role === "team_leader" ? "Team Leader" : "Użytkownik"}
+                         currentUser.role === "group_leader" ? "Lider grupy" :
+                         currentUser.role === "team_leader" ? "Team Leader" :
+                         currentUser.role === "hr_admin" ? "Administrator HR" :
+                         currentUser.role === "test_user" ? "Użytkownik testowy" :
+                         currentUser.role === "serviceman" ? "Serwisant" :
+                         currentUser.role === "auditor" ? "Audytor" :
+                         "Doradca"}
                       </div>
                     </div>
                   </div>

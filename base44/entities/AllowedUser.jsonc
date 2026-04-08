@@ -14,12 +14,16 @@
     "role": {
       "type": "string",
       "enum": [
-        "user",
+        "advisor",
         "team_leader",
         "group_leader",
-        "admin"
+        "admin",
+        "test_user",
+        "hr_admin",
+        "serviceman",
+        "auditor"
       ],
-      "default": "user",
+      "default": "advisor",
       "description": "Rola u\u017cytkownika"
     },
     "notes": {
