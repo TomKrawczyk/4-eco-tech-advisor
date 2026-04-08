@@ -205,7 +205,7 @@ export default function Layout({ children, currentPageName }) {
     .map(entry => {
       if (entry.group) {
         // Jeśli cała grupa ma roles lub adminOnly, sprawdź czy user ma dostęp
-        if (entry.adminOnly && currentUser?.role !== "admin") return null;
+        if (entry.adminOnly && currentUser?.role !== "admin" && currentUser?.role !== "hr_admin") return null;
         if (entry.roles && !entry.roles.includes(currentUser?.role)) return null;
         const visibleItems = entry.items.filter(isItemVisible);
         if (visibleItems.length === 0) return null;
