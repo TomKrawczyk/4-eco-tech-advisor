@@ -6,23 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Lock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, Unlock } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
-import { RoleBadge } from "@/components/user-management/RoleBadge";
 import { format } from "date-fns";
 
 export default function UserManagement() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState("advisor");
+  const [role, setRole] = useState("user");
   const [notes, setNotes] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
@@ -85,7 +85,7 @@ export default function UserManagement() {
       
       // Następnie zapraszamy przez Base44
       try {
-        await base44.users.inviteUser(data.email, data.role);
+        await base44.users.inviteUser(data.email, "user");
       } catch (inviteError) {
         console.warn("Zaproszenie nie powiodło się:", inviteError);
       }
@@ -96,7 +96,7 @@ export default function UserManagement() {
       queryClient.invalidateQueries(["allowedUsers"]);
       setEmail("");
       setName("");
-      setRole("advisor");
+      setRole("user");
       setNotes("");
       setAssignedTo("");
       toast.success("Użytkownik dodany pomyślnie");
@@ -130,7 +130,7 @@ export default function UserManagement() {
 
   const resendInviteMutation = useMutation({
     mutationFn: async (user) => {
-      await base44.users.inviteUser(user.data?.email || user.email, user.data?.role || user.role);
+      await base44.users.inviteUser(user.email, user.role);
     },
     onSuccess: () => {
       toast.success("Zaproszenie wysłane ponownie");
@@ -192,7 +192,7 @@ export default function UserManagement() {
 
   const availableLeaders = allowedUsers.filter(u => {
     const userRole = u.data?.role || u.role;
-    if (role === "advisor") return userRole === "team_leader" || userRole === "group_leader";
+    if (role === "user") return userRole === "team_leader" || userRole === "group_leader";
     if (role === "team_leader") return userRole === "group_leader";
     return false;
   });
@@ -229,6 +229,17 @@ export default function UserManagement() {
     updateUserMutation.mutate({ userId, updates, oldAssignedTo });
   };
 
+  const unblockUserMutation = useMutation({
+    mutationFn: (userId) => base44.entities.AllowedUser.update(userId, { is_blocked: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["allowedUsers"]);
+      toast.success("Użytkownik odblokowany");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
+    },
+  });
+
   const approveRequestMutation = useMutation({
     mutationFn: async (request) => {
       const email = request.data?.email || request.email;
@@ -238,7 +249,7 @@ export default function UserManagement() {
       await base44.entities.AllowedUser.create({
         email: email,
         name: fullName,
-        role: "advisor"
+        role: "user"
       });
       
       // Zaktualizuj status prośby
@@ -250,7 +261,7 @@ export default function UserManagement() {
 
       // Wyślij zaproszenie
       try {
-        await base44.users.inviteUser(email, "advisor");
+        await base44.users.inviteUser(email, "user");
       } catch (error) {
         console.warn("Zaproszenie nie powiodło się:", error);
       }
@@ -319,17 +330,17 @@ export default function UserManagement() {
     }
   };
 
-  if (currentUser?.role !== "admin" && currentUser?.role !== "hr_admin") {
-     return (
-       <div className="flex items-center justify-center min-h-[60vh]">
-         <div className="text-center">
-           <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-           <h2 className="text-xl font-semibold text-gray-900 mb-2">Brak dostępu</h2>
-           <p className="text-gray-600">Tylko administratorzy mogą zarządzać użytkownikami</p>
-         </div>
-       </div>
-     );
-   }
+  if (currentUser?.role !== "admin") {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Brak dostępu</h2>
+          <p className="text-gray-600">Tylko administratorzy mogą zarządzać użytkownikami</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -452,21 +463,17 @@ export default function UserManagement() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="advisor">Doradca</SelectItem>
+                <SelectItem value="user">Użytkownik</SelectItem>
                 <SelectItem value="team_leader">Team Leader</SelectItem>
                 <SelectItem value="group_leader">Group Leader</SelectItem>
                 <SelectItem value="admin">Administrator</SelectItem>
-                <SelectItem value="hr_admin">Administrator HR</SelectItem>
-                <SelectItem value="test_user">Użytkownik testowy</SelectItem>
-                <SelectItem value="serviceman">Serwisant</SelectItem>
-                <SelectItem value="auditor">Audytor</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          {(role === "advisor" || role === "team_leader") && availableLeaders.length > 0 && (
+          {(role === "user" || role === "team_leader") && availableLeaders.length > 0 && (
             <div>
               <Label className="text-sm">
-                Przypisz do {role === "advisor" ? "Team/Group Leadera" : "Group Leadera"}
+                Przypisz do {role === "user" ? "Team/Group Leadera" : "Group Leadera"}
               </Label>
               <Select value={assignedTo} onValueChange={setAssignedTo}>
                 <SelectTrigger className="h-11">
@@ -541,14 +548,10 @@ export default function UserManagement() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie role</SelectItem>
-              <SelectItem value="advisor">Doradca</SelectItem>
+              <SelectItem value="user">Użytkownik</SelectItem>
               <SelectItem value="team_leader">Team Leader</SelectItem>
               <SelectItem value="group_leader">Group Leader</SelectItem>
               <SelectItem value="admin">Administrator</SelectItem>
-              <SelectItem value="hr_admin">Administrator HR</SelectItem>
-              <SelectItem value="test_user">Użytkownik testowy</SelectItem>
-              <SelectItem value="serviceman">Serwisant</SelectItem>
-              <SelectItem value="auditor">Audytor</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -577,10 +580,22 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                    <RoleBadge user={user} />
+                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
+                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
+                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
+                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
+                      "bg-gray-100 text-gray-700"
+                    }`}>
+                      {
+                        (user.data?.role || user.role) === "admin" ? "Admin" :
+                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
+                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
+                        "Użytkownik"
+                      }
+                    </span>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
@@ -591,33 +606,44 @@ export default function UserManagement() {
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => resendInviteMutation.mutate(user)}
-                    className="shrink-0"
-                    title="Wyślij zaproszenie ponownie"
-                  >
-                    <Mail className="w-4 h-4 text-blue-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setUserToDelete(user)}
-                    className="shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setEditingUser(user)}
-                    className="shrink-0"
-                    title="Edytuj użytkownika"
-                  >
-                    <Edit className="w-4 h-4 text-blue-500" />
-                  </Button>
-                </div>
+                   {(user.data?.is_blocked || user.is_blocked) && (
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       onClick={() => unblockUserMutation.mutate(user.id)}
+                       className="shrink-0"
+                       title="Odblokuj użytkownika"
+                     >
+                       <Unlock className="w-4 h-4 text-green-500" />
+                     </Button>
+                   )}
+                   <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={() => resendInviteMutation.mutate(user)}
+                     className="shrink-0"
+                     title="Wyślij zaproszenie ponownie"
+                   >
+                     <Mail className="w-4 h-4 text-blue-500" />
+                   </Button>
+                   <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={() => setUserToDelete(user)}
+                     className="shrink-0"
+                   >
+                     <Trash2 className="w-4 h-4 text-red-500" />
+                   </Button>
+                   <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={() => setEditingUser(user)}
+                     className="shrink-0"
+                     title="Edytuj użytkownika"
+                   >
+                     <Edit className="w-4 h-4 text-blue-500" />
+                   </Button>
+                 </div>
               </div>
             ))}
           </div>
@@ -628,10 +654,9 @@ export default function UserManagement() {
       <TabsContent value="profiles">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <h3 className="text-base md:text-lg font-semibold mb-4">Podgląd profili użytkowników</h3>
-          {(currentUser?.role === "admin" || currentUser?.role === "hr_admin") && (
+          {currentUser?.role === "admin" ? (
             <UserProfilesPreview allowedUsers={allowedUsers} groups={groups} />
-          )}
-          {currentUser?.role !== "admin" && currentUser?.role !== "hr_admin" && (
+          ) : (
             <div className="text-center py-12">
               <Shield className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">Tylko administratorzy mają dostęp do podglądu profili.</p>
