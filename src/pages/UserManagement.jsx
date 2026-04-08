@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, Lock, LockOpen } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, LockOpen } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
@@ -174,25 +174,6 @@ export default function UserManagement() {
     },
   });
 
-  const unblockUserMutation = useMutation({
-    mutationFn: async (userId) => {
-      setUnblockingUserId(userId);
-      await base44.entities.AllowedUser.update(userId, {
-        is_blocked: false,
-        missing_reports_count: 0
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(["allowedUsers"]);
-      setUnblockingUserId(null);
-      toast.success("Użytkownik odblokowany");
-    },
-    onError: (error) => {
-      setUnblockingUserId(null);
-      toast.error(`Błąd: ${error.message}`);
-    },
-  });
-
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Submit clicked", { email, name, role, notes, assignedTo });
@@ -327,6 +308,25 @@ export default function UserManagement() {
     onError: (error) => {
       toast.error(`Błąd: ${error.message}`);
     }
+  });
+
+  const unblockUserMutation = useMutation({
+    mutationFn: async (userId) => {
+      setUnblockingUserId(userId);
+      await base44.entities.AllowedUser.update(userId, {
+        is_blocked: false,
+        missing_reports_count: 0
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["allowedUsers"]);
+      setUnblockingUserId(null);
+      toast.success("Użytkownik odblokowany");
+    },
+    onError: (error) => {
+      setUnblockingUserId(null);
+      toast.error(`Błąd: ${error.message}`);
+    },
   });
 
   const formatLastActivity = (lastActivity) => {
@@ -591,15 +591,19 @@ export default function UserManagement() {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${getRoleBgColor(user.data?.role || user.role)}`}>
-                      {getRoleLabel(user.data?.role || user.role)}
+                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
+                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
+                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
+                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
+                      "bg-gray-100 text-gray-700"
+                    }`}>
+                      {
+                        (user.data?.role || user.role) === "admin" ? "Admin" :
+                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
+                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
+                        "Użytkownik"
+                      }
                     </span>
-                    {(user.data?.is_blocked || user.is_blocked) && (
-                      <span className="text-xs px-2 py-0.5 rounded w-fit bg-red-100 text-red-700 flex items-center gap-1">
-                        <Lock className="w-3 h-3" />
-                        Zablokowany
-                      </span>
-                    )}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
