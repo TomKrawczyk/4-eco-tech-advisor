@@ -9,13 +9,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, LockOpen } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
+import RoleBadge from "@/components/user-management/RoleBadge";
+import StatusBadge from "@/components/user-management/StatusBadge";
 import { format } from "date-fns";
 
 export default function UserManagement() {
@@ -128,16 +130,27 @@ export default function UserManagement() {
   });
 
   const resendInviteMutation = useMutation({
-    mutationFn: async (user) => {
-      await base44.users.inviteUser(user.email, user.role);
-    },
-    onSuccess: () => {
-      toast.success("Zaproszenie wysłane ponownie");
-    },
-    onError: (error) => {
-      toast.error(`Błąd: ${error.message}`);
-    },
-  });
+     mutationFn: async (user) => {
+       await base44.users.inviteUser(user.data?.email || user.email, user.data?.role || user.role);
+     },
+     onSuccess: () => {
+       toast.success("Zaproszenie wysłane ponownie");
+     },
+     onError: (error) => {
+       toast.error(`Błąd: ${error.message}`);
+     },
+   });
+
+   const unblockUserMutation = useMutation({
+     mutationFn: (userId) => base44.entities.AllowedUser.update(userId, { is_blocked: false }),
+     onSuccess: () => {
+       queryClient.invalidateQueries(["allowedUsers"]);
+       toast.success("Użytkownik odblokowany");
+     },
+     onError: (error) => {
+       toast.error(`Błąd: ${error.message}`);
+     },
+   });
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, updates, oldAssignedTo }) => {
@@ -318,17 +331,17 @@ export default function UserManagement() {
     }
   };
 
-  if (currentUser?.role !== "admin") {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Brak dostępu</h2>
-          <p className="text-gray-600">Tylko administratorzy mogą zarządzać użytkownikami</p>
-        </div>
-      </div>
-    );
-  }
+  if (currentUser?.role !== "admin" && currentUser?.role !== "hr_admin") {
+     return (
+       <div className="flex items-center justify-center min-h-[60vh]">
+         <div className="text-center">
+           <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+           <h2 className="text-xl font-semibold text-gray-900 mb-2">Brak dostępu</h2>
+           <p className="text-gray-600">Tylko administratorzy mogą zarządzać użytkownikami</p>
+         </div>
+       </div>
+     );
+   }
 
   return (
     <div>
@@ -346,7 +359,7 @@ export default function UserManagement() {
             )}
           </TabsTrigger>
           <TabsTrigger value="users">Użytkownicy</TabsTrigger>
-          <TabsTrigger value="profiles">Profile</TabsTrigger>
+          <TabsTrigger value="profiles">{currentUser?.role === "admin" && "Profile"}</TabsTrigger>
           <TabsTrigger value="groups">Grupy</TabsTrigger>
           <TabsTrigger value="activity"><Activity className="w-3 h-3 mr-1" />Aktywność</TabsTrigger>
         </TabsList>
@@ -633,9 +646,10 @@ export default function UserManagement() {
       <TabsContent value="profiles">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <h3 className="text-base md:text-lg font-semibold mb-4">Podgląd profili użytkowników</h3>
-          {currentUser?.role === "admin" ? (
+          {currentUser?.role === "admin" && (
             <UserProfilesPreview allowedUsers={allowedUsers} groups={groups} />
-          ) : (
+          )}
+          {currentUser?.role !== "admin" && (
             <div className="text-center py-12">
               <Shield className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">Tylko administratorzy mają dostęp do podglądu profili.</p>
