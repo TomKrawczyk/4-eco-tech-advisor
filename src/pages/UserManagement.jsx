@@ -536,10 +536,14 @@ export default function UserManagement() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie role</SelectItem>
-              <SelectItem value="user">Użytkownik</SelectItem>
+              <SelectItem value="advisor">Doradca</SelectItem>
               <SelectItem value="team_leader">Team Leader</SelectItem>
               <SelectItem value="group_leader">Group Leader</SelectItem>
               <SelectItem value="admin">Administrator</SelectItem>
+              <SelectItem value="hr_admin">Admin HR</SelectItem>
+              <SelectItem value="test_user">Użytkownik testowy</SelectItem>
+              <SelectItem value="serviceman">Serwisant</SelectItem>
+              <SelectItem value="auditor">Audytor</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -573,29 +577,11 @@ export default function UserManagement() {
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
                     {(() => {
                       const r = user.data?.role || user.role;
-                      const roleLabel = {
-                        admin: "Administrator",
-                        hr_admin: "Admin HR",
-                        group_leader: "Group Leader",
-                        team_leader: "Team Leader",
-                        advisor: "Doradca",
-                        test_user: "Użytkownik testowy",
-                        serviceman: "Serwisant",
-                        auditor: "Audytor",
-                      }[r] || r || "Brak roli";
-                      const roleColor = {
-                        admin: "bg-purple-100 text-purple-700",
-                        hr_admin: "bg-purple-100 text-purple-600",
-                        group_leader: "bg-blue-100 text-blue-700",
-                        team_leader: "bg-green-100 text-green-700",
-                        advisor: "bg-gray-100 text-gray-700",
-                        test_user: "bg-yellow-100 text-yellow-700",
-                        serviceman: "bg-cyan-100 text-cyan-700",
-                        auditor: "bg-indigo-100 text-indigo-700",
-                      }[r] || "bg-gray-100 text-gray-500";
+                      const ROLE_LABELS = { admin: "Administrator", hr_admin: "Admin HR", group_leader: "Group Leader", team_leader: "Team Leader", advisor: "Doradca", test_user: "Użytkownik testowy", serviceman: "Serwisant", auditor: "Audytor" };
+                      const ROLE_COLORS = { admin: "bg-purple-100 text-purple-700", hr_admin: "bg-purple-100 text-purple-600", group_leader: "bg-blue-100 text-blue-700", team_leader: "bg-green-100 text-green-700", advisor: "bg-gray-100 text-gray-700", test_user: "bg-yellow-100 text-yellow-700", serviceman: "bg-cyan-100 text-cyan-700", auditor: "bg-indigo-100 text-indigo-700" };
                       return (
-                        <span className={`text-xs px-2 py-0.5 rounded w-fit ${roleColor}`}>
-                          {roleLabel}
+                        <span className={`text-xs px-2 py-0.5 rounded w-fit ${ROLE_COLORS[r] || "bg-gray-100 text-gray-500"}`}>
+                          {ROLE_LABELS[r] || r || "Brak roli"}
                         </span>
                       );
                     })()}
