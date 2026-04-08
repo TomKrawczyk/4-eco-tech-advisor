@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, ShieldAlert, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, Lock, LockOpen } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
@@ -21,7 +21,7 @@ import { format } from "date-fns";
 export default function UserManagement() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState("user");
+  const [role, setRole] = useState("advisor");
   const [notes, setNotes] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
@@ -451,10 +451,14 @@ export default function UserManagement() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">Użytkownik</SelectItem>
+                <SelectItem value="advisor">Doradca</SelectItem>
                 <SelectItem value="team_leader">Team Leader</SelectItem>
                 <SelectItem value="group_leader">Group Leader</SelectItem>
                 <SelectItem value="admin">Administrator</SelectItem>
+                <SelectItem value="hr_admin">Admin HR</SelectItem>
+                <SelectItem value="test_user">Użytkownik testowy</SelectItem>
+                <SelectItem value="serviceman">Serwisant</SelectItem>
+                <SelectItem value="auditor">Audytor</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -568,33 +572,22 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                    {(() => {
-                      const r = user.data?.role || user.role;
-                      const ROLE_LABELS = { admin: "Administrator", hr_admin: "Admin HR", group_leader: "Group Leader", team_leader: "Team Leader", advisor: "Doradca", test_user: "Użytkownik testowy", serviceman: "Serwisant", auditor: "Audytor" };
-                      const ROLE_COLORS = { admin: "bg-purple-100 text-purple-700", hr_admin: "bg-purple-100 text-purple-600", group_leader: "bg-blue-100 text-blue-700", team_leader: "bg-green-100 text-green-700", advisor: "bg-gray-100 text-gray-700", test_user: "bg-yellow-100 text-yellow-700", serviceman: "bg-cyan-100 text-cyan-700", auditor: "bg-indigo-100 text-indigo-700" };
-                      return <span className={`text-xs px-2 py-0.5 rounded w-fit ${ROLE_COLORS[r] || "bg-gray-100 text-gray-500"}`}>{ROLE_LABELS[r] || r || "Brak roli"}</span>;
-                    })()}
-                    {/* Blokada auto (brak raportów) */}
-                    {(user.data?.is_blocked || user.is_blocked) && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 flex items-center gap-1 w-fit">
-                        <ShieldAlert className="w-3 h-3" /> Auto-blokada
-                      </span>
-                    )}
-                    {/* Blokada administracyjna */}
-                    {(() => {
-                      const blockedUntil = user.data?.blocked_until || user.blocked_until;
-                      if (!blockedUntil) return null;
-                      const isActive = new Date(blockedUntil) >= new Date(new Date().toISOString().split("T")[0]);
-                      if (!isActive) return null;
-                      return (
-                        <span className="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-700 flex items-center gap-1 w-fit">
-                          <Lock className="w-3 h-3" /> Zablokowany do {blockedUntil}
-                        </span>
-                      );
-                    })()}
+                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
+                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
+                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
+                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
+                      "bg-gray-100 text-gray-700"
+                    }`}>
+                      {
+                        (user.data?.role || user.role) === "admin" ? "Admin" :
+                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
+                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
+                        "Użytkownik"
+                      }
+                    </span>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
@@ -605,21 +598,6 @@ export default function UserManagement() {
                   )}
                 </div>
                 <div className="flex gap-1">
-                  {/* Odblokuj auto-blokadę */}
-                  {(user.data?.is_blocked || user.is_blocked) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Usuń auto-blokadę"
-                      className="shrink-0"
-                      onClick={() => {
-                        base44.entities.AllowedUser.update(user.id, { is_blocked: false, blocked_reason: "", missing_reports_count: 0 })
-                          .then(() => queryClient.invalidateQueries({ queryKey: ["allowedUsers"] }));
-                      }}
-                    >
-                      <LockOpen className="w-4 h-4 text-orange-500" />
-                    </Button>
-                  )}
                   <Button
                     variant="ghost"
                     size="icon"
