@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -9,15 +9,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, LockOpen } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, LockOpen, Lock } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
-import RoleBadge from "@/components/user-management/RoleBadge";
-import StatusBadge from "@/components/user-management/StatusBadge";
 import { format } from "date-fns";
 
 export default function UserManagement() {
@@ -130,27 +128,27 @@ export default function UserManagement() {
   });
 
   const resendInviteMutation = useMutation({
-     mutationFn: async (user) => {
-       await base44.users.inviteUser(user.data?.email || user.email, user.data?.role || user.role);
-     },
-     onSuccess: () => {
-       toast.success("Zaproszenie wysłane ponownie");
-     },
-     onError: (error) => {
-       toast.error(`Błąd: ${error.message}`);
-     },
-   });
+    mutationFn: async (user) => {
+      await base44.users.inviteUser(user.data?.email || user.email, user.data?.role || user.role);
+    },
+    onSuccess: () => {
+      toast.success("Zaproszenie wysłane ponownie");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
+    },
+  });
 
-   const unblockUserMutation = useMutation({
-     mutationFn: (userId) => base44.entities.AllowedUser.update(userId, { is_blocked: false }),
-     onSuccess: () => {
-       queryClient.invalidateQueries(["allowedUsers"]);
-       toast.success("Użytkownik odblokowany");
-     },
-     onError: (error) => {
-       toast.error(`Błąd: ${error.message}`);
-     },
-   });
+  const unblockUserMutation = useMutation({
+    mutationFn: (userId) => base44.entities.AllowedUser.update(userId, { is_blocked: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["allowedUsers"]);
+      toast.success("Użytkownik odblokowany");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
+    },
+  });
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, updates, oldAssignedTo }) => {
@@ -359,7 +357,7 @@ export default function UserManagement() {
             )}
           </TabsTrigger>
           <TabsTrigger value="users">Użytkownicy</TabsTrigger>
-          <TabsTrigger value="profiles">{currentUser?.role === "admin" && "Profile"}</TabsTrigger>
+          <TabsTrigger value="profiles">Profile</TabsTrigger>
           <TabsTrigger value="groups">Grupy</TabsTrigger>
           <TabsTrigger value="activity"><Activity className="w-3 h-3 mr-1" />Aktywność</TabsTrigger>
         </TabsList>
@@ -584,8 +582,25 @@ export default function UserManagement() {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                    <RoleBadge user={user} />
-                    <StatusBadge user={user} />
+                    <span className={`text-xs px-2 py-0.5 rounded inline-flex items-center gap-1 w-fit ${
+                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
+                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
+                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
+                      "bg-gray-100 text-gray-700"
+                    }`}>
+                      {
+                        (user.data?.role || user.role) === "admin" ? "Admin" :
+                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
+                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
+                        "Użytkownik"
+                      }
+                    </span>
+                    {(user.data?.is_blocked || user.is_blocked) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">
+                        <Lock className="w-3 h-3" />
+                        Zablokowany
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
