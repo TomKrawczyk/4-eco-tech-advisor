@@ -158,7 +158,7 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setShowAddDialog(false);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false, visible_to_test_users: false });
       setUploadedVideoUrl("");
       setUploadProgress(0);
       setUploadMode("url");
@@ -174,7 +174,7 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setEditingTraining(null);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false, visible_to_test_users: false });
       setUploadedVideoUrl("");
       setUploadProgress(0);
       setUploadMode("url");
@@ -242,7 +242,8 @@ export default function Education() {
 
   const filteredTrainings = trainings.filter(t =>
     t.is_published !== false &&
-    (categoryFilter === "all" || t.category === categoryFilter)
+    (categoryFilter === "all" || t.category === categoryFilter) &&
+    (currentUser?.role !== 'test_user' || t.visible_to_test_users === true)
   );
 
   const completedCount = trainings.filter(t => isCompleted(t.id)).length;
