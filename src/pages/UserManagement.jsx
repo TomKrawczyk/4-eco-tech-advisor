@@ -21,7 +21,7 @@ import { format } from "date-fns";
 export default function UserManagement() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState("advisor");
+  const [role, setRole] = useState("user");
   const [notes, setNotes] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
@@ -95,7 +95,7 @@ export default function UserManagement() {
       queryClient.invalidateQueries(["allowedUsers"]);
       setEmail("");
       setName("");
-      setRole("advisor");
+      setRole("user");
       setNotes("");
       setAssignedTo("");
       toast.success("Użytkownik dodany pomyślnie");
@@ -191,7 +191,7 @@ export default function UserManagement() {
 
   const availableLeaders = allowedUsers.filter(u => {
     const userRole = u.data?.role || u.role;
-    if (role === "advisor" || role === "test_user" || role === "serviceman" || role === "auditor") return userRole === "team_leader" || userRole === "group_leader";
+    if (role === "user") return userRole === "team_leader" || userRole === "group_leader";
     if (role === "team_leader") return userRole === "group_leader";
     return false;
   });
@@ -318,7 +318,7 @@ export default function UserManagement() {
     }
   };
 
-  if (currentUser?.role !== "admin" && currentUser?.role !== "hr_admin") {
+  if (currentUser?.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -445,27 +445,23 @@ export default function UserManagement() {
             <Label className="text-sm">Rola</Label>
             <Select value={role} onValueChange={(val) => {
               setRole(val);
-              if (val === "admin" || val === "group_leader" || val === "hr_admin") setAssignedTo("");
+              if (val === "admin" || val === "group_leader") setAssignedTo("");
             }}>
               <SelectTrigger className="h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="advisor">Doradca</SelectItem>
+                <SelectItem value="user">Użytkownik</SelectItem>
                 <SelectItem value="team_leader">Team Leader</SelectItem>
-                <SelectItem value="group_leader">Lider grupy</SelectItem>
-                <SelectItem value="hr_admin">Administrator HR</SelectItem>
-                <SelectItem value="test_user">Użytkownik testowy</SelectItem>
-                <SelectItem value="serviceman">Serwisant</SelectItem>
-                <SelectItem value="auditor">Audytor</SelectItem>
+                <SelectItem value="group_leader">Group Leader</SelectItem>
                 <SelectItem value="admin">Administrator</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          {(["advisor","team_leader","test_user","serviceman","auditor"].includes(role)) && availableLeaders.length > 0 && (
+          {(role === "user" || role === "team_leader") && availableLeaders.length > 0 && (
             <div>
               <Label className="text-sm">
-                Przypisz do {role === "team_leader" ? "Group Leadera" : "Team/Group Leadera"}
+                Przypisz do {role === "user" ? "Team/Group Leadera" : "Group Leadera"}
               </Label>
               <Select value={assignedTo} onValueChange={setAssignedTo}>
                 <SelectTrigger className="h-11">
@@ -539,15 +535,11 @@ export default function UserManagement() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-            <SelectItem value="all">Wszystkie role</SelectItem>
-            <SelectItem value="advisor">Doradca</SelectItem>
-            <SelectItem value="team_leader">Team Leader</SelectItem>
-            <SelectItem value="group_leader">Lider grupy</SelectItem>
-            <SelectItem value="hr_admin">Administrator HR</SelectItem>
-            <SelectItem value="test_user">Użytkownik testowy</SelectItem>
-            <SelectItem value="serviceman">Serwisant</SelectItem>
-            <SelectItem value="auditor">Audytor</SelectItem>
-            <SelectItem value="admin">Administrator</SelectItem>
+              <SelectItem value="all">Wszystkie role</SelectItem>
+              <SelectItem value="user">Użytkownik</SelectItem>
+              <SelectItem value="team_leader">Team Leader</SelectItem>
+              <SelectItem value="group_leader">Group Leader</SelectItem>
+              <SelectItem value="admin">Administrator</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -576,30 +568,38 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
                     <span className={`text-xs px-2 py-0.5 rounded w-fit ${
                       (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
                       (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
                       (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
-                      (user.data?.role || user.role) === "hr_admin" ? "bg-pink-100 text-pink-700" :
-                      (user.data?.role || user.role) === "test_user" ? "bg-yellow-100 text-yellow-700" :
-                      (user.data?.role || user.role) === "serviceman" ? "bg-orange-100 text-orange-700" :
-                      (user.data?.role || user.role) === "auditor" ? "bg-indigo-100 text-indigo-700" :
                       "bg-gray-100 text-gray-700"
                     }`}>
-                      {{
-                        admin: "Administrator",
-                        group_leader: "Lider grupy",
-                        team_leader: "Team Leader",
-                        hr_admin: "Admin HR",
-                        test_user: "Testowy",
-                        serviceman: "Serwisant",
-                        auditor: "Audytor",
-                        advisor: "Doradca"
-                      }[(user.data?.role || user.role)] || (user.data?.role || user.role)}
+                      {
+                        (user.data?.role || user.role) === "admin" ? "Admin" :
+                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
+                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
+                        "Użytkownik"
+                      }
                     </span>
+                    {(() => {
+                      const blockedUntil = user.data?.blocked_until || user.blocked_until;
+                      const adminBlocked = blockedUntil && new Date(blockedUntil) >= new Date(new Date().toISOString().split("T")[0]);
+                      const autoBlocked = (user.data?.is_blocked || user.is_blocked) === true;
+                      if (adminBlocked) return (
+                        <span className="text-xs px-2 py-0.5 rounded w-fit bg-red-100 text-red-700 font-medium">
+                          🔒 Blokada do {blockedUntil}
+                        </span>
+                      );
+                      if (autoBlocked) return (
+                        <span className="text-xs px-2 py-0.5 rounded w-fit bg-orange-100 text-orange-700 font-medium">
+                          ⚠️ Autoblokada
+                        </span>
+                      );
+                      return null;
+                    })()}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
