@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, LockOpen } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
+import { RoleBadge, StatusBadge } from "@/components/user-management/RoleBadge";
 import { format } from "date-fns";
 
 export default function UserManagement() {
@@ -31,6 +32,7 @@ export default function UserManagement() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [unblockingUserId, setUnblockingUserId] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -49,7 +51,7 @@ export default function UserManagement() {
     queryFn: () => base44.entities.RegistrationRequest.filter({ status: "pending" }),
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     const loadUser = async () => {
       const user = await base44.auth.me();
       const allowedUsersList = await base44.entities.AllowedUser.list();
@@ -136,6 +138,19 @@ export default function UserManagement() {
     },
     onError: (error) => {
       toast.error(`Błąd: ${error.message}`);
+    },
+  });
+
+  const unblockUserMutation = useMutation({
+    mutationFn: (userId) => base44.entities.AllowedUser.update(userId, { is_blocked: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["allowedUsers"]);
+      setUnblockingUserId(null);
+      toast.success("Użytkownik odblokowany");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
+      setUnblockingUserId(null);
     },
   });
 
@@ -583,6 +598,18 @@ export default function UserManagement() {
                    )}
                  </div>
                 <div className="flex gap-1">
+                  {(user.data?.is_blocked || user.is_blocked) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => unblockUserMutation.mutate(user.id)}
+                      disabled={unblockUserMutation.isPending}
+                      className="shrink-0"
+                      title="Odblokuj użytkownika"
+                    >
+                      <LockOpen className="w-4 h-4 text-green-600" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -595,19 +622,20 @@ export default function UserManagement() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setUserToDelete(user)}
-                    className="shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
                     onClick={() => setEditingUser(user)}
                     className="shrink-0"
                     title="Edytuj użytkownika"
                   >
                     <Edit className="w-4 h-4 text-blue-500" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setUserToDelete(user)}
+                    className="shrink-0"
+                    title="Usuń użytkownika"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
                   </Button>
                 </div>
               </div>
