@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, Lock, LockOpen } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
@@ -31,7 +31,6 @@ export default function UserManagement() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [unblockingUserId, setUnblockingUserId] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -228,24 +227,6 @@ export default function UserManagement() {
     const oldAssignedTo = user.data?.assigned_to || user.assigned_to;
     updateUserMutation.mutate({ userId, updates, oldAssignedTo });
   };
-
-  const unblockUserMutation = useMutation({
-    mutationFn: async (userId) => {
-      await base44.entities.AllowedUser.update(userId, {
-        is_blocked: false,
-        blocked_reason: "",
-        missing_reports_count: 0,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(["allowedUsers"]);
-      setUnblockingUserId(null);
-      toast.success("Użytkownik odblokowany");
-    },
-    onError: (error) => {
-      toast.error(`Błąd: ${error.message}`);
-    },
-  });
 
   const approveRequestMutation = useMutation({
     mutationFn: async (request) => {
@@ -587,7 +568,7 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
                     <span className={`text-xs px-2 py-0.5 rounded w-fit ${
@@ -603,6 +584,12 @@ export default function UserManagement() {
                         "Użytkownik"
                       }
                     </span>
+                    {(user.data?.is_blocked || user.is_blocked) && (
+                      <span className="text-xs px-2 py-0.5 rounded w-fit bg-red-100 text-red-700 flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        Zablokowany
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
@@ -622,18 +609,6 @@ export default function UserManagement() {
                   >
                     <Mail className="w-4 h-4 text-blue-500" />
                   </Button>
-                  {(user.data?.is_blocked || user.is_blocked) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => unblockUserMutation.mutate(user.id)}
-                      disabled={unblockingUserId === user.id || unblockUserMutation.isPending}
-                      className="shrink-0"
-                      title="Odblokuj użytkownika"
-                    >
-                      <LockOpen className="w-4 h-4 text-green-600" />
-                    </Button>
-                  )}
                   <Button
                     variant="ghost"
                     size="icon"
