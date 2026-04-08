@@ -16,7 +16,6 @@ import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
-import { RoleBadge, StatusBadge } from "@/components/user-management/RoleBadge";
 import { format } from "date-fns";
 
 export default function UserManagement() {
@@ -330,7 +329,7 @@ export default function UserManagement() {
     }
   };
 
-  if (currentUser?.role !== "admin") {
+  if (currentUser?.role !== "admin" && currentUser?.role !== "hr_admin") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -580,61 +579,61 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
-                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
-                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                     <RoleBadge user={user} />
-                     <StatusBadge user={user} />
-                   </div>
-                   <div className="text-xs text-gray-500 mt-1">
-                     <Clock className="w-3 h-3 inline mr-1" />
-                     Ostatnia aktywność: {formatLastActivity(user.data?.last_activity || user.last_activity)}
-                   </div>
-                   {(user.data?.notes || user.notes) && (
-                     <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.data?.notes || user.notes}</p>
-                   )}
-                 </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
+                    <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
+                    <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
+                    <RoleBadge user={user} />
+                    <StatusBadge user={user} />
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    <Clock className="w-3 h-3 inline mr-1" />
+                    Ostatnia aktywność: {formatLastActivity(user.data?.last_activity || user.last_activity)}
+                  </div>
+                  {(user.data?.notes || user.notes) && (
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">{user.data?.notes || user.notes}</p>
+                  )}
+                </div>
                 <div className="flex gap-1">
-                   {(user.data?.is_blocked || user.is_blocked) && (
-                     <Button
-                       variant="ghost"
-                       size="icon"
-                       onClick={() => unblockUserMutation.mutate(user.id)}
-                       disabled={unblockUserMutation.isPending}
-                       className="shrink-0"
-                       title="Odblokuj użytkownika"
-                     >
-                       <LockOpen className="w-4 h-4 text-green-600" />
-                     </Button>
-                   )}
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     onClick={() => resendInviteMutation.mutate(user)}
-                     className="shrink-0"
-                     title="Wyślij zaproszenie ponownie"
-                   >
-                     <Mail className="w-4 h-4 text-blue-500" />
-                   </Button>
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     onClick={() => setUserToDelete(user)}
-                     className="shrink-0"
-                     title="Usuń użytkownika"
-                   >
-                     <Trash2 className="w-4 h-4 text-red-500" />
-                   </Button>
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     onClick={() => setEditingUser(user)}
-                     className="shrink-0"
-                     title="Edytuj użytkownika"
-                   >
-                     <Edit className="w-4 h-4 text-blue-500" />
-                   </Button>
-                 </div>
+                  {(user.data?.is_blocked || user.is_blocked) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => unblockUserMutation.mutate(user.id)}
+                      disabled={unblockUserMutation.isPending}
+                      className="shrink-0"
+                      title="Odblokuj użytkownika"
+                    >
+                      <LockOpen className="w-4 h-4 text-green-600" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => resendInviteMutation.mutate(user)}
+                    className="shrink-0"
+                    title="Wyślij zaproszenie ponownie"
+                  >
+                    <Mail className="w-4 h-4 text-blue-500" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setUserToDelete(user)}
+                    className="shrink-0"
+                    title="Usuń użytkownika"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditingUser(user)}
+                    className="shrink-0"
+                    title="Edytuj użytkownika"
+                  >
+                    <Edit className="w-4 h-4 text-blue-500" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -645,7 +644,7 @@ export default function UserManagement() {
       <TabsContent value="profiles">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <h3 className="text-base md:text-lg font-semibold mb-4">Podgląd profili użytkowników</h3>
-          {currentUser?.role === "admin" ? (
+          {(currentUser?.role === "admin" || currentUser?.role === "hr_admin") ? (
             <UserProfilesPreview allowedUsers={allowedUsers} groups={groups} />
           ) : (
             <div className="text-center py-12">

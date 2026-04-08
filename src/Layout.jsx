@@ -89,7 +89,7 @@ const navStructure = [
     ]
   },
   { name: "Education", label: "Szkolenia" },
-  { name: "UserManagement", label: "Użytkownicy", adminOnly: true, roles: ["admin", "hr_admin"] },
+  { name: "UserManagement", label: "Użytkownicy", adminOnly: false, roles: ["admin", "hr_admin"] },
 ];
 
 export default function Layout({ children, currentPageName }) {
