@@ -186,9 +186,15 @@ export default function Layout({ children, currentPageName }) {
   const isItemVisible = (item) => {
     if (item.adminOnly && currentUser?.role !== "admin" && currentUser?.role !== "hr_admin") return false;
     if (item.roles && !item.roles.includes(currentUser?.role)) return false;
-    // Użytkownik testowy widzi tylko Szkolenia
+    // Użytkownik testowy widzi tylko Szkolenia i Start
     if (currentUser?.role === "test_user") {
       const allowed = ["Education", "Dashboard"];
+      if (item.group) return item.items?.some(i => allowed.includes(i.name));
+      return allowed.includes(item.name);
+    }
+    // HR Admin widzi tylko Start, Szkolenia i Użytkownicy
+    if (currentUser?.role === "hr_admin") {
+      const allowed = ["Dashboard", "Education", "UserManagement"];
       if (item.group) return item.items?.some(i => allowed.includes(i.name));
       return allowed.includes(item.name);
     }
