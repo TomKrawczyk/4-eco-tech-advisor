@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
+import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -48,6 +49,7 @@ export default function PhoneContacts() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
+  const [manualAddOpen, setManualAddOpen] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -114,10 +116,11 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy
+  // Scal dane z arkusza z przypisaniami z bazy + dołącz ręcznie dodane kontakty
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    return rawContacts.map(c => {
+    // Kontakty z arkusza (wzbogacone o dane z bazy)
+    const fromSheet = rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -131,6 +134,28 @@ export default function PhoneContacts() {
       }
       return c;
     });
+    // Ręcznie dodane kontakty (mają contact_key zaczynający się od "manual_")
+    const manual = phoneContactsFromDB.filter(db =>
+      db.contact_key?.startsWith("manual_") &&
+      !fromSheet.find(c => c.contact_key === db.contact_key)
+    ).map(db => ({
+      contact_key: db.contact_key,
+      sheet: db.sheet || "Ręczne",
+      client_name: db.client_name,
+      phone: db.phone,
+      address: db.address,
+      date: db.date,
+      contact_date: db.contact_date,
+      status: db.status || "Kontakt do doradcy",
+      comments: db.comments,
+      agent: db.agent,
+      id: db.id,
+      assigned_user_email: db.assigned_user_email,
+      assigned_user_name: db.assigned_user_name,
+      assigned_group_id: db.assigned_group_id,
+      assigned_group_name: db.assigned_group_name,
+    }));
+    return [...fromSheet, ...manual];
   }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
@@ -209,7 +234,10 @@ export default function PhoneContacts() {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
+        const email = u.data?.email || u.email;
         if (currentUser?.role === "admin") return true;
+        // Group leader może przypisać siebie
+        if (currentUser?.role === "group_leader" && email === currentUser.email) return true;
         if (role !== "advisor" && role !== "user" && role !== "team_leader") return false;
         const uGroupId = u.data?.group_id || u.group_id;
         return uGroupId === currentUserGroupId;
@@ -371,6 +399,11 @@ export default function PhoneContacts() {
           </Select>
         )}
 
+        <Button onClick={() => setManualAddOpen(true)} variant="outline" className="gap-2 h-11 border-green-300 text-green-700 hover:bg-green-50">
+          <Plus className="w-4 h-4" />
+          Dodaj ręcznie
+        </Button>
+
         <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           Odśwież
@@ -458,6 +491,12 @@ export default function PhoneContacts() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-800 text-sm">{sheet}</span>
                     <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{total} kontaktów</Badge>
+                    {(() => {
+                      const unassigned = dates.reduce((acc, d) => acc + d.items.filter(c => !c.assigned_user_email).length, 0);
+                      return unassigned > 0 ? (
+                        <Badge className="bg-red-50 text-red-600 border border-red-200 text-[10px]">{unassigned} nieprzypisanych</Badge>
+                      ) : null;
+                    })()}
                   </div>
                   {isOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </button>
@@ -515,7 +554,12 @@ export default function PhoneContacts() {
                                       {contact.assigned_user_email ? (
                                         <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
                                           <User className="w-3 h-3 text-green-600" />
-                                          <span className="text-xs font-medium text-green-700">{contact.assigned_user_name || contact.assigned_user_email}</span>
+                                          <span className="text-xs font-medium text-green-700">
+                                            {contact.assigned_user_name || contact.assigned_user_email}
+                                            {contact.assigned_user_name && (
+                                              <span className="ml-1 text-green-500 font-normal">({contact.assigned_user_email})</span>
+                                            )}
+                                          </span>
                                           {canAssign && (
                                             <button
                                               onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
@@ -534,7 +578,9 @@ export default function PhoneContacts() {
                                             </SelectTrigger>
                                             <SelectContent>
                                               {salespeople.map(sp => (
-                                                <SelectItem key={sp.email} value={sp.email}>{sp.name}</SelectItem>
+                                                <SelectItem key={sp.email} value={sp.email}>
+                                                  {sp.name} <span className="text-gray-400 text-[10px]">({sp.email})</span>
+                                                </SelectItem>
                                               ))}
                                             </SelectContent>
                                           </Select>
@@ -589,6 +635,13 @@ export default function PhoneContacts() {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         data={selectedDetails}
+      />
+
+      <ManualAddModal
+        open={manualAddOpen}
+        onClose={() => setManualAddOpen(false)}
+        currentUser={currentUser}
+        onContactAdded={() => queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] })}
       />
     </div>
   );
