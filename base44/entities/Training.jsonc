@@ -1,0 +1,68 @@
+{
+  "name": "Training",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Tytu\u0142 szkolenia"
+    },
+    "description": {
+      "type": "string",
+      "description": "Opis szkolenia"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "sprzedaz",
+        "techniczne",
+        "produkty",
+        "procesy",
+        "inne"
+      ],
+      "default": "sprzedaz",
+      "description": "Kategoria szkolenia"
+    },
+    "video_url": {
+      "type": "string",
+      "description": "Link do wideo (YouTube, Vimeo, itp.)"
+    },
+    "document_url": {
+      "type": "string",
+      "description": "URL lub URI do dokumentu (PDF, TXT)"
+    },
+    "document_name": {
+      "type": "string",
+      "description": "Oryginalna nazwa pliku dokumentu"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "Miniatura szkolenia"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Czas trwania w minutach"
+    },
+    "is_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy szkolenie obowi\u0105zkowe"
+    },
+    "is_published": {
+      "type": "boolean",
+      "default": true,
+      "description": "Czy opublikowane"
+    },
+    "visible_to_test_users": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy widoczne dla u\u017cytkownik\u00f3w testowych"
+    },
+    "order": {
+      "type": "number",
+      "description": "Kolejno\u015b\u0107 wy\u015bwietlania"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}
