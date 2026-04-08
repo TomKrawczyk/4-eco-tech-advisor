@@ -174,6 +174,10 @@ export default function UserProfilesPreview({ allowedUsers, groups }) {
             <SelectItem value="team_leader">Team Leader</SelectItem>
             <SelectItem value="group_leader">Group Leader</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="serviceman">Serwisant</SelectItem>
+            <SelectItem value="auditor">Audytor</SelectItem>
+            <SelectItem value="test_user">Użytkownik testowy</SelectItem>
+            <SelectItem value="hr_admin">Administrator HR</SelectItem>
           </SelectContent>
         </Select>
       </div>
