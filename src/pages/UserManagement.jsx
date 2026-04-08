@@ -318,6 +318,36 @@ export default function UserManagement() {
     }
   };
 
+  const getRoleLabel = (role) => {
+    const roleMap = {
+      admin: "Administrator",
+      hr_admin: "Administrator HR",
+      group_leader: "Lider grupy",
+      team_leader: "Team Leader",
+      advisor: "Doradca",
+      test_user: "Użytkownik testowy",
+      serviceman: "Serwisant",
+      auditor: "Audytor",
+      user: "Użytkownik"
+    };
+    return roleMap[role] || role;
+  };
+
+  const getRoleBgColor = (role) => {
+    const colorMap = {
+      admin: "bg-purple-100 text-purple-700",
+      hr_admin: "bg-indigo-100 text-indigo-700",
+      group_leader: "bg-blue-100 text-blue-700",
+      team_leader: "bg-green-100 text-green-700",
+      advisor: "bg-cyan-100 text-cyan-700",
+      test_user: "bg-yellow-100 text-yellow-700",
+      serviceman: "bg-orange-100 text-orange-700",
+      auditor: "bg-pink-100 text-pink-700",
+      user: "bg-gray-100 text-gray-700"
+    };
+    return colorMap[role] || "bg-gray-100 text-gray-700";
+  };
+
   if (currentUser?.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -569,28 +599,18 @@ export default function UserManagement() {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
-                    <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
-                    <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
-                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
-                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
-                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
-                      "bg-gray-100 text-gray-700"
-                    }`}>
-                      {
-                        (user.data?.role || user.role) === "admin" ? "Admin" :
-                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
-                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
-                        "Użytkownik"
-                      }
-                    </span>
-                    {(user.data?.is_blocked || user.is_blocked) && (
-                      <span className="text-xs px-2 py-0.5 rounded w-fit bg-red-100 text-red-700 flex items-center gap-1">
-                        <Lock className="w-3 h-3" />
-                        Zablokowany
-                      </span>
-                    )}
-                  </div>
+                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
+                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
+                     <span className={`text-xs px-2 py-0.5 rounded w-fit ${getRoleBgColor(user.data?.role || user.role)}`}>
+                       {getRoleLabel(user.data?.role || user.role)}
+                     </span>
+                     {(user.data?.is_blocked || user.is_blocked) && (
+                       <span className="text-xs px-2 py-0.5 rounded w-fit bg-red-100 text-red-700 flex items-center gap-1">
+                         <Lock className="w-3 h-3" />
+                         Zablokowany
+                       </span>
+                     )}
+                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
                     Ostatnia aktywność: {formatLastActivity(user.data?.last_activity || user.last_activity)}
@@ -600,33 +620,45 @@ export default function UserManagement() {
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => resendInviteMutation.mutate(user)}
-                    className="shrink-0"
-                    title="Wyślij zaproszenie ponownie"
-                  >
-                    <Mail className="w-4 h-4 text-blue-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setUserToDelete(user)}
-                    className="shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setEditingUser(user)}
-                    className="shrink-0"
-                    title="Edytuj użytkownika"
-                  >
-                    <Edit className="w-4 h-4 text-blue-500" />
-                  </Button>
-                </div>
+                   <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={() => resendInviteMutation.mutate(user)}
+                     className="shrink-0"
+                     title="Wyślij zaproszenie ponownie"
+                   >
+                     <Mail className="w-4 h-4 text-blue-500" />
+                   </Button>
+                   {(user.data?.is_blocked || user.is_blocked) && (
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       onClick={() => unblockUserMutation.mutate(user.id)}
+                       disabled={unblockingUserId === user.id || unblockUserMutation.isPending}
+                       className="shrink-0"
+                       title="Odblokuj użytkownika"
+                     >
+                       <LockOpen className="w-4 h-4 text-green-600" />
+                     </Button>
+                   )}
+                   <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={() => setUserToDelete(user)}
+                     className="shrink-0"
+                   >
+                     <Trash2 className="w-4 h-4 text-red-500" />
+                   </Button>
+                   <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={() => setEditingUser(user)}
+                     className="shrink-0"
+                     title="Edytuj użytkownika"
+                   >
+                     <Edit className="w-4 h-4 text-blue-500" />
+                   </Button>
+                 </div>
               </div>
             ))}
           </div>
