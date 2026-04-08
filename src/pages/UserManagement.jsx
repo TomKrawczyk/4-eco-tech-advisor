@@ -21,7 +21,7 @@ import { format } from "date-fns";
 export default function UserManagement() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState("user");
+  const [role, setRole] = useState("advisor");
   const [notes, setNotes] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
@@ -92,14 +92,14 @@ export default function UserManagement() {
       return allowedUser;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(["allowedUsers"]);
-      setEmail("");
-      setName("");
-      setRole("user");
-      setNotes("");
-      setAssignedTo("");
-      toast.success("Użytkownik dodany pomyślnie");
-    },
+       queryClient.invalidateQueries(["allowedUsers"]);
+       setEmail("");
+       setName("");
+       setRole("advisor");
+       setNotes("");
+       setAssignedTo("");
+       toast.success("Użytkownik dodany pomyślnie");
+     },
     onError: (error) => {
       console.error("Błąd dodawania użytkownika:", error);
       toast.error(`Błąd: ${error.message}`);
@@ -191,7 +191,7 @@ export default function UserManagement() {
 
   const availableLeaders = allowedUsers.filter(u => {
     const userRole = u.data?.role || u.role;
-    if (role === "advisor") return userRole === "team_leader" || userRole === "group_leader";
+    if (role === "user") return userRole === "team_leader" || userRole === "group_leader";
     if (role === "team_leader") return userRole === "group_leader";
     return false;
   });
@@ -451,21 +451,17 @@ export default function UserManagement() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="advisor">Doradca</SelectItem>
+                <SelectItem value="user">Użytkownik</SelectItem>
                 <SelectItem value="team_leader">Team Leader</SelectItem>
                 <SelectItem value="group_leader">Group Leader</SelectItem>
                 <SelectItem value="admin">Administrator</SelectItem>
-                <SelectItem value="hr_admin">Administrator HR</SelectItem>
-                <SelectItem value="test_user">Użytkownik testowy</SelectItem>
-                <SelectItem value="serviceman">Serwisant</SelectItem>
-                <SelectItem value="auditor">Audytor</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          {(role === "advisor" || role === "team_leader") && availableLeaders.length > 0 && (
+          {(role === "user" || role === "team_leader") && availableLeaders.length > 0 && (
             <div>
               <Label className="text-sm">
-                Przypisz do {role === "advisor" ? "Team/Group Leadera" : "Group Leadera"}
+                Przypisz do {role === "user" ? "Team/Group Leadera" : "Group Leadera"}
               </Label>
               <Select value={assignedTo} onValueChange={setAssignedTo}>
                 <SelectTrigger className="h-11">
@@ -540,14 +536,10 @@ export default function UserManagement() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie role</SelectItem>
-              <SelectItem value="advisor">Doradca</SelectItem>
+              <SelectItem value="user">Użytkownik</SelectItem>
               <SelectItem value="team_leader">Team Leader</SelectItem>
               <SelectItem value="group_leader">Group Leader</SelectItem>
               <SelectItem value="admin">Administrator</SelectItem>
-              <SelectItem value="hr_admin">Administrator HR</SelectItem>
-              <SelectItem value="test_user">Użytkownik testowy</SelectItem>
-              <SelectItem value="serviceman">Serwisant</SelectItem>
-              <SelectItem value="auditor">Audytor</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -576,30 +568,22 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
-                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
-                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
+                    <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
                     <span className={`text-xs px-2 py-0.5 rounded w-fit ${
-                       (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
-                       (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
-                       (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
-                       (user.data?.role || user.role) === "hr_admin" ? "bg-indigo-100 text-indigo-700" :
-                       (user.data?.role || user.role) === "test_user" ? "bg-yellow-100 text-yellow-700" :
-                       (user.data?.role || user.role) === "serviceman" ? "bg-orange-100 text-orange-700" :
-                       (user.data?.role || user.role) === "auditor" ? "bg-cyan-100 text-cyan-700" :
-                       "bg-gray-100 text-gray-700"
-                     }`}>
-                       {
-                         (user.data?.role || user.role) === "admin" ? "Administrator" :
-                         (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
-                         (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
-                         (user.data?.role || user.role) === "hr_admin" ? "Administrator HR" :
-                         (user.data?.role || user.role) === "test_user" ? "Testowy" :
-                         (user.data?.role || user.role) === "serviceman" ? "Serwisant" :
-                         (user.data?.role || user.role) === "auditor" ? "Audytor" :
-                         "Doradca"
-                       }
-                     </span>
+                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
+                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
+                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
+                      "bg-gray-100 text-gray-700"
+                    }`}>
+                      {
+                        (user.data?.role || user.role) === "admin" ? "Admin" :
+                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
+                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
+                        "Użytkownik"
+                      }
+                    </span>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
@@ -610,46 +594,33 @@ export default function UserManagement() {
                   )}
                 </div>
                 <div className="flex gap-1">
-                   {(user.data?.is_blocked || user.is_blocked) && (
-                     <Button
-                       variant="ghost"
-                       size="icon"
-                       onClick={() => unblockUserMutation.mutate(user.id)}
-                       disabled={unblockUserMutation.isPending}
-                       className="shrink-0"
-                       title="Odblokuj użytkownika"
-                     >
-                       <LockOpen className="w-4 h-4 text-green-600" />
-                     </Button>
-                   )}
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     onClick={() => resendInviteMutation.mutate(user)}
-                     className="shrink-0"
-                     title="Wyślij zaproszenie ponownie"
-                   >
-                     <Mail className="w-4 h-4 text-blue-500" />
-                   </Button>
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     onClick={() => setUserToDelete(user)}
-                     className="shrink-0"
-                     title="Usuń użytkownika"
-                   >
-                     <Trash2 className="w-4 h-4 text-red-500" />
-                   </Button>
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     onClick={() => setEditingUser(user)}
-                     className="shrink-0"
-                     title="Edytuj użytkownika"
-                   >
-                     <Edit className="w-4 h-4 text-blue-500" />
-                   </Button>
-                 </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => resendInviteMutation.mutate(user)}
+                    className="shrink-0"
+                    title="Wyślij zaproszenie ponownie"
+                  >
+                    <Mail className="w-4 h-4 text-blue-500" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setUserToDelete(user)}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditingUser(user)}
+                    className="shrink-0"
+                    title="Edytuj użytkownika"
+                  >
+                    <Edit className="w-4 h-4 text-blue-500" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -660,10 +631,9 @@ export default function UserManagement() {
       <TabsContent value="profiles">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <h3 className="text-base md:text-lg font-semibold mb-4">Podgląd profili użytkowników</h3>
-          {currentUser?.role === "admin" && (
+          {currentUser?.role === "admin" ? (
             <UserProfilesPreview allowedUsers={allowedUsers} groups={groups} />
-          )}
-          {currentUser?.role !== "admin" && (
+          ) : (
             <div className="text-center py-12">
               <Shield className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">Tylko administratorzy mają dostęp do podglądu profili.</p>
