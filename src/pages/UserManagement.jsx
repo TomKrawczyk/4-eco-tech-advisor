@@ -9,13 +9,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, LockOpen } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
+import { RoleBadge, StatusBadge } from "@/components/user-management/RoleBadge";
 import { format } from "date-fns";
 
 export default function UserManagement() {
@@ -31,6 +32,7 @@ export default function UserManagement() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [unblockingUserId, setUnblockingUserId] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -136,6 +138,19 @@ export default function UserManagement() {
     },
     onError: (error) => {
       toast.error(`Błąd: ${error.message}`);
+    },
+  });
+
+  const unblockUserMutation = useMutation({
+    mutationFn: (userId) => base44.entities.AllowedUser.update(userId, { is_blocked: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["allowedUsers"]);
+      setUnblockingUserId(null);
+      toast.success("Użytkownik odblokowany");
+    },
+    onError: (error) => {
+      toast.error(`Błąd: ${error.message}`);
+      setUnblockingUserId(null);
     },
   });
 
@@ -577,22 +592,11 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
-                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
-                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
-                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
-                      "bg-gray-100 text-gray-700"
-                    }`}>
-                      {
-                        (user.data?.role || user.role) === "admin" ? "Admin" :
-                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
-                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
-                        "Użytkownik"
-                      }
-                    </span>
+                    <RoleBadge user={user} />
+                    <StatusBadge user={user} />
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
@@ -603,33 +607,46 @@ export default function UserManagement() {
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => resendInviteMutation.mutate(user)}
-                    className="shrink-0"
-                    title="Wyślij zaproszenie ponownie"
-                  >
-                    <Mail className="w-4 h-4 text-blue-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setUserToDelete(user)}
-                    className="shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setEditingUser(user)}
-                    className="shrink-0"
-                    title="Edytuj użytkownika"
-                  >
-                    <Edit className="w-4 h-4 text-blue-500" />
-                  </Button>
-                </div>
+                   {(user.data?.is_blocked || user.is_blocked) && (
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       onClick={() => unblockUserMutation.mutate(user.id)}
+                       disabled={unblockUserMutation.isPending}
+                       className="shrink-0"
+                       title="Odblokuj użytkownika"
+                     >
+                       <LockOpen className="w-4 h-4 text-green-600" />
+                     </Button>
+                   )}
+                   <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={() => resendInviteMutation.mutate(user)}
+                     className="shrink-0"
+                     title="Wyślij zaproszenie ponownie"
+                   >
+                     <Mail className="w-4 h-4 text-blue-500" />
+                   </Button>
+                   <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={() => setUserToDelete(user)}
+                     className="shrink-0"
+                     title="Usuń użytkownika"
+                   >
+                     <Trash2 className="w-4 h-4 text-red-500" />
+                   </Button>
+                   <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={() => setEditingUser(user)}
+                     className="shrink-0"
+                     title="Edytuj użytkownika"
+                   >
+                     <Edit className="w-4 h-4 text-blue-500" />
+                   </Button>
+                 </div>
               </div>
             ))}
           </div>
