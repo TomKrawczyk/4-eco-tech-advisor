@@ -191,7 +191,7 @@ export default function UserManagement() {
 
   const availableLeaders = allowedUsers.filter(u => {
     const userRole = u.data?.role || u.role;
-    if (role === "user") return userRole === "team_leader" || userRole === "group_leader";
+    if (role === "advisor") return userRole === "team_leader" || userRole === "group_leader";
     if (role === "team_leader") return userRole === "group_leader";
     return false;
   });
@@ -617,10 +617,7 @@ export default function UserManagement() {
                       size="icon"
                       title="Usuń auto-blokadę"
                       className="shrink-0"
-                      onClick={() => {
-                        base44.entities.AllowedUser.update(user.id, { is_blocked: false, blocked_reason: "", missing_reports_count: 0 })
-                          .then(() => queryClient.invalidateQueries({ queryKey: ["allowedUsers"] }));
-                      }}
+                      onClick={() => base44.entities.AllowedUser.update(user.id, { is_blocked: false, blocked_reason: "", missing_reports_count: 0 }).then(() => queryClient.invalidateQueries({ queryKey: ["allowedUsers"] }))}
                     >
                       <LockOpen className="w-4 h-4 text-orange-500" />
                     </Button>
