@@ -451,14 +451,10 @@ export default function UserManagement() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="advisor">Doradca</SelectItem>
+                <SelectItem value="user">Użytkownik</SelectItem>
                 <SelectItem value="team_leader">Team Leader</SelectItem>
                 <SelectItem value="group_leader">Group Leader</SelectItem>
                 <SelectItem value="admin">Administrator</SelectItem>
-                <SelectItem value="hr_admin">Administrator HR</SelectItem>
-                <SelectItem value="serviceman">Serwisant</SelectItem>
-                <SelectItem value="auditor">Audytor</SelectItem>
-                <SelectItem value="test_user">Użytkownik testowy</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -540,14 +536,10 @@ export default function UserManagement() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie role</SelectItem>
-              <SelectItem value="advisor">Doradca</SelectItem>
+              <SelectItem value="user">Użytkownik</SelectItem>
               <SelectItem value="team_leader">Team Leader</SelectItem>
               <SelectItem value="group_leader">Group Leader</SelectItem>
               <SelectItem value="admin">Administrator</SelectItem>
-              <SelectItem value="hr_admin">Administrator HR</SelectItem>
-              <SelectItem value="serviceman">Serwisant</SelectItem>
-              <SelectItem value="auditor">Audytor</SelectItem>
-              <SelectItem value="test_user">Użytkownik testowy</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -576,22 +568,11 @@ export default function UserManagement() {
                   className="mt-1 sm:mt-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
-                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
-                      (user.data?.role || user.role) === "admin" ? "bg-purple-100 text-purple-700" :
-                      (user.data?.role || user.role) === "group_leader" ? "bg-blue-100 text-blue-700" :
-                      (user.data?.role || user.role) === "team_leader" ? "bg-green-100 text-green-700" :
-                      "bg-gray-100 text-gray-700"
-                    }`}>
-                      {
-                        (user.data?.role || user.role) === "admin" ? "Admin" :
-                        (user.data?.role || user.role) === "group_leader" ? "Group Leader" :
-                        (user.data?.role || user.role) === "team_leader" ? "Team Leader" :
-                        "Użytkownik"
-                      }
-                    </span>
+                    <RoleBadge user={user} />
+                    <StatusBadge user={user} />
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
@@ -602,6 +583,18 @@ export default function UserManagement() {
                   )}
                 </div>
                 <div className="flex gap-1">
+                  {(user.data?.is_blocked || user.is_blocked) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => unblockUserMutation.mutate(user.id)}
+                      disabled={unblockUserMutation.isPending}
+                      className="shrink-0"
+                      title="Odblokuj użytkownika"
+                    >
+                      <LockOpen className="w-4 h-4 text-green-600" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -616,6 +609,7 @@ export default function UserManagement() {
                     size="icon"
                     onClick={() => setUserToDelete(user)}
                     className="shrink-0"
+                    title="Usuń użytkownika"
                   >
                     <Trash2 className="w-4 h-4 text-red-500" />
                   </Button>
