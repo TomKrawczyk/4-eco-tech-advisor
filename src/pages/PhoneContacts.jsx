@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus, FileText } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
 import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
+import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -48,11 +49,12 @@ export default function PhoneContacts() {
   const [showStats, setShowStats] = useState(false);
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-  const [notifySending, setNotifySending] = useState(false);
   const [manualAddOpen, setManualAddOpen] = useState(false);
+  const [reportContact, setReportContact] = useState(null);
+  const [notifySending, setNotifySending] = useState(false);
 
-  const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
-  const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
+  const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "hr_admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
+  const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "hr_admin" || currentUser?.role === "group_leader";
   const canAssign = isLeaderOrAdmin;
   const canManageGroups = isAdminOrGroupLeader;
 
@@ -74,8 +76,7 @@ export default function PhoneContacts() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
-  // Zawsze pobieramy przypisania z bazy - potrzebne dla każdej roli
-  const { data: phoneContactsFromDB = [] } = useQuery({
+  const { data: phoneContactsFromDB = [], refetch: refetchDB } = useQuery({
     queryKey: ["phoneContactsDB"],
     queryFn: () => base44.entities.PhoneContact.list(),
     enabled: accessChecked,
@@ -97,14 +98,22 @@ export default function PhoneContacts() {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  // Ustal groupId bieżącego użytkownika
+  // Ręcznie dodane kontakty (manual_*) z bazy
+  const manualContacts = useMemo(() => {
+    return phoneContactsFromDB.filter(c => c.contact_key?.startsWith("manual_")).map(c => ({
+      ...c,
+      // normalize pola dla spójności z rawContacts
+      phone: c.phone || c.client_phone || "",
+      address: c.address || c.client_address || "",
+    }));
+  }, [phoneContactsFromDB]);
+
   const currentUserGroupId = useMemo(() => {
     if (!currentUser) return null;
-    if (currentUser.role === "admin") return null;
+    if (currentUser.role === "admin" || currentUser.role === "hr_admin") return null;
     return currentUser.groupId || null;
   }, [currentUser]);
 
-  // Ustal emaile zespołu team_leadera
   const teamMemberEmails = useMemo(() => {
     if (!currentUser || currentUser.role !== "team_leader") return [];
     const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
@@ -116,11 +125,10 @@ export default function PhoneContacts() {
     return emails;
   }, [currentUser, allAllowedUsers]);
 
-  // Scal dane z arkusza z przypisaniami z bazy + dołącz ręcznie dodane kontakty
+  // Scal rawContacts z danymi z bazy + dołącz ręcznie dodane
   const contacts = useMemo(() => {
     if (!isLeaderOrAdmin) return [];
-    // Kontakty z arkusza (wzbogacone o dane z bazy)
-    const fromSheet = rawContacts.map(c => {
+    const merged = rawContacts.map(c => {
       const dbRecord = phoneContactsFromDB.find(db => db.contact_key === c.contact_key);
       if (dbRecord) {
         return {
@@ -134,29 +142,15 @@ export default function PhoneContacts() {
       }
       return c;
     });
-    // Ręcznie dodane kontakty (mają contact_key zaczynający się od "manual_")
-    const manual = phoneContactsFromDB.filter(db =>
-      db.contact_key?.startsWith("manual_") &&
-      !fromSheet.find(c => c.contact_key === db.contact_key)
-    ).map(db => ({
-      contact_key: db.contact_key,
-      sheet: db.sheet || "Ręczne",
-      client_name: db.client_name,
-      phone: db.phone,
-      address: db.address,
-      date: db.date,
-      contact_date: db.contact_date,
-      status: db.status || "Kontakt do doradcy",
-      comments: db.comments,
-      agent: db.agent,
-      id: db.id,
-      assigned_user_email: db.assigned_user_email,
-      assigned_user_name: db.assigned_user_name,
-      assigned_group_id: db.assigned_group_id,
-      assigned_group_name: db.assigned_group_name,
-    }));
-    return [...fromSheet, ...manual];
-  }, [rawContacts, phoneContactsFromDB, isLeaderOrAdmin]);
+    // Dodaj ręcznie dodane (które nie są już w rawContacts)
+    const rawKeys = new Set(rawContacts.map(c => c.contact_key));
+    manualContacts.forEach(mc => {
+      if (!rawKeys.has(mc.contact_key)) {
+        merged.push(mc);
+      }
+    });
+    return merged;
+  }, [rawContacts, phoneContactsFromDB, manualContacts, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
     const existing = phoneContactsFromDB.find(db => db.contact_key === contact.contact_key);
@@ -229,44 +223,55 @@ export default function PhoneContacts() {
     },
   });
 
-  // Handlowcy do przypisania – filtruj wg grupy dla liderów
+  // Handlowcy do przypisania – admin widzi wszystkich, group_leader widzi swoją grupę + siebie
   const salespeople = useMemo(() => {
     return allAllowedUsers
       .filter(u => {
         const role = u.data?.role || u.role;
-        const email = u.data?.email || u.email;
-        if (currentUser?.role === "admin") return true;
-        // Group leader może przypisać siebie
-        if (currentUser?.role === "group_leader" && email === currentUser.email) return true;
-        if (role !== "advisor" && role !== "user" && role !== "team_leader") return false;
-        const uGroupId = u.data?.group_id || u.group_id;
-        return uGroupId === currentUserGroupId;
+        const uEmail = u.data?.email || u.email;
+        if (currentUser?.role === "admin" || currentUser?.role === "hr_admin") {
+          return role === "advisor" || role === "user" || role === "team_leader";
+        }
+        if (currentUser?.role === "group_leader") {
+          // Może przypisać do siebie lub do doradców/team_leaderów w swojej grupie
+          if (uEmail === currentUser.email) return true;
+          if (role !== "advisor" && role !== "user" && role !== "team_leader") return false;
+          const uGroupId = u.data?.group_id || u.group_id;
+          return uGroupId === currentUserGroupId;
+        }
+        if (currentUser?.role === "team_leader") {
+          if (role !== "advisor" && role !== "user" && role !== "team_leader") return false;
+          const uGroupId = u.data?.group_id || u.group_id;
+          return uGroupId === currentUserGroupId;
+        }
+        return false;
       })
-      .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
+      .map(u => ({
+        email: u.data?.email || u.email,
+        name: u.data?.name || u.name,
+      }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
-  // Filtr hierarchiczny wg roli
   const visibleContacts = useMemo(() => {
-    if (currentUser?.role === "admin") return contacts;
+    if (currentUser?.role === "admin" || currentUser?.role === "hr_admin") return contacts;
     if (currentUser?.role === "group_leader") {
       const myGroupId = currentUserGroupId;
-      if (!myGroupId) return contacts; // brak grupy = widzi wszystko
+      if (!myGroupId) return contacts;
       return contacts.filter(c => {
         const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
         if (sheetMapping && sheetMapping.group_id === myGroupId) return true;
-        // Fallback: kontakty przypisane do grupy
         if (c.assigned_group_id === myGroupId) return true;
+        // Ręcznie dodane przez tego lidera
+        if (c.contact_key?.startsWith("manual_") && c.assigned_user_email === currentUser.email) return true;
         return false;
       });
     }
     if (currentUser?.role === "team_leader") {
-      // Team leader widzi kontakty przypisane bezpośrednio do niego lub do członków jego zespołu
       return contacts.filter(c => {
         if (c.assigned_user_email && teamMemberEmails.includes(c.assigned_user_email)) return true;
         if (currentUserGroupId && c.assigned_group_id === currentUserGroupId) return true;
-        // Nieprzypisane kontakty z arkuszy grupy
         if (!c.assigned_user_email && !c.assigned_group_id && currentUserGroupId) {
           const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
           return sheetMapping?.group_id === currentUserGroupId;
@@ -281,12 +286,12 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
-      const matchStatus = c.status === "Kontakt do doradcy" || c.status === "DWS";
+      const isManual = c.contact_key?.startsWith("manual_");
+      const matchStatus = isManual || c.status === "Kontakt do doradcy" || c.status === "DWS";
       return matchSearch && matchSheet && matchStatus;
     });
   }, [visibleContacts, search, sheetFilter]);
 
-  // Grupuj po zakładce, potem po dacie
   const sheetGroups = useMemo(() => {
     const bySheet = {};
     filtered.forEach(c => {
@@ -300,6 +305,18 @@ export default function PhoneContacts() {
       sheet,
       dates: Object.entries(byDate).sort(([a], [b]) => a.localeCompare(b)).map(([date, items]) => ({ date, items })),
     }));
+  }, [filtered]);
+
+  // Liczba nieprzypisanych per arkusz
+  const unassignedBySheet = useMemo(() => {
+    const map = {};
+    filtered.forEach(c => {
+      const sheet = c.sheet || "Brak zakładki";
+      if (!c.assigned_user_email) {
+        map[sheet] = (map[sheet] || 0) + 1;
+      }
+    });
+    return map;
   }, [filtered]);
 
   const toggleSheet = (sheet) => setExpandedSheets(prev => ({ ...prev, [sheet]: !prev[sheet] }));
@@ -321,7 +338,7 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły użytkownik widzi swoje przypisane kontakty
+  // Zwykły doradca widzi swoje przypisane kontakty
   if (!isLeaderOrAdmin) {
     const myContacts = phoneContactsFromDB.filter(c =>
       c.assigned_user_email === currentUser?.email
@@ -341,32 +358,53 @@ export default function PhoneContacts() {
           <div className="space-y-2">
             {myContacts.map((c, i) => (
               <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
-                {c.phone && (
-                  <a href={`tel:${c.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
-                    <Phone className="w-3 h-3" /> {c.phone}
-                  </a>
-                )}
-                {c.address && <div className="text-xs text-gray-500 mt-0.5">{c.address}</div>}
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {c.sheet && <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{c.sheet}</Badge>}
-                  {c.assigned_group_name && (
-                    <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
-                  )}
-                </div>
-                {(c.comments || c.agent) && (
-                  <button
-                    onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
-                    className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
+                    {(c.phone || c.client_phone) && (
+                      <a href={`tel:${c.phone || c.client_phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1">
+                        <Phone className="w-3 h-3" /> {c.phone || c.client_phone}
+                      </a>
+                    )}
+                    {(c.address || c.client_address) && <div className="text-xs text-gray-500 mt-0.5">{c.address || c.client_address}</div>}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {c.sheet && <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{c.sheet}</Badge>}
+                      {c.assigned_group_name && (
+                        <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
+                      )}
+                    </div>
+                    {(c.comments || c.agent) && (
+                      <button
+                        onClick={() => { setSelectedDetails({ agent: c.agent, comments: c.comments, interview_data: c.interview_data || {} }); setDetailsModalOpen(true); }}
+                        className="mt-2 px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                      >
+                        Szczegóły
+                      </button>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 gap-1 text-xs"
+                    onClick={() => setReportContact(c)}
                   >
-                    Szczegóły
-                  </button>
-                )}
+                    <FileText className="w-3 h-3" />
+                    Raport
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         )}
         <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
+        {reportContact && (
+          <PhoneContactReportModal
+            contact={reportContact}
+            currentUser={currentUser}
+            open={!!reportContact}
+            onClose={() => setReportContact(null)}
+          />
+        )}
       </div>
     );
   }
@@ -399,14 +437,18 @@ export default function PhoneContacts() {
           </Select>
         )}
 
-        <Button onClick={() => setManualAddOpen(true)} variant="outline" className="gap-2 h-11 border-green-300 text-green-700 hover:bg-green-50">
-          <Plus className="w-4 h-4" />
-          Dodaj ręcznie
-        </Button>
-
-        <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
+        <Button onClick={() => { refetch(); refetchDB(); }} variant="outline" className="gap-2 h-11" disabled={isFetching}>
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           Odśwież
+        </Button>
+
+        <Button
+          onClick={() => setManualAddOpen(true)}
+          variant="outline"
+          className="gap-2 h-11 border-green-300 text-green-700 hover:bg-green-50"
+        >
+          <Plus className="w-4 h-4" />
+          Dodaj ręcznie
         </Button>
 
         {isAdminOrGroupLeader && filtered.length > 0 && (
@@ -420,18 +462,10 @@ export default function PhoneContacts() {
               const groupId = currentUser.role === "group_leader" ? currentUserGroupId : null;
               if (groupId) {
                 const g = groups.find(gr => gr.id === groupId);
-                await base44.functions.invoke("notifyGroupLeaderNewContacts", {
-                  groupId,
-                  groupName: g?.name || "",
-                  bulkMode: true,
-                });
+                await base44.functions.invoke("notifyGroupLeaderNewContacts", { groupId, groupName: g?.name || "", bulkMode: true });
               } else {
                 for (const g of groups) {
-                  await base44.functions.invoke("notifyGroupLeaderNewContacts", {
-                    groupId: g.id,
-                    groupName: g.name,
-                    bulkMode: true,
-                  });
+                  await base44.functions.invoke("notifyGroupLeaderNewContacts", { groupId: g.id, groupName: g.name, bulkMode: true });
                 }
               }
               setNotifySending(false);
@@ -482,21 +516,21 @@ export default function PhoneContacts() {
           {sheetGroups.map(({ sheet, dates }) => {
             const isOpen = expandedSheets[sheet] ?? false;
             const total = dates.reduce((acc, d) => acc + d.items.length, 0);
+            const unassigned = unassignedBySheet[sheet] || 0;
             return (
               <div key={sheet} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
                 <button
                   onClick={() => toggleSheet(sheet)}
                   className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-gray-800 text-sm">{sheet}</span>
                     <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px]">{total} kontaktów</Badge>
-                    {(() => {
-                      const unassigned = dates.reduce((acc, d) => acc + d.items.filter(c => !c.assigned_user_email).length, 0);
-                      return unassigned > 0 ? (
-                        <Badge className="bg-red-50 text-red-600 border border-red-200 text-[10px]">{unassigned} nieprzypisanych</Badge>
-                      ) : null;
-                    })()}
+                    {unassigned > 0 && (
+                      <Badge className="bg-red-50 text-red-700 border border-red-200 text-[10px]">
+                        {unassigned} nieprzypisanych
+                      </Badge>
+                    )}
                   </div>
                   {isOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </button>
@@ -521,102 +555,19 @@ export default function PhoneContacts() {
                             </div>
                             <div className="space-y-2">
                               {items.map((contact, i) => (
-                                <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                      <div className="font-medium text-gray-800 text-sm truncate">{contact.client_name}</div>
-                                      {contact.phone && (
-                                        <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
-                                          <Phone className="w-3 h-3" /> {contact.phone}
-                                        </a>
-                                      )}
-                                      {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
-                                      {contact.status && (
-                                        <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
-                                      )}
-                                    </div>
-                                    <div className="shrink-0 flex gap-2 flex-wrap">
-                                      <button
-                                        onClick={() => {
-                                          setSelectedDetails({
-                                            agent: contact.agent,
-                                            comments: contact.comments,
-                                            interview_data: contact.interview_data || {}
-                                          });
-                                          setDetailsModalOpen(true);
-                                        }}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                        title="Pokaż szczegóły"
-                                      >
-                                        Szczegóły
-                                      </button>
-
-                                      {contact.assigned_user_email ? (
-                                        <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
-                                          <User className="w-3 h-3 text-green-600" />
-                                          <span className="text-xs font-medium text-green-700">
-                                            {contact.assigned_user_name || contact.assigned_user_email}
-                                            {contact.assigned_user_name && (
-                                              <span className="ml-1 text-green-500 font-normal">({contact.assigned_user_email})</span>
-                                            )}
-                                          </span>
-                                          {canAssign && (
-                                            <button
-                                              onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
-                                              className="ml-1 text-gray-400 hover:text-red-500 text-xs"
-                                            >×</button>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        canAssign && (
-                                          <Select onValueChange={(val) => {
-                                            const sp = salespeople.find(s => s.email === val);
-                                            if (sp) assignMutation.mutate({ contact, email: sp.email, name: sp.name });
-                                          }}>
-                                            <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
-                                              <SelectValue placeholder="Przypisz doradcę" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {salespeople.map(sp => (
-                                                <SelectItem key={sp.email} value={sp.email}>
-                                                  {sp.name} <span className="text-gray-400 text-[10px]">({sp.email})</span>
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        )
-                                      )}
-
-                                      {canManageGroups && (
-                                        <>
-                                          {contact.assigned_group_id ? (
-                                            <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
-                                              <span className="text-xs font-medium text-blue-700">{contact.assigned_group_name}</span>
-                                              <button
-                                                onClick={() => assignGroupMutation.mutate({ contact, groupId: "", groupName: "" })}
-                                                className="ml-1 text-gray-400 hover:text-red-500 text-xs"
-                                              >×</button>
-                                            </div>
-                                          ) : (
-                                            <Select onValueChange={(val) => {
-                                              const g = groups.find(gr => gr.id === val);
-                                              if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
-                                            }}>
-                                              <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
-                                                <SelectValue placeholder="Przypisz grupę" />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                {groups.map(g => (
-                                                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                          )}
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
+                                <ContactRow
+                                  key={contact.contact_key || i}
+                                  contact={contact}
+                                  canAssign={canAssign}
+                                  canManageGroups={canManageGroups}
+                                  salespeople={salespeople}
+                                  groups={groups}
+                                  currentUser={currentUser}
+                                  assignMutation={assignMutation}
+                                  assignGroupMutation={assignGroupMutation}
+                                  onShowDetails={(data) => { setSelectedDetails(data); setDetailsModalOpen(true); }}
+                                  onShowReport={(c) => setReportContact(c)}
+                                />
                               ))}
                             </div>
                           </div>
@@ -631,18 +582,138 @@ export default function PhoneContacts() {
         </div>
       )}
 
-      <DetailsModal
-        open={detailsModalOpen}
-        onOpenChange={setDetailsModalOpen}
-        data={selectedDetails}
-      />
+      <DetailsModal open={detailsModalOpen} onOpenChange={setDetailsModalOpen} data={selectedDetails} />
 
       <ManualAddModal
         open={manualAddOpen}
         onClose={() => setManualAddOpen(false)}
         currentUser={currentUser}
-        onContactAdded={() => queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] })}
+        onContactAdded={() => {
+          queryClient.invalidateQueries(["phoneContactsDB"]);
+          refetchDB();
+        }}
       />
+
+      {reportContact && (
+        <PhoneContactReportModal
+          contact={reportContact}
+          currentUser={currentUser}
+          open={!!reportContact}
+          onClose={() => setReportContact(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ContactRow({ contact, canAssign, canManageGroups, salespeople, groups, currentUser, assignMutation, assignGroupMutation, onShowDetails, onShowReport }) {
+  return (
+    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="font-medium text-gray-800 text-sm truncate">{contact.client_name}</div>
+          {contact.phone && (
+            <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
+              <Phone className="w-3 h-3" /> {contact.phone}
+            </a>
+          )}
+          {contact.address && <div className="text-xs text-gray-500 mt-0.5">{contact.address}</div>}
+          {contact.status && !contact.contact_key?.startsWith("manual_") && (
+            <Badge className="mt-1 bg-orange-50 text-orange-700 border-orange-200 text-[10px]">{contact.status}</Badge>
+          )}
+          {contact.contact_key?.startsWith("manual_") && (
+            <Badge className="mt-1 bg-green-50 text-green-700 border-green-200 text-[10px]">Ręcznie dodany</Badge>
+          )}
+        </div>
+
+        <div className="shrink-0 flex gap-1.5 flex-wrap items-start">
+          {/* Przycisk szczegółów */}
+          {(contact.comments || contact.agent) && (
+            <button
+              onClick={() => onShowDetails({ agent: contact.agent, comments: contact.comments, interview_data: contact.interview_data || {} })}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+            >
+              Szczegóły
+            </button>
+          )}
+
+          {/* Przycisk raportu */}
+          <button
+            onClick={() => onShowReport(contact)}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
+          >
+            <FileText className="w-3 h-3" />
+            Raport
+          </button>
+
+          {/* Przypisanie doradcy */}
+          {contact.assigned_user_email ? (
+            <div className="flex items-center gap-1.5 bg-green-50 rounded-lg px-2 py-1">
+              <User className="w-3 h-3 text-green-600" />
+              <div className="flex flex-col leading-none">
+                <span className="text-xs font-medium text-green-700">{contact.assigned_user_name || contact.assigned_user_email}</span>
+                <span className="text-[10px] text-green-500">{contact.assigned_user_email}</span>
+              </div>
+              {canAssign && (
+                <button
+                  onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
+                  className="ml-1 text-gray-400 hover:text-red-500 text-xs"
+                >×</button>
+              )}
+            </div>
+          ) : (
+            canAssign && (
+              <Select onValueChange={(val) => {
+                const sp = salespeople.find(s => s.email === val);
+                if (sp) assignMutation.mutate({ contact, email: sp.email, name: sp.name });
+              }}>
+                <SelectTrigger className="h-8 text-xs min-w-[160px]">
+                  <SelectValue placeholder="Przypisz doradcę" />
+                </SelectTrigger>
+                <SelectContent>
+                  {salespeople.map(sp => (
+                    <SelectItem key={sp.email} value={sp.email}>
+                      <div className="flex flex-col leading-tight">
+                        <span>{sp.name}</span>
+                        <span className="text-[10px] text-gray-400">{sp.email}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )
+          )}
+
+          {/* Przypisanie grupy */}
+          {canManageGroups && (
+            <>
+              {contact.assigned_group_id ? (
+                <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">
+                  <span className="text-xs font-medium text-blue-700">{contact.assigned_group_name}</span>
+                  <button
+                    onClick={() => assignGroupMutation.mutate({ contact, groupId: "", groupName: "" })}
+                    className="ml-1 text-gray-400 hover:text-red-500 text-xs"
+                  >×</button>
+                </div>
+              ) : (
+                <Select onValueChange={(val) => {
+                  const g = groups.find(gr => gr.id === val);
+                  if (g) assignGroupMutation.mutate({ contact, groupId: g.id, groupName: g.name });
+                }}>
+                  <SelectTrigger className="h-8 text-xs min-w-[140px]">
+                    <SelectValue placeholder="Przypisz grupę" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map(g => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
