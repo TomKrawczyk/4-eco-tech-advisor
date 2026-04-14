@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil } from "lucide-react";
+import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil, FileText } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { Progress } from "@/components/ui/progress";
 
@@ -70,9 +70,6 @@ export default function Education() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState("");
-  const [uploadedDocUrl, setUploadedDocUrl] = useState("");
-  const [uploadedDocName, setUploadedDocName] = useState("");
-  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -151,18 +148,6 @@ export default function Education() {
     }
   };
 
-  const handleDocUpload = async (file) => {
-    if (!file) return;
-    setUploadingDoc(true);
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setUploadedDocUrl(file_url);
-      setUploadedDocName(file.name);
-    } finally {
-      setUploadingDoc(false);
-    }
-  };
-
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Training.create({
       ...data,
@@ -173,10 +158,8 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setShowAddDialog(false);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false, visible_to_test_users: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
       setUploadedVideoUrl("");
-      setUploadedDocUrl("");
-      setUploadedDocName("");
       setUploadProgress(0);
       setUploadMode("url");
     }
@@ -191,10 +174,8 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setEditingTraining(null);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false, visible_to_test_users: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
       setUploadedVideoUrl("");
-      setUploadedDocUrl("");
-      setUploadedDocName("");
       setUploadProgress(0);
       setUploadMode("url");
     }
@@ -213,8 +194,7 @@ export default function Education() {
       category: training.category || "sprzedaz",
       video_url: training.video_url || "",
       duration_minutes: training.duration_minutes || "",
-      is_required: training.is_required || false,
-      visible_to_test_users: training.visible_to_test_users || false
+      is_required: training.is_required || false
     });
     setUploadMode("url");
     setUploadedVideoUrl("");
@@ -404,18 +384,6 @@ export default function Education() {
                         🔒 Szkolenie obowiązkowe — blokuje dostęp do czasu ukończenia
                       </label>
                     </div>
-                    <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-100">
-                      <input
-                        type="checkbox"
-                        id="visible_to_test_users_create"
-                        checked={formData.visible_to_test_users}
-                        onChange={(e) => setFormData({ ...formData, visible_to_test_users: e.target.checked })}
-                        className="w-4 h-4 accent-purple-600"
-                      />
-                      <label htmlFor="visible_to_test_users_create" className="text-sm font-medium text-purple-800 cursor-pointer">
-                        👁 Widoczne dla użytkowników testowych
-                      </label>
-                    </div>
                     <Button type="submit" disabled={createMutation.isPending || uploading} className="w-full bg-green-600 hover:bg-green-700">
                       Dodaj szkolenie
                     </Button>
@@ -504,18 +472,6 @@ export default function Education() {
                     🔒 Szkolenie obowiązkowe — blokuje dostęp do czasu ukończenia
                   </label>
                 </div>
-                <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-100">
-                  <input
-                    type="checkbox"
-                    id="visible_to_test_users_edit"
-                    checked={formData.visible_to_test_users}
-                    onChange={(e) => setFormData({ ...formData, visible_to_test_users: e.target.checked })}
-                    className="w-4 h-4 accent-purple-600"
-                  />
-                  <label htmlFor="visible_to_test_users_edit" className="text-sm font-medium text-purple-800 cursor-pointer">
-                    👁 Widoczne dla użytkowników testowych
-                  </label>
-                </div>
                 <Button type="submit" disabled={updateMutation.isPending || uploading} className="w-full bg-green-600 hover:bg-green-700">
                   {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Zapisz zmiany
@@ -572,6 +528,9 @@ export default function Education() {
                       <div className="flex items-center gap-3 text-xs text-gray-500">
                         {training.duration_minutes && (
                           <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{training.duration_minutes} min</span>
+                        )}
+                        {training.document_url && (
+                          <span className="flex items-center gap-1 text-blue-600"><FileText className="w-3 h-3" />PDF</span>
                         )}
                         {currentUser?.role === 'admin' && (
                           <span className="flex items-center gap-1"><Users className="w-3 h-3" />{getViewCount(training.id)} osób</span>
@@ -731,6 +690,20 @@ export default function Education() {
                   <Play className="w-12 h-12 mx-auto mb-2" />
                   <p>Brak linku do wideo</p>
                 </div>
+              </div>
+            )}
+            {selectedTraining.document_url && (
+              <div className="border-t">
+                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b">
+                  <FileText className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">{selectedTraining.document_name || "Dokument"}</span>
+                </div>
+                <iframe
+                  src={selectedTraining.document_url}
+                  className="w-full"
+                  style={{ height: "500px" }}
+                  title={selectedTraining.document_name || "Dokument"}
+                />
               </div>
             )}
             {selectedTraining.description && (
