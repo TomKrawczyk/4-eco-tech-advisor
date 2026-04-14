@@ -529,9 +529,6 @@ export default function Education() {
                         {training.duration_minutes && (
                           <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{training.duration_minutes} min</span>
                         )}
-                        {training.document_url && (
-                          <span className="flex items-center gap-1 text-blue-600"><FileText className="w-3 h-3" />PDF</span>
-                        )}
                         {currentUser?.role === 'admin' && (
                           <span className="flex items-center gap-1"><Users className="w-3 h-3" />{getViewCount(training.id)} osób</span>
                         )}
@@ -694,12 +691,22 @@ export default function Education() {
             )}
             {selectedTraining.document_url && (
               <div className="border-t">
-                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">{selectedTraining.document_name || "Dokument"}</span>
+                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">{selectedTraining.document_name || "Dokument"}</span>
+                  </div>
+                  <a
+                    href={selectedTraining.document_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Otwórz w nowej karcie ↗
+                  </a>
                 </div>
                 <iframe
-                  src={selectedTraining.document_url}
+                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedTraining.document_url)}&embedded=true`}
                   className="w-full"
                   style={{ height: "500px" }}
                   title={selectedTraining.document_name || "Dokument"}
