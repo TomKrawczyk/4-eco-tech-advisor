@@ -690,27 +690,19 @@ export default function Education() {
               </div>
             )}
             {selectedTraining.document_url && (
-              <div className="border-t">
-                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">{selectedTraining.document_name || "Dokument"}</span>
-                  </div>
-                  <a
-                    href={selectedTraining.document_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Otwórz w nowej karcie ↗
-                  </a>
+              <div className="border-t px-4 py-3 bg-gray-50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">{selectedTraining.document_name || "Dokument"}</span>
                 </div>
-                <iframe
-                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedTraining.document_url)}&embedded=true`}
-                  className="w-full"
-                  style={{ height: "500px" }}
-                  title={selectedTraining.document_name || "Dokument"}
-                />
+                <a
+                  href={selectedTraining.document_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Otwórz PDF ↗
+                </a>
               </div>
             )}
             {selectedTraining.description && (
