@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil, FileText } from "lucide-react";
+import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { Progress } from "@/components/ui/progress";
 
@@ -64,15 +64,15 @@ export default function Education() {
   const [editingTraining, setEditingTraining] = useState(null);
   const [formData, setFormData] = useState({
     title: "", description: "", category: "sprzedaz",
-    video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false
+    video_url: "", duration_minutes: "", is_required: false
   });
   const [uploadMode, setUploadMode] = useState("url"); // "url" | "file"
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState("");
-  const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadedDocUrl, setUploadedDocUrl] = useState("");
   const [uploadedDocName, setUploadedDocName] = useState("");
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -158,7 +158,6 @@ export default function Education() {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       setUploadedDocUrl(file_url);
       setUploadedDocName(file.name);
-      setFormData(prev => ({ ...prev, document_url: file_url, document_name: file.name }));
     } finally {
       setUploadingDoc(false);
     }
@@ -168,15 +167,13 @@ export default function Education() {
     mutationFn: (data) => base44.entities.Training.create({
       ...data,
       video_url: uploadMode === "file" ? uploadedVideoUrl : data.video_url,
-      document_url: uploadedDocUrl || data.document_url || undefined,
-      document_name: uploadedDocName || data.document_name || undefined,
       duration_minutes: data.duration_minutes ? Number(data.duration_minutes) : undefined,
       order: trainings.length + 1
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setShowAddDialog(false);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false, visible_to_test_users: false });
       setUploadedVideoUrl("");
       setUploadedDocUrl("");
       setUploadedDocName("");
@@ -189,14 +186,12 @@ export default function Education() {
     mutationFn: ({ id, data }) => base44.entities.Training.update(id, {
       ...data,
       video_url: uploadMode === "file" ? uploadedVideoUrl || data.video_url : data.video_url,
-      document_url: uploadedDocUrl || data.document_url || undefined,
-      document_name: uploadedDocName || data.document_name || undefined,
       duration_minutes: data.duration_minutes ? Number(data.duration_minutes) : undefined,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setEditingTraining(null);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false, visible_to_test_users: false });
       setUploadedVideoUrl("");
       setUploadedDocUrl("");
       setUploadedDocName("");
@@ -217,15 +212,12 @@ export default function Education() {
       description: training.description || "",
       category: training.category || "sprzedaz",
       video_url: training.video_url || "",
-      document_url: training.document_url || "",
-      document_name: training.document_name || "",
       duration_minutes: training.duration_minutes || "",
-      is_required: training.is_required || false
+      is_required: training.is_required || false,
+      visible_to_test_users: training.visible_to_test_users || false
     });
     setUploadMode("url");
     setUploadedVideoUrl("");
-    setUploadedDocUrl("");
-    setUploadedDocName("");
   };
 
   const [signedVideoUrl, setSignedVideoUrl] = useState(null);
@@ -400,19 +392,6 @@ export default function Education() {
                         </div>
                       )}
                     </div>
-                    <div>
-                      <Label className="mb-2 block">Dokument / Prezentacja (PDF)</Label>
-                      <label className={`flex flex-col items-center justify-center w-full h-20 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploadingDoc ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>
-                        <input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx" className="hidden" onChange={(e) => e.target.files?.[0] && handleDocUpload(e.target.files[0])} disabled={uploadingDoc} />
-                        {uploadingDoc ? (
-                          <div className="text-center"><Loader2 className="w-5 h-5 text-blue-600 animate-spin mx-auto mb-1" /><p className="text-xs text-blue-700">Przesyłanie...</p></div>
-                        ) : (uploadedDocUrl || formData.document_url) ? (
-                          <div className="text-center"><CheckCircle2 className="w-5 h-5 text-blue-600 mx-auto mb-1" /><p className="text-xs text-blue-700 font-medium">{uploadedDocName || formData.document_name || "Dokument przesłany"}</p><p className="text-[10px] text-gray-400">Kliknij aby zmienić</p></div>
-                        ) : (
-                          <div className="text-center"><FileText className="w-5 h-5 text-gray-400 mx-auto mb-1" /><p className="text-xs text-gray-500">Kliknij lub przeciągnij plik PDF/PPT</p></div>
-                        )}
-                      </label>
-                    </div>
                     <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
                       <input
                         type="checkbox"
@@ -423,6 +402,18 @@ export default function Education() {
                       />
                       <label htmlFor="is_required_create" className="text-sm font-medium text-red-800 cursor-pointer">
                         🔒 Szkolenie obowiązkowe — blokuje dostęp do czasu ukończenia
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                      <input
+                        type="checkbox"
+                        id="visible_to_test_users_create"
+                        checked={formData.visible_to_test_users}
+                        onChange={(e) => setFormData({ ...formData, visible_to_test_users: e.target.checked })}
+                        className="w-4 h-4 accent-purple-600"
+                      />
+                      <label htmlFor="visible_to_test_users_create" className="text-sm font-medium text-purple-800 cursor-pointer">
+                        👁 Widoczne dla użytkowników testowych
                       </label>
                     </div>
                     <Button type="submit" disabled={createMutation.isPending || uploading} className="w-full bg-green-600 hover:bg-green-700">
@@ -501,19 +492,6 @@ export default function Education() {
                     </label>
                   )}
                 </div>
-                <div>
-                  <Label className="mb-2 block">Dokument / Prezentacja (PDF)</Label>
-                  <label className={`flex flex-col items-center justify-center w-full h-20 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploadingDoc ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>
-                    <input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx" className="hidden" onChange={(e) => e.target.files?.[0] && handleDocUpload(e.target.files[0])} disabled={uploadingDoc} />
-                    {uploadingDoc ? (
-                      <div className="text-center"><Loader2 className="w-5 h-5 text-blue-600 animate-spin mx-auto mb-1" /><p className="text-xs text-blue-700">Przesyłanie...</p></div>
-                    ) : (uploadedDocUrl || formData.document_url) ? (
-                      <div className="text-center"><CheckCircle2 className="w-5 h-5 text-blue-600 mx-auto mb-1" /><p className="text-xs text-blue-700 font-medium">{uploadedDocName || formData.document_name || "Dokument przesłany"}</p><p className="text-[10px] text-gray-400">Kliknij aby zmienić</p></div>
-                    ) : (
-                      <div className="text-center"><FileText className="w-5 h-5 text-gray-400 mx-auto mb-1" /><p className="text-xs text-gray-500">Kliknij lub przeciągnij plik PDF/PPT</p></div>
-                    )}
-                  </label>
-                </div>
                 <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
                   <input
                     type="checkbox"
@@ -524,6 +502,18 @@ export default function Education() {
                   />
                   <label htmlFor="is_required_edit" className="text-sm font-medium text-red-800 cursor-pointer">
                     🔒 Szkolenie obowiązkowe — blokuje dostęp do czasu ukończenia
+                  </label>
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                  <input
+                    type="checkbox"
+                    id="visible_to_test_users_edit"
+                    checked={formData.visible_to_test_users}
+                    onChange={(e) => setFormData({ ...formData, visible_to_test_users: e.target.checked })}
+                    className="w-4 h-4 accent-purple-600"
+                  />
+                  <label htmlFor="visible_to_test_users_edit" className="text-sm font-medium text-purple-800 cursor-pointer">
+                    👁 Widoczne dla użytkowników testowych
                   </label>
                 </div>
                 <Button type="submit" disabled={updateMutation.isPending || uploading} className="w-full bg-green-600 hover:bg-green-700">
@@ -746,19 +736,6 @@ export default function Education() {
             {selectedTraining.description && (
               <div className="p-4">
                 <p className="text-sm text-gray-700">{selectedTraining.description}</p>
-              </div>
-            )}
-            {selectedTraining.document_url && (
-              <div className="px-4 pb-4">
-                <a
-                  href={selectedTraining.document_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-blue-700 text-sm font-medium transition-colors"
-                >
-                  <FileText className="w-4 h-4" />
-                  {selectedTraining.document_name || "Pobierz dokument"}
-                </a>
               </div>
             )}
           </div>
