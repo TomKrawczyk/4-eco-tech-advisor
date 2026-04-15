@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import PageHeader from "@/components/shared/PageHeader";
@@ -11,10 +11,42 @@ export default function ServiceReports() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [generatingPdf, setGeneratingPdf] = useState(null);
+  const [currentUser, setCurrentUser] = React.useState(null);
 
-  const { data: reports = [], isLoading } = useQuery({
+  React.useEffect(() => {
+    const fetchUser = async () => {
+      const user = await base44.auth.me();
+      const allowedUsers = await base44.entities.AllowedUser.list();
+      const userAccess = allowedUsers.find(a => (a.data?.email || a.email) === user.email);
+      if (userAccess) {
+        user.role = userAccess.data?.role || userAccess.role;
+      }
+      setCurrentUser(user);
+    };
+    fetchUser();
+  }, []);
+
+  const { data: allReports = [], isLoading } = useQuery({
     queryKey: ["service_reports"],
     queryFn: () => base44.entities.ServiceReport.list("-created_date", 100),
+    enabled: !!currentUser,
+  });
+
+  const { data: hierarchy = [] } = useQuery({
+    queryKey: ["hierarchy", currentUser?.email],
+    queryFn: async () => {
+      const response = await base44.functions.invoke('getUsersInHierarchy', { 
+        user_email: currentUser.email 
+      });
+      return response.data.users || [];
+    },
+    enabled: !!currentUser
+  });
+
+  const reports = allReports.filter(report => {
+    const creatorEmail = report.created_by;
+    if (currentUser?.role === 'admin') return true;
+    return hierarchy.some(u => (u.data?.email || u.email) === creatorEmail);
   });
 
   const filtered = reports.filter(r => {

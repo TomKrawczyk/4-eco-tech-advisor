@@ -267,9 +267,8 @@ export default function MeetingReports() {
   const [currentUser, setCurrentUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Sprawdź prefill z URL — HashRouter trzyma params w hash (#/MeetingReports?params)
-  const hashSearch = window.location.hash.includes("?") ? window.location.hash.split("?")[1] : window.location.search;
-  const urlParams = new URLSearchParams(hashSearch);
+  // Sprawdź prefill z URL (po przejściu ze spotkania)
+  const urlParams = new URLSearchParams(window.location.search);
   const prefill = urlParams.get("from_meeting") === "1" ? {
     client_name: urlParams.get("prefill_client_name") || "",
     client_phone: urlParams.get("prefill_client_phone") || "",
@@ -294,23 +293,27 @@ export default function MeetingReports() {
     fetchUser();
   }, []);
 
-  const { data: hierarchyEmails } = useQuery({
-    queryKey: ["hierarchyEmails", currentUser?.email],
-    queryFn: async () => {
-      const res = await base44.functions.invoke("getUsersInHierarchy", {});
-      return res.data?.userEmails || [currentUser?.email];
-    },
+  const { data: allReports = [], isLoading } = useQuery({
+    queryKey: ["meetingReports"],
+    queryFn: () => base44.entities.MeetingReport.list("-created_date", 100),
     enabled: !!currentUser,
   });
 
-  const { data: reports = [], isLoading } = useQuery({
-    queryKey: ["meetingReports", hierarchyEmails],
+  const { data: hierarchy = [] } = useQuery({
+    queryKey: ["hierarchy", currentUser?.email],
     queryFn: async () => {
-      const all = await base44.entities.MeetingReport.list("-created_date", 500);
-      if (currentUser?.role === "admin" || !hierarchyEmails) return all;
-      return all.filter(r => !r.author_email || hierarchyEmails.includes(r.author_email));
+      const response = await base44.functions.invoke('getUsersInHierarchy', { 
+        user_email: currentUser.email 
+      });
+      return response.data.users || [];
     },
-    enabled: !!currentUser,
+    enabled: !!currentUser
+  });
+
+  const reports = allReports.filter(report => {
+    const creatorEmail = report.created_by;
+    if (currentUser?.role === 'admin') return true;
+    return hierarchy.some(u => (u.data?.email || u.email) === creatorEmail);
   });
 
   const createMutation = useMutation({
