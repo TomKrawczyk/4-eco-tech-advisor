@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { FileText, Search, Clock, CheckCircle2, Send, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -46,23 +46,20 @@ export default function VisitReports() {
     staleTime: 30000,
   });
 
-  const { data: hierarchy = [] } = useQuery({
+  const { data: allowedEmails } = useQuery({
     queryKey: ["hierarchy", currentUser?.email],
     queryFn: async () => {
-      const response = await base44.functions.invoke('getUsersInHierarchy', { 
-        user_email: currentUser.email 
-      });
-      return response.data.users || [];
+      const response = await base44.functions.invoke('getUsersInHierarchy');
+      return response.data.userEmails || [currentUser.email];
     },
-    enabled: !!currentUser
+    enabled: !!currentUser,
   });
 
-  // Filtruj raporty według hierarchii
-  const reports = allReports.filter(report => {
-    const creatorEmail = report.created_by;
-    if (currentUser?.role === 'admin') return true;
-    return hierarchy.some(u => (u.data?.email || u.email) === creatorEmail);
-  });
+  // Filtruj raporty według hierarchii — czekaj aż lista emaili się załaduje
+  const reports = React.useMemo(() => {
+    if (!allowedEmails) return [];
+    return allReports.filter(report => allowedEmails.includes(report.created_by));
+  }, [allReports, allowedEmails]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => smartDelete(base44.entities.VisitReport, "VisitReport", id),

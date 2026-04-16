@@ -60,17 +60,18 @@ export default function Referrals() {
     staleTime: 30000,
   });
 
-  const { data: hierarchyData } = useQuery({
-    queryKey: ['userHierarchy', currentUser?.email],
-    queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
-    enabled: !!currentUser
+  const { data: allowedEmails } = useQuery({
+    queryKey: ['hierarchy', currentUser?.email],
+    queryFn: async () => {
+      const response = await base44.functions.invoke('getUsersInHierarchy');
+      return response.data.userEmails || [currentUser.email];
+    },
+    enabled: !!currentUser,
   });
 
-  const referrals = React.useMemo(() => {
-    if (!currentUser || !hierarchyData?.data) return [];
-    const allowedEmails = hierarchyData.data.userEmails || [];
-    return allReferrals.filter(ref => allowedEmails.includes(ref.created_by));
-  }, [allReferrals, hierarchyData, currentUser]);
+  const referrals = allowedEmails
+    ? allReferrals.filter(ref => allowedEmails.includes(ref.created_by))
+    : [];
 
   const filteredReferrals = referrals.filter(ref => {
     if (!searchQuery) return true;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import PageHeader from "@/components/shared/PageHeader";
@@ -11,7 +11,7 @@ export default function ServiceReports() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [generatingPdf, setGeneratingPdf] = useState(null);
-  const [currentUser, setCurrentUser] = React.useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -32,22 +32,18 @@ export default function ServiceReports() {
     enabled: !!currentUser,
   });
 
-  const { data: hierarchy = [] } = useQuery({
+  const { data: allowedEmails } = useQuery({
     queryKey: ["hierarchy", currentUser?.email],
     queryFn: async () => {
-      const response = await base44.functions.invoke('getUsersInHierarchy', { 
-        user_email: currentUser.email 
-      });
-      return response.data.users || [];
+      const response = await base44.functions.invoke('getUsersInHierarchy');
+      return response.data.userEmails || [currentUser.email];
     },
-    enabled: !!currentUser
+    enabled: !!currentUser,
   });
 
-  const reports = allReports.filter(report => {
-    const creatorEmail = report.created_by;
-    if (currentUser?.role === 'admin') return true;
-    return hierarchy.some(u => (u.data?.email || u.email) === creatorEmail);
-  });
+  const reports = allowedEmails
+    ? allReports.filter(r => allowedEmails.includes(r.created_by))
+    : [];
 
   const filtered = reports.filter(r => {
     const matchSearch = !search ||
@@ -90,7 +86,6 @@ export default function ServiceReports() {
     <div className="space-y-6">
       <PageHeader title="Raporty serwisowe" subtitle="Protokoły PV i PC" />
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -117,7 +112,6 @@ export default function ServiceReports() {
         </div>
       </div>
 
-      {/* List */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
