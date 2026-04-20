@@ -330,17 +330,12 @@ export default function Calendar() {
       .filter(sm => sm.group_id === groupId)
       .map(sm => sm.sheet_name);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     const meetings = allSheetMeetings.filter(m => {
       if (!m.meeting_calendar) return false;
       const d = parseMeetingDate(m.meeting_calendar);
       if (!d || !isSameDay(d, day)) return false;
       const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
       const assignment = meetingAssignments.find(a => a.meeting_key === key);
-      // Nie pokazuj przeszłych spotkań bez przypisania (stare, niepodjęte z arkusza)
-      if (!assignment && d < today) return false;
       if (assignment) return assignment.assigned_group_id === groupId;
       return sheetsForGroup.includes(m.sheet);
     }).map(m => {
