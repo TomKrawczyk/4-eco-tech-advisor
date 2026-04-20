@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/shared/PageHeader";
-import { ChevronLeft, ChevronRight, Plus, Users, LayoutGrid, X, Phone, MapPin, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Users, LayoutGrid, X, Phone, MapPin, Clock, EyeOff } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, isSameDay, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import CalendarEventModal from "@/components/calendar/CalendarEventModal.jsx";
@@ -24,7 +24,7 @@ function parseMeetingDate(str) {
 }
 
 // Modal z listą spotkań/kontaktów dla danego dnia w trybie grup
-function GroupDayModal({ day, items, groupName, onClose }) {
+function GroupDayModal({ day, items, groupName, onClose, onHide, isAdmin }) {
   const meetings = items.filter(i => i.type === "meeting");
   const contacts = items.filter(i => i.type === "phone_contact");
 
@@ -57,7 +57,18 @@ function GroupDayModal({ day, items, groupName, onClose }) {
               <div className="space-y-2">
                 {meetings.map((m, i) => (
                   <div key={i} className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-1">
-                    <div className="font-semibold text-gray-900 text-sm">{m.client_name}</div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-semibold text-gray-900 text-sm">{m.client_name}</div>
+                      {isAdmin && m.meeting_key && (
+                        <button
+                          onClick={() => { onHide(m.meeting_key); onClose(); }}
+                          className="shrink-0 flex items-center gap-1 text-[10px] text-red-500 hover:text-red-700 hover:bg-red-50 rounded px-1.5 py-0.5 border border-red-200 transition-colors"
+                          title="Ukryj to spotkanie w kalendarzu"
+                        >
+                          <EyeOff className="w-3 h-3" /> Ukryj
+                        </button>
+                      )}
+                    </div>
                     {m.event_time && (
                       <div className="flex items-center gap-1 text-xs text-gray-600">
                         <Clock className="w-3 h-3" /> {m.event_time}
@@ -195,6 +206,24 @@ export default function Calendar() {
     enabled: !!currentUser && currentUser?.role === "admin",
   });
 
+  const { data: hiddenMeetings = [] } = useQuery({
+    queryKey: ["hiddenMeetings"],
+    queryFn: () => base44.entities.HiddenMeeting.list(),
+    enabled: !!currentUser && currentUser?.role === "admin",
+  });
+
+  const hiddenMeetingKeys = useMemo(() => new Set(hiddenMeetings.map(h => h.meeting_key)), [hiddenMeetings]);
+
+  const hideMeetingMutation = useMutation({
+    mutationFn: (meeting_key) => base44.entities.HiddenMeeting.create({ meeting_key, hidden_by: currentUser?.email }),
+    onSuccess: () => queryClient.invalidateQueries(["hiddenMeetings"]),
+  });
+
+  const unhideMeetingMutation = useMutation({
+    mutationFn: (id) => base44.entities.HiddenMeeting.delete(id),
+    onSuccess: () => queryClient.invalidateQueries(["hiddenMeetings"]),
+  });
+
   const { data: phoneContactsDB = [] } = useQuery({
     queryKey: ["phoneContactsCalendar"],
     queryFn: () => base44.entities.PhoneContact.list("-contact_date", 2000),
@@ -240,6 +269,7 @@ export default function Calendar() {
         const d = parseMeetingDate(m.meeting_calendar);
         if (!d) return false;
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+        if (hiddenMeetingKeys.has(key)) return false;
         const assignment = meetingAssignments.find(a => a.meeting_key === key);
         const hasCalendarEvent = events.some(e => e.meeting_assignment_id === key);
         if (hasCalendarEvent) return false;
@@ -335,6 +365,7 @@ export default function Calendar() {
       const d = parseMeetingDate(m.meeting_calendar);
       if (!d || !isSameDay(d, day)) return false;
       const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+      if (hiddenMeetingKeys.has(key)) return false;
       const assignment = meetingAssignments.find(a => a.meeting_key === key);
       if (assignment) return assignment.assigned_group_id === groupId;
       return sheetsForGroup.includes(m.sheet);
@@ -342,8 +373,10 @@ export default function Calendar() {
       const d = parseMeetingDate(m.meeting_calendar);
       const timeMatch = m.meeting_calendar?.match(/(\d{1,2}):(\d{2})/);
       const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : "";
+      const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
       return {
         type: "meeting",
+        meeting_key: key,
         client_name: m.client_name,
         event_time: time,
         client_phone: m.client_phone || m.phone || "",
@@ -637,6 +670,8 @@ export default function Calendar() {
           items={groupDaySelected.items}
           groupName={selectedGroupObj?.name || ""}
           onClose={() => setGroupDaySelected(null)}
+          isAdmin={currentUser?.role === "admin"}
+          onHide={(key) => hideMeetingMutation.mutate(key)}
         />
       )}
     </div>

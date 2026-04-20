@@ -1,0 +1,21 @@
+{
+  "name": "HiddenMeeting",
+  "type": "object",
+  "properties": {
+    "meeting_key": {
+      "type": "string",
+      "description": "Klucz spotkania (sheet__client_name__meeting_calendar)"
+    },
+    "hidden_by": {
+      "type": "string",
+      "description": "Email admina kt\u00f3ry ukry\u0142 spotkanie"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Pow\u00f3d ukrycia"
+    }
+  },
+  "required": [
+    "meeting_key"
+  ]
+}
