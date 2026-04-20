@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/shared/PageHeader";
-import { ChevronLeft, ChevronRight, Plus, Users, LayoutGrid, X, Phone, MapPin, Clock, EyeOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Users, LayoutGrid, X, Phone, MapPin, Clock, EyeOff, Eye } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, isSameDay, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import CalendarEventModal from "@/components/calendar/CalendarEventModal.jsx";
@@ -24,7 +24,7 @@ function parseMeetingDate(str) {
 }
 
 // Modal z listą spotkań/kontaktów dla danego dnia w trybie grup
-function GroupDayModal({ day, items, groupName, onClose, onHide, isAdmin }) {
+function GroupDayModal({ day, items, groupName, onClose, onHide, onUnhide, isAdmin, hiddenMeetings = [] }) {
   const meetings = items.filter(i => i.type === "meeting");
   const contacts = items.filter(i => i.type === "phone_contact");
 
@@ -59,15 +59,26 @@ function GroupDayModal({ day, items, groupName, onClose, onHide, isAdmin }) {
                   <div key={i} className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="font-semibold text-gray-900 text-sm">{m.client_name}</div>
-                      {isAdmin && m.meeting_key && (
-                        <button
-                          onClick={() => { onHide(m.meeting_key); onClose(); }}
-                          className="shrink-0 flex items-center gap-1 text-[10px] text-red-500 hover:text-red-700 hover:bg-red-50 rounded px-1.5 py-0.5 border border-red-200 transition-colors"
-                          title="Ukryj to spotkanie w kalendarzu"
-                        >
-                          <EyeOff className="w-3 h-3" /> Ukryj
-                        </button>
-                      )}
+                      {isAdmin && m.meeting_key && (() => {
+                        const hiddenRecord = hiddenMeetings.find(h => h.meeting_key === m.meeting_key);
+                        return hiddenRecord ? (
+                          <button
+                            onClick={() => onUnhide(hiddenRecord.id)}
+                            className="shrink-0 flex items-center gap-1 text-[10px] text-green-600 hover:text-green-800 hover:bg-green-50 rounded px-1.5 py-0.5 border border-green-300 transition-colors"
+                            title="Odkryj spotkanie dla grupy"
+                          >
+                            <Eye className="w-3 h-3" /> Odkryj
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onHide(m.meeting_key)}
+                            className="shrink-0 flex items-center gap-1 text-[10px] text-red-500 hover:text-red-700 hover:bg-red-50 rounded px-1.5 py-0.5 border border-red-200 transition-colors"
+                            title="Ukryj spotkanie przed grupą"
+                          >
+                            <EyeOff className="w-3 h-3" /> Ukryj
+                          </button>
+                        );
+                      })()}
                     </div>
                     {m.event_time && (
                       <div className="flex items-center gap-1 text-xs text-gray-600">
@@ -675,7 +686,9 @@ export default function Calendar() {
           groupName={selectedGroupObj?.name || ""}
           onClose={() => setGroupDaySelected(null)}
           isAdmin={currentUser?.role === "admin"}
+          hiddenMeetings={hiddenMeetings}
           onHide={(key) => hideMeetingMutation.mutate(key)}
+          onUnhide={(id) => unhideMeetingMutation.mutate(id)}
         />
       )}
     </div>
