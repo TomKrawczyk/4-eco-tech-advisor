@@ -209,10 +209,14 @@ export default function Calendar() {
   const { data: hiddenMeetings = [] } = useQuery({
     queryKey: ["hiddenMeetings"],
     queryFn: () => base44.entities.HiddenMeeting.list(),
-    enabled: !!currentUser && currentUser?.role === "admin",
+    enabled: !!currentUser,
   });
 
-  const hiddenMeetingKeys = useMemo(() => new Set(hiddenMeetings.map(h => h.meeting_key)), [hiddenMeetings]);
+  // Admin widzi ukryte spotkania — filtr dotyczy tylko nie-adminów
+  const hiddenMeetingKeys = useMemo(() => {
+    if (currentUser?.role === "admin") return new Set();
+    return new Set(hiddenMeetings.map(h => h.meeting_key));
+  }, [hiddenMeetings, currentUser]);
 
   const hideMeetingMutation = useMutation({
     mutationFn: (meeting_key) => base44.entities.HiddenMeeting.create({ meeting_key, hidden_by: currentUser?.email }),
