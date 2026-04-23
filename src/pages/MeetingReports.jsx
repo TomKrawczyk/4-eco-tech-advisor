@@ -295,7 +295,7 @@ export default function MeetingReports() {
 
   const { data: allReports = [], isLoading } = useQuery({
     queryKey: ["meetingReports"],
-    queryFn: () => base44.entities.MeetingReport.list("-created_date", 100),
+    queryFn: () => base44.entities.MeetingReport.list("-created_date", 2000),
     enabled: !!currentUser,
   });
 
