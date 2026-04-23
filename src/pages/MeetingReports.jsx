@@ -265,6 +265,7 @@ export default function MeetingReports() {
   const [search, setSearch] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [filterAuthor, setFilterAuthor] = useState("");
   const queryClient = useQueryClient();
 
   // Sprawdź prefill z URL (po przejściu ze spotkania) — HashRouter: query jest za #/path?...
@@ -347,11 +348,18 @@ export default function MeetingReports() {
     },
   });
 
-  const filtered = reports.filter(r =>
-    (r.client_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.client_address || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.client_phone || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const uniqueAuthors = [...new Map(
+    reports.filter(r => r.author_name).map(r => [r.author_name, r.author_email])
+  ).entries()].map(([name, email]) => ({ name, email })).sort((a, b) => a.name.localeCompare(b.name));
+
+  const filtered = reports.filter(r => {
+    const matchSearch =
+      (r.client_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.client_address || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.client_phone || "").toLowerCase().includes(search.toLowerCase());
+    const matchAuthor = !filterAuthor || r.author_email === filterAuthor;
+    return matchSearch && matchAuthor;
+  });
 
   if (view === "create") {
     return (
@@ -405,8 +413,8 @@ export default function MeetingReports() {
     <div className="space-y-6">
       <PageHeader title="Raporty po spotkaniach" subtitle="Dokumentacja spotkań z klientami" />
 
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+      <div className="flex gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <Input
             value={search}
@@ -415,6 +423,18 @@ export default function MeetingReports() {
             className="pl-10 h-11"
           />
         </div>
+        {isAdmin && uniqueAuthors.length > 0 && (
+          <select
+            value={filterAuthor}
+            onChange={e => setFilterAuthor(e.target.value)}
+            className="h-11 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="">Wszyscy użytkownicy</option>
+            {uniqueAuthors.map(a => (
+              <option key={a.email} value={a.email}>{a.name}</option>
+            ))}
+          </select>
+        )}
         <Button onClick={() => setView("create")} className="bg-green-600 hover:bg-green-700 gap-2 shrink-0">
           <Plus className="w-4 h-4" /> Nowy raport
         </Button>
