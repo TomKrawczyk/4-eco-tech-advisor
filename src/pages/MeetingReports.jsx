@@ -207,7 +207,7 @@ function MeetingDetail({ report, onBack, onDelete, onEdit }) {
           {report.author_name && (
             <div className="flex items-center gap-2">
               <User className="w-4 h-4 text-gray-400" />
-              <span className="text-gray-500">{report.author_name}</span>
+              <span className="text-gray-500">{report.author_name}{report.author_email && ` (${report.author_email})`}</span>
             </div>
           )}
         </div>
@@ -515,7 +515,7 @@ export default function MeetingReports() {
                         <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center text-[9px] font-bold text-green-700">
                           {report.author_name.charAt(0)}
                         </div>
-                        <span className="text-xs text-gray-400">{report.author_name}</span>
+                        <span className="text-xs text-gray-400">{report.author_name}{report.author_email && ` (${report.author_email})`}</span>
                       </div>
                     )}
                   </div>
