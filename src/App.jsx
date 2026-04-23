@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import RejectedMeetings from '@/pages/RejectedMeetings';
 import CleanupMeetings from '@/pages/CleanupMeetings';
+import ExportReports from '@/pages/ExportReports';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -73,6 +74,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="CleanupMeetings">
             <CleanupMeetings />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/ExportReports"
+        element={
+          <LayoutWrapper currentPageName="ExportReports">
+            <ExportReports />
           </LayoutWrapper>
         }
       />
