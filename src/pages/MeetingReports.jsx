@@ -308,9 +308,13 @@ export default function MeetingReports() {
     enabled: !!currentUser,
   });
 
-  const reports = allowedEmails
-    ? allReports.filter(r => allowedEmails.includes(r.created_by))
-    : [];
+  const isAdmin = currentUser?.role === "admin";
+
+  const reports = isAdmin
+    ? allReports
+    : allowedEmails
+      ? allReports.filter(r => allowedEmails.includes(r.created_by))
+      : [];
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MeetingReport.create({
