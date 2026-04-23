@@ -431,7 +431,7 @@ export default function MeetingReports() {
           >
             <option value="">Wszyscy użytkownicy</option>
             {uniqueAuthors.map(a => (
-              <option key={a.email} value={a.email}>{a.name}</option>
+              <option key={a.email} value={a.email}>{a.name} ({a.email})</option>
             ))}
           </select>
         )}
