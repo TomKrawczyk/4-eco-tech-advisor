@@ -68,13 +68,12 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     mutationFn: (groupId) => {
       const g = allGroups.find(g => g.id === groupId);
       const patch = { group_id: groupId || null, group_name: g?.name || "" };
-      return base44.entities.ContactPackage.update(pkg.id, patch).then(() => patch);
+      return base44.entities.ContactPackage.update(pkg.id, patch);
     },
-    onSuccess: (patch) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contact-packages"] });
-      qc.invalidateQueries({ queryKey: ["groups-for-packages"] });
       setEditingGroup(false);
-      if (onPackageUpdated) onPackageUpdated({ ...pkg, ...patch });
+      if (onPackageUpdated) onPackageUpdated();
     },
   });
 

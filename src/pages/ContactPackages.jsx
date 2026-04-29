@@ -15,18 +15,14 @@ export default function ContactPackages() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [showImport, setShowImport] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [selectedPackageId, setSelectedPackageId] = useState(null);
   const [editingPackage, setEditingPackage] = useState(null);
   const [deletingPackage, setDeletingPackage] = useState(null);
 
   const updatePackageMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ContactPackage.update(id, data),
-    onSuccess: (_result, variables) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contact-packages"] });
-      // Jeśli edytujemy paczkę aktualnie otwartą w widoku szczegółowym, odśwież ją
-      if (selectedPackage && selectedPackage.id === variables.id) {
-        setSelectedPackage(prev => ({ ...prev, ...variables.data }));
-      }
       setEditingPackage(null);
     },
   });
@@ -121,13 +117,22 @@ export default function ContactPackages() {
   }
 
   // Jeśli wybraliśmy paczkę — widok szczegółowy
-  if (selectedPackage) {
+  const selectedPackage = selectedPackageId ? packages.find(p => p.id === selectedPackageId) : null;
+  if (selectedPackageId) {
+    if (!selectedPackage) {
+      // Paczka jeszcze się ładuje lub nie istnieje
+      return (
+        <div className="flex items-center justify-center py-16">
+          <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
     return (
       <PackageDetailView
         pkg={selectedPackage}
         currentUser={currentUser}
-        onBack={() => setSelectedPackage(null)}
-        onPackageUpdated={(updated) => setSelectedPackage(updated)}
+        onBack={() => setSelectedPackageId(null)}
+        onPackageUpdated={() => qc.invalidateQueries({ queryKey: ["contact-packages"] })}
       />
     );
   }
@@ -184,7 +189,7 @@ export default function ContactPackages() {
               key={pkg.id}
               pkg={pkg}
               isAdmin={isAdmin}
-              onClick={() => setSelectedPackage(pkg)}
+              onClick={() => setSelectedPackageId(pkg.id)}
               onEdit={isAdmin ? (e) => { e.stopPropagation(); setEditingPackage(pkg); } : null}
               onDelete={isAdmin ? (e) => { e.stopPropagation(); setDeletingPackage(pkg); } : null}
             />
