@@ -118,9 +118,12 @@ function parseExcel(file) {
   });
 }
 
-export default function PackageImportModal({ currentUser, onClose, onSuccess }) {
+export default function PackageImportModal({ currentUser, allGroups = [], onClose, onSuccess }) {
+  const isAdmin = currentUser?.role === "admin";
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedGroupId, setSelectedGroupId] = useState(currentUser?.groupId || "");
+  const [selectedGroupName, setSelectedGroupName] = useState(currentUser?.groupName || "");
   const [file, setFile] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [mapping, setMapping] = useState(null);
@@ -154,8 +157,11 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
   const handleImport = async () => {
     if (!name.trim() || contacts.length === 0) return;
     setImporting(true);
-    if (!currentUser.groupId) {
-      setParseError("Błąd: Twoje konto nie ma przypisanej grupy. Skontaktuj się z administratorem.");
+    const effectiveGroupId = isAdmin ? selectedGroupId : currentUser.groupId;
+    const effectiveGroupName = isAdmin ? selectedGroupName : (currentUser.groupName || "");
+
+    if (!effectiveGroupId) {
+      setParseError("Błąd: Wybierz grupę przed importem.");
       setImporting(false);
       return;
     }
@@ -164,8 +170,8 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
         packageMeta: {
           name: name.trim(),
           description: description.trim(),
-          group_id: currentUser.groupId,
-          group_name: currentUser.groupName || "",
+          group_id: effectiveGroupId,
+          group_name: effectiveGroupName,
           created_by_name: currentUser.displayName || currentUser.full_name || "",
         },
         contacts,
@@ -203,6 +209,26 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
                 <label className="text-sm font-medium text-gray-700 block mb-1.5">Opis (opcjonalny)</label>
                 <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="np. Rejon Kraków, kampania wiosenna" />
               </div>
+
+              {isAdmin && allGroups.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Przypisz do grupy *</label>
+                  <select
+                    value={selectedGroupId}
+                    onChange={e => {
+                      const g = allGroups.find(g => g.id === e.target.value);
+                      setSelectedGroupId(e.target.value);
+                      setSelectedGroupName(g?.name || "");
+                    }}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
+                  >
+                    <option value="">— wybierz grupę —</option>
+                    {allGroups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Upload */}
               <div>

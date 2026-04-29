@@ -21,10 +21,20 @@ export default function ContactPackages() {
   const isAdvisor = currentUser?.role === "advisor";
   const canManage = isLeader || currentUser?.role === "admin";
 
+  const isAdmin = currentUser?.role === "admin";
+
   const { data: packages = [], isLoading } = useQuery({
-    queryKey: ["contact-packages", currentUser?.groupId],
-    queryFn: () => base44.entities.ContactPackage.filter({ group_id: currentUser.groupId }),
-    enabled: !!currentUser?.groupId,
+    queryKey: ["contact-packages", currentUser?.groupId, isAdmin],
+    queryFn: () => isAdmin
+      ? base44.entities.ContactPackage.list()
+      : base44.entities.ContactPackage.filter({ group_id: currentUser.groupId }),
+    enabled: !!currentUser,
+  });
+
+  const { data: allGroups = [] } = useQuery({
+    queryKey: ["groups-for-packages"],
+    queryFn: () => base44.entities.Group.list(),
+    enabled: isAdmin,
   });
 
   const { data: myLeads = [] } = useQuery({
@@ -128,6 +138,7 @@ export default function ContactPackages() {
       {showImport && (
         <PackageImportModal
           currentUser={currentUser}
+          allGroups={allGroups}
           onClose={() => setShowImport(false)}
           onSuccess={() => {
             setShowImport(false);
