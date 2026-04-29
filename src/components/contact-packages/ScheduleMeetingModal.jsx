@@ -35,6 +35,8 @@ export default function ScheduleMeetingModal({ lead, currentUser, onClose, onSuc
       status: "meeting_scheduled",
       contact_notes: notes,
       contacted_at: new Date().toISOString(),
+      scheduled_meeting_date: date,
+      scheduled_meeting_time: time || "",
     });
 
     setSaving(false);

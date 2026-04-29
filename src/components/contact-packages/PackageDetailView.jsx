@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Users, Search, UserCheck, ChevronDown, CheckSquare, Square,
-  Trash2, RotateCcw, MoreVertical, Pencil, Check, X, MessageSquare
+  Trash2, RotateCcw, MoreVertical, Pencil, Check, X, MessageSquare, Calendar, Clock
 } from "lucide-react";
 
 const STATUS_LABELS = {
@@ -352,6 +352,10 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                 const advisorNote = lead.contact_notes;
                 const importedNote = lead.notes;
                 const isExpanded = expandedLeadId === lead.id;
+                const hasMeetingDate = lead.status === "meeting_scheduled" && lead.scheduled_meeting_date;
+                const meetingDateLabel = hasMeetingDate
+                  ? new Date(lead.scheduled_meeting_date).toLocaleDateString("pl-PL", { day: "2-digit", month: "long", year: "numeric" })
+                  : "";
 
                 return (
                   <div key={lead.id} className={selected.has(lead.id) ? "bg-green-50/50" : ""}>
@@ -384,9 +388,17 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                           </div>
                         )}
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium text-center ${STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-600"}`}>
-                        {STATUS_LABELS[lead.status] || lead.status}
-                      </span>
+                      <div className="space-y-1">
+                        <span className={`block text-xs px-2 py-1 rounded-full font-medium text-center ${STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-600"}`}>
+                          {STATUS_LABELS[lead.status] || lead.status}
+                        </span>
+                        {hasMeetingDate && (
+                          <div className="text-[11px] text-purple-700 text-center flex items-center justify-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {lead.scheduled_meeting_date}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {isExpanded && (
@@ -405,6 +417,17 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                             <p className="text-gray-400 italic">Brak notatki doradcy</p>
                           )}
                         </div>
+                        {hasMeetingDate && (
+                          <div className="sm:col-span-2 bg-purple-50 rounded-lg p-3">
+                            <div className="text-xs font-semibold text-purple-700 uppercase mb-1">Umówione spotkanie</div>
+                            <div className="flex flex-wrap items-center gap-4 text-purple-900">
+                              <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{meetingDateLabel}</span>
+                              {lead.scheduled_meeting_time && (
+                                <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{lead.scheduled_meeting_time}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                         {importedNote && (
                           <div className="sm:col-span-2 bg-yellow-50 rounded-lg p-3">
                             <div className="text-xs font-semibold text-yellow-700 uppercase mb-1">Notatka z importu</div>

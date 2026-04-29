@@ -56,6 +56,15 @@
     "contact_notes": {
       "type": "string",
       "description": "Notatki handlowca po kontakcie"
+    },
+    "scheduled_meeting_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data um\u00f3wionego spotkania"
+    },
+    "scheduled_meeting_time": {
+      "type": "string",
+      "description": "Godzina um\u00f3wionego spotkania (HH:MM)"
     }
   },
   "required": [
