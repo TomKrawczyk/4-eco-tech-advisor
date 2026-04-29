@@ -81,23 +81,29 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     u.role === "advisor" || u.role === "team_leader"
   );
 
+  // Wspólna funkcja do przeliczenia i zapisania assigned_count w paczce
+  const recalcAssignedCount = async () => {
+    // Pobierz świeży stan leadów (z opóźnieniem żeby baza zdążyła zapisać)
+    await new Promise(r => setTimeout(r, 300));
+    const fresh = await base44.entities.ContactLead.filter({ package_id: pkg.id });
+    const total = fresh.length;
+    const assigned = fresh.filter(l => l.status && l.status !== "unassigned").length;
+    await base44.entities.ContactPackage.update(pkg.id, {
+      total_count: total,
+      assigned_count: assigned,
+    });
+  };
+
   const assignMutation = useMutation({
     mutationFn: async ({ leadIds, userEmail, userName }) => {
-      const updates = leadIds.map(id =>
-        base44.entities.ContactLead.update(id, {
+      for (const id of leadIds) {
+        await base44.entities.ContactLead.update(id, {
           assigned_user_email: userEmail,
           assigned_user_name: userName,
           status: "assigned",
-        })
-      );
-      await Promise.all(updates);
-
-      // Pobierz świeży stan leadów i przelicz assigned_count
-      const fresh = await base44.entities.ContactLead.filter({ package_id: pkg.id });
-      const newAssigned = fresh.filter(l => l.status !== "unassigned").length;
-      await base44.entities.ContactPackage.update(pkg.id, {
-        assigned_count: newAssigned,
-      });
+        });
+      }
+      await recalcAssignedCount();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["leads", pkg.id] });
@@ -109,20 +115,14 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
 
   const unassignMutation = useMutation({
     mutationFn: async (leadIds) => {
-      await Promise.all(leadIds.map(id =>
-        base44.entities.ContactLead.update(id, {
+      for (const id of leadIds) {
+        await base44.entities.ContactLead.update(id, {
           assigned_user_email: "",
           assigned_user_name: "",
           status: "unassigned",
-        })
-      ));
-
-      // Pobierz świeży stan leadów i przelicz assigned_count
-      const fresh = await base44.entities.ContactLead.filter({ package_id: pkg.id });
-      const stillAssigned = fresh.filter(l => l.status !== "unassigned").length;
-      await base44.entities.ContactPackage.update(pkg.id, {
-        assigned_count: stillAssigned,
-      });
+        });
+      }
+      await recalcAssignedCount();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["leads", pkg.id] });
