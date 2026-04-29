@@ -14,15 +14,13 @@ async function fetchCurrentUser() {
     user.is_blocked = (ua.data?.is_blocked || ua.is_blocked) === true;
     let groupId = ua.data?.group_id || ua.group_id;
     if (!groupId) {
+      const uaEmail = ua.data?.email || ua.email;
       const myGroup = groups.find(g => {
         const ids = g.data?.group_leader_ids || g.group_leader_ids || [];
         const legacyId = g.data?.group_leader_id || g.group_leader_id;
-        const uaEmail = ua.data?.email || ua.email;
-        const uaName = ua.data?.name || ua.name;
         return (
           ids.includes(ua.id) ||
           ids.includes(uaEmail) ||
-          ids.includes(uaName) ||
           legacyId === ua.id ||
           legacyId === uaEmail
         );
