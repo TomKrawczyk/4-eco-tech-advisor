@@ -5,7 +5,7 @@ import useCurrentUser from "@/components/shared/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ShieldAlert, Package, Plus, Users, Upload, ChevronRight, Search, X } from "lucide-react";
+import { ShieldAlert, Package, Plus, Users, Upload, ChevronRight, Search, X, Pencil, Trash2 } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 import PackageDetailView from "@/components/contact-packages/PackageDetailView";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
@@ -16,6 +16,29 @@ export default function ContactPackages() {
   const [search, setSearch] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
+  const [editingPackage, setEditingPackage] = useState(null);
+  const [deletingPackage, setDeletingPackage] = useState(null);
+
+  const updatePackageMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.ContactPackage.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contact-packages"] });
+      setEditingPackage(null);
+    },
+  });
+
+  const deletePackageMutation = useMutation({
+    mutationFn: async (pkg) => {
+      // Usuń leady paczki
+      const leads = await base44.entities.ContactLead.filter({ package_id: pkg.id });
+      await Promise.all(leads.map(l => base44.entities.ContactLead.delete(l.id)));
+      await base44.entities.ContactPackage.delete(pkg.id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contact-packages"] });
+      setDeletingPackage(null);
+    },
+  });
 
   // Rola dostępu
   const isLeader = currentUser?.role === "group_leader" || currentUser?.role === "team_leader" || currentUser?.role === "admin";
@@ -144,7 +167,10 @@ export default function ContactPackages() {
             <PackageCard
               key={pkg.id}
               pkg={pkg}
+              isAdmin={isAdmin}
               onClick={() => setSelectedPackage(pkg)}
+              onEdit={isAdmin ? (e) => { e.stopPropagation(); setEditingPackage(pkg); } : null}
+              onDelete={isAdmin ? (e) => { e.stopPropagation(); setDeletingPackage(pkg); } : null}
             />
           ))}
         </div>
@@ -161,47 +187,168 @@ export default function ContactPackages() {
           }}
         />
       )}
+
+      {/* Modal edycji paczki */}
+      {editingPackage && (
+        <EditPackageModal
+          pkg={editingPackage}
+          allGroups={allGroups}
+          onClose={() => setEditingPackage(null)}
+          onSave={(data) => updatePackageMutation.mutate({ id: editingPackage.id, data })}
+          saving={updatePackageMutation.isPending}
+        />
+      )}
+
+      {/* Modal potwierdzenia usunięcia */}
+      {deletingPackage && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Usuń paczkę</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Czy na pewno chcesz usunąć paczkę <strong>{deletingPackage.name}</strong>?
+            </p>
+            <p className="text-xs text-red-500 mb-6">Zostaną usunięte wszystkie kontakty w tej paczce ({deletingPackage.total_count || 0} szt.).</p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setDeletingPackage(null)}>Anuluj</Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => deletePackageMutation.mutate(deletingPackage)}
+                disabled={deletePackageMutation.isPending}
+              >
+                {deletePackageMutation.isPending ? "Usuwanie..." : "Usuń"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function PackageCard({ pkg, onClick }) {
+function EditPackageModal({ pkg, allGroups, onClose, onSave, saving }) {
+  const [name, setName] = useState(pkg.name || "");
+  const [description, setDescription] = useState(pkg.description || "");
+  const [groupId, setGroupId] = useState(pkg.group_id || "");
+
+  const handleSave = () => {
+    const g = allGroups.find(g => g.id === groupId);
+    onSave({
+      name,
+      description,
+      group_id: groupId,
+      group_name: g?.name || pkg.group_name || "",
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-bold text-gray-900">Edytuj paczkę</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">Nazwa paczki *</label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Nazwa paczki" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">Opis</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={2}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full resize-none focus:outline-none focus:ring-2 focus:ring-green-200"
+              placeholder="Opcjonalny opis..."
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">Grupa</label>
+            <select
+              value={groupId}
+              onChange={e => setGroupId(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
+            >
+              <option value="">— brak grupy —</option>
+              {allGroups.map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end mt-6">
+          <Button variant="outline" onClick={onClose}>Anuluj</Button>
+          <Button
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={handleSave}
+            disabled={!name || saving}
+          >
+            {saving ? "Zapisywanie..." : "Zapisz"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PackageCard({ pkg, onClick, isAdmin, onEdit, onDelete }) {
   const assigned = pkg.assigned_count || 0;
   const total = pkg.total_count || 0;
   const pct = total > 0 ? Math.round((assigned / total) * 100) : 0;
 
   return (
-    <button
-      onClick={onClick}
-      className="text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-green-300 hover:shadow-md transition-all group"
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-          <Package className="w-5 h-5 text-green-600" />
+    <div className="relative bg-white border border-gray-200 rounded-xl p-4 hover:border-green-300 hover:shadow-md transition-all group">
+      {/* Admin actions */}
+      {isAdmin && (
+        <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <button
+            onClick={onEdit}
+            className="p-1.5 rounded-lg bg-white border border-gray-200 hover:bg-blue-50 hover:border-blue-300 text-gray-400 hover:text-blue-600 transition-colors shadow-sm"
+            title="Edytuj"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded-lg bg-white border border-gray-200 hover:bg-red-50 hover:border-red-300 text-gray-400 hover:text-red-600 transition-colors shadow-sm"
+            title="Usuń"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
-        <Badge variant={pkg.status === "archived" ? "secondary" : "outline"} className="text-xs">
-          {pkg.status === "archived" ? "Archiwum" : "Aktywna"}
-        </Badge>
-      </div>
-      <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-green-700 transition-colors">{pkg.name}</h3>
-      {pkg.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{pkg.description}</p>}
-      <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-        <span className="flex items-center gap-1"><Users className="w-3 h-3" />{total} kontaktów</span>
-        <span>{pct}% przypisanych</span>
-      </div>
-      <div className="w-full bg-gray-100 rounded-full h-1.5">
-        <div
-          className="bg-green-500 h-1.5 rounded-full transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <div className="flex items-center justify-between mt-3">
-        <span className="text-xs text-gray-400">
-          {new Date(pkg.created_date).toLocaleDateString("pl-PL")}
-        </span>
-        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-green-600 transition-colors" />
-      </div>
-    </button>
+      )}
+      <button onClick={onClick} className="text-left w-full">
+        <div className="flex items-start justify-between mb-3">
+          <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+            <Package className="w-5 h-5 text-green-600" />
+          </div>
+          <Badge variant={pkg.status === "archived" ? "secondary" : "outline"} className="text-xs">
+            {pkg.status === "archived" ? "Archiwum" : "Aktywna"}
+          </Badge>
+        </div>
+        <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-green-700 transition-colors pr-12">{pkg.name}</h3>
+        {pkg.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{pkg.description}</p>}
+        {pkg.group_name && <p className="text-xs text-green-600 mb-2 font-medium">{pkg.group_name}</p>}
+        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+          <span className="flex items-center gap-1"><Users className="w-3 h-3" />{total} kontaktów</span>
+          <span>{pct}% przypisanych</span>
+        </div>
+        <div className="w-full bg-gray-100 rounded-full h-1.5">
+          <div
+            className="bg-green-500 h-1.5 rounded-full transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="flex items-center justify-between mt-3">
+          <span className="text-xs text-gray-400">
+            {new Date(pkg.created_date).toLocaleDateString("pl-PL")}
+          </span>
+          <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-green-600 transition-colors" />
+        </div>
+      </button>
+    </div>
   );
 }
 
