@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
@@ -85,6 +85,31 @@ export default function ContactPackages() {
     },
     enabled: !!currentUser && (isAdmin || (groupsLoaded && allGroups.length >= 0)),
   });
+
+  const packageIdsKey = useMemo(() => packages.map(p => p.id).sort().join("|"), [packages]);
+  const packageIds = useMemo(() => new Set(packages.map(p => p.id)), [packages]);
+
+  const { data: packageLeads = [] } = useQuery({
+    queryKey: ["contact-package-leads", packageIdsKey],
+    queryFn: async () => {
+      const allLeads = await base44.entities.ContactLead.list();
+      return allLeads.filter(l => packageIds.has(l.package_id));
+    },
+    enabled: !!currentUser && !isAdvisor && packages.length > 0,
+  });
+
+  const packageStats = useMemo(() => {
+    const stats = {};
+    packages.forEach(p => {
+      stats[p.id] = { total: 0, assigned: 0 };
+    });
+    packageLeads.forEach(lead => {
+      if (!stats[lead.package_id]) return;
+      stats[lead.package_id].total += 1;
+      if (lead.assigned_user_email) stats[lead.package_id].assigned += 1;
+    });
+    return stats;
+  }, [packages, packageLeads]);
 
   const { data: myLeads = [] } = useQuery({
     queryKey: ["my-leads", currentUser?.email],
@@ -188,6 +213,7 @@ export default function ContactPackages() {
             <PackageCard
               key={pkg.id}
               pkg={pkg}
+              stats={packageStats[pkg.id]}
               isAdmin={isAdmin}
               onClick={() => setSelectedPackageId(pkg.id)}
               onEdit={isAdmin ? (e) => { e.stopPropagation(); setEditingPackage(pkg); } : null}
@@ -314,9 +340,9 @@ function EditPackageModal({ pkg, allGroups, onClose, onSave, saving }) {
   );
 }
 
-function PackageCard({ pkg, onClick, isAdmin, onEdit, onDelete }) {
-  const assigned = pkg.assigned_count || 0;
-  const total = pkg.total_count || 0;
+function PackageCard({ pkg, stats, onClick, isAdmin, onEdit, onDelete }) {
+  const assigned = stats?.assigned ?? pkg.assigned_count ?? 0;
+  const total = stats?.total ?? pkg.total_count ?? 0;
   const pct = total > 0 ? Math.round((assigned / total) * 100) : 0;
 
   return (

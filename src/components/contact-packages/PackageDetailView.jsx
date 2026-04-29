@@ -87,7 +87,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     await new Promise(r => setTimeout(r, 300));
     const fresh = await base44.entities.ContactLead.filter({ package_id: pkg.id });
     const total = fresh.length;
-    const assigned = fresh.filter(l => l.status && l.status !== "unassigned").length;
+    const assigned = fresh.filter(l => l.assigned_user_email).length;
     await base44.entities.ContactPackage.update(pkg.id, {
       total_count: total,
       assigned_count: assigned,
@@ -167,8 +167,8 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
 
   const stats = useMemo(() => {
     const total = leads.length;
-    const assigned = leads.filter(l => l.status !== "unassigned").length;
-    const unassigned = leads.filter(l => l.status === "unassigned").length;
+    const assigned = leads.filter(l => l.assigned_user_email).length;
+    const unassigned = total - assigned;
     const interested = leads.filter(l => l.status === "interested" || l.status === "meeting_scheduled").length;
     return { total, assigned, unassigned, interested };
   }, [leads]);
