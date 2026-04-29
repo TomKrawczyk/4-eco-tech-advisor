@@ -34,6 +34,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState(new Set());
+  const [expandedLeadId, setExpandedLeadId] = useState(null);
   const [assignTarget, setAssignTarget] = useState("");
   const [assignDropdown, setAssignDropdown] = useState(false);
   const [editingGroup, setEditingGroup] = useState(false);
@@ -347,38 +348,74 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
             <div className="text-center py-12 text-gray-400 text-sm">Brak kontaktów spełniających filtry</div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {filtered.map(lead => (
-                <div
-                  key={lead.id}
-                  className={`grid grid-cols-[32px_1fr_1fr_1fr_120px] gap-3 px-4 py-3 items-center hover:bg-gray-50 transition-colors ${selected.has(lead.id) ? "bg-green-50/50" : ""}`}
-                >
-                  <button onClick={() => toggleSelect(lead.id)} className="flex items-center justify-center">
-                    {selected.has(lead.id)
-                      ? <CheckSquare className="w-4 h-4 text-green-600" />
-                      : <Square className="w-4 h-4 text-gray-300" />
-                    }
-                  </button>
-                  <span className="font-medium text-gray-900 text-sm truncate">{lead.client_name}</span>
-                  <div className="text-xs text-gray-500 truncate">
-                    {lead.client_phone && <div>{lead.client_phone}</div>}
-                    {lead.client_address && <div className="text-gray-400">{lead.client_address}</div>}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm text-gray-600 truncate">
-                      {lead.assigned_user_name || <span className="text-gray-300 italic">—</span>}
+              {filtered.map(lead => {
+                const advisorNote = lead.contact_notes;
+                const importedNote = lead.notes;
+                const isExpanded = expandedLeadId === lead.id;
+
+                return (
+                  <div key={lead.id} className={selected.has(lead.id) ? "bg-green-50/50" : ""}>
+                    <div
+                      className="grid grid-cols-[32px_1fr_1fr_1fr_120px] gap-3 px-4 py-3 items-center hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => setExpandedLeadId(isExpanded ? null : lead.id)}
+                    >
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleSelect(lead.id); }}
+                        className="flex items-center justify-center"
+                      >
+                        {selected.has(lead.id)
+                          ? <CheckSquare className="w-4 h-4 text-green-600" />
+                          : <Square className="w-4 h-4 text-gray-300" />
+                        }
+                      </button>
+                      <span className="font-medium text-gray-900 text-sm truncate">{lead.client_name}</span>
+                      <div className="text-xs text-gray-500 truncate">
+                        {lead.client_phone && <div>{lead.client_phone}</div>}
+                        {lead.client_address && <div className="text-gray-400">{lead.client_address}</div>}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm text-gray-600 truncate">
+                          {lead.assigned_user_name || <span className="text-gray-300 italic">—</span>}
+                        </div>
+                        {advisorNote && (
+                          <div className="mt-1 flex items-start gap-1 text-xs text-gray-500 bg-gray-50 rounded-md px-2 py-1" title={advisorNote}>
+                            <MessageSquare className="w-3 h-3 mt-0.5 shrink-0 text-green-600" />
+                            <span className="line-clamp-2">{advisorNote}</span>
+                          </div>
+                        )}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium text-center ${STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-600"}`}>
+                        {STATUS_LABELS[lead.status] || lead.status}
+                      </span>
                     </div>
-                    {lead.contact_notes && (
-                      <div className="mt-1 flex items-start gap-1 text-xs text-gray-500 bg-gray-50 rounded-md px-2 py-1" title={lead.contact_notes}>
-                        <MessageSquare className="w-3 h-3 mt-0.5 shrink-0 text-green-600" />
-                        <span className="line-clamp-2">{lead.contact_notes}</span>
+
+                    {isExpanded && (
+                      <div className="px-4 pb-4 ml-8 grid gap-3 sm:grid-cols-2 text-sm">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <div className="text-xs font-semibold text-gray-400 uppercase mb-1">Dane kontaktu</div>
+                          <div className="font-medium text-gray-900">{lead.client_name}</div>
+                          <div className="text-gray-600">{lead.client_phone || "Brak telefonu"}</div>
+                          <div className="text-gray-500">{lead.client_address || "Brak adresu"}</div>
+                        </div>
+                        <div className="bg-green-50 rounded-lg p-3">
+                          <div className="text-xs font-semibold text-green-700 uppercase mb-1">Notatka doradcy</div>
+                          {advisorNote ? (
+                            <p className="text-gray-700 whitespace-pre-wrap">{advisorNote}</p>
+                          ) : (
+                            <p className="text-gray-400 italic">Brak notatki doradcy</p>
+                          )}
+                        </div>
+                        {importedNote && (
+                          <div className="sm:col-span-2 bg-yellow-50 rounded-lg p-3">
+                            <div className="text-xs font-semibold text-yellow-700 uppercase mb-1">Notatka z importu</div>
+                            <p className="text-gray-700 whitespace-pre-wrap">{importedNote}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium text-center ${STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-600"}`}>
-                    {STATUS_LABELS[lead.status] || lead.status}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
