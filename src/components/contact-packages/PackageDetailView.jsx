@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Users, Search, UserCheck, ChevronDown, CheckSquare, Square,
-  Trash2, RotateCcw, MoreVertical, Pencil, Check, X
+  Trash2, RotateCcw, MoreVertical, Pencil, Check, X, MessageSquare
 } from "lucide-react";
 
 const STATUS_LABELS = {
@@ -363,9 +363,17 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                     {lead.client_phone && <div>{lead.client_phone}</div>}
                     {lead.client_address && <div className="text-gray-400">{lead.client_address}</div>}
                   </div>
-                  <span className="text-sm text-gray-600 truncate">
-                    {lead.assigned_user_name || <span className="text-gray-300 italic">—</span>}
-                  </span>
+                  <div className="min-w-0">
+                    <div className="text-sm text-gray-600 truncate">
+                      {lead.assigned_user_name || <span className="text-gray-300 italic">—</span>}
+                    </div>
+                    {lead.contact_notes && (
+                      <div className="mt-1 flex items-start gap-1 text-xs text-gray-500 bg-gray-50 rounded-md px-2 py-1" title={lead.contact_notes}>
+                        <MessageSquare className="w-3 h-3 mt-0.5 shrink-0 text-green-600" />
+                        <span className="line-clamp-2">{lead.contact_notes}</span>
+                      </div>
+                    )}
+                  </div>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium text-center ${STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-600"}`}>
                     {STATUS_LABELS[lead.status] || lead.status}
                   </span>
