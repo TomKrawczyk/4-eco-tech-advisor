@@ -256,7 +256,7 @@ function EditPackageModal({ pkg, allGroups, onClose, onSave, saving }) {
     onSave({
       name,
       description,
-      group_id: groupId || null,
+      group_id: groupId || "",
       group_name: g?.name || "",
     });
   };

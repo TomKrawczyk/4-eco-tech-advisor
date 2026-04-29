@@ -67,7 +67,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const updateGroupMutation = useMutation({
     mutationFn: (groupId) => {
       const g = allGroups.find(g => g.id === groupId);
-      const patch = { group_id: groupId || null, group_name: g?.name || "" };
+      const patch = { group_id: groupId || "", group_name: g?.name || "" };
       return base44.entities.ContactPackage.update(pkg.id, patch);
     },
     onSuccess: () => {
