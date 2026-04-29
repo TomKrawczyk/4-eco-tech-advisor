@@ -105,11 +105,14 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       }
       await recalcAssignedCount();
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["leads", pkg.id] });
-      qc.invalidateQueries({ queryKey: ["contact-packages"] });
+    onSuccess: async () => {
       setSelected(new Set());
       setAssignDropdown(false);
+      // Wymuś refetch zamiast tylko invalidate — gwarancja świeżych danych w UI
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ["leads", pkg.id] }),
+        qc.refetchQueries({ queryKey: ["contact-packages"] }),
+      ]);
     },
   });
 
@@ -124,10 +127,13 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       }
       await recalcAssignedCount();
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["leads", pkg.id] });
-      qc.invalidateQueries({ queryKey: ["contact-packages"] });
+    onSuccess: async () => {
       setSelected(new Set());
+      // Wymuś refetch zamiast tylko invalidate — gwarancja świeżych danych w UI
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ["leads", pkg.id] }),
+        qc.refetchQueries({ queryKey: ["contact-packages"] }),
+      ]);
     },
   });
 
