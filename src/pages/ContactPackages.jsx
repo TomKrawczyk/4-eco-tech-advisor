@@ -51,20 +51,11 @@ export default function ContactPackages() {
     queryKey: ["contact-packages", currentUser?.groupId, isAdmin],
     queryFn: async () => {
       if (isAdmin) return base44.entities.ContactPackage.list();
+      // useCurrentUser już wykrywa groupId (w tym przez group_leader_ids)
       if (currentUser.groupId) {
         return base44.entities.ContactPackage.filter({ group_id: currentUser.groupId });
       }
-      // Lider bez groupId w AllowedUser — pobierz wszystkie i odfiltruj po grupach, w których jest liderem
-      const allGroups = await base44.entities.Group.list();
-      const myGroups = allGroups.filter(g => {
-        const ids = g.data?.group_leader_ids || g.group_leader_ids || [];
-        const legacyId = g.data?.group_leader_id || g.group_leader_id;
-        return ids.includes(currentUser.allowedUserId) || ids.includes(currentUser.email) || legacyId === currentUser.allowedUserId || legacyId === currentUser.email;
-      });
-      if (myGroups.length === 0) return [];
-      const allPkgs = await base44.entities.ContactPackage.list();
-      const myGroupIds = new Set(myGroups.map(g => g.id));
-      return allPkgs.filter(p => myGroupIds.has(p.group_id));
+      return [];
     },
     enabled: !!currentUser,
   });
@@ -235,8 +226,8 @@ function EditPackageModal({ pkg, allGroups, onClose, onSave, saving }) {
     onSave({
       name,
       description,
-      group_id: groupId,
-      group_name: g?.name || pkg.group_name || "",
+      group_id: groupId || null,
+      group_name: g?.name || "",
     });
   };
 
