@@ -268,8 +268,9 @@ export default function MeetingReports() {
   const [filterAuthor, setFilterAuthor] = useState("");
   const queryClient = useQueryClient();
 
-  // Sprawdź prefill z URL (po przejściu ze spotkania) — HashRouter: query jest za #/path?...
-  const urlParams = new URLSearchParams(window.location.hash.includes('?') ? window.location.hash.split('?')[1] : window.location.search);
+  // Sprawdź prefill z URL — HashRouter: query jest za #/path?...
+  const hashPart = window.location.hash;
+  const urlParams = new URLSearchParams(hashPart.includes('?') ? hashPart.split('?')[1] : window.location.search);
   const prefill = urlParams.get("from_meeting") === "1" ? {
     client_name: urlParams.get("prefill_client_name") || "",
     client_phone: urlParams.get("prefill_client_phone") || "",

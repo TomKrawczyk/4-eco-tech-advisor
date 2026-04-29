@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ShieldAlert, Package, Plus, Users, Upload, ChevronRight, Search, X } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 import PackageDetailView from "@/components/contact-packages/PackageDetailView";
+import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
 
 export default function ContactPackages() {
   const { currentUser, accessChecked } = useCurrentUser();
@@ -64,7 +65,7 @@ export default function ContactPackages() {
 
   // Widok handlowca — tylko jego kontakty
   if (isAdvisor) {
-    return <AdvisorView leads={myLeads} currentUser={currentUser} />;
+    return <AdvisorView leads={myLeads} currentUser={currentUser} qc={qc} />;
   }
 
   // Jeśli wybraliśmy paczkę — widok szczegółowy
@@ -190,8 +191,7 @@ function PackageCard({ pkg, onClick }) {
   );
 }
 
-function AdvisorView({ leads, currentUser }) {
-  const qc = useQueryClient();
+function AdvisorView({ leads, currentUser, qc }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -268,7 +268,9 @@ function AdvisorView({ leads, currentUser }) {
               lead={lead}
               statusLabels={statusLabels}
               statusColors={statusColors}
+              currentUser={currentUser}
               onUpdateStatus={(status, notes) => updateStatus.mutate({ id: lead.id, status, notes })}
+              onMeetingScheduled={() => qc.invalidateQueries({ queryKey: ["my-leads"] })}
             />
           ))}
         </div>
@@ -277,56 +279,90 @@ function AdvisorView({ leads, currentUser }) {
   );
 }
 
-function LeadRow({ lead, statusLabels, statusColors, onUpdateStatus }) {
+function LeadRow({ lead, statusLabels, statusColors, currentUser, onUpdateStatus, onMeetingScheduled }) {
   const [expanded, setExpanded] = useState(false);
   const [notes, setNotes] = useState(lead.contact_notes || "");
   const [status, setStatus] = useState(lead.status);
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
+
+  const handleStatusChange = (newStatus) => {
+    setStatus(newStatus);
+    if (newStatus === "meeting_scheduled") {
+      setShowMeetingModal(true);
+    }
+  };
+
+  const handleSave = () => {
+    if (status === "meeting_scheduled") {
+      setShowMeetingModal(true);
+    } else {
+      onUpdateStatus(status, notes);
+    }
+  };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <button
-        className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors"
-        onClick={() => setExpanded(e => !e)}
-      >
-        <div className="flex-1 min-w-0">
-          <div className="font-medium text-gray-900">{lead.client_name}</div>
-          <div className="text-sm text-gray-500">{lead.client_phone} {lead.client_address && `· ${lead.client_address}`}</div>
-        </div>
-        <span className={`text-xs px-2 py-1 rounded-full font-medium shrink-0 ${statusColors[lead.status] || "bg-gray-50 text-gray-600"}`}>
-          {statusLabels[lead.status] || lead.status}
-        </span>
-        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${expanded ? "rotate-90" : ""}`} />
-      </button>
-      {expanded && (
-        <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
-          {lead.notes && <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-2">{lead.notes}</p>}
-          <div>
-            <label className="text-xs font-medium text-gray-500 block mb-1">Status kontaktu</label>
-            <select
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full"
-            >
-              {Object.entries(statusLabels).filter(([v]) => v !== "unassigned" && v !== "assigned").map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
+    <>
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <button
+          className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors"
+          onClick={() => setExpanded(e => !e)}
+        >
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-gray-900">{lead.client_name}</div>
+            <div className="text-sm text-gray-500">{lead.client_phone} {lead.client_address && `· ${lead.client_address}`}</div>
           </div>
-          <div>
-            <label className="text-xs font-medium text-gray-500 block mb-1">Notatki</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={2}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full resize-none focus:outline-none focus:ring-2 focus:ring-green-200"
-              placeholder="Notatki z rozmowy..."
-            />
+          <span className={`text-xs px-2 py-1 rounded-full font-medium shrink-0 ${statusColors[lead.status] || "bg-gray-50 text-gray-600"}`}>
+            {statusLabels[lead.status] || lead.status}
+          </span>
+          <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${expanded ? "rotate-90" : ""}`} />
+        </button>
+        {expanded && (
+          <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+            {lead.notes && <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-2">{lead.notes}</p>}
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Status kontaktu</label>
+              <select
+                value={status}
+                onChange={e => handleStatusChange(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full"
+              >
+                {Object.entries(statusLabels).filter(([v]) => v !== "unassigned" && v !== "assigned").map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+              {status === "meeting_scheduled" && (
+                <p className="text-xs text-purple-600 mt-1">Kliknij "Zapisz" aby wybrać datę spotkania i dodać do kalendarza.</p>
+              )}
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 block mb-1">Notatki</label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                rows={2}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full resize-none focus:outline-none focus:ring-2 focus:ring-green-200"
+                placeholder="Notatki z rozmowy..."
+              />
+            </div>
+            <Button size="sm" onClick={handleSave} className="bg-green-600 hover:bg-green-700 text-white">
+              Zapisz
+            </Button>
           </div>
-          <Button size="sm" onClick={() => onUpdateStatus(status, notes)} className="bg-green-600 hover:bg-green-700 text-white">
-            Zapisz
-          </Button>
-        </div>
+        )}
+      </div>
+
+      {showMeetingModal && (
+        <ScheduleMeetingModal
+          lead={{ ...lead, contact_notes: notes }}
+          currentUser={currentUser}
+          onClose={() => { setShowMeetingModal(false); setStatus(lead.status); }}
+          onSuccess={() => {
+            setShowMeetingModal(false);
+            onMeetingScheduled();
+            setExpanded(false);
+          }}
+        />
       )}
-    </div>
+    </>
   );
 }

@@ -8,7 +8,6 @@ import { format, isPast, isToday } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Plus, Pencil, Trash2, MapPin, Clock, User, FileText, CheckCircle2, XCircle, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -32,13 +31,13 @@ function makeReportUrl(ev, day) {
   const dateStr = format(day, "yyyy-MM-dd");
   const params = new URLSearchParams({
     from_meeting: "1",
-    prefill_client_name: ev.client_name || ev.title?.replace(/^📋\s*/, "") || "",
+    prefill_client_name: ev.client_name || ev.title?.replace(/^Spotkanie:\s*/, "")?.replace(/^📋\s*/, "") || "",
     prefill_client_phone: ev.client_phone || "",
     prefill_client_address: ev.location || "",
     prefill_meeting_date: ev.event_date || dateStr,
     prefill_meeting_time: ev.event_time || "",
   });
-  return `${createPageUrl("MeetingReports")}?${params.toString()}`;
+  return `/MeetingReports?${params.toString()}`;
 }
 
 export default function CalendarDayModal({ day, events, currentUser, viewMode, onClose, onEdit, onDelete, onAdd }) {
