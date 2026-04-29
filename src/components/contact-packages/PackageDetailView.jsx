@@ -92,10 +92,9 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       );
       await Promise.all(updates);
 
-      // Aktualizuj licznik w paczce
-      const newAssigned = leads.filter(
-        l => l.assigned_user_email || leadIds.includes(l.id)
-      ).length;
+      // Pobierz świeży stan leadów i przelicz assigned_count
+      const fresh = await base44.entities.ContactLead.filter({ package_id: pkg.id });
+      const newAssigned = fresh.filter(l => l.status !== "unassigned").length;
       await base44.entities.ContactPackage.update(pkg.id, {
         assigned_count: newAssigned,
       });
@@ -118,10 +117,9 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         })
       ));
 
-      // Przelicz assigned_count — kontakty które zostały przypisane po tej operacji
-      const stillAssigned = leads.filter(
-        l => l.assigned_user_email && !leadIds.includes(l.id)
-      ).length;
+      // Pobierz świeży stan leadów i przelicz assigned_count
+      const fresh = await base44.entities.ContactLead.filter({ package_id: pkg.id });
+      const stillAssigned = fresh.filter(l => l.status !== "unassigned").length;
       await base44.entities.ContactPackage.update(pkg.id, {
         assigned_count: stillAssigned,
       });
