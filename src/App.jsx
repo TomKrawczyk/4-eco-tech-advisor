@@ -8,6 +8,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import RejectedMeetings from '@/pages/RejectedMeetings';
+import ContactPackages from '@/pages/ContactPackages';
 import CleanupMeetings from '@/pages/CleanupMeetings';
 import ExportReports from '@/pages/ExportReports';
 import Documentation from '@/pages/Documentation';
@@ -83,6 +84,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="ExportReports">
             <ExportReports />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/ContactPackages"
+        element={
+          <LayoutWrapper currentPageName="ContactPackages">
+            <ContactPackages />
           </LayoutWrapper>
         }
       />

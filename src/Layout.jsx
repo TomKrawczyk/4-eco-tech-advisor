@@ -91,6 +91,7 @@ const navStructure = [
     ]
   },
   { name: "Education", label: "Szkolenia" },
+  { name: "ContactPackages", label: "Paczki kontaktów", roles: ["admin", "group_leader", "team_leader", "advisor"] },
   { name: "Documentation", label: "Dokumentacja", adminOnly: true },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: false, roles: ["admin", "hr_admin"] },
 ];
@@ -188,7 +189,7 @@ export default function Layout({ children, currentPageName }) {
 
   const isItemVisible = (item) => {
     if (item.adminOnly && currentUser?.role !== "admin" && currentUser?.role !== "hr_admin") return false;
-    if (item.roles && !item.roles.includes(currentUser?.role)) return false;
+    if (item.roles && currentUser?.role && !item.roles.includes(currentUser?.role)) return false;
     // Użytkownik testowy widzi tylko Szkolenia i Start
     if (currentUser?.role === "test_user") {
       const allowed = ["Education", "Dashboard"];

@@ -1,0 +1,66 @@
+{
+  "name": "ContactLead",
+  "type": "object",
+  "properties": {
+    "package_id": {
+      "type": "string",
+      "description": "ID paczki kontakt\u00f3w"
+    },
+    "group_id": {
+      "type": "string",
+      "description": "ID grupy (do filtrowania)"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko klienta"
+    },
+    "client_phone": {
+      "type": "string",
+      "description": "Numer telefonu"
+    },
+    "client_address": {
+      "type": "string",
+      "description": "Adres klienta"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notatki / dodatkowe info z Excela"
+    },
+    "assigned_user_email": {
+      "type": "string",
+      "description": "Email handlowca kt\u00f3remu przypisano kontakt"
+    },
+    "assigned_user_name": {
+      "type": "string",
+      "description": "Imi\u0119 handlowca (cache)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "unassigned",
+        "assigned",
+        "contacted",
+        "interested",
+        "not_interested",
+        "no_answer",
+        "meeting_scheduled"
+      ],
+      "default": "unassigned",
+      "description": "Status kontaktu"
+    },
+    "contacted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data kontaktu"
+    },
+    "contact_notes": {
+      "type": "string",
+      "description": "Notatki handlowca po kontakcie"
+    }
+  },
+  "required": [
+    "package_id",
+    "group_id",
+    "client_name"
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "name": "ContactPackage",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nazwa paczki kontakt\u00f3w"
+    },
+    "description": {
+      "type": "string",
+      "description": "Opis paczki"
+    },
+    "group_id": {
+      "type": "string",
+      "description": "ID grupy w\u0142a\u015bciciela paczki"
+    },
+    "group_name": {
+      "type": "string",
+      "description": "Nazwa grupy (cache)"
+    },
+    "created_by_email": {
+      "type": "string",
+      "description": "Email lidera kt\u00f3ry stworzy\u0142 paczk\u0119"
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Imi\u0119 lidera (cache)"
+    },
+    "total_count": {
+      "type": "number",
+      "default": 0,
+      "description": "\u0141\u0105czna liczba kontakt\u00f3w w paczce"
+    },
+    "assigned_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Liczba przypisanych kontakt\u00f3w"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "archived"
+      ],
+      "default": "active",
+      "description": "Status paczki"
+    }
+  },
+  "required": [
+    "name",
+    "group_id"
+  ]
+}
