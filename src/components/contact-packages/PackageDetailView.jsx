@@ -29,7 +29,7 @@ const STATUS_COLORS = {
   meeting_scheduled: "bg-purple-50 text-purple-700",
 };
 
-export default function PackageDetailView({ pkg, currentUser, onBack }) {
+export default function PackageDetailView({ pkg, currentUser, onBack, onPackageUpdated }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -67,10 +67,11 @@ export default function PackageDetailView({ pkg, currentUser, onBack }) {
         group_name: g?.name || "",
       });
     },
-    onSuccess: () => {
+    onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ["contact-packages"] });
       qc.invalidateQueries({ queryKey: ["groups-for-packages"] });
       setEditingGroup(false);
+      if (onPackageUpdated && updated) onPackageUpdated(updated);
     },
   });
 

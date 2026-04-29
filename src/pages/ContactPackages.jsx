@@ -21,8 +21,12 @@ export default function ContactPackages() {
 
   const updatePackageMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ContactPackage.update(id, data),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ["contact-packages"] });
+      // Jeśli edytujemy paczkę aktualnie otwartą w widoku szczegółowym, odśwież ją
+      if (selectedPackage && updated?.id === selectedPackage.id) {
+        setSelectedPackage(updated);
+      }
       setEditingPackage(null);
     },
   });
@@ -123,6 +127,7 @@ export default function ContactPackages() {
         pkg={selectedPackage}
         currentUser={currentUser}
         onBack={() => setSelectedPackage(null)}
+        onPackageUpdated={(updated) => setSelectedPackage(updated)}
       />
     );
   }
