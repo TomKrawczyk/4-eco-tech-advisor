@@ -21,11 +21,11 @@ export default function ContactPackages() {
 
   const updatePackageMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ContactPackage.update(id, data),
-    onSuccess: (updated) => {
+    onSuccess: (_result, variables) => {
       qc.invalidateQueries({ queryKey: ["contact-packages"] });
       // Jeśli edytujemy paczkę aktualnie otwartą w widoku szczegółowym, odśwież ją
-      if (selectedPackage && updated?.id === selectedPackage.id) {
-        setSelectedPackage(updated);
+      if (selectedPackage && selectedPackage.id === variables.id) {
+        setSelectedPackage(prev => ({ ...prev, ...variables.data }));
       }
       setEditingPackage(null);
     },

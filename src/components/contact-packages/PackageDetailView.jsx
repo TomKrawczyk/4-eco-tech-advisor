@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,11 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
 
   const isAdmin = currentUser?.role === "admin";
 
+  // Synchronizuj newGroupId gdy pkg się zmieni (po zapisie przez rodzica)
+  useEffect(() => {
+    setNewGroupId(pkg.group_id || "");
+  }, [pkg.group_id]);
+
   // Wszystkie leady w tej paczce
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", pkg.id],
@@ -62,16 +67,14 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const updateGroupMutation = useMutation({
     mutationFn: (groupId) => {
       const g = allGroups.find(g => g.id === groupId);
-      return base44.entities.ContactPackage.update(pkg.id, {
-        group_id: groupId || null,
-        group_name: g?.name || "",
-      });
+      const patch = { group_id: groupId || null, group_name: g?.name || "" };
+      return base44.entities.ContactPackage.update(pkg.id, patch).then(() => patch);
     },
-    onSuccess: (updated) => {
+    onSuccess: (patch) => {
       qc.invalidateQueries({ queryKey: ["contact-packages"] });
       qc.invalidateQueries({ queryKey: ["groups-for-packages"] });
       setEditingGroup(false);
-      if (onPackageUpdated && updated) onPackageUpdated(updated);
+      if (onPackageUpdated) onPackageUpdated({ ...pkg, ...patch });
     },
   });
 
