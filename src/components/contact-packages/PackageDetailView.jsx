@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Users, Search, UserCheck, ChevronDown, CheckSquare, Square,
-  Trash2, RotateCcw, MoreVertical
+  Trash2, RotateCcw, MoreVertical, Pencil, Check, X
 } from "lucide-react";
 
 const STATUS_LABELS = {
@@ -36,6 +36,10 @@ export default function PackageDetailView({ pkg, currentUser, onBack }) {
   const [selected, setSelected] = useState(new Set());
   const [assignTarget, setAssignTarget] = useState("");
   const [assignDropdown, setAssignDropdown] = useState(false);
+  const [editingGroup, setEditingGroup] = useState(false);
+  const [newGroupId, setNewGroupId] = useState(pkg.group_id || "");
+
+  const isAdmin = currentUser?.role === "admin";
 
   // Wszystkie leady w tej paczce
   const { data: leads = [], isLoading } = useQuery({
@@ -47,6 +51,26 @@ export default function PackageDetailView({ pkg, currentUser, onBack }) {
   const { data: allUsers = [] } = useQuery({
     queryKey: ["allowed-users-group", pkg.group_id],
     queryFn: () => base44.entities.AllowedUser.filter({ group_id: pkg.group_id }),
+  });
+
+  const { data: allGroups = [] } = useQuery({
+    queryKey: ["groups-all"],
+    queryFn: () => base44.entities.Group.list(),
+    enabled: isAdmin,
+  });
+
+  const updateGroupMutation = useMutation({
+    mutationFn: (groupId) => {
+      const g = allGroups.find(g => g.id === groupId);
+      return base44.entities.ContactPackage.update(pkg.id, {
+        group_id: groupId,
+        group_name: g?.name || "",
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contact-packages"] });
+      setEditingGroup(false);
+    },
   });
 
   const advisors = allUsers.filter(u =>
@@ -146,6 +170,47 @@ export default function PackageDetailView({ pkg, currentUser, onBack }) {
         <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900">{pkg.name}</h1>
           {pkg.description && <p className="text-sm text-gray-500">{pkg.description}</p>}
+          {/* Edycja grupy — tylko admin */}
+          {isAdmin && (
+            <div className="flex items-center gap-2 mt-1">
+              {editingGroup ? (
+                <>
+                  <select
+                    value={newGroupId}
+                    onChange={e => setNewGroupId(e.target.value)}
+                    className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
+                  >
+                    <option value="">— brak grupy —</option>
+                    {allGroups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => updateGroupMutation.mutate(newGroupId)}
+                    className="p-1 rounded hover:bg-green-50 text-green-600"
+                    title="Zapisz"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => { setEditingGroup(false); setNewGroupId(pkg.group_id || ""); }}
+                    className="p-1 rounded hover:bg-gray-100 text-gray-400"
+                    title="Anuluj"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setEditingGroup(true)}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  <Pencil className="w-3 h-3" />
+                  {pkg.group_name ? `Grupa: ${pkg.group_name}` : "Brak grupy — kliknij aby przypisać"}
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <Badge variant="outline" className="text-xs">
           {new Date(pkg.created_date).toLocaleDateString("pl-PL")}
