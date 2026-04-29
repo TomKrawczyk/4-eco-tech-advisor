@@ -47,6 +47,12 @@ export default function ContactPackages() {
 
   const isAdmin = currentUser?.role === "admin";
 
+  const { data: allGroups = [], isSuccess: groupsLoaded } = useQuery({
+    queryKey: ["groups-for-packages"],
+    queryFn: () => base44.entities.Group.list(),
+    enabled: !!currentUser,
+  });
+
   const { data: packages = [], isLoading } = useQuery({
     queryKey: ["contact-packages", currentUser?.email, isAdmin, allGroups.length],
     queryFn: async () => {
@@ -78,12 +84,6 @@ export default function ContactPackages() {
       return allPkgs.filter(p => myGroupIds.has(p.group_id));
     },
     enabled: !!currentUser && (isAdmin || groupsLoaded),
-  });
-
-  const { data: allGroups = [], isSuccess: groupsLoaded } = useQuery({
-    queryKey: ["groups-for-packages"],
-    queryFn: () => base44.entities.Group.list(),
-    enabled: !!currentUser,
   });
 
   const { data: myLeads = [] } = useQuery({
