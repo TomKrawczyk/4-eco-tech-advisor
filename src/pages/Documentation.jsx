@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   BookOpen, Users, FileText, Calendar, Calculator, 
   Settings, Database, ChevronDown, ChevronRight, 
@@ -75,6 +75,54 @@ const Pill = ({ children, color = "gray" }) => {
   );
 };
 
+function generateDocHTML(tab) {
+  const content = document.getElementById("doc-content")?.innerHTML || "";
+  return `<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dokumentacja 4-ECO Green Energy</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 900px; margin: 0 auto; padding: 32px 24px; color: #111; line-height: 1.6; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  h2 { font-size: 20px; font-weight: 700; margin: 28px 0 8px; color: #166534; border-bottom: 2px solid #d1fae5; padding-bottom: 6px; }
+  h3 { font-size: 16px; font-weight: 600; margin: 20px 0 6px; }
+  p, li { font-size: 14px; color: #374151; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th { background: #f9fafb; text-align: left; padding: 8px 10px; border: 1px solid #e5e7eb; font-weight: 600; font-size: 11px; text-transform: uppercase; color: #6b7280; }
+  td { padding: 8px 10px; border: 1px solid #e5e7eb; vertical-align: top; }
+  tr:hover td { background: #f9fafb; }
+  code { background: #f3f4f6; color: #15803d; padding: 2px 5px; border-radius: 4px; font-size: 12px; font-family: monospace; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: #dcfce7; color: #166534; }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-gray { background: #f3f4f6; color: #374151; }
+  .section { margin-bottom: 28px; }
+  .intro { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; }
+  .note { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #92400e; margin-top: 10px; }
+  footer { margin-top: 48px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 16px; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+${content}
+<footer>Dokumentacja wygenerowana automatycznie · 4-ECO Green Energy · ${new Date().toLocaleDateString("pl-PL")}</footer>
+</body>
+</html>`;
+}
+
+function handleDownload(tab) {
+  const html = generateDocHTML(tab);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `dokumentacja_4eco_${tab}_${new Date().toISOString().split("T")[0]}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Documentation() {
   const [activeTab, setActiveTab] = useState("general");
 
@@ -85,30 +133,42 @@ export default function Documentation() {
         subtitle="4-ECO Green Energy — przewodnik ogólny i techniczny"
       />
 
-      {/* Tab switcher */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setActiveTab("general")}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === "general"
-              ? "bg-green-600 text-white shadow"
-              : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-          }`}
+      {/* Tab switcher + download */}
+      <div className="flex items-center justify-between gap-2 mb-6 flex-wrap">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab("general")}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "general"
+                ? "bg-green-600 text-white shadow"
+                : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            📘 Ogólna
+          </button>
+          <button
+            onClick={() => setActiveTab("technical")}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "technical"
+                ? "bg-green-600 text-white shadow"
+                : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            ⚙️ Techniczna
+          </button>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleDownload(activeTab)}
+          className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50"
         >
-          📘 Ogólna
-        </button>
-        <button
-          onClick={() => setActiveTab("technical")}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === "technical"
-              ? "bg-green-600 text-white shadow"
-              : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-          }`}
-        >
-          ⚙️ Techniczna
-        </button>
+          <Download className="w-4 h-4" />
+          Pobierz HTML
+        </Button>
       </div>
 
+      <div id="doc-content">
       {/* ===================== DOKUMENTACJA OGÓLNA ===================== */}
       {activeTab === "general" && (
         <div>
@@ -533,6 +593,7 @@ export default function Documentation() {
           </Section>
         </div>
       )}
+      </div>{/* end doc-content */}
     </div>
   );
 }
