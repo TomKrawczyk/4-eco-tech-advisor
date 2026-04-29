@@ -7,6 +7,10 @@ Deno.serve(async (req) => {
 
   const { packageMeta, contacts } = await req.json();
 
+  if (!packageMeta.group_id) {
+    return Response.json({ error: 'Brak przypisanej grupy. Skontaktuj się z administratorem.' }, { status: 400 });
+  }
+
   // Utwórz paczkę
   const pkg = await base44.asServiceRole.entities.ContactPackage.create({
     name: packageMeta.name,

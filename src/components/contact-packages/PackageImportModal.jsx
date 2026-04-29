@@ -154,6 +154,11 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
   const handleImport = async () => {
     if (!name.trim() || contacts.length === 0) return;
     setImporting(true);
+    if (!currentUser.groupId) {
+      setParseError("Błąd: Twoje konto nie ma przypisanej grupy. Skontaktuj się z administratorem.");
+      setImporting(false);
+      return;
+    }
     try {
       const res = await base44.functions.invoke("importContactLeads", {
         packageMeta: {
@@ -168,7 +173,8 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
       setImportedCount(res.data?.created || contacts.length);
       setDone(true);
     } catch (err) {
-      setParseError("Błąd importu: " + (err.message || "spróbuj ponownie."));
+      const msg = err?.response?.data?.error || err.message || "spróbuj ponownie.";
+      setParseError("Błąd importu: " + msg);
     } finally {
       setImporting(false);
     }
