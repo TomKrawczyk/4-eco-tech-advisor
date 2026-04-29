@@ -115,6 +115,14 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
           status: "unassigned",
         })
       ));
+
+      // Przelicz assigned_count — kontakty które zostały przypisane po tej operacji
+      const stillAssigned = leads.filter(
+        l => l.assigned_user_email && !leadIds.includes(l.id)
+      ).length;
+      await base44.entities.ContactPackage.update(pkg.id, {
+        assigned_count: stillAssigned,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["leads", pkg.id] });
