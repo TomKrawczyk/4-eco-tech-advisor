@@ -48,22 +48,42 @@ export default function ContactPackages() {
   const isAdmin = currentUser?.role === "admin";
 
   const { data: packages = [], isLoading } = useQuery({
-    queryKey: ["contact-packages", currentUser?.groupId, isAdmin],
+    queryKey: ["contact-packages", currentUser?.email, isAdmin, allGroups.length],
     queryFn: async () => {
       if (isAdmin) return base44.entities.ContactPackage.list();
-      // useCurrentUser już wykrywa groupId (w tym przez group_leader_ids)
-      if (currentUser.groupId) {
-        return base44.entities.ContactPackage.filter({ group_id: currentUser.groupId });
+
+      // Zbierz wszystkie groupId gdzie user jest liderem (przez group_leader_ids lub group_id w AllowedUser)
+      const myGroupIds = new Set();
+
+      // Dodaj groupId z AllowedUser (bezpośrednie przypisanie)
+      if (currentUser.groupId) myGroupIds.add(currentUser.groupId);
+
+      // Dodaj wszystkie grupy, w których user jest wymieniony w group_leader_ids
+      for (const g of allGroups) {
+        const leaderIds = g.data?.group_leader_ids || g.group_leader_ids || [];
+        const legacyId = g.data?.group_leader_id || g.group_leader_id;
+        if (
+          leaderIds.includes(currentUser.allowedUserId) ||
+          leaderIds.includes(currentUser.email) ||
+          legacyId === currentUser.allowedUserId ||
+          legacyId === currentUser.email
+        ) {
+          myGroupIds.add(g.id);
+        }
       }
-      return [];
+
+      if (myGroupIds.size === 0) return [];
+
+      const allPkgs = await base44.entities.ContactPackage.list();
+      return allPkgs.filter(p => myGroupIds.has(p.group_id));
     },
-    enabled: !!currentUser,
+    enabled: !!currentUser && (isAdmin || groupsLoaded),
   });
 
-  const { data: allGroups = [] } = useQuery({
+  const { data: allGroups = [], isSuccess: groupsLoaded } = useQuery({
     queryKey: ["groups-for-packages"],
     queryFn: () => base44.entities.Group.list(),
-    enabled: !!currentUser && isAdmin,
+    enabled: !!currentUser,
   });
 
   const { data: myLeads = [] } = useQuery({
