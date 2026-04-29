@@ -91,6 +91,7 @@ const navStructure = [
     ]
   },
   { name: "Education", label: "Szkolenia" },
+  { name: "Documentation", label: "Dokumentacja", adminOnly: true },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: false, roles: ["admin", "hr_admin"] },
 ];
 
