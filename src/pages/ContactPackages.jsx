@@ -34,7 +34,7 @@ export default function ContactPackages() {
   const { data: allGroups = [] } = useQuery({
     queryKey: ["groups-for-packages"],
     queryFn: () => base44.entities.Group.list(),
-    enabled: isAdmin,
+    enabled: !!currentUser && isAdmin,
   });
 
   const { data: myLeads = [] } = useQuery({

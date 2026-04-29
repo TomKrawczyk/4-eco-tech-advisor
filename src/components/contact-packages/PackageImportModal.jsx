@@ -157,11 +157,11 @@ export default function PackageImportModal({ currentUser, allGroups = [], onClos
   const handleImport = async () => {
     if (!name.trim() || contacts.length === 0) return;
     setImporting(true);
-    const effectiveGroupId = isAdmin ? selectedGroupId : currentUser.groupId;
+    const effectiveGroupId = isAdmin ? selectedGroupId : (currentUser.groupId || "");
     const effectiveGroupName = isAdmin ? selectedGroupName : (currentUser.groupName || "");
 
     if (!effectiveGroupId) {
-      setParseError("Błąd: Wybierz grupę przed importem.");
+      setParseError(isAdmin ? "Wybierz grupę przed importem." : "Twoje konto nie ma przypisanej grupy. Skontaktuj się z administratorem.");
       setImporting(false);
       return;
     }
@@ -210,7 +210,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], onClos
                 <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="np. Rejon Kraków, kampania wiosenna" />
               </div>
 
-              {isAdmin && allGroups.length > 0 && (
+              {isAdmin && (
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1.5">Przypisz do grupy *</label>
                   <select
@@ -227,6 +227,9 @@ export default function PackageImportModal({ currentUser, allGroups = [], onClos
                       <option key={g.id} value={g.id}>{g.name}</option>
                     ))}
                   </select>
+                  {allGroups.length === 0 && (
+                    <p className="text-xs text-gray-400 mt-1">Ładowanie grup…</p>
+                  )}
                 </div>
               )}
 
