@@ -5,66 +5,129 @@ import { Input } from "@/components/ui/input";
 import { X, Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
 
-// Mapowanie możliwych nagłówków kolumn w Excelu
-const COLUMN_MAP = {
-  client_name: ["imię i nazwisko", "imie i nazwisko", "nazwa", "klient", "name", "client_name", "imię", "imie", "nazwisko"],
-  client_phone: ["telefon", "tel", "phone", "numer", "numer telefonu", "client_phone"],
-  client_address: ["adres", "address", "client_address", "miejscowość", "miejscowosc", "miasto"],
-  notes: ["notatki", "uwagi", "notes", "komentarz", "comments", "info"],
+// ─── Inteligentne dopasowanie kolumn ───────────────────────────────────────────
+// Zwraca index kolumny lub -1
+function findCol(headers, keywords) {
+  const norm = h => h?.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  return headers.findIndex(h => keywords.some(k => norm(h).includes(norm(k))));
+}
+
+const PHONE_RE = /^(\+?48)?[\s-]?(\d[\s-]?){9,}$/;
+const LOOKS_LIKE_PHONE = (v) => PHONE_RE.test(v?.toString().replace(/\s/g, ""));
+const LOOKS_LIKE_NAME = (v) => {
+  const s = v?.toString().trim() || "";
+  return s.length > 3 && /[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(s) && !LOOKS_LIKE_PHONE(s);
+};
+const LOOKS_LIKE_ADDRESS = (v) => {
+  const s = v?.toString().trim() || "";
+  return s.length > 3 && /\d/.test(s) && /[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(s);
 };
 
-function matchHeader(header) {
-  const h = header?.toString().toLowerCase().trim();
-  for (const [field, aliases] of Object.entries(COLUMN_MAP)) {
-    if (aliases.some(a => h.includes(a))) return field;
+function detectColumns(headers, sampleRows) {
+  // Najpierw po nagłówkach
+  let nameIdx = findCol(headers, ["imię i nazwisko", "imie i nazwisko", "nazwisko", "nazwa", "klient", "name", "imię", "imie", "pesel"]);
+  let phoneIdx = findCol(headers, ["telefon", "tel", "phone", "numer", "komórka", "komorka", "mobile", "gsm"]);
+  let addressIdx = findCol(headers, ["adres", "address", "miejscowość", "miejscowosc", "miasto", "ulica", "lokalizacja"]);
+  let notesIdx = findCol(headers, ["notatki", "uwagi", "notes", "komentarz", "comments", "info", "opis"]);
+
+  // Jeśli nie znaleziono po nagłówkach — wykryj po zawartości (pierwsze 10 wierszy)
+  if (nameIdx === -1 || phoneIdx === -1) {
+    const colScores = headers.map((_, ci) => {
+      const vals = sampleRows.map(r => r[ci]).filter(Boolean);
+      return {
+        phoneScore: vals.filter(LOOKS_LIKE_PHONE).length,
+        nameScore: vals.filter(LOOKS_LIKE_NAME).length,
+        addressScore: vals.filter(LOOKS_LIKE_ADDRESS).length,
+      };
+    });
+
+    if (phoneIdx === -1) {
+      const best = colScores.reduce((bi, s, i) => s.phoneScore > colScores[bi].phoneScore ? i : bi, 0);
+      if (colScores[best].phoneScore > 0) phoneIdx = best;
+    }
+    if (nameIdx === -1) {
+      const best = colScores.reduce((bi, s, i) =>
+        i !== phoneIdx && s.nameScore > colScores[bi].nameScore ? i : bi, 0);
+      if (colScores[best].nameScore > 0) nameIdx = best;
+    }
+    if (addressIdx === -1) {
+      const best = colScores.reduce((bi, s, i) =>
+        i !== phoneIdx && i !== nameIdx && s.addressScore > colScores[bi].addressScore ? i : bi, 0);
+      if (colScores[best].addressScore > 0) addressIdx = best;
+    }
   }
-  return null;
+
+  return { nameIdx, phoneIdx, addressIdx, notesIdx };
 }
 
 function parseExcel(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const wb = XLSX.read(e.target.result, { type: "binary" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-      if (rows.length < 2) { reject(new Error("Plik jest pusty lub nie ma danych.")); return; }
+      try {
+        const wb = XLSX.read(e.target.result, { type: "binary" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
 
-      // Pierwsza niepusta linia jako nagłówki
-      const headers = rows[0].map(h => h?.toString() || "");
-      const fieldMap = headers.map(matchHeader);
+        if (rows.length < 2) { reject(new Error("Plik jest pusty lub nie ma danych.")); return; }
 
-      const contacts = [];
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (row.every(c => !c)) continue;
-        const contact = {};
-        fieldMap.forEach((field, idx) => {
-          if (field && row[idx] !== undefined && row[idx] !== "") {
-            contact[field] = row[idx]?.toString().trim();
+        // Sprawdź czy pierwsza linia to nagłówki (czy zawiera tekst)
+        const firstRow = rows[0].map(c => c?.toString() || "");
+        const hasHeaders = firstRow.some(h => /[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(h));
+        const headers = hasHeaders ? firstRow : firstRow.map((_, i) => `Kolumna ${i + 1}`);
+        const dataRows = hasHeaders ? rows.slice(1) : rows;
+
+        const sampleRows = dataRows.slice(0, 15);
+        const { nameIdx, phoneIdx, addressIdx, notesIdx } = detectColumns(headers, sampleRows);
+
+        const contacts = [];
+        for (const row of dataRows) {
+          if (row.every(c => c === "" || c === null || c === undefined)) continue;
+
+          const contact = {};
+          if (nameIdx >= 0 && row[nameIdx]) contact.client_name = row[nameIdx].toString().trim();
+          if (phoneIdx >= 0 && row[phoneIdx]) contact.client_phone = row[phoneIdx].toString().trim();
+          if (addressIdx >= 0 && row[addressIdx]) contact.client_address = row[addressIdx].toString().trim();
+          if (notesIdx >= 0 && row[notesIdx]) contact.notes = row[notesIdx].toString().trim();
+
+          // Fallback — jeśli nadal nie mamy imienia, bierz pierwszą niepustą kolumnę tekstową
+          if (!contact.client_name) {
+            const fallback = row.find(c => LOOKS_LIKE_NAME(c));
+            if (fallback) contact.client_name = fallback.toString().trim();
           }
-        });
-        // Jeśli nie znaleźliśmy client_name automatycznie, bierz pierwszą kolumnę
-        if (!contact.client_name && row[0]) {
-          contact.client_name = row[0]?.toString().trim();
+          // Fallback dla telefonu
+          if (!contact.client_phone) {
+            const fallback = row.find(c => LOOKS_LIKE_PHONE(c));
+            if (fallback) contact.client_phone = fallback.toString().trim();
+          }
+
+          if (contact.client_name || contact.client_phone) contacts.push(contact);
         }
-        if (contact.client_name) contacts.push(contact);
+
+        resolve({
+          contacts,
+          mapping: { nameIdx, phoneIdx, addressIdx, notesIdx },
+          headers,
+        });
+      } catch (err) {
+        reject(err);
       }
-      resolve({ contacts, headers, fieldMap });
     };
-    reader.onerror = reject;
+    reader.onerror = () => reject(new Error("Błąd odczytu pliku"));
     reader.readAsBinaryString(file);
   });
 }
 
 export default function PackageImportModal({ currentUser, onClose, onSuccess }) {
-  const [step, setStep] = useState("form"); // form | preview | importing | done
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState(null);
   const [contacts, setContacts] = useState([]);
+  const [mapping, setMapping] = useState(null);
+  const [headers, setHeaders] = useState([]);
   const [parseError, setParseError] = useState("");
-  const [progress, setProgress] = useState(0);
+  const [importing, setImporting] = useState(false);
+  const [done, setDone] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
   const fileRef = useRef();
 
@@ -73,55 +136,49 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
     if (!f) return;
     setFile(f);
     setParseError("");
+    setContacts([]);
+    setMapping(null);
     try {
-      const { contacts: parsed } = await parseExcel(f);
-      setContacts(parsed);
+      const result = await parseExcel(f);
+      setContacts(result.contacts);
+      setMapping(result.mapping);
+      setHeaders(result.headers);
+      if (result.contacts.length === 0) {
+        setParseError("Nie znaleziono żadnych kontaktów. Sprawdź format pliku.");
+      }
     } catch (err) {
       setParseError(err.message || "Błąd odczytu pliku.");
-      setContacts([]);
     }
   };
 
   const handleImport = async () => {
     if (!name.trim() || contacts.length === 0) return;
-    setStep("importing");
-    setProgress(0);
-
-    // Utwórz paczkę
-    const pkg = await base44.entities.ContactPackage.create({
-      name: name.trim(),
-      description: description.trim(),
-      group_id: currentUser.groupId,
-      group_name: currentUser.groupName || "",
-      created_by_email: currentUser.email,
-      created_by_name: currentUser.displayName || currentUser.full_name || "",
-      total_count: contacts.length,
-      assigned_count: 0,
-      status: "active",
-    });
-
-    // Bulk insert kontaktów partiami po 50
-    const BATCH = 50;
-    let done = 0;
-    for (let i = 0; i < contacts.length; i += BATCH) {
-      const batch = contacts.slice(i, i + BATCH).map(c => ({
-        ...c,
-        package_id: pkg.id,
-        group_id: currentUser.groupId,
-        status: "unassigned",
-      }));
-      await base44.entities.ContactLead.bulkCreate(batch);
-      done += batch.length;
-      setProgress(Math.round((done / contacts.length) * 100));
+    setImporting(true);
+    try {
+      const res = await base44.functions.invoke("importContactLeads", {
+        packageMeta: {
+          name: name.trim(),
+          description: description.trim(),
+          group_id: currentUser.groupId,
+          group_name: currentUser.groupName || "",
+          created_by_name: currentUser.displayName || currentUser.full_name || "",
+        },
+        contacts,
+      });
+      setImportedCount(res.data?.created || contacts.length);
+      setDone(true);
+    } catch (err) {
+      setParseError("Błąd importu: " + (err.message || "spróbuj ponownie."));
+    } finally {
+      setImporting(false);
     }
-    setImportedCount(done);
-    setStep("done");
   };
+
+  const colName = (idx) => idx >= 0 && headers[idx] ? headers[idx] : "—";
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-gray-900">Importuj paczkę kontaktów</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
@@ -130,24 +187,18 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          {step === "form" && (
+          {!done ? (
             <>
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1.5">Nazwa paczki *</label>
-                <Input
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="np. Kontakty kwiecień 2026"
-                />
+                <Input value={name} onChange={e => setName(e.target.value)} placeholder="np. Kontakty kwiecień 2026" />
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1.5">Opis (opcjonalny)</label>
-                <Input
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  placeholder="np. Rejon Kraków, kampania wiosenna"
-                />
+                <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="np. Rejon Kraków, kampania wiosenna" />
               </div>
+
+              {/* Upload */}
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1.5">Plik Excel (.xlsx, .xls, .csv) *</label>
                 <div
@@ -155,25 +206,21 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
                   onClick={() => fileRef.current?.click()}
                 >
                   {file ? (
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-col items-center gap-1.5">
                       <FileSpreadsheet className="w-8 h-8 text-green-600" />
                       <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                      <p className="text-xs text-gray-500">{contacts.length} kontaktów wczytanych</p>
+                      {contacts.length > 0 && (
+                        <p className="text-xs text-green-700 font-medium">{contacts.length} kontaktów wczytanych</p>
+                      )}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2">
                       <Upload className="w-8 h-8 text-gray-300" />
-                      <p className="text-sm text-gray-500">Kliknij aby wybrać plik Excel</p>
-                      <p className="text-xs text-gray-400">Obsługiwane kolumny: imię i nazwisko, telefon, adres, notatki</p>
+                      <p className="text-sm text-gray-500">Kliknij aby wybrać plik</p>
+                      <p className="text-xs text-gray-400">System automatycznie wykryje kolumny z imieniem, telefonem i adresem</p>
                     </div>
                   )}
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
+                  <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileChange} />
                 </div>
                 {parseError && (
                   <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
@@ -182,7 +229,28 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
                 )}
               </div>
 
-              {/* Podgląd pierwszych wierszy */}
+              {/* Wykryte mapowanie */}
+              {mapping && contacts.length > 0 && (
+                <div className="bg-green-50 rounded-xl p-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-green-800 mb-2">Wykryte kolumny:</p>
+                  <div className="grid grid-cols-2 gap-1 text-xs">
+                    <span className="text-gray-500">Imię i nazwisko:</span>
+                    <span className="font-medium text-gray-800">{colName(mapping.nameIdx)}</span>
+                    <span className="text-gray-500">Telefon:</span>
+                    <span className="font-medium text-gray-800">{colName(mapping.phoneIdx)}</span>
+                    <span className="text-gray-500">Adres:</span>
+                    <span className="font-medium text-gray-800">{colName(mapping.addressIdx)}</span>
+                    {mapping.notesIdx >= 0 && (
+                      <>
+                        <span className="text-gray-500">Notatki:</span>
+                        <span className="font-medium text-gray-800">{colName(mapping.notesIdx)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Podgląd */}
               {contacts.length > 0 && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-2">Podgląd (pierwsze 5 wierszy):</p>
@@ -198,9 +266,9 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
                       <tbody>
                         {contacts.slice(0, 5).map((c, i) => (
                           <tr key={i} className="border-t border-gray-50">
-                            <td className="px-3 py-2 text-gray-900">{c.client_name || "—"}</td>
-                            <td className="px-3 py-2 text-gray-600">{c.client_phone || "—"}</td>
-                            <td className="px-3 py-2 text-gray-600 truncate max-w-[120px]">{c.client_address || "—"}</td>
+                            <td className="px-3 py-2 text-gray-900">{c.client_name || <span className="text-gray-300">—</span>}</td>
+                            <td className="px-3 py-2 text-gray-600">{c.client_phone || <span className="text-gray-300">—</span>}</td>
+                            <td className="px-3 py-2 text-gray-600 max-w-[120px] truncate">{c.client_address || <span className="text-gray-300">—</span>}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -211,48 +279,40 @@ export default function PackageImportModal({ currentUser, onClose, onSuccess }) 
                   )}
                 </div>
               )}
+
+              {importing && (
+                <div className="flex items-center justify-center gap-3 py-4">
+                  <Loader2 className="w-5 h-5 text-green-600 animate-spin" />
+                  <span className="text-sm text-gray-600">Importowanie {contacts.length} kontaktów…</span>
+                </div>
+              )}
             </>
-          )}
-
-          {step === "importing" && (
-            <div className="flex flex-col items-center py-8 gap-4">
-              <Loader2 className="w-10 h-10 text-green-600 animate-spin" />
-              <p className="font-medium text-gray-900">Importowanie kontaktów…</p>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
-              </div>
-              <p className="text-sm text-gray-500">{progress}% ({Math.round(contacts.length * progress / 100)} / {contacts.length})</p>
-            </div>
-          )}
-
-          {step === "done" && (
+          ) : (
             <div className="flex flex-col items-center py-8 gap-4 text-center">
               <CheckCircle className="w-12 h-12 text-green-500" />
               <p className="text-lg font-bold text-gray-900">Import zakończony!</p>
-              <p className="text-sm text-gray-500">Zaimportowano <strong>{importedCount}</strong> kontaktów do paczki <strong>{name}</strong>.</p>
+              <p className="text-sm text-gray-500">
+                Zaimportowano <strong>{importedCount}</strong> kontaktów do paczki <strong>{name}</strong>.
+              </p>
             </div>
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
-          {step === "form" && (
+          {!done ? (
             <>
-              <Button variant="outline" onClick={onClose}>Anuluj</Button>
+              <Button variant="outline" onClick={onClose} disabled={importing}>Anuluj</Button>
               <Button
                 onClick={handleImport}
-                disabled={!name.trim() || contacts.length === 0}
+                disabled={!name.trim() || contacts.length === 0 || importing}
                 className="bg-green-600 hover:bg-green-700 text-white gap-2"
               >
-                <Upload className="w-4 h-4" />
-                Importuj {contacts.length > 0 ? `(${contacts.length})` : ""}
+                {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {importing ? "Importowanie…" : `Importuj (${contacts.length})`}
               </Button>
             </>
-          )}
-          {step === "done" && (
-            <Button onClick={onSuccess} className="bg-green-600 hover:bg-green-700 text-white">
-              Gotowe
-            </Button>
+          ) : (
+            <Button onClick={onSuccess} className="bg-green-600 hover:bg-green-700 text-white">Gotowe</Button>
           )}
         </div>
       </div>
