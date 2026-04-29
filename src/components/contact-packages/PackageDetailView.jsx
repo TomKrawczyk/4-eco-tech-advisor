@@ -112,8 +112,8 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     mutationFn: async (leadIds) => {
       await Promise.all(leadIds.map(id =>
         base44.entities.ContactLead.update(id, {
-          assigned_user_email: null,
-          assigned_user_name: null,
+          assigned_user_email: "",
+          assigned_user_name: "",
           status: "unassigned",
         })
       ));
