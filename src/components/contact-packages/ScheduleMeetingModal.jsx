@@ -30,10 +30,19 @@ export default function ScheduleMeetingModal({ lead, currentUser, onClose, onSuc
       source: "manual",
     });
 
-    // 2. Zaktualizuj status leada
+    // 2. Zaktualizuj status leada i dopisz termin do notatki widocznej w paczce
+    const meetingDateLabel = new Date(date).toLocaleDateString("pl-PL", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    const meetingNote = `Spotkanie umówione na: ${meetingDateLabel}${time ? ` o ${time}` : ""}. Handlowiec: ${currentUser.displayName || currentUser.full_name || currentUser.email}`;
+    const combinedNotes = notes?.trim() ? `${notes.trim()}\n\n${meetingNote}` : meetingNote;
+
     await base44.entities.ContactLead.update(lead.id, {
       status: "meeting_scheduled",
-      contact_notes: notes,
+      contact_notes: combinedNotes,
       contacted_at: new Date().toISOString(),
       scheduled_meeting_date: date,
       scheduled_meeting_time: time || "",
