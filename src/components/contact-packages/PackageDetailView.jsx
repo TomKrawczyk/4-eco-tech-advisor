@@ -17,6 +17,7 @@ const STATUS_LABELS = {
   not_interested: "Niezainteresowany",
   no_answer: "Brak odpowiedzi",
   meeting_scheduled: "Spotkanie umówione",
+  contract_signed: "Umowa podpisana",
 };
 
 const STATUS_COLORS = {
@@ -27,6 +28,7 @@ const STATUS_COLORS = {
   not_interested: "bg-red-50 text-red-700",
   no_answer: "bg-orange-50 text-orange-700",
   meeting_scheduled: "bg-purple-50 text-purple-700",
+  contract_signed: "bg-emerald-100 text-emerald-800",
 };
 
 export default function PackageDetailView({ pkg, currentUser, onBack, onPackageUpdated }) {

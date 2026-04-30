@@ -43,7 +43,8 @@
         "interested",
         "not_interested",
         "no_answer",
-        "meeting_scheduled"
+        "meeting_scheduled",
+        "contract_signed"
       ],
       "default": "unassigned",
       "description": "Status kontaktu"

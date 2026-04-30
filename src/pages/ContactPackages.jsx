@@ -411,6 +411,7 @@ function AdvisorView({ leads, currentUser, qc }) {
     not_interested: "Niezainteresowany",
     no_answer: "Brak odpowiedzi",
     meeting_scheduled: "Spotkanie umówione",
+    contract_signed: "Umowa podpisana",
   };
 
   const statusColors = {
@@ -420,6 +421,7 @@ function AdvisorView({ leads, currentUser, qc }) {
     not_interested: "bg-red-50 text-red-700",
     no_answer: "bg-gray-50 text-gray-600",
     meeting_scheduled: "bg-purple-50 text-purple-700",
+    contract_signed: "bg-emerald-100 text-emerald-800",
   };
 
   const filtered = leads.filter(l => {
