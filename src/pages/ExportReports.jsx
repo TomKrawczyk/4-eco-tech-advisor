@@ -34,7 +34,7 @@ export default function ExportReports() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      setSuccess(`Pobrano Excel: ${counts.meeting} spotkania, ${counts.visit} wizyty, ${counts.service} serwisowe.`);
+      setSuccess(`Pobrano Excel: ${counts.meeting} spotkania, ${counts.visit} wizyty, ${counts.service} serwisowe, ${counts.phone || 0} telefoniczne.`);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -105,7 +105,7 @@ export default function ExportReports() {
     <div className="max-w-2xl mx-auto py-8 px-4">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Eksport raportów</h1>
-        <p className="text-gray-500 text-sm mt-1">Pobierz wszystkie raporty (spotkania, wizyty, serwis) jako plik Excel lub spakowane zdjęcia.</p>
+        <p className="text-gray-500 text-sm mt-1">Pobierz wszystkie raporty (spotkania, wizyty, serwis, kontakty telefoniczne) jako plik Excel lub spakowane zdjęcia.</p>
       </div>
 
       {error && (
@@ -133,11 +133,12 @@ export default function ExportReports() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-600 mb-4">
-              Generuje plik Excel z trzema arkuszami:
+              Generuje plik Excel z czterema arkuszami:
               <span className="flex flex-wrap gap-1 mt-2">
                 <Badge variant="outline">Raporty po spotkaniu</Badge>
                 <Badge variant="outline">Raporty wizytowe</Badge>
                 <Badge variant="outline">Raporty serwisowe</Badge>
+                <Badge variant="outline">Kontakty telefoniczne</Badge>
               </span>
               <span className="block mt-2 text-gray-500">Zawiera wszystkie dane + kolumny z URL-ami zdjęć.</span>
             </p>

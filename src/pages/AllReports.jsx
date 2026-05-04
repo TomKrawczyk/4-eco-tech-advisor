@@ -5,7 +5,8 @@ import useCurrentUser from "@/components/shared/useCurrentUser";
 import PageHeader from "@/components/shared/PageHeader";
 import AllReportsFilters from "@/components/reports/AllReportsFilters";
 import AllReportCard from "@/components/reports/AllReportCard";
-import { FileText, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Download, FileText, Loader2, ShieldAlert } from "lucide-react";
 
 const phoneResultLabels = {
   interested: "Zainteresowany",
@@ -21,6 +22,7 @@ export default function AllReports() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [personFilter, setPersonFilter] = useState("all");
+  const [exporting, setExporting] = useState(false);
 
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "hr_admin";
 
@@ -163,9 +165,36 @@ export default function AllReports() {
 
   const loading = loadingPhone || loadingMeeting || loadingVisit || loadingService;
 
+  const handleExcelExport = async () => {
+    setExporting(true);
+    const res = await base44.functions.invoke("exportReports", { type: "excel" });
+    const { base64, filename } = res.data;
+    const byteChars = atob(base64);
+    const byteArr = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([byteArr], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExporting(false);
+  };
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Wszystkie raporty" subtitle="Raporty po spotkaniach, wizytach, serwisie oraz kontaktach telefonicznych z filtrowaniem po przypisanej osobie" />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader title="Wszystkie raporty" subtitle="Raporty po spotkaniach, wizytach, serwisie oraz kontaktach telefonicznych z filtrowaniem po przypisanej osobie" />
+        <Button
+          onClick={handleExcelExport}
+          disabled={exporting}
+          className="bg-green-600 hover:bg-green-700 text-white gap-2"
+        >
+          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {exporting ? "Generowanie..." : "Eksport Excel"}
+        </Button>
+      </div>
 
       <AllReportsFilters
         search={search}
