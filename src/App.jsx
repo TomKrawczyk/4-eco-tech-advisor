@@ -12,6 +12,7 @@ import ContactPackages from '@/pages/ContactPackages';
 import CleanupMeetings from '@/pages/CleanupMeetings';
 import ExportReports from '@/pages/ExportReports';
 import Documentation from '@/pages/Documentation';
+import AllReports from '@/pages/AllReports';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -84,6 +85,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="ExportReports">
             <ExportReports />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/AllReports"
+        element={
+          <LayoutWrapper currentPageName="AllReports">
+            <AllReports />
           </LayoutWrapper>
         }
       />
