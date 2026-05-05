@@ -154,7 +154,10 @@ Deno.serve(async (req) => {
     const ua = allowedUsers.find(a => (a.email || a.data?.email) === user.email);
     const role = ua?.role || ua?.data?.role;
 
-    if (role !== 'admin' && role !== 'group_leader' && role !== 'team_leader') {
+    const isLeaderOrAdmin = role === 'admin' || role === 'group_leader' || role === 'team_leader';
+    const isAdvisor = role === 'advisor' || role === 'user';
+
+    if (!isLeaderOrAdmin && !isAdvisor) {
       return Response.json({ error: 'Forbidden – brak uprawnień' }, { status: 403 });
     }
 
@@ -171,8 +174,15 @@ Deno.serve(async (req) => {
 
     const results = await Promise.all(activeTabs.map(tab => fetchLeadsFromSheet(accessToken, tab)));
 
-    const meetings = results.flatMap(r => r.meetings);
-    const phoneContacts = results.flatMap(r => r.phoneContacts);
+    let meetings = results.flatMap(r => r.meetings);
+    let phoneContacts = results.flatMap(r => r.phoneContacts);
+
+    if (isAdvisor) {
+      const assignments = await base44.asServiceRole.entities.MeetingAssignment.filter({ assigned_user_email: user.email });
+      const assignedKeys = new Set(assignments.map(a => a.meeting_key));
+      meetings = meetings.filter(m => assignedKeys.has(`${m.sheet}__${m.client_name}__${m.meeting_calendar}`));
+      phoneContacts = [];
+    }
 
     return Response.json({
       meetings,

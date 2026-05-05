@@ -43,6 +43,36 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   );
   if (calendarIdx === -1 && commentIdx > 0) calendarIdx = commentIdx - 1;
 
+  const questions = {};
+  const questionMappings = [
+    ['Jak rachunki za prąd', h => h.toLowerCase().includes('jak rachunki')],
+    ['Ile płaci za prąd', h => h.toLowerCase().includes('ile płaci') && h.toLowerCase().includes('prąd')],
+    ['Czy ma foto', h => h.toLowerCase().includes('czy') && h.toLowerCase().includes('foto')],
+    ['Jakie zasady', h => h.toLowerCase().includes('jakie') && h.toLowerCase().includes('zasady')],
+    ['Ile ma kWp instalacji', h => h.toLowerCase().includes('kwp')],
+    ['Czy ma falownik hybrydowy', h => h.toLowerCase().includes('falownik')],
+    ['Czy ma Magazyn Energii', h => h.toLowerCase().includes('magazyn') && (h.toLowerCase().includes('energia') || h.toLowerCase().includes('magazyn'))],
+    ['Pojemność magazynu', h => h.toLowerCase().includes('pojemność') || (h.toLowerCase().includes('kwh') && !h.toLowerCase().includes('roczna'))],
+    ['Inne urządzenia', h => h.toLowerCase().includes('inne') && h.toLowerCase().includes('urządzenia')],
+    ['Czym ogrzewa dom', h => h.toLowerCase().includes('ogrzewa')],
+    ['Ile opłatu na rok', h => h.toLowerCase().includes('opłatu') && h.toLowerCase().includes('rok')],
+    ['Wielkość instalacji', h => h.toLowerCase().includes('wielkość') && h.toLowerCase().includes('instalacji')],
+    ['Wielkość instalacji w umowie', h => h.toLowerCase().includes('wielkość') && h.toLowerCase().includes('umowie')],
+  ];
+  questionMappings.forEach(([label, matcher]) => {
+    const idx = headers.findIndex(matcher);
+    if (idx >= 0 && !questions[label]) questions[label] = idx;
+  });
+
+  const buildInterviewData = (row) => {
+    const data = {};
+    for (const [key, idx] of Object.entries(questions)) {
+      const answer = (row[idx] || '').trim();
+      if (answer) data[key] = answer;
+    }
+    return Object.keys(data).length > 0 ? data : null;
+  };
+
   const meetings = [];
   const phoneContacts = [];
 
@@ -57,8 +87,10 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
       address: addressIdx >= 0 ? (row[addressIdx] || '') : '',
       date: dateIdx >= 0 ? (row[dateIdx] || '') : '',
       agent: agentIdx >= 0 ? (row[agentIdx] || '') : (assignedIdx >= 0 ? (row[assignedIdx] || '') : ''),
+      comments: commentIdx >= 0 ? (row[commentIdx] || '') : '',
       sheet: sheetTitle,
       status: intVal,
+      interview_data: buildInterviewData(row),
     };
 
     if (intVal.toLowerCase() === 'spotkanie') {
@@ -94,13 +126,26 @@ function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
 
     const allTabs = await getAllSheetTabs(accessToken);
-    const results = await Promise.all(allTabs.map(tab => fetchLeadsFromSheet(accessToken, tab)));
+    const sheetMappings = await base44.asServiceRole.entities.SheetGroupMapping.list();
+    const activeTabs = allTabs.filter(tab => {
+      const mapping = sheetMappings.find(m => m.sheet_name === tab);
+      return !mapping || mapping.is_active !== false;
+    });
+    const results = [];
+    for (const tab of activeTabs) {
+      results.push(await fetchLeadsFromSheet(accessToken, tab));
+      await sleep(500);
+    }
 
     const meetings = results.flatMap(r => r.meetings);
     const phoneContacts = results.flatMap(r => r.phoneContacts);
@@ -114,7 +159,9 @@ Deno.serve(async (req) => {
 
     let newMeetings = 0;
     let updatedMeetings = 0;
+    const MAX_UPDATES_PER_RUN = 25;
     for (const m of meetings) {
+      if (updatedMeetings >= MAX_UPDATES_PER_RUN) break;
       const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
       const existing = existingMap[key];
       if (!existing) {
@@ -127,14 +174,22 @@ Deno.serve(async (req) => {
           client_address: m.address || "",
           meeting_calendar: m.meeting_calendar,
           meeting_date: d ? formatDate(d) : '',
+          agent: m.agent || "",
+          comments: m.comments || "",
+          interview_data: m.interview_data || {},
         });
         newMeetings++;
-      } else if ((m.address && !existing.client_address) || (m.phone && !existing.client_phone)) {
-        // Uzupełnij brakujące dane kontaktowe
+      } else {
+        // Uzupełnij brakujące dane kontaktowe i szczegóły widoczne dla doradcy
         const patch = {};
         if (m.address && !existing.client_address) patch.client_address = m.address;
         if (m.phone && !existing.client_phone) patch.client_phone = m.phone;
+        if (m.agent && !existing.agent) patch.agent = m.agent;
+        if (m.comments && !existing.comments) patch.comments = m.comments;
+        if (m.interview_data && Object.keys(m.interview_data).length > 0 && (!existing.interview_data || Object.keys(existing.interview_data).length === 0)) patch.interview_data = m.interview_data;
+        if (Object.keys(patch).length === 0) continue;
         await base44.asServiceRole.entities.MeetingAssignment.update(existing.id, patch);
+        await sleep(300);
         // Zaktualizuj powiązany CalendarEvent
         if (patch.client_address) {
           const eventsToUpdate = await base44.asServiceRole.entities.CalendarEvent.filter({ meeting_assignment_id: key });
@@ -165,6 +220,8 @@ Deno.serve(async (req) => {
           agent: c.agent,
           contact_calendar: c.contact_calendar,
           status: c.status,
+          comments: c.comments || "",
+          interview_data: c.interview_data || {},
           contact_date: d ? formatDate(d) : '',
         });
         newContacts++;

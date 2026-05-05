@@ -52,6 +52,11 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
         await base44.entities.MeetingAssignment.update(assignment.id, {
           assigned_group_id: groupId,
           assigned_group_name: groupName,
+          client_phone: meeting.phone || assignment?.client_phone || "",
+          client_address: meeting.address || assignment?.client_address || "",
+          agent: meeting.agent || assignment?.agent || "",
+          comments: meeting.comments || assignment?.comments || "",
+          interview_data: meeting.interview_data || assignment?.interview_data || {},
         });
       } else {
         await base44.entities.MeetingAssignment.create({
@@ -62,6 +67,9 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           client_address: meeting.address || "",
           meeting_calendar: meeting.meeting_calendar,
           meeting_date: meeting.meeting_date,
+          agent: meeting.agent || "",
+          comments: meeting.comments || "",
+          interview_data: meeting.interview_data || {},
           assigned_group_id: groupId,
           assigned_group_name: groupName,
         });

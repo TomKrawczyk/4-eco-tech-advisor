@@ -259,16 +259,23 @@ export default function Meetings() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
-  // Dane z arkusza – pobiera admin, group_leader i team_leader (backend wymaga tych ról)
+  // Dane z arkusza – doradca pobiera tylko swoje przypisane spotkania z pełnymi szczegółami
   const { data: result, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["sheetMeetings"],
     queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data),
-    enabled: accessChecked && isLeaderOrAdmin,
+    enabled: accessChecked,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
   });
 
   const allMeetings = result?.meetings || [];
+  const sheetMeetingsByKey = useMemo(() => {
+    const map = {};
+    allMeetings.forEach(m => {
+      map[`${m.sheet}__${m.client_name}__${m.meeting_calendar}`] = m;
+    });
+    return map;
+  }, [allMeetings]);
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
   // Okno dat: dziś + 14 dni dla wszystkich (zwiększone z 3)
@@ -300,6 +307,7 @@ export default function Meetings() {
     if (!currentUser || isLeaderOrAdmin) return [];
     return meetingAssignments
       .filter(a => a.assigned_user_email === currentUser.email)
+      .map(a => ({ ...a, ...(sheetMeetingsByKey[a.meeting_key] || {}) }))
       .filter(a => {
         if (!a.meeting_calendar) return true;
         const d = parseMeetingDate(a.meeting_calendar);
@@ -315,7 +323,7 @@ export default function Meetings() {
         if (!db) return -1;
         return da - db;
       });
-  }, [currentUser, isLeaderOrAdmin, meetingAssignments, today, maxDateUser]);
+  }, [currentUser, isLeaderOrAdmin, meetingAssignments, sheetMeetingsByKey, today, maxDateUser]);
 
   // Handlowcy do przypisania: filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {
