@@ -96,6 +96,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
         client_address: meeting.address || assignment?.client_address || "",
         agent: meeting.agent || assignment?.agent || "",
         comments: meeting.comments || assignment?.comments || "",
+        interview_data: meeting.interview_data || assignment?.interview_data || {},
       };
 
       // Zapis przypisania i synchronizacja kalendarza – równolegle
