@@ -153,21 +153,27 @@ export default function PhoneContacts() {
   }, [rawContacts, phoneContactsFromDB, manualContacts, isLeaderOrAdmin]);
 
   const upsertContact = async (contact, patch) => {
+    const contactDetails = {
+      contact_key: contact.contact_key,
+      sheet: contact.sheet,
+      client_name: contact.client_name,
+      phone: contact.phone,
+      address: contact.address,
+      date: contact.date,
+      agent: contact.agent,
+      contact_date: contact.contact_date,
+      contact_calendar: contact.contact_calendar,
+      status: contact.status,
+      comments: contact.comments,
+      interview_data: contact.interview_data,
+    };
+
     const existing = phoneContactsFromDB.find(db => db.contact_key === contact.contact_key);
     if (existing) {
-      return base44.entities.PhoneContact.update(existing.id, patch);
+      return base44.entities.PhoneContact.update(existing.id, { ...contactDetails, ...patch });
     } else {
       return base44.entities.PhoneContact.create({
-        contact_key: contact.contact_key,
-        sheet: contact.sheet,
-        client_name: contact.client_name,
-        phone: contact.phone,
-        address: contact.address,
-        date: contact.date,
-        agent: contact.agent,
-        contact_date: contact.contact_date,
-        status: contact.status,
-        comments: contact.comments,
+        ...contactDetails,
         ...patch,
       });
     }
