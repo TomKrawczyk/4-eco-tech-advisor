@@ -25,7 +25,7 @@ function parseMeetingCalendar(str) {
   return null;
 }
 
-export default function MeetingCard({ meeting, assignment, salespeople, assignmentsForDate, currentUserRole, meetingReports = [], groups = [] }) {
+export default function MeetingCard({ meeting, assignment, salespeople, assignmentsForDate, currentUserRole, meetingReports = [], groups = [], allAllowedUsers = [] }) {
   const [showDetail, setShowDetail] = useState(false);
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -44,6 +44,48 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
 
   const canAssign = currentUserRole === "admin" || currentUserRole === "group_leader" || currentUserRole === "team_leader";
   const canManageGroups = currentUserRole === "admin" || currentUserRole === "group_leader";
+
+  const createAssignmentNotifications = async ({ userEmail, userName }) => {
+    const assignedAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === userEmail);
+    const userGroupId = assignedAllowedUser?.data?.group_id || assignedAllowedUser?.group_id;
+    const leaderRecipients = [];
+    const assignedToId = assignedAllowedUser?.data?.assigned_to || assignedAllowedUser?.assigned_to;
+
+    if (assignedToId) {
+      const teamLeader = allAllowedUsers.find(u => u.id === assignedToId);
+      const email = teamLeader?.data?.email || teamLeader?.email;
+      if (email && email !== userEmail) leaderRecipients.push({ email });
+    }
+
+    if (userGroupId) {
+      const group = groups.find(g => g.id === userGroupId);
+      const leaderIds = [...(group?.data?.group_leader_ids || group?.group_leader_ids || [])];
+      const legacyId = group?.data?.group_leader_id || group?.group_leader_id;
+      if (legacyId) leaderIds.push(legacyId);
+      [...new Set(leaderIds)].forEach(id => {
+        const leader = allAllowedUsers.find(u => u.id === id);
+        const email = leader?.data?.email || leader?.email;
+        if (email && email !== userEmail && !leaderRecipients.some(r => r.email === email)) leaderRecipients.push({ email });
+      });
+    }
+
+    await Promise.all([
+      base44.entities.Notification.create({
+        user_email: userEmail,
+        type: "new_report",
+        title: "📅 Nowe spotkanie przypisane",
+        message: `Masz nowe spotkanie z klientem ${meeting.client_name} (${meeting.sheet}) zaplanowane na ${meeting.meeting_calendar}.`,
+        is_read: false,
+      }),
+      ...leaderRecipients.map(({ email }) => base44.entities.Notification.create({
+        user_email: email,
+        type: "user_activity",
+        title: "📅 Spotkanie przypisane w Twoim zespole",
+        message: `${userName} został przypisany do spotkania z klientem ${meeting.client_name} (${meeting.sheet}) na ${meeting.meeting_calendar}.`,
+        is_read: false,
+      })),
+    ]);
+  };
 
   const assignGroupMutation = useMutation({
     mutationFn: async ({ groupId, groupName }) => {
@@ -159,13 +201,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
       queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
       queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
       toast.success("Przypisano handlowca i dodano do kalendarza");
-      base44.functions.invoke("notifyMeetingAssigned", {
-        assignedUserEmail: variables.userEmail,
-        assignedUserName: variables.userName,
-        clientName: meeting.client_name,
-        meetingCalendar: meeting.meeting_calendar,
-        sheet: meeting.sheet,
-      }).catch(() => {});
+      createAssignmentNotifications(variables).catch(() => {});
     },
     onError: (e) => toast.error(e.message),
   });

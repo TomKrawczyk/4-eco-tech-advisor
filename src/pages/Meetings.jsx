@@ -714,7 +714,8 @@ export default function Meetings() {
                                        currentUserRole={currentUser?.role}
                                        meetingReports={meetingReports}
                                        groups={groups}
-                                      />
+                                       allAllowedUsers={allAllowedUsers}
+                                       />
                                     </div>
                                   </div>
                                 );

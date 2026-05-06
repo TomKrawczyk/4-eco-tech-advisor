@@ -193,13 +193,45 @@ export default function PhoneContacts() {
         return [...old, { ...savedRecord, contact_key: variables.contact.contact_key }];
       });
       if (variables.email) {
-        base44.functions.invoke("notifyContactAssigned", {
-          assignedUserEmail: variables.email,
-          assignedUserName: variables.name,
-          clientName: variables.contact.client_name,
-          phone: variables.contact.phone,
-          sheet: variables.contact.sheet,
-        }).catch(() => {});
+        const assignedAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === variables.email);
+        const userGroupId = assignedAllowedUser?.data?.group_id || assignedAllowedUser?.group_id;
+        const leaderRecipients = [];
+        const assignedToId = assignedAllowedUser?.data?.assigned_to || assignedAllowedUser?.assigned_to;
+
+        if (assignedToId) {
+          const teamLeader = allAllowedUsers.find(u => u.id === assignedToId);
+          const email = teamLeader?.data?.email || teamLeader?.email;
+          if (email && email !== variables.email) leaderRecipients.push(email);
+        }
+
+        if (userGroupId) {
+          const group = groups.find(g => g.id === userGroupId);
+          const leaderIds = [...(group?.data?.group_leader_ids || group?.group_leader_ids || [])];
+          const legacyId = group?.data?.group_leader_id || group?.group_leader_id;
+          if (legacyId) leaderIds.push(legacyId);
+          [...new Set(leaderIds)].forEach(id => {
+            const leader = allAllowedUsers.find(u => u.id === id);
+            const email = leader?.data?.email || leader?.email;
+            if (email && email !== variables.email && !leaderRecipients.includes(email)) leaderRecipients.push(email);
+          });
+        }
+
+        Promise.all([
+          base44.entities.Notification.create({
+            user_email: variables.email,
+            type: "new_report",
+            title: "📞 Nowy kontakt telefoniczny przypisany",
+            message: `Masz nowy kontakt telefoniczny do obsłużenia: ${variables.contact.client_name}${variables.contact.phone ? " (" + variables.contact.phone + ")" : ""} z arkusza ${variables.contact.sheet}.`,
+            is_read: false,
+          }),
+          ...leaderRecipients.map(email => base44.entities.Notification.create({
+            user_email: email,
+            type: "user_activity",
+            title: "📞 Kontakt telefoniczny przypisany w Twoim zespole",
+            message: `${variables.name} został przypisany do kontaktu telefonicznego z klientem ${variables.contact.client_name}${variables.contact.phone ? " (" + variables.contact.phone + ")" : ""} z arkusza ${variables.contact.sheet}.`,
+            is_read: false,
+          })),
+        ]).catch(() => {});
       }
     },
   });
