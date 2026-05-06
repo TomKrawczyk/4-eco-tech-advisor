@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "@/components/shared/PageHeader";
 import { ChevronLeft, ChevronRight, Plus, Users, LayoutGrid, X, Phone, MapPin, Clock, EyeOff, Eye } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, isSameDay, parseISO, isValid } from "date-fns";
@@ -159,6 +160,7 @@ export default function Calendar() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedUserEmail, setSelectedUserEmail] = useState("all");
   const [groupDaySelected, setGroupDaySelected] = useState(null); // { day, items }
   const queryClient = useQueryClient();
 
@@ -274,6 +276,22 @@ export default function Calendar() {
     return emails;
   }, [allUsers, currentUser]);
 
+  const availableCalendarUsers = useMemo(() => {
+    if (!currentUser || !isLeaderOrAdmin) return [];
+    let allowedEmails = null;
+    if (currentUser.role === "group_leader") allowedEmails = groupUserEmails;
+    if (currentUser.role === "team_leader") allowedEmails = teamMemberEmails;
+
+    return allUsers
+      .map(u => ({
+        email: u.data?.email || u.email,
+        name: u.data?.name || u.name || u.data?.email || u.email,
+        role: u.data?.role || u.role,
+      }))
+      .filter(u => u.email && (!allowedEmails || allowedEmails.includes(u.email)))
+      .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email, "pl"));
+  }, [allUsers, currentUser, isLeaderOrAdmin, groupUserEmails, teamMemberEmails]);
+
   const sheetMeetingEvents = useMemo(() => {
     if (!currentUser || !isLeaderOrAdmin) return [];
     const currentUserGroupId = currentUser.role === "admin" ? null : (currentUser.groupId || null);
@@ -351,10 +369,14 @@ export default function Calendar() {
       calEvents = events.filter(e => e.owner_email === currentUser.email);
     }
     if (viewMode === "team" && isLeaderOrAdmin) {
-      return [...calEvents, ...sheetMeetingEvents];
+      const combinedEvents = [...calEvents, ...sheetMeetingEvents];
+      if (selectedUserEmail !== "all") {
+        return combinedEvents.filter(e => e.owner_email === selectedUserEmail);
+      }
+      return combinedEvents;
     }
     return calEvents;
-  }, [events, currentUser, viewMode, groupUserEmails, isLeaderOrAdmin, sheetMeetingEvents, teamMemberEmails]);
+  }, [events, currentUser, viewMode, groupUserEmails, isLeaderOrAdmin, sheetMeetingEvents, teamMemberEmails, selectedUserEmail]);
 
   // Dni miesiąca
   const monthStart = startOfMonth(currentMonth);
@@ -485,6 +507,21 @@ export default function Calendar() {
                 </button>
               )}
             </div>
+          )}
+          {viewMode === "team" && isLeaderOrAdmin && (
+            <Select value={selectedUserEmail} onValueChange={setSelectedUserEmail}>
+              <SelectTrigger className="h-9 w-56 text-xs">
+                <SelectValue placeholder="Wybierz użytkownika" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Wszyscy użytkownicy</SelectItem>
+                {availableCalendarUsers.map(user => (
+                  <SelectItem key={user.email} value={user.email}>
+                    {user.name} ({user.email})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
           {viewMode !== "groups" && (
             <Button
