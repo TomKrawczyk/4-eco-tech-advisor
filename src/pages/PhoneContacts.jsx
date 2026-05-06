@@ -45,6 +45,7 @@ export default function PhoneContacts() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [sheetFilter, setSheetFilter] = useState("all");
+  const [selectedUserEmail, setSelectedUserEmail] = useState("all");
   const [expandedSheets, setExpandedSheets] = useState({});
   const [showStats, setShowStats] = useState(false);
   const [selectedDetails, setSelectedDetails] = useState(null);
@@ -142,11 +143,15 @@ export default function PhoneContacts() {
       }
       return c;
     });
-    // Dodaj ręcznie dodane (które nie są już w rawContacts)
+    // Dodaj ręcznie dodane i zapisane przypisane kontakty, których nie ma już w bieżącym wyniku arkusza
     const rawKeys = new Set(rawContacts.map(c => c.contact_key));
-    manualContacts.forEach(mc => {
-      if (!rawKeys.has(mc.contact_key)) {
-        merged.push(mc);
+    phoneContactsFromDB.forEach(dbContact => {
+      if (!rawKeys.has(dbContact.contact_key) && (dbContact.contact_key?.startsWith("manual_") || dbContact.assigned_user_email)) {
+        merged.push({
+          ...dbContact,
+          phone: dbContact.phone || dbContact.client_phone || "",
+          address: dbContact.address || dbContact.client_address || "",
+        });
       }
     });
     return merged;
@@ -292,6 +297,12 @@ export default function PhoneContacts() {
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
+  const availableContactUsers = useMemo(() => {
+    return salespeople
+      .filter(u => u.email)
+      .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email, "pl"));
+  }, [salespeople]);
+
   const visibleContacts = useMemo(() => {
     if (currentUser?.role === "admin" || currentUser?.role === "hr_admin") return contacts;
     if (currentUser?.role === "group_leader") {
@@ -324,11 +335,13 @@ export default function PhoneContacts() {
     return visibleContacts.filter(c => {
       const matchSearch = !search || Object.values(c).some(v => String(v || "").toLowerCase().includes(search.toLowerCase()));
       const matchSheet = sheetFilter === "all" || c.sheet === sheetFilter;
+      const matchUser = selectedUserEmail === "all" || (selectedUserEmail === "unassigned" ? !c.assigned_user_email : c.assigned_user_email === selectedUserEmail);
       const isManual = c.contact_key?.startsWith("manual_");
-      const matchStatus = isManual || c.status === "Kontakt do doradcy" || c.status === "DWS";
-      return matchSearch && matchSheet && matchStatus;
+      const isSavedAssigned = !!c.assigned_user_email;
+      const matchStatus = isManual || isSavedAssigned || c.status === "Kontakt do doradcy" || c.status === "DWS";
+      return matchSearch && matchSheet && matchUser && matchStatus;
     });
-  }, [visibleContacts, search, sheetFilter]);
+  }, [visibleContacts, search, sheetFilter, selectedUserEmail]);
 
   const sheetGroups = useMemo(() => {
     const bySheet = {};
@@ -475,6 +488,19 @@ export default function PhoneContacts() {
           </Select>
         )}
 
+        <Select value={selectedUserEmail} onValueChange={setSelectedUserEmail}>
+          <SelectTrigger className="w-60 h-11">
+            <SelectValue placeholder="Wybierz doradcę" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Wszyscy doradcy</SelectItem>
+            <SelectItem value="unassigned">Nieprzypisane</SelectItem>
+            {availableContactUsers.map(user => (
+              <SelectItem key={user.email} value={user.email}>{user.name} ({user.email})</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Button onClick={() => { refetch(); refetchDB(); }} variant="outline" className="gap-2 h-11" disabled={isFetching}>
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           Odśwież
@@ -530,6 +556,9 @@ export default function PhoneContacts() {
 
       <div className="text-sm text-gray-500">
         Pokazano <span className="font-semibold text-gray-800">{filtered.length}</span> kontaktów
+        {selectedUserEmail !== "all" && (
+          <span> dla <span className="font-semibold text-gray-800">{selectedUserEmail === "unassigned" ? "nieprzypisanych" : (availableContactUsers.find(u => u.email === selectedUserEmail)?.name || selectedUserEmail)}</span></span>
+        )}
       </div>
 
       {isLoading ? (
