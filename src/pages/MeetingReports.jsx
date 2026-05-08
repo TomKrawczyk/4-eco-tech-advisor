@@ -325,7 +325,7 @@ export default function MeetingReports() {
       author_email: currentUser?.email || "",
     }),
     onSuccess: (created) => {
-      queryClient.invalidateQueries(["meetingReports"]);
+      queryClient.invalidateQueries({ queryKey: ["meetingReports"] });
       setSelectedReport(created);
       setView("detail");
     },
@@ -334,7 +334,7 @@ export default function MeetingReports() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.MeetingReport.update(id, data),
     onSuccess: (updated) => {
-      queryClient.invalidateQueries(["meetingReports"]);
+      queryClient.invalidateQueries({ queryKey: ["meetingReports"] });
       setSelectedReport(updated);
       setView("detail");
     },
@@ -343,7 +343,7 @@ export default function MeetingReports() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.MeetingReport.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(["meetingReports"]);
+      queryClient.invalidateQueries({ queryKey: ["meetingReports"] });
       setView("list");
       setSelectedReport(null);
     },

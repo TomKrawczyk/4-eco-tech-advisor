@@ -117,7 +117,7 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
       author_email: currentUser?.email || "",
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["phoneContactReports", contact.contact_key]);
+      queryClient.invalidateQueries({ queryKey: ["phoneContactReports", contact.contact_key] });
       toast.success("Raport zapisany");
       setReportSaved(true);
       setView("list");
@@ -127,7 +127,7 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.PhoneContactReport.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(["phoneContactReports", contact.contact_key]);
+      queryClient.invalidateQueries({ queryKey: ["phoneContactReports", contact.contact_key] });
       toast.success("Raport zaktualizowany");
       setReportSaved(true);
       setView("list");
