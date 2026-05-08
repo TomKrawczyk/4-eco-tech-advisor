@@ -1,0 +1,67 @@
+{
+  "name": "MeetingAssignment",
+  "type": "object",
+  "properties": {
+    "meeting_key": {
+      "type": "string",
+      "description": "Unikalny klucz spotkania (sheet + client_name + meeting_calendar)"
+    },
+    "sheet": {
+      "type": "string",
+      "description": "Zak\u0142adka arkusza"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko klienta"
+    },
+    "client_phone": {
+      "type": "string",
+      "description": "Telefon klienta"
+    },
+    "client_address": {
+      "type": "string",
+      "description": "Adres klienta"
+    },
+    "meeting_calendar": {
+      "type": "string",
+      "description": "Data i godzina spotkania z arkusza"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent/handlowiec z arkusza"
+    },
+    "comments": {
+      "type": "string",
+      "description": "Komentarze/uwagi z arkusza"
+    },
+    "assigned_user_email": {
+      "type": "string",
+      "description": "Email handlowca przypisanego do spotkania"
+    },
+    "assigned_user_name": {
+      "type": "string",
+      "description": "Imi\u0119 handlowca (cache)"
+    },
+    "assigned_group_id": {
+      "type": "string",
+      "description": "ID grupy przypisanej do spotkania"
+    },
+    "assigned_group_name": {
+      "type": "string",
+      "description": "Nazwa grupy (cache)"
+    },
+    "meeting_date": {
+      "type": "string",
+      "description": "Data spotkania (YYYY-MM-DD) do filtrowania"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notatki do przypisania"
+    }
+  },
+  "required": [
+    "meeting_key",
+    "sheet",
+    "client_name"
+  ]
+}

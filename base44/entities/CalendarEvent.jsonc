@@ -1,0 +1,92 @@
+{
+  "name": "CalendarEvent",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Tytu\u0142 wydarzenia"
+    },
+    "description": {
+      "type": "string",
+      "description": "Opis wydarzenia"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data wydarzenia"
+    },
+    "event_time": {
+      "type": "string",
+      "description": "Godzina wydarzenia (HH:MM)"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "Godzina zako\u0144czenia (HH:MM)"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "meeting",
+        "task",
+        "reminder",
+        "other"
+      ],
+      "default": "meeting",
+      "description": "Typ wydarzenia"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "completed",
+        "cancelled",
+        "postponed"
+      ],
+      "default": "planned",
+      "description": "Status wydarzenia"
+    },
+    "postponed_to": {
+      "type": "string",
+      "format": "date",
+      "description": "Nowa data (gdy spotkanie prze\u0142o\u017cone)"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nazwa klienta (je\u015bli dotyczy)"
+    },
+    "client_phone": {
+      "type": "string",
+      "description": "Telefon klienta"
+    },
+    "location": {
+      "type": "string",
+      "description": "Lokalizacja"
+    },
+    "owner_email": {
+      "type": "string",
+      "description": "Email w\u0142a\u015bciciela wydarzenia"
+    },
+    "owner_name": {
+      "type": "string",
+      "description": "Imi\u0119 w\u0142a\u015bciciela wydarzenia"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "meeting_assignment"
+      ],
+      "default": "manual",
+      "description": "\u0179r\u00f3d\u0142o wydarzenia"
+    },
+    "meeting_assignment_id": {
+      "type": "string",
+      "description": "ID przypisania spotkania (je\u015bli z MeetingAssignment)"
+    }
+  },
+  "required": [
+    "title",
+    "event_date",
+    "owner_email"
+  ]
+}

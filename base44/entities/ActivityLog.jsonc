@@ -1,0 +1,49 @@
+{
+  "name": "ActivityLog",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email u\u017cytkownika"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Imi\u0119 u\u017cytkownika"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "page_view",
+        "report_create",
+        "report_update",
+        "report_delete",
+        "report_export",
+        "report_send_email",
+        "checklist_save",
+        "interview_save",
+        "calculator_use"
+      ],
+      "description": "Typ akcji"
+    },
+    "page_name": {
+      "type": "string",
+      "description": "Nazwa strony"
+    },
+    "details": {
+      "type": "object",
+      "description": "Szczeg\u00f3\u0142y akcji (dane, zmiany)"
+    },
+    "report_id": {
+      "type": "string",
+      "description": "ID powi\u0105zanego raportu"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Dodatkowe metadane"
+    }
+  },
+  "required": [
+    "user_email",
+    "action_type"
+  ]
+}

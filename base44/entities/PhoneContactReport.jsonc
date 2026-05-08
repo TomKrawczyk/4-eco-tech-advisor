@@ -1,0 +1,66 @@
+{
+  "name": "PhoneContactReport",
+  "type": "object",
+  "properties": {
+    "contact_key": {
+      "type": "string",
+      "description": "Klucz kontaktu telefonicznego (z PhoneContact)"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko klienta"
+    },
+    "client_phone": {
+      "type": "string",
+      "description": "Telefon klienta"
+    },
+    "client_address": {
+      "type": "string",
+      "description": "Adres klienta"
+    },
+    "contact_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data kontaktu telefonicznego"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "interested",
+        "not_interested",
+        "no_answer",
+        "callback",
+        "meeting_scheduled",
+        "other"
+      ],
+      "default": "other",
+      "description": "Wynik kontaktu"
+    },
+    "description": {
+      "type": "string",
+      "description": "Opis rozmowy / notatki"
+    },
+    "next_steps": {
+      "type": "string",
+      "description": "Kolejne kroki"
+    },
+    "callback_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data oddzwonienia (je\u015bli um\u00f3wione)"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Imi\u0119 autora raportu"
+    },
+    "author_email": {
+      "type": "string",
+      "description": "Email autora raportu"
+    }
+  },
+  "required": [
+    "contact_key",
+    "client_name",
+    "contact_date"
+  ]
+}

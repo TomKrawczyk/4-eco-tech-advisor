@@ -1,0 +1,31 @@
+{
+  "name": "TrainingView",
+  "type": "object",
+  "properties": {
+    "training_id": {
+      "type": "string",
+      "description": "ID szkolenia"
+    },
+    "training_title": {
+      "type": "string",
+      "description": "Tytu\u0142 szkolenia (cache)"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email u\u017cytkownika"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Imi\u0119 u\u017cytkownika"
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy uko\u0144czone"
+    }
+  },
+  "required": [
+    "training_id",
+    "user_email"
+  ]
+}

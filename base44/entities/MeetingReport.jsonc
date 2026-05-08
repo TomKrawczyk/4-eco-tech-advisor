@@ -1,0 +1,64 @@
+{
+  "name": "MeetingReport",
+  "type": "object",
+  "properties": {
+    "client_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko klienta"
+    },
+    "client_address": {
+      "type": "string",
+      "description": "Adres klienta"
+    },
+    "client_phone": {
+      "type": "string",
+      "description": "Numer telefonu klienta"
+    },
+    "meeting_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data spotkania"
+    },
+    "meeting_time": {
+      "type": "string",
+      "description": "Godzina spotkania (HH:MM)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Opis/notatki ze spotkania"
+    },
+    "next_steps": {
+      "type": "string",
+      "description": "Kolejne kroki / plan dzia\u0142ania"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "completed",
+        "cancelled"
+      ],
+      "default": "planned",
+      "description": "Status spotkania"
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URL-e zdj\u0119\u0107 do\u0142\u0105czonych do raportu"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko autora"
+    },
+    "author_email": {
+      "type": "string",
+      "description": "Email autora"
+    }
+  },
+  "required": [
+    "client_name",
+    "meeting_date"
+  ]
+}

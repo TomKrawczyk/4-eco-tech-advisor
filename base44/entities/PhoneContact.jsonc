@@ -1,0 +1,75 @@
+{
+  "name": "PhoneContact",
+  "type": "object",
+  "properties": {
+    "contact_key": {
+      "type": "string",
+      "description": "Unikalny klucz kontaktu (sheet + client_name + date)"
+    },
+    "sheet": {
+      "type": "string",
+      "description": "Zak\u0142adka arkusza"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko klienta"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon klienta"
+    },
+    "address": {
+      "type": "string",
+      "description": "Adres klienta"
+    },
+    "date": {
+      "type": "string",
+      "description": "Data kontaktu z arkusza"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent/handlowiec dzwoni\u0105cy"
+    },
+    "contact_calendar": {
+      "type": "string",
+      "description": "Data i godzina kontaktu z arkusza"
+    },
+    "status": {
+      "type": "string",
+      "description": "Status z arkusza"
+    },
+    "comments": {
+      "type": "string",
+      "description": "Komentarze/uwagi z arkusza"
+    },
+    "interview_data": {
+      "type": "object",
+      "description": "Pytania i odpowiedzi z wywiadu"
+    },
+    "assigned_user_email": {
+      "type": "string",
+      "description": "Email doradcy przypisanego do kontaktu"
+    },
+    "assigned_user_name": {
+      "type": "string",
+      "description": "Imi\u0119 doradcy (cache)"
+    },
+    "assigned_group_id": {
+      "type": "string",
+      "description": "ID grupy przypisanej do kontaktu"
+    },
+    "assigned_group_name": {
+      "type": "string",
+      "description": "Nazwa grupy (cache)"
+    },
+    "contact_date": {
+      "type": "string",
+      "description": "Data kontaktu (YYYY-MM-DD) do filtrowania"
+    }
+  },
+  "required": [
+    "contact_key",
+    "sheet",
+    "client_name"
+  ]
+}

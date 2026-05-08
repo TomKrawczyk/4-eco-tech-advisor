@@ -1,0 +1,28 @@
+{
+  "name": "Group",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nazwa grupy"
+    },
+    "description": {
+      "type": "string",
+      "description": "Opis grupy"
+    },
+    "group_leader_id": {
+      "type": "string",
+      "description": "ID g\u0142\u00f3wnego group leadera (legacy)"
+    },
+    "group_leader_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista ID group leader\u00f3w zarz\u0105dzaj\u0105cych grup\u0105"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

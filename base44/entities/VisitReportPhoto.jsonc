@@ -1,0 +1,22 @@
+{
+  "name": "VisitReportPhoto",
+  "type": "object",
+  "properties": {
+    "report_id": {
+      "type": "string",
+      "description": "ID raportu wizytowego (VisitReport)"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "URL zdj\u0119cia"
+    },
+    "caption": {
+      "type": "string",
+      "description": "Opis zdj\u0119cia"
+    }
+  },
+  "required": [
+    "report_id",
+    "photo_url"
+  ]
+}

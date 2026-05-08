@@ -1,0 +1,43 @@
+{
+  "name": "NotificationPreference",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email u\u017cytkownika"
+    },
+    "new_report_in_app": {
+      "type": "boolean",
+      "default": true,
+      "description": "Powiadomienia w aplikacji o nowych raportach"
+    },
+    "new_report_email": {
+      "type": "boolean",
+      "default": false,
+      "description": "Email o nowych raportach"
+    },
+    "system_errors_in_app": {
+      "type": "boolean",
+      "default": true,
+      "description": "Powiadomienia w aplikacji o b\u0142\u0119dach"
+    },
+    "system_errors_email": {
+      "type": "boolean",
+      "default": true,
+      "description": "Email o b\u0142\u0119dach systemowych"
+    },
+    "user_activity_in_app": {
+      "type": "boolean",
+      "default": true,
+      "description": "Powiadomienia o aktywno\u015bci u\u017cytkownik\u00f3w"
+    },
+    "user_activity_email": {
+      "type": "boolean",
+      "default": false,
+      "description": "Email o aktywno\u015bci u\u017cytkownik\u00f3w"
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}

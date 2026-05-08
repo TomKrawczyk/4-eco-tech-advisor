@@ -1,0 +1,50 @@
+{
+  "name": "RegistrationRequest",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email osoby prosz\u0105cej o dost\u0119p"
+    },
+    "full_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko"
+    },
+    "company": {
+      "type": "string",
+      "description": "Nazwa firmy"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon kontaktowy"
+    },
+    "message": {
+      "type": "string",
+      "description": "Wiadomo\u015b\u0107/pow\u00f3d pro\u015bby"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Status pro\u015bby"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Email admina kt\u00f3ry rozpatrzy\u0142 pro\u015bb\u0119"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data rozpatrzenia"
+    }
+  },
+  "required": [
+    "email",
+    "full_name"
+  ]
+}

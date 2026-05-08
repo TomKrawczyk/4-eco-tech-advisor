@@ -1,0 +1,46 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email odbiorcy"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "new_report",
+        "system_error",
+        "user_activity"
+      ],
+      "description": "Typ powiadomienia"
+    },
+    "title": {
+      "type": "string",
+      "description": "Tytu\u0142 powiadomienia"
+    },
+    "message": {
+      "type": "string",
+      "description": "Tre\u015b\u0107 powiadomienia"
+    },
+    "link": {
+      "type": "string",
+      "description": "Link do powi\u0105zanego zasobu"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy odczytane"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Dodatkowe dane"
+    }
+  },
+  "required": [
+    "user_email",
+    "type",
+    "title",
+    "message"
+  ]
+}

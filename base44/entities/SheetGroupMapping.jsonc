@@ -1,0 +1,26 @@
+{
+  "name": "SheetGroupMapping",
+  "type": "object",
+  "properties": {
+    "sheet_name": {
+      "type": "string",
+      "description": "Nazwa zak\u0142adki arkusza Google Sheets"
+    },
+    "group_id": {
+      "type": "string",
+      "description": "ID grupy przypisanej do tego arkusza"
+    },
+    "group_name": {
+      "type": "string",
+      "description": "Nazwa grupy (cache)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Czy arkusz jest aktywny (pobierane s\u0105 z niego spotkania)"
+    }
+  },
+  "required": [
+    "sheet_name"
+  ]
+}

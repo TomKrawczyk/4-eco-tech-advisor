@@ -1,0 +1,51 @@
+{
+  "name": "Referral",
+  "type": "object",
+  "properties": {
+    "client_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko poleconego klienta"
+    },
+    "client_address": {
+      "type": "string",
+      "description": "Adres klienta"
+    },
+    "client_phone": {
+      "type": "string",
+      "description": "Telefon kontaktowy"
+    },
+    "source_client": {
+      "type": "string",
+      "description": "Klient, kt\u00f3ry udzieli\u0142 polecenia"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Dodatkowe uwagi"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "scheduled",
+        "completed",
+        "rejected"
+      ],
+      "default": "new",
+      "description": "Status polecenia"
+    },
+    "last_action_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data ostatniej akcji/zmiany statusu"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "Email u\u017cytkownika odpowiedzialnego za polecenie"
+    }
+  },
+  "required": [
+    "client_name",
+    "client_phone"
+  ]
+}

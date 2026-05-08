@@ -1,0 +1,160 @@
+{
+  "name": "VisitReport",
+  "type": "object",
+  "properties": {
+    "client_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko klienta"
+    },
+    "client_address": {
+      "type": "string",
+      "description": "Adres klienta"
+    },
+    "client_phone": {
+      "type": "string",
+      "description": "Telefon kontaktowy"
+    },
+    "visit_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data wizyty"
+    },
+    "installation_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Typy instalacji: PV, Pompa ciep\u0142a, Magazyn energii"
+    },
+    "launch_date": {
+      "type": "string",
+      "description": "Data uruchomienia instalacji"
+    },
+    "contractor": {
+      "type": "string",
+      "description": "Firma wykonawcy"
+    },
+    "annual_production_kwh": {
+      "type": "number",
+      "description": "Roczna produkcja energii w kWh"
+    },
+    "energy_imported_kwh": {
+      "type": "number",
+      "description": "Energia pobrana z sieci (1.8.0) kWh"
+    },
+    "energy_exported_kwh": {
+      "type": "number",
+      "description": "Energia oddana do sieci (2.8.0) kWh"
+    },
+    "autoconsumption_rating": {
+      "type": "string",
+      "description": "Ocena autokonsumpcji"
+    },
+    "panels_condition": {
+      "type": "string",
+      "description": "Stan paneli"
+    },
+    "mounting_condition": {
+      "type": "string",
+      "description": "Stan mocowa\u0144"
+    },
+    "cables_condition": {
+      "type": "string",
+      "description": "Stan przewod\u00f3w DC/AC"
+    },
+    "protection_condition": {
+      "type": "string",
+      "description": "Stan zabezpiecze\u0144 SPD, RCD"
+    },
+    "inverter_reading": {
+      "type": "string",
+      "description": "Odczyt falownika"
+    },
+    "grounding_condition": {
+      "type": "string",
+      "description": "Stan uziemienia"
+    },
+    "expansion_possibilities": {
+      "type": "string",
+      "description": "Mo\u017cliwo\u015bci rozbudowy"
+    },
+    "modernization_potential": {
+      "type": "string",
+      "description": "Potencja\u0142 modernizacji kWh/rok"
+    },
+    "recommendations": {
+      "type": "string",
+      "description": "Rekomendacje"
+    },
+    "additional_notes": {
+      "type": "string",
+      "description": "Dodatkowe uwagi"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "completed",
+        "sent"
+      ],
+      "default": "draft",
+      "description": "Status raportu"
+    },
+    "interview_annual_cost": {
+      "type": "string",
+      "description": "Roczny koszt energii"
+    },
+    "interview_residents": {
+      "type": "string",
+      "description": "Liczba mieszka\u0144c\u00f3w"
+    },
+    "interview_work_schedule": {
+      "type": "string",
+      "description": "Godziny wyj\u015bcia do pracy/szko\u0142y"
+    },
+    "interview_return_time": {
+      "type": "string",
+      "description": "Godzina powrotu do domu"
+    },
+    "interview_home_during_day": {
+      "type": "string",
+      "description": "Obecno\u015b\u0107 w domu 10:00-15:00"
+    },
+    "interview_peak_usage": {
+      "type": "string",
+      "description": "Pora najwi\u0119kszego zu\u017cycia"
+    },
+    "interview_appliance_usage": {
+      "type": "string",
+      "description": "Czas u\u017cywania urz\u0105dze\u0144"
+    },
+    "interview_water_heating": {
+      "type": "string",
+      "description": "Ogrzewanie wody"
+    },
+    "interview_equipment": {
+      "type": "string",
+      "description": "Sprz\u0119t elektryczny"
+    },
+    "interview_purchase_plans": {
+      "type": "string",
+      "description": "Plany zakupowe"
+    },
+    "client_signature": {
+      "type": "string",
+      "description": "Podpis klienta"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko autora raportu (zapisane przy tworzeniu)"
+    },
+    "author_email": {
+      "type": "string",
+      "description": "Email autora raportu (zapisane przy tworzeniu)"
+    }
+  },
+  "required": [
+    "client_name",
+    "visit_date"
+  ]
+}

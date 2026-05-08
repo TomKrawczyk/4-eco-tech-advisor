@@ -1,0 +1,61 @@
+{
+  "name": "Component",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "panel",
+        "inverter",
+        "storage"
+      ],
+      "description": "Typ komponentu"
+    },
+    "manufacturer": {
+      "type": "string",
+      "description": "Producent"
+    },
+    "model": {
+      "type": "string",
+      "description": "Model"
+    },
+    "power": {
+      "type": "number",
+      "description": "Moc (W dla paneli, kW dla falownik\u00f3w, kWh dla magazyn\u00f3w)"
+    },
+    "efficiency": {
+      "type": "number",
+      "description": "Sprawno\u015b\u0107 (%)"
+    },
+    "warranty_years": {
+      "type": "number",
+      "description": "Gwarancja (lata)"
+    },
+    "price": {
+      "type": "number",
+      "description": "Cena (z\u0142)"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Cechy i w\u0142a\u015bciwo\u015bci"
+    },
+    "datasheet_url": {
+      "type": "string",
+      "description": "Link do karty katalogowej"
+    },
+    "is_recommended": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy polecany"
+    }
+  },
+  "required": [
+    "type",
+    "manufacturer",
+    "model",
+    "power"
+  ]
+}

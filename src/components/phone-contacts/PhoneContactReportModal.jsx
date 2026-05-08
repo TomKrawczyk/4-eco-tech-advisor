@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,16 +99,20 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["phoneContactReports", contact?.contact_key],
     queryFn: () => base44.entities.PhoneContactReport.filter({ contact_key: contact.contact_key }),
-    enabled: !!contact && open,
+    enabled: !!contact?.contact_key && open,
   });
+
+  const sortedReports = useMemo(() => {
+    return [...reports].sort((a, b) => (b.contact_date || "").localeCompare(a.contact_date || ""));
+  }, [reports]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.PhoneContactReport.create({
       ...data,
       contact_key: contact.contact_key,
       client_name: contact.client_name,
-      client_phone: contact.phone,
-      client_address: contact.address,
+      client_phone: contact.phone || contact.client_phone || "",
+      client_address: contact.address || contact.client_address || "",
       author_name: currentUser?.displayName || currentUser?.full_name || "",
       author_email: currentUser?.email || "",
     }),
@@ -136,7 +140,7 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
     setView("list");
     setEditingReport(null);
     setReportSaved(false);
-    onClose(saved);
+    onClose?.(saved);
   };
 
   return (
@@ -172,7 +176,7 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
               <div className="text-center py-8 text-gray-500 text-sm">Brak raportów dla tego kontaktu</div>
             ) : (
               <div className="space-y-2">
-                {reports.sort((a, b) => b.contact_date?.localeCompare(a.contact_date)).map(r => {
+                {sortedReports.map(r => {
                   const cfg = resultConfig[r.result] || resultConfig.other;
                   return (
                     <div key={r.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
