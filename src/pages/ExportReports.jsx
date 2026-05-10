@@ -60,14 +60,21 @@ export default function ExportReports() {
       const byteChars = atob(base64);
       const byteArr = new Uint8Array(byteChars.length);
       for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-      const blob = new Blob([byteArr], { type: "application/zip" });
-      const url = URL.createObjectURL(blob);
+
+      const zip = await JSZip.loadAsync(new Blob([byteArr], { type: "application/zip" }));
+      const { getBackendSourceFiles } = await import("@/lib/backendExportSources");
+      getBackendSourceFiles().forEach((file) => {
+        zip.file(`source/${file.path}`, file.content);
+      });
+
+      const finalBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(finalBlob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      setSuccess("Pobrano pełny eksport backendu.");
+      setSuccess("Pobrano pełny eksport backendu z plikami kodu i konfiguracją.");
     } catch (e) {
       setError(e.response?.data?.error || e.message);
     } finally {
@@ -166,7 +173,7 @@ export default function ExportReports() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">
-                Pobiera ZIP z danymi i schematami encji oraz listą funkcji backendowych.
+                Pobiera ZIP z danymi, schematami encji, kodem funkcji backendowych i konfiguracją aplikacji.
                 <span className="block mt-2 text-amber-700 text-xs font-medium">Dostępne wyłącznie dla głównego administratora.</span>
               </p>
               <Button

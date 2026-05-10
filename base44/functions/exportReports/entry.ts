@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       const manifest = {
         exported_at: new Date().toISOString(),
         exported_by: user.email,
-        note: 'Eksport zawiera dane i schematy encji oraz listę funkcji backendowych. Sekrety środowiskowe nie są eksportowane.',
+        note: 'Eksport zawiera dane i schematy encji. Pliki kodu backendu i konfiguracji są dokładane do ZIP po potwierdzeniu dostępu głównego administratora. Sekrety środowiskowe nie są eksportowane.',
         entities: entityNames,
         functions: functionNames
       };
