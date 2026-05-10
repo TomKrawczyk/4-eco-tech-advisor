@@ -1,10 +1,23 @@
-const sourceModules = import.meta.glob("../**/*.{js,jsx,ts,tsx,json,css,html}", {
+const appSourceModules = import.meta.glob("../**/*.{js,jsx,ts,tsx,json,css,html}", {
   query: "?raw",
   import: "default",
   eager: true,
 });
 
-const normalizePath = (path) => path.replace(/^\.\.\//, "");
+const rootConfigModules = import.meta.glob("../../{index.html,package.json,vite.config.js,tailwind.config.js,postcss.config.js,jsconfig.json,tsconfig.json}", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
+
+const sourceModules = {
+  ...appSourceModules,
+  ...rootConfigModules,
+};
+
+const normalizePath = (path) => path
+  .replace(/^\.\.\/\.\.\//, "ROOT/")
+  .replace(/^\.\.\//, "src/");
 
 const toFiles = (modules) =>
   Object.entries(modules).map(([path, content]) => ({
@@ -20,14 +33,14 @@ export function getBackendSourceFiles() {
     total_files: files.length,
     total_characters: files.reduce((sum, file) => sum + file.content.length, 0),
     folders: {
-      functions: files.filter((file) => file.path.startsWith("functions/")).length,
-      entities: files.filter((file) => file.path.startsWith("entities/")).length,
-      agents: files.filter((file) => file.path.startsWith("agents/")).length,
-      pages: files.filter((file) => file.path.startsWith("pages/")).length,
-      components: files.filter((file) => file.path.startsWith("components/")).length,
-      api: files.filter((file) => file.path.startsWith("api/")).length,
-      lib: files.filter((file) => file.path.startsWith("lib/")).length,
-      root_config: files.filter((file) => ["App.jsx", "main.jsx", "index.css", "pages.config.js"].includes(file.path)).length,
+      functions: files.filter((file) => file.path.startsWith("src/functions/")).length,
+      entities: files.filter((file) => file.path.startsWith("src/entities/")).length,
+      agents: files.filter((file) => file.path.startsWith("src/agents/")).length,
+      pages: files.filter((file) => file.path.startsWith("src/pages/")).length,
+      components: files.filter((file) => file.path.startsWith("src/components/")).length,
+      api: files.filter((file) => file.path.startsWith("src/api/")).length,
+      lib: files.filter((file) => file.path.startsWith("src/lib/")).length,
+      root_config: files.filter((file) => file.path.startsWith("ROOT/")).length,
     },
     migration_notice: "To jest kompletny eksport kodu aplikacji dostępnego w projekcie Base44. Nie zawiera wewnętrznego kodu platformy Base44, serwerów Base44, bazy danych jako silnika, auth providera ani implementacji pakietu @base44/sdk — te elementy są usługą platformową. Zawiera natomiast kod funkcji, encji, stron, komponentów i konfiguracji aplikacji oraz osobno dane/schematy pobrane przez funkcję eksportu.",
     missing_from_export_by_design: [

@@ -66,10 +66,15 @@ export default function ExportReports() {
 
       const { getBackendSourceFiles } = await import("@/lib/backendExportSources");
       const sourceFiles = getBackendSourceFiles();
-      const functionSourceFiles = sourceFiles.filter((file) => file.path.startsWith("functions/"));
+      const functionSourceFiles = sourceFiles.filter((file) => file.path.startsWith("src/functions/"));
+      const emptySourceFiles = sourceFiles.filter((file) => !file.content || file.content.trim().length === 0);
 
       if (functionSourceFiles.length === 0) {
         throw new Error("Nie udało się dołączyć kodu funkcji backendowych do ZIP. Eksport przerwany, żeby nie pobrać niepełnej paczki.");
+      }
+
+      if (emptySourceFiles.length > 0) {
+        throw new Error(`Eksport przerwany: ${emptySourceFiles.length} plików źródłowych jest pustych i wymaga sprawdzenia.`);
       }
 
       sourceFiles.forEach((file) => {
