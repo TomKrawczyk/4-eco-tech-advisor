@@ -1,5 +1,6 @@
 const sourceModules = import.meta.glob("../**/*.{js,jsx,ts,tsx,json,css,html}", {
-  as: "raw",
+  query: "?raw",
+  import: "default",
   eager: true,
 });
 

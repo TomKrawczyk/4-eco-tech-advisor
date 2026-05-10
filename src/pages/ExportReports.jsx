@@ -62,13 +62,21 @@ export default function ExportReports() {
       for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
 
       const zip = await JSZip.loadAsync(new Blob([byteArr], { type: "application/zip" }));
+      zip.remove("functions/function_names.json");
+
       const { getBackendSourceFiles } = await import("@/lib/backendExportSources");
       const sourceFiles = getBackendSourceFiles();
+      const functionSourceFiles = sourceFiles.filter((file) => file.path.startsWith("functions/"));
+
+      if (functionSourceFiles.length === 0) {
+        throw new Error("Nie udało się dołączyć kodu funkcji backendowych do ZIP. Eksport przerwany, żeby nie pobrać niepełnej paczki.");
+      }
+
       sourceFiles.forEach((file) => {
-        zip.file(`source/${file.path}`, file.content);
+        zip.file(`COMPLETE_APP_SOURCE/${file.path}`, file.content);
       });
 
-      zip.file("source/export-size-check.txt", `Dołączono plików źródłowych: ${sourceFiles.length}\nŁączny rozmiar tekstu: ${sourceFiles.reduce((sum, file) => sum + file.content.length, 0)} znaków\n`);
+      zip.file("EXPORT_CHECK.txt", `RZECZYWISTE PLIKI ŹRÓDŁOWE SĄ W FOLDERZE: COMPLETE_APP_SOURCE/\n\nFunkcje backendowe: ${functionSourceFiles.length}\nWszystkie pliki źródłowe: ${sourceFiles.length}\nŁączny rozmiar tekstu: ${sourceFiles.reduce((sum, file) => sum + file.content.length, 0)} znaków\n\nUwaga: usunięto mylący functions/function_names.json — to była tylko lista nazw, nie kod.\n`);
 
       const finalBlob = await zip.generateAsync({ type: "blob", compression: "STORE" });
       const url = URL.createObjectURL(finalBlob);
@@ -77,7 +85,7 @@ export default function ExportReports() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      setSuccess(`Pobrano pełny eksport backendu: ${sourceFiles.length} plików źródłowych + dane i schematy.`);
+      setSuccess(`Pobrano pełny eksport: ${functionSourceFiles.length} plików funkcji backendowych i ${sourceFiles.length} plików źródłowych w COMPLETE_APP_SOURCE/.`);
     } catch (e) {
       setError(e.response?.data?.error || e.message);
     } finally {
