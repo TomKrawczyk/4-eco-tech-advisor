@@ -1,4 +1,4 @@
-const appSourceModules = import.meta.glob("../**/*.{js,jsx,ts,tsx,json,css,html}", {
+const appSourceModules = import.meta.glob("../**/*", {
   query: "?raw",
   import: "default",
   eager: true,
@@ -26,7 +26,10 @@ const toFiles = (modules) =>
   }));
 
 export function getBackendSourceFiles() {
-  const files = toFiles(sourceModules).filter((file) => file.path !== "lib/backendExportSources.js");
+  const files = toFiles(sourceModules).filter((file) =>
+    file.path !== "src/lib/backendExportSources.js" &&
+    !file.path.includes("/assets/")
+  );
 
   const manifest = {
     generated_at: new Date().toISOString(),

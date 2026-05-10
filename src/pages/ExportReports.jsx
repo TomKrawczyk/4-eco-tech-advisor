@@ -70,7 +70,7 @@ export default function ExportReports() {
       const emptySourceFiles = sourceFiles.filter((file) => !file.content || file.content.trim().length === 0);
 
       if (functionSourceFiles.length === 0) {
-        throw new Error("Nie udało się dołączyć kodu funkcji backendowych do ZIP. Eksport przerwany, żeby nie pobrać niepełnej paczki.");
+        throw new Error(`Nie udało się dołączyć kodu funkcji backendowych. Wykryte pliki: ${sourceFiles.slice(0, 30).map((file) => file.path).join(", ")}`);
       }
 
       if (emptySourceFiles.length > 0) {
