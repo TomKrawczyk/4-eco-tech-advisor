@@ -1,17 +1,25 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileSpreadsheet, ImageDown, Download, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { FileSpreadsheet, ImageDown, Download, Loader2, CheckCircle2, AlertCircle, Database } from "lucide-react";
 import JSZip from "jszip";
 
 export default function ExportReports() {
   const [excelLoading, setExcelLoading] = useState(false);
   const [photosLoading, setPhotosLoading] = useState(false);
+  const [backendLoading, setBackendLoading] = useState(false);
+  const [canExportBackend, setCanExportBackend] = useState(false);
   const [photosProgress, setPhotosProgress] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  useEffect(() => {
+    base44.functions.invoke("exportReports", { type: "full_backend_check" })
+      .then(res => setCanExportBackend(res.data?.allowed === true))
+      .catch(() => setCanExportBackend(false));
+  }, []);
 
   const handleExcelExport = async () => {
     setExcelLoading(true);
@@ -39,6 +47,31 @@ export default function ExportReports() {
       setError(e.message);
     } finally {
       setExcelLoading(false);
+    }
+  };
+
+  const handleBackendExport = async () => {
+    setBackendLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await base44.functions.invoke("exportReports", { type: "full_backend" });
+      const { base64, filename } = res.data;
+      const byteChars = atob(base64);
+      const byteArr = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([byteArr], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      setSuccess("Pobrano pełny eksport backendu.");
+    } catch (e) {
+      setError(e.response?.data?.error || e.message);
+    } finally {
+      setBackendLoading(false);
     }
   };
 
@@ -123,6 +156,34 @@ export default function ExportReports() {
       )}
 
       <div className="grid gap-4">
+        {canExportBackend && (
+          <Card className="border-amber-200 bg-amber-50/40">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Database className="w-5 h-5 text-amber-700" />
+                Pełny eksport backendu
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 mb-4">
+                Pobiera ZIP z danymi i schematami encji oraz listą funkcji backendowych.
+                <span className="block mt-2 text-amber-700 text-xs font-medium">Dostępne wyłącznie dla głównego administratora.</span>
+              </p>
+              <Button
+                onClick={handleBackendExport}
+                disabled={backendLoading}
+                className="w-full bg-amber-700 hover:bg-amber-800 text-white"
+              >
+                {backendLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generowanie backendu...</>
+                ) : (
+                  <><Download className="w-4 h-4 mr-2" /> Pobierz pełny backend</>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Excel Export */}
         <Card>
           <CardHeader className="pb-3">

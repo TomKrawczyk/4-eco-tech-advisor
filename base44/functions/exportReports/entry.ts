@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import * as XLSX from 'npm:xlsx@0.18.5';
+import JSZip from 'npm:jszip@3.10.1';
 
 Deno.serve(async (req) => {
   try {
@@ -11,7 +12,83 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const exportType = body.type || 'excel'; // 'excel' or 'photos_list'
+    const exportType = body.type || 'excel'; // 'excel', 'photos_list', 'full_backend', 'full_backend_check'
+
+    const mainAdminEmail = (Deno.env.get('MAIN_ADMIN_EMAIL') || '').trim().toLowerCase();
+    const isMainAdmin = !!mainAdminEmail && user.email?.toLowerCase() === mainAdminEmail;
+
+    if (exportType === 'full_backend_check') {
+      return Response.json({ allowed: isMainAdmin });
+    }
+
+    if (exportType === 'full_backend') {
+      if (!isMainAdmin) {
+        return Response.json({ error: 'Brak dostępu. Eksport backendu jest dostępny tylko dla głównego administratora.' }, { status: 403 });
+      }
+
+      const entityNames = [
+        'ActivityLog', 'AllowedUser', 'CalendarEvent', 'Component', 'ContactLead', 'ContactPackage',
+        'Group', 'HiddenMeeting', 'MeetingAcceptance', 'MeetingAssignment', 'MeetingReport',
+        'Notification', 'NotificationPreference', 'PhoneContact', 'PhoneContactReport', 'Referral',
+        'RegistrationRequest', 'ServiceReport', 'SheetGroupMapping', 'Training', 'TrainingView',
+        'User', 'VisitReport', 'VisitReportPhoto'
+      ];
+      const functionNames = [
+        'autoCreateAccessRequest', 'autoLogReportActivity', 'autoRefreshMeetings', 'checkInactiveReferrals',
+        'checkMissingMeetingReports', 'checkMissingPhoneContacts', 'checkOlszewskiPhoneContacts',
+        'cleanupOldUnacceptedMeetings', 'debugClientRow', 'diagnoseDamianReports', 'exportReferralsToSheets',
+        'exportReports', 'exportToGoogleSheets', 'fixCalendarEventLocations', 'fixCalendarLocations',
+        'generateAutoconsumptionPDF', 'generateChecklistPCPDF', 'generatePVCalculatorPDF',
+        'generateROICalculatorPDF', 'generateReportPDF', 'getAllSheetTabs', 'getAppId', 'getEnergyPrices',
+        'getMeetingsFromSheets', 'getUsersInHierarchy', 'getWeatherForecast', 'handleMeetingAcceptance',
+        'importContactLeads', 'inspectSheet', 'logActivity', 'monitorMeetingRejections', 'notifyContactAssigned',
+        'notifyGroupLeaderNewContacts', 'notifyGroupLeaderNewMeetings', 'notifyMeetingAssigned', 'notifyNewReport',
+        'refreshMeetingsCache', 'requestAccess', 'sendNotification', 'sendPasswordResetEmail', 'sendReportEmail',
+        'syncAddressesToAssignments', 'syncAllowedUserWithBase44', 'syncGroupName', 'syncRegisteredUsers',
+        'trackUserActivity'
+      ];
+
+      const zip = new JSZip();
+      const manifest = {
+        exported_at: new Date().toISOString(),
+        exported_by: user.email,
+        note: 'Eksport zawiera dane i schematy encji oraz listę funkcji backendowych. Sekrety środowiskowe nie są eksportowane.',
+        entities: entityNames,
+        functions: functionNames
+      };
+
+      zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+      zip.file('functions/function_names.json', JSON.stringify(functionNames, null, 2));
+
+      const summary = [];
+      for (const entityName of entityNames) {
+        const entity = base44.asServiceRole.entities[entityName];
+        if (!entity) {
+          summary.push({ entity: entityName, status: 'missing' });
+          continue;
+        }
+        try {
+          const [schema, records] = await Promise.all([
+            entity.schema().catch(() => null),
+            entity.list('-created_date', 10000).catch(() => [])
+          ]);
+          zip.file(`entities/${entityName}/schema.json`, JSON.stringify(schema, null, 2));
+          zip.file(`entities/${entityName}/records.json`, JSON.stringify(records, null, 2));
+          summary.push({ entity: entityName, status: 'exported', records: records.length });
+        } catch (error) {
+          summary.push({ entity: entityName, status: 'error', error: error.message });
+        }
+      }
+
+      zip.file('summary.json', JSON.stringify(summary, null, 2));
+      const zipBase64 = await zip.generateAsync({ type: 'base64' });
+
+      return Response.json({
+        base64: zipBase64,
+        filename: `pelny_backend_${new Date().toISOString().split('T')[0]}.zip`,
+        summary
+      });
+    }
 
     // Pobierz wszystkie raporty równolegle — bez użycia integracji AI
     const [meetingReports, visitReports, serviceReports, phoneReports, phoneContacts] = await Promise.all([
