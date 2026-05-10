@@ -63,18 +63,21 @@ export default function ExportReports() {
 
       const zip = await JSZip.loadAsync(new Blob([byteArr], { type: "application/zip" }));
       const { getBackendSourceFiles } = await import("@/lib/backendExportSources");
-      getBackendSourceFiles().forEach((file) => {
+      const sourceFiles = getBackendSourceFiles();
+      sourceFiles.forEach((file) => {
         zip.file(`source/${file.path}`, file.content);
       });
 
-      const finalBlob = await zip.generateAsync({ type: "blob" });
+      zip.file("source/export-size-check.txt", `Dołączono plików źródłowych: ${sourceFiles.length}\nŁączny rozmiar tekstu: ${sourceFiles.reduce((sum, file) => sum + file.content.length, 0)} znaków\n`);
+
+      const finalBlob = await zip.generateAsync({ type: "blob", compression: "STORE" });
       const url = URL.createObjectURL(finalBlob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      setSuccess("Pobrano pełny eksport backendu z plikami kodu i konfiguracją.");
+      setSuccess(`Pobrano pełny eksport backendu: ${sourceFiles.length} plików źródłowych + dane i schematy.`);
     } catch (e) {
       setError(e.response?.data?.error || e.message);
     } finally {
