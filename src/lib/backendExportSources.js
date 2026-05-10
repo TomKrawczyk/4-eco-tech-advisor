@@ -1,24 +1,7 @@
-const functionModules = import.meta.glob("../functions/**/*", {
+const sourceModules = import.meta.glob("../**/*.{js,jsx,ts,tsx,json,css,html}", {
   as: "raw",
   eager: true,
 });
-
-const entityModules = import.meta.glob("../entities/**/*.json", {
-  as: "raw",
-  eager: true,
-});
-
-const agentModules = import.meta.glob("../agents/**/*.json", {
-  as: "raw",
-  eager: true,
-});
-
-const backendConfigModules = {
-  ...import.meta.glob("../api/base44Client.js", { as: "raw", eager: true }),
-  ...import.meta.glob("../lib/app-params.js", { as: "raw", eager: true }),
-  ...import.meta.glob("../lib/query-client.js", { as: "raw", eager: true }),
-  ...import.meta.glob("../pages.config.js", { as: "raw", eager: true }),
-};
 
 const normalizePath = (path) => path.replace(/^\.\.\//, "");
 
@@ -29,12 +12,7 @@ const toFiles = (modules) =>
   }));
 
 export function getBackendSourceFiles() {
-  const files = [
-    ...toFiles(functionModules),
-    ...toFiles(entityModules),
-    ...toFiles(agentModules),
-    ...toFiles(backendConfigModules),
-  ];
+  const files = toFiles(sourceModules).filter((file) => file.path !== "lib/backendExportSources.js");
 
   const manifest = {
     generated_at: new Date().toISOString(),
@@ -44,22 +22,32 @@ export function getBackendSourceFiles() {
       functions: files.filter((file) => file.path.startsWith("functions/")).length,
       entities: files.filter((file) => file.path.startsWith("entities/")).length,
       agents: files.filter((file) => file.path.startsWith("agents/")).length,
-      config: files.filter((file) => file.path.startsWith("api/") || file.path.startsWith("lib/") || file.path === "pages.config.js").length,
+      pages: files.filter((file) => file.path.startsWith("pages/")).length,
+      components: files.filter((file) => file.path.startsWith("components/")).length,
+      api: files.filter((file) => file.path.startsWith("api/")).length,
+      lib: files.filter((file) => file.path.startsWith("lib/")).length,
+      root_config: files.filter((file) => ["App.jsx", "main.jsx", "index.css", "pages.config.js"].includes(file.path)).length,
     },
+    migration_notice: "To jest kompletny eksport kodu aplikacji dostępnego w projekcie Base44. Nie zawiera wewnętrznego kodu platformy Base44, serwerów Base44, bazy danych jako silnika, auth providera ani implementacji pakietu @base44/sdk — te elementy są usługą platformową. Zawiera natomiast kod funkcji, encji, stron, komponentów i konfiguracji aplikacji oraz osobno dane/schematy pobrane przez funkcję eksportu.",
+    missing_from_export_by_design: [
+      "Sekrety środowiskowe: MAIN_ADMIN_EMAIL, BREVO_API_KEY, GOOGLE_SHEETS_SPREADSHEET_ID",
+      "Wewnętrzna implementacja @base44/sdk i infrastruktura Base44",
+      "Wewnętrzny backend logowania/auth Base44",
+      "Silnik bazy danych Base44 — eksportowane są schematy i rekordy, nie sama platforma bazy"
+    ],
     files: files.map((file) => ({ path: file.path, characters: file.content.length })),
-    note: "Sekrety środowiskowe nie są eksportowane ze względów bezpieczeństwa.",
   };
 
   return [
     ...files,
     {
-      path: "backend-source-manifest.json",
-      content: JSON.stringify(manifest, null, 2),
+      path: "FULL_MIGRATION_NOTICE.txt",
+      content:
+        "Paczka zawiera wszystkie pliki źródłowe aplikacji dostępne w projekcie Base44: funkcje backendowe, encje, komponenty, strony i konfigurację. Nie może zawierać wewnętrznego kodu platformy Base44 ani implementacji @base44/sdk, bo to nie jest część kodu projektu — to usługa/platforma. Do migracji na własny serwer trzeba zastąpić Base44 SDK własnym backendem, auth, bazą danych i storage, używając dołączonych funkcji, schematów i danych jako punktu wyjścia. Sekrety środowiskowe trzeba ustawić ręcznie.",
     },
     {
-      path: "backend-export-readme.txt",
-      content:
-        "Ten katalog zawiera jawny eksport plików backendowych: functions/, entities/, agents/ oraz podstawową konfigurację SDK. Jeżeli plik ZIP ma podejrzanie mały rozmiar, sprawdź source/backend-source-manifest.json — powinien pokazywać liczbę i rozmiary dołączonych plików. Sekrety środowiskowe nie są eksportowane.",
+      path: "source-manifest.json",
+      content: JSON.stringify(manifest, null, 2),
     },
   ];
 }
