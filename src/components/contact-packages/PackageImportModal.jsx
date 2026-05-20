@@ -9,7 +9,16 @@ import * as XLSX from "xlsx";
 // Zwraca index kolumny lub -1
 function findCol(headers, keywords) {
   const norm = h => h?.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-  return headers.findIndex(h => keywords.some(k => norm(h).includes(norm(k))));
+  const normalized = headers.map(norm);
+  const normalizedKeywords = keywords.map(norm);
+
+  let idx = normalized.findIndex(h => normalizedKeywords.some(k => h === k));
+  if (idx >= 0) return idx;
+
+  idx = normalized.findIndex(h => normalizedKeywords.some(k => h.startsWith(k)));
+  if (idx >= 0) return idx;
+
+  return normalized.findIndex(h => normalizedKeywords.some(k => h.includes(k)));
 }
 
 const PHONE_RE = /^(\+?48)?[\s-]?(\d[\s-]?){9,}$/;
@@ -28,6 +37,7 @@ function detectColumns(headers, sampleRows) {
   let nameIdx = findCol(headers, ["imię i nazwisko", "imie i nazwisko", "nazwisko", "nazwa", "klient", "name", "imię", "imie", "pesel"]);
   let phoneIdx = findCol(headers, ["telefon", "tel", "phone", "numer", "komórka", "komorka", "mobile", "gsm"]);
   let addressIdx = findCol(headers, ["adres", "address", "miejscowość", "miejscowosc", "miasto", "ulica", "lokalizacja"]);
+  let postalCodeIdx = findCol(headers, ["kod pocztowy", "kod", "postal", "zip", "postcode"]);
   let notesIdx = findCol(headers, ["notatki", "uwagi", "notes", "komentarz", "comments", "info", "opis"]);
   let statusIdx = findCol(headers, ["status", "status kontaktu", "wynik", "etap", "stan", "opis statusu"]);
 
@@ -58,7 +68,33 @@ function detectColumns(headers, sampleRows) {
     }
   }
 
-  return { nameIdx, phoneIdx, addressIdx, notesIdx, statusIdx };
+  return { nameIdx, phoneIdx, addressIdx, postalCodeIdx, notesIdx, statusIdx };
+}
+
+function buildContacts(dataRows, mapping) {
+  const contacts = [];
+  for (const row of dataRows) {
+    if (row.every(c => c === "" || c === null || c === undefined)) continue;
+
+    const contact = {};
+    if (mapping.nameIdx >= 0 && row[mapping.nameIdx]) contact.client_name = row[mapping.nameIdx].toString().trim();
+    if (mapping.phoneIdx >= 0 && row[mapping.phoneIdx]) contact.client_phone = row[mapping.phoneIdx].toString().trim();
+    if (mapping.addressIdx >= 0 && row[mapping.addressIdx]) contact.client_address = row[mapping.addressIdx].toString().trim();
+    if (mapping.postalCodeIdx >= 0 && row[mapping.postalCodeIdx]) contact.postal_code = row[mapping.postalCodeIdx].toString().trim();
+
+    const noteParts = [];
+    if (mapping.notesIdx >= 0 && row[mapping.notesIdx]) noteParts.push(row[mapping.notesIdx].toString().trim());
+    if (mapping.statusIdx >= 0 && row[mapping.statusIdx]) noteParts.push(`Status z arkusza: ${row[mapping.statusIdx].toString().trim()}`);
+    if (noteParts.length > 0) contact.notes = noteParts.join("\n");
+
+    if (!contact.client_name) {
+      const fallback = row.find(c => LOOKS_LIKE_NAME(c));
+      if (fallback) contact.client_name = fallback.toString().trim();
+    }
+
+    if (contact.client_name || contact.client_phone) contacts.push(contact);
+  }
+  return contacts;
 }
 
 function parseExcel(file) {
@@ -79,40 +115,14 @@ function parseExcel(file) {
         const dataRows = hasHeaders ? rows.slice(1) : rows;
 
         const sampleRows = dataRows.slice(0, 15);
-        const { nameIdx, phoneIdx, addressIdx, notesIdx, statusIdx } = detectColumns(headers, sampleRows);
-
-        const contacts = [];
-        for (const row of dataRows) {
-          if (row.every(c => c === "" || c === null || c === undefined)) continue;
-
-          const contact = {};
-          if (nameIdx >= 0 && row[nameIdx]) contact.client_name = row[nameIdx].toString().trim();
-          if (phoneIdx >= 0 && row[phoneIdx]) contact.client_phone = row[phoneIdx].toString().trim();
-          if (addressIdx >= 0 && row[addressIdx]) contact.client_address = row[addressIdx].toString().trim();
-
-          const noteParts = [];
-          if (notesIdx >= 0 && row[notesIdx]) noteParts.push(row[notesIdx].toString().trim());
-          if (statusIdx >= 0 && row[statusIdx]) noteParts.push(`Status z arkusza: ${row[statusIdx].toString().trim()}`);
-          if (noteParts.length > 0) contact.notes = noteParts.join("\n");
-
-          // Fallback — jeśli nadal nie mamy imienia, bierz pierwszą niepustą kolumnę tekstową
-          if (!contact.client_name) {
-            const fallback = row.find(c => LOOKS_LIKE_NAME(c));
-            if (fallback) contact.client_name = fallback.toString().trim();
-          }
-          // Fallback dla telefonu
-          if (!contact.client_phone) {
-            const fallback = row.find(c => LOOKS_LIKE_PHONE(c));
-            if (fallback) contact.client_phone = fallback.toString().trim();
-          }
-
-          if (contact.client_name || contact.client_phone) contacts.push(contact);
-        }
+        const mapping = detectColumns(headers, sampleRows);
+        const contacts = buildContacts(dataRows, mapping);
 
         resolve({
           contacts,
-          mapping: { nameIdx, phoneIdx, addressIdx, notesIdx, statusIdx },
+          mapping,
           headers,
+          dataRows,
         });
       } catch (err) {
         reject(err);
@@ -134,6 +144,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   const [contacts, setContacts] = useState([]);
   const [mapping, setMapping] = useState(null);
   const [headers, setHeaders] = useState([]);
+  const [dataRows, setDataRows] = useState([]);
   const [parseError, setParseError] = useState("");
   const [importing, setImporting] = useState(false);
   const [done, setDone] = useState(false);
@@ -152,6 +163,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
       setContacts(result.contacts);
       setMapping(result.mapping);
       setHeaders(result.headers);
+      setDataRows(result.dataRows || []);
       if (result.contacts.length === 0) {
         setParseError("Nie znaleziono żadnych kontaktów. Sprawdź format pliku.");
       }
@@ -194,6 +206,14 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   };
 
   const colName = (idx) => idx >= 0 && headers[idx] ? headers[idx] : "—";
+
+  const updateMapping = (field, value) => {
+    const next = { ...mapping, [field]: Number(value) };
+    setMapping(next);
+    const nextContacts = buildContacts(dataRows, next);
+    setContacts(nextContacts);
+    setParseError(nextContacts.length === 0 ? "Nie znaleziono żadnych kontaktów. Sprawdź wybrane kolumny." : "");
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -288,9 +308,24 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                     <span className="text-gray-500">Imię i nazwisko:</span>
                     <span className="font-medium text-gray-800">{colName(mapping.nameIdx)}</span>
                     <span className="text-gray-500">Telefon:</span>
-                    <span className="font-medium text-gray-800">{colName(mapping.phoneIdx)}</span>
+                    <select
+                      value={mapping.phoneIdx}
+                      onChange={e => updateMapping("phoneIdx", e.target.value)}
+                      className="border border-green-200 rounded px-2 py-1 bg-white font-medium text-gray-800"
+                    >
+                      {headers.map((h, i) => <option key={i} value={i}>{h || `Kolumna ${i + 1}`}</option>)}
+                    </select>
                     <span className="text-gray-500">Adres:</span>
                     <span className="font-medium text-gray-800">{colName(mapping.addressIdx)}</span>
+                    <span className="text-gray-500">Kod pocztowy:</span>
+                    <select
+                      value={mapping.postalCodeIdx}
+                      onChange={e => updateMapping("postalCodeIdx", e.target.value)}
+                      className="border border-green-200 rounded px-2 py-1 bg-white font-medium text-gray-800"
+                    >
+                      <option value={-1}>— brak —</option>
+                      {headers.map((h, i) => <option key={i} value={i}>{h || `Kolumna ${i + 1}`}</option>)}
+                    </select>
                     {mapping.notesIdx >= 0 && (
                       <>
                         <span className="text-gray-500">Notatki:</span>
@@ -317,6 +352,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                         <tr className="bg-gray-50">
                           <th className="px-3 py-2 text-left text-gray-500 font-medium">Imię i nazwisko</th>
                           <th className="px-3 py-2 text-left text-gray-500 font-medium">Telefon</th>
+                          <th className="px-3 py-2 text-left text-gray-500 font-medium">Kod</th>
                           <th className="px-3 py-2 text-left text-gray-500 font-medium">Adres</th>
                         </tr>
                       </thead>
@@ -325,6 +361,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                           <tr key={i} className="border-t border-gray-50">
                             <td className="px-3 py-2 text-gray-900">{c.client_name || <span className="text-gray-300">—</span>}</td>
                             <td className="px-3 py-2 text-gray-600">{c.client_phone || <span className="text-gray-300">—</span>}</td>
+                            <td className="px-3 py-2 text-gray-600">{c.postal_code || <span className="text-gray-300">—</span>}</td>
                             <td className="px-3 py-2 text-gray-600 max-w-[120px] truncate">{c.client_address || <span className="text-gray-300">—</span>}</td>
                           </tr>
                         ))}

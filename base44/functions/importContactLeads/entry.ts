@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
       client_name: c.client_name || "",
       client_phone: c.client_phone || "",
       client_address: c.client_address || "",
+      postal_code: c.postal_code || "",
       notes: c.notes || "",
       status: "unassigned",
       is_archived: false,

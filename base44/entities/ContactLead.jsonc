@@ -22,6 +22,10 @@
       "type": "string",
       "description": "Adres klienta"
     },
+    "postal_code": {
+      "type": "string",
+      "description": "Kod pocztowy klienta"
+    },
     "notes": {
       "type": "string",
       "description": "Notatki / dodatkowe info z Excela"

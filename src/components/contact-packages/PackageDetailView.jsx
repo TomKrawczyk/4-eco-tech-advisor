@@ -44,6 +44,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [newGroupId, setNewGroupId] = useState(pkg.group_id || "");
   const [showAppendImport, setShowAppendImport] = useState(false);
   const [archiveTab, setArchiveTab] = useState("active");
+  const [sortMode, setSortMode] = useState("created");
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -171,12 +172,17 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         !search ||
         l.client_name?.toLowerCase().includes(search.toLowerCase()) ||
         l.client_phone?.includes(search) ||
+        l.postal_code?.includes(search) ||
         l.assigned_user_name?.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === "all" || l.status === statusFilter;
       const matchArchive = archiveTab === "archived" ? l.is_archived === true : l.is_archived !== true;
       return matchSearch && matchStatus && matchArchive;
+    }).sort((a, b) => {
+      if (sortMode === "postal_code") return (a.postal_code || "999999").localeCompare(b.postal_code || "999999", "pl");
+      if (sortMode === "name") return (a.client_name || "").localeCompare(b.client_name || "", "pl");
+      return 0;
     });
-  }, [leads, search, statusFilter, archiveTab]);
+  }, [leads, search, statusFilter, archiveTab, sortMode]);
 
   const toggleSelect = (id) => {
     setSelected(prev => {
@@ -322,6 +328,15 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
             <option key={v} value={v}>{l}</option>
           ))}
         </select>
+        <select
+          value={sortMode}
+          onChange={e => setSortMode(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="created">Kolejność importu</option>
+          <option value="postal_code">Sortuj po kodzie pocztowym</option>
+          <option value="name">Sortuj po nazwisku</option>
+        </select>
       </div>
 
       {/* Bulk action bar */}
@@ -436,7 +451,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
               }
             </button>
             <span>Klient</span>
-            <span>Telefon / Adres</span>
+            <span>Telefon / Kod / Adres</span>
             <span>Przypisany do</span>
             <span>Status</span>
           </div>
@@ -472,6 +487,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                       <span className="font-medium text-gray-900 text-sm truncate">{lead.client_name}</span>
                       <div className="text-xs text-gray-500 truncate">
                         {lead.client_phone && <div>{lead.client_phone}</div>}
+                        {lead.postal_code && <div className="text-gray-600">Kod: {lead.postal_code}</div>}
                         {lead.client_address && <div className="text-gray-400">{lead.client_address}</div>}
                       </div>
                       <div className="min-w-0">
