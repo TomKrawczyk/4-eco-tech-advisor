@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus, FileText } from "lucide-react";
+import { RefreshCw, Search, Phone, ChevronDown, ChevronUp, User, BarChart2, Bell, Plus, FileText, Archive, ArchiveRestore } from "lucide-react";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
@@ -53,6 +53,7 @@ export default function PhoneContacts() {
   const [manualAddOpen, setManualAddOpen] = useState(false);
   const [reportContact, setReportContact] = useState(null);
   const [notifySending, setNotifySending] = useState(false);
+  const [archiveTab, setArchiveTab] = useState("active");
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "hr_admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "hr_admin" || currentUser?.role === "group_leader";
@@ -139,6 +140,10 @@ export default function PhoneContacts() {
           assigned_user_name: dbRecord.assigned_user_name || c.assigned_user_name,
           assigned_group_id: dbRecord.assigned_group_id || c.assigned_group_id,
           assigned_group_name: dbRecord.assigned_group_name || c.assigned_group_name,
+          is_archived: dbRecord.is_archived === true,
+          archived_at: dbRecord.archived_at,
+          archived_by_email: dbRecord.archived_by_email,
+          archived_by_name: dbRecord.archived_by_name,
         };
       }
       return c;
@@ -266,6 +271,21 @@ export default function PhoneContacts() {
     },
   });
 
+  const archiveContactMutation = useMutation({
+    mutationFn: ({ contact, archived }) => upsertContact(contact, archived ? {
+      is_archived: true,
+      archived_at: new Date().toISOString(),
+      archived_by_email: currentUser.email,
+      archived_by_name: currentUser.displayName || currentUser.full_name || currentUser.email,
+    } : {
+      is_archived: false,
+      archived_at: "",
+      archived_by_email: "",
+      archived_by_name: "",
+    }),
+    onSuccess: () => refetchDB(),
+  });
+
   // Handlowcy do przypisania – admin widzi wszystkich, group_leader widzi swoją grupę + siebie
   const salespeople = useMemo(() => {
     return allAllowedUsers
@@ -339,9 +359,15 @@ export default function PhoneContacts() {
       const isManual = c.contact_key?.startsWith("manual_");
       const isSavedAssigned = !!c.assigned_user_email;
       const matchStatus = isManual || isSavedAssigned || c.status === "Kontakt do doradcy" || c.status === "DWS";
-      return matchSearch && matchSheet && matchUser && matchStatus;
+      const matchArchive = archiveTab === "archived" ? c.is_archived === true : c.is_archived !== true;
+      return matchSearch && matchSheet && matchUser && matchStatus && matchArchive;
     });
-  }, [visibleContacts, search, sheetFilter, selectedUserEmail]);
+  }, [visibleContacts, search, sheetFilter, selectedUserEmail, archiveTab]);
+
+  const archiveCounts = useMemo(() => ({
+    active: visibleContacts.filter(c => c.is_archived !== true).length,
+    archived: visibleContacts.filter(c => c.is_archived === true).length,
+  }), [visibleContacts]);
 
   const sheetGroups = useMemo(() => {
     const bySheet = {};
@@ -391,12 +417,33 @@ export default function PhoneContacts() {
 
   // Zwykły doradca widzi swoje przypisane kontakty
   if (!isLeaderOrAdmin) {
-    const myContacts = phoneContactsFromDB.filter(c =>
-      c.assigned_user_email === currentUser?.email
-    );
+    const myAllContacts = phoneContactsFromDB.filter(c => c.assigned_user_email === currentUser?.email);
+    const myArchiveCounts = {
+      active: myAllContacts.filter(c => c.is_archived !== true).length,
+      archived: myAllContacts.filter(c => c.is_archived === true).length,
+    };
+    const myContacts = myAllContacts.filter(c => archiveTab === "archived" ? c.is_archived === true : c.is_archived !== true);
     return (
       <div className="space-y-6">
         <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant={archiveTab === "active" ? "default" : "outline"}
+            onClick={() => setArchiveTab("active")}
+            className={archiveTab === "active" ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+          >
+            Aktywne ({myArchiveCounts.active})
+          </Button>
+          <Button
+            size="sm"
+            variant={archiveTab === "archived" ? "default" : "outline"}
+            onClick={() => setArchiveTab("archived")}
+            className={archiveTab === "archived" ? "bg-gray-700 hover:bg-gray-800 text-white" : ""}
+          >
+            Zarchiwizowane ({myArchiveCounts.archived})
+          </Button>
+        </div>
         {myContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -433,15 +480,39 @@ export default function PhoneContacts() {
                       </button>
                     )}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 gap-1 text-xs"
-                    onClick={() => setReportContact(c)}
-                  >
-                    <FileText className="w-3 h-3" />
-                    Raport
-                  </Button>
+                  <div className="shrink-0 flex flex-col gap-1.5">
+                    {archiveTab === "active" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 text-xs text-gray-700"
+                        onClick={() => archiveContactMutation.mutate({ contact: c, archived: true })}
+                      >
+                        <Archive className="w-3 h-3" />
+                        Ukryj
+                      </Button>
+                    )}
+                    {archiveTab === "archived" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 text-xs text-green-700 border-green-200 hover:bg-green-50"
+                        onClick={() => archiveContactMutation.mutate({ contact: c, archived: false })}
+                      >
+                        <ArchiveRestore className="w-3 h-3" />
+                        Przywróć
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1 text-xs"
+                      onClick={() => setReportContact(c)}
+                    >
+                      <FileText className="w-3 h-3" />
+                      Raport
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -467,6 +538,25 @@ export default function PhoneContacts() {
       {currentUser?.role === "admin" && showStats && (
         <AssignmentStats onClose={() => setShowStats(false)} />
       )}
+
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          size="sm"
+          variant={archiveTab === "active" ? "default" : "outline"}
+          onClick={() => setArchiveTab("active")}
+          className={archiveTab === "active" ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+        >
+          Aktywne ({archiveCounts.active})
+        </Button>
+        <Button
+          size="sm"
+          variant={archiveTab === "archived" ? "default" : "outline"}
+          onClick={() => setArchiveTab("archived")}
+          className={archiveTab === "archived" ? "bg-gray-700 hover:bg-gray-800 text-white" : ""}
+        >
+          Zarchiwizowane ({archiveCounts.archived})
+        </Button>
+      </div>
 
       <div className="flex flex-wrap gap-2 items-center">
         <div className="relative flex-1 min-w-[180px]">
@@ -634,6 +724,8 @@ export default function PhoneContacts() {
                                   assignGroupMutation={assignGroupMutation}
                                   onShowDetails={(data) => { setSelectedDetails(data); setDetailsModalOpen(true); }}
                                   onShowReport={(c) => setReportContact(c)}
+                                  onArchive={(c, archived) => archiveContactMutation.mutate({ contact: c, archived })}
+                                  archiveTab={archiveTab}
                                 />
                               ))}
                             </div>
@@ -673,7 +765,7 @@ export default function PhoneContacts() {
   );
 }
 
-function ContactRow({ contact, canAssign, canManageGroups, salespeople, groups, currentUser, assignMutation, assignGroupMutation, onShowDetails, onShowReport }) {
+function ContactRow({ contact, canAssign, canManageGroups, salespeople, groups, currentUser, assignMutation, assignGroupMutation, onShowDetails, onShowReport, onArchive, archiveTab }) {
   return (
     <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
       <div className="flex items-start justify-between gap-2">
@@ -694,6 +786,26 @@ function ContactRow({ contact, canAssign, canManageGroups, salespeople, groups, 
         </div>
 
         <div className="shrink-0 flex gap-1.5 flex-wrap items-start">
+          {archiveTab === "active" && (
+            <button
+              onClick={() => onArchive(contact, true)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-1"
+            >
+              <Archive className="w-3 h-3" />
+              Ukryj
+            </button>
+          )}
+
+          {archiveTab === "archived" && (
+            <button
+              onClick={() => onArchive(contact, false)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
+            >
+              <ArchiveRestore className="w-3 h-3" />
+              Przywróć
+            </button>
+          )}
+
           {/* Przycisk szczegółów */}
           {(contact.comments || contact.agent) && (
             <button
