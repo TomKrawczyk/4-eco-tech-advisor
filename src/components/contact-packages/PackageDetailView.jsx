@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Users, Search, UserCheck, ChevronDown, CheckSquare, Square,
-  Trash2, RotateCcw, MoreVertical, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload
+  Trash2, RotateCcw, MoreVertical, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload, Archive, ArchiveRestore
 } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 
@@ -43,6 +43,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [editingGroup, setEditingGroup] = useState(false);
   const [newGroupId, setNewGroupId] = useState(pkg.group_id || "");
   const [showAppendImport, setShowAppendImport] = useState(false);
+  const [archiveTab, setArchiveTab] = useState("active");
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -142,6 +143,28 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async ({ leadIds, archived }) => {
+      for (const id of leadIds) {
+        await base44.entities.ContactLead.update(id, archived ? {
+          is_archived: true,
+          archived_at: new Date().toISOString(),
+          archived_by_email: currentUser.email,
+          archived_by_name: currentUser.displayName || currentUser.full_name || currentUser.email,
+        } : {
+          is_archived: false,
+          archived_at: "",
+          archived_by_email: "",
+          archived_by_name: "",
+        });
+      }
+    },
+    onSuccess: async () => {
+      setSelected(new Set());
+      await qc.refetchQueries({ queryKey: ["leads", pkg.id] });
+    },
+  });
+
   const filtered = useMemo(() => {
     return leads.filter(l => {
       const matchSearch =
@@ -150,9 +173,10 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         l.client_phone?.includes(search) ||
         l.assigned_user_name?.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === "all" || l.status === statusFilter;
-      return matchSearch && matchStatus;
+      const matchArchive = archiveTab === "archived" ? l.is_archived === true : l.is_archived !== true;
+      return matchSearch && matchStatus && matchArchive;
     });
-  }, [leads, search, statusFilter]);
+  }, [leads, search, statusFilter, archiveTab]);
 
   const toggleSelect = (id) => {
     setSelected(prev => {
@@ -171,11 +195,13 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   };
 
   const stats = useMemo(() => {
-    const total = leads.length;
-    const assigned = leads.filter(l => l.assigned_user_email).length;
+    const activeLeads = leads.filter(l => l.is_archived !== true);
+    const archived = leads.filter(l => l.is_archived === true).length;
+    const total = activeLeads.length;
+    const assigned = activeLeads.filter(l => l.assigned_user_email).length;
     const unassigned = total - assigned;
-    const interested = leads.filter(l => l.status === "interested" || l.status === "meeting_scheduled").length;
-    return { total, assigned, unassigned, interested };
+    const interested = activeLeads.filter(l => l.status === "interested" || l.status === "meeting_scheduled").length;
+    return { total, assigned, unassigned, interested, archived };
   }, [leads]);
 
   return (
@@ -261,6 +287,25 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         ))}
       </div>
 
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          size="sm"
+          variant={archiveTab === "active" ? "default" : "outline"}
+          onClick={() => { setArchiveTab("active"); setSelected(new Set()); }}
+          className={archiveTab === "active" ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+        >
+          Aktywne ({stats.total})
+        </Button>
+        <Button
+          size="sm"
+          variant={archiveTab === "archived" ? "default" : "outline"}
+          onClick={() => { setArchiveTab("archived"); setSelected(new Set()); }}
+          className={archiveTab === "archived" ? "bg-gray-700 hover:bg-gray-800 text-white" : ""}
+        >
+          Zarchiwizowane ({stats.archived})
+        </Button>
+      </div>
+
       {/* Filters + bulk actions */}
       <div className="flex flex-wrap gap-2 items-center">
         <div className="relative flex-1 min-w-48">
@@ -322,15 +367,38 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                 </div>
               )}
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => unassignMutation.mutate(Array.from(selected))}
-              className="gap-1 text-orange-600 border-orange-200 hover:bg-orange-50"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Cofnij przypisanie
-            </Button>
+            {archiveTab === "active" ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => unassignMutation.mutate(Array.from(selected))}
+                  className="gap-1 text-orange-600 border-orange-200 hover:bg-orange-50"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Cofnij przypisanie
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => archiveMutation.mutate({ leadIds: Array.from(selected), archived: true })}
+                  className="gap-1 text-gray-700 border-gray-300 hover:bg-gray-50"
+                >
+                  <Archive className="w-4 h-4" />
+                  Ukryj / archiwizuj
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => archiveMutation.mutate({ leadIds: Array.from(selected), archived: false })}
+                className="gap-1 text-green-700 border-green-200 hover:bg-green-50"
+              >
+                <ArchiveRestore className="w-4 h-4" />
+                Przywróć
+              </Button>
+            )}
           </div>
         </div>
       )}

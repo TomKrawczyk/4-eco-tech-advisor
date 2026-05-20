@@ -402,6 +402,7 @@ function PackageCard({ pkg, stats, onClick, isAdmin, onEdit, onDelete }) {
 function AdvisorView({ leads, currentUser, qc }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [archiveTab, setArchiveTab] = useState("active");
 
   const statusLabels = {
     unassigned: "Nieprzypisany",
@@ -428,7 +429,28 @@ function AdvisorView({ leads, currentUser, qc }) {
     const matchSearch = l.client_name?.toLowerCase().includes(search.toLowerCase()) ||
       l.client_phone?.includes(search);
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchArchive = archiveTab === "archived" ? l.is_archived === true : l.is_archived !== true;
+    return matchSearch && matchStatus && matchArchive;
+  });
+
+  const archiveCounts = useMemo(() => ({
+    active: leads.filter(l => l.is_archived !== true).length,
+    archived: leads.filter(l => l.is_archived === true).length,
+  }), [leads]);
+
+  const archiveLead = useMutation({
+    mutationFn: ({ lead, archived }) => base44.entities.ContactLead.update(lead.id, archived ? {
+      is_archived: true,
+      archived_at: new Date().toISOString(),
+      archived_by_email: currentUser.email,
+      archived_by_name: currentUser.displayName || currentUser.full_name || currentUser.email,
+    } : {
+      is_archived: false,
+      archived_at: "",
+      archived_by_email: "",
+      archived_by_name: "",
+    }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-leads"] }),
   });
 
   const updateStatus = useMutation({
@@ -446,6 +468,25 @@ function AdvisorView({ leads, currentUser, qc }) {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Moje kontakty</h1>
         <p className="text-sm text-gray-500 mt-0.5">Przydzielone do Ciebie kontakty do obdzwonienia</p>
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          size="sm"
+          variant={archiveTab === "active" ? "default" : "outline"}
+          onClick={() => setArchiveTab("active")}
+          className={archiveTab === "active" ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+        >
+          Aktywne ({archiveCounts.active})
+        </Button>
+        <Button
+          size="sm"
+          variant={archiveTab === "archived" ? "default" : "outline"}
+          onClick={() => setArchiveTab("archived")}
+          className={archiveTab === "archived" ? "bg-gray-700 hover:bg-gray-800 text-white" : ""}
+        >
+          Zarchiwizowane ({archiveCounts.archived})
+        </Button>
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -481,6 +522,8 @@ function AdvisorView({ leads, currentUser, qc }) {
               currentUser={currentUser}
               onUpdateStatus={(status, notes) => updateStatus.mutate({ id: lead.id, status, notes })}
               onMeetingScheduled={() => qc.invalidateQueries({ queryKey: ["my-leads"] })}
+              onArchive={(archived) => archiveLead.mutate({ lead, archived })}
+              archiveTab={archiveTab}
             />
           ))}
         </div>
@@ -489,7 +532,7 @@ function AdvisorView({ leads, currentUser, qc }) {
   );
 }
 
-function LeadRow({ lead, statusLabels, statusColors, currentUser, onUpdateStatus, onMeetingScheduled }) {
+function LeadRow({ lead, statusLabels, statusColors, currentUser, onUpdateStatus, onMeetingScheduled, onArchive, archiveTab }) {
   const [expanded, setExpanded] = useState(false);
   const [notes, setNotes] = useState(lead.contact_notes || "");
   const [status, setStatus] = useState(lead.status);
@@ -554,9 +597,21 @@ function LeadRow({ lead, statusLabels, statusColors, currentUser, onUpdateStatus
                 placeholder="Notatki z rozmowy..."
               />
             </div>
-            <Button size="sm" onClick={handleSave} className="bg-green-600 hover:bg-green-700 text-white">
-              Zapisz
-            </Button>
+            <div className="flex gap-2 flex-wrap">
+              {archiveTab === "active" && (
+                <Button size="sm" onClick={handleSave} className="bg-green-600 hover:bg-green-700 text-white">
+                  Zapisz
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onArchive(archiveTab === "active")}
+                className={archiveTab === "active" ? "text-gray-700" : "text-green-700 border-green-200 hover:bg-green-50"}
+              >
+                {archiveTab === "active" ? "Ukryj / archiwizuj" : "Przywróć kontakt"}
+              </Button>
+            </div>
           </div>
         )}
       </div>

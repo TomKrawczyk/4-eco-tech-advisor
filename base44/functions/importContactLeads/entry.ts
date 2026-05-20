@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
       client_address: c.client_address || "",
       notes: c.notes || "",
       status: "unassigned",
+      is_archived: false,
     }));
     await base44.asServiceRole.entities.ContactLead.bulkCreate(batch);
     created += batch.length;

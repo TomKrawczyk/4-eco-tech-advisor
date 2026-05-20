@@ -66,6 +66,24 @@
     "scheduled_meeting_time": {
       "type": "string",
       "description": "Godzina um\u00f3wionego spotkania (HH:MM)"
+    },
+    "is_archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy kontakt jest ukryty/zarchiwizowany"
+    },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kiedy kontakt zosta\u0142 zarchiwizowany"
+    },
+    "archived_by_email": {
+      "type": "string",
+      "description": "Email osoby kt\u00f3ra zarchiwizowa\u0142a kontakt"
+    },
+    "archived_by_name": {
+      "type": "string",
+      "description": "Imi\u0119 osoby kt\u00f3ra zarchiwizowa\u0142a kontakt"
     }
   },
   "required": [
