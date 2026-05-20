@@ -23,6 +23,13 @@ function findCol(headers, keywords) {
 
 const PHONE_RE = /^(\+?48)?[\s-]?(\d[\s-]?){9,}$/;
 const LOOKS_LIKE_PHONE = (v) => PHONE_RE.test(v?.toString().replace(/\s/g, ""));
+const extractPhoneFromRow = (row, preferredIdx) => {
+  const preferred = preferredIdx >= 0 ? row[preferredIdx]?.toString().trim() : "";
+  if (LOOKS_LIKE_PHONE(preferred)) return preferred;
+
+  const fallback = row.find(c => LOOKS_LIKE_PHONE(c));
+  return fallback ? fallback.toString().trim() : preferred;
+};
 const LOOKS_LIKE_NAME = (v) => {
   const s = v?.toString().trim() || "";
   return s.length > 3 && /[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(s) && !LOOKS_LIKE_PHONE(s);
@@ -78,7 +85,8 @@ function buildContacts(dataRows, mapping) {
 
     const contact = {};
     if (mapping.nameIdx >= 0 && row[mapping.nameIdx]) contact.client_name = row[mapping.nameIdx].toString().trim();
-    if (mapping.phoneIdx >= 0 && row[mapping.phoneIdx]) contact.client_phone = row[mapping.phoneIdx].toString().trim();
+    const detectedPhone = extractPhoneFromRow(row, mapping.phoneIdx);
+    if (detectedPhone) contact.client_phone = detectedPhone;
     if (mapping.addressIdx >= 0 && row[mapping.addressIdx]) contact.client_address = row[mapping.addressIdx].toString().trim();
     if (mapping.postalCodeIdx >= 0 && row[mapping.postalCodeIdx]) contact.postal_code = row[mapping.postalCodeIdx].toString().trim();
 
@@ -315,6 +323,9 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                     >
                       {headers.map((h, i) => <option key={i} value={i}>{h || `Kolumna ${i + 1}`}</option>)}
                     </select>
+                    <span className="col-span-2 text-[11px] text-green-700">
+                      Jeśli wiersz ma przesunięte kolumny, system weźmie pierwszy poprawny numer telefonu z tego wiersza.
+                    </span>
                     <span className="text-gray-500">Adres:</span>
                     <span className="font-medium text-gray-800">{colName(mapping.addressIdx)}</span>
                     <span className="text-gray-500">Kod pocztowy:</span>
