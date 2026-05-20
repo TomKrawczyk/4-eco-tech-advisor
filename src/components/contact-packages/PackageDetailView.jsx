@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Users, Search, UserCheck, ChevronDown, CheckSquare, Square,
-  Trash2, RotateCcw, MoreVertical, Pencil, Check, X, MessageSquare, Calendar, Clock
+  Trash2, RotateCcw, MoreVertical, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload
 } from "lucide-react";
+import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 
 const STATUS_LABELS = {
   unassigned: "Nieprzypisany",
@@ -41,6 +42,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [assignDropdown, setAssignDropdown] = useState(false);
   const [editingGroup, setEditingGroup] = useState(false);
   const [newGroupId, setNewGroupId] = useState(pkg.group_id || "");
+  const [showAppendImport, setShowAppendImport] = useState(false);
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -231,6 +233,14 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
             </div>
           )}
         </div>
+        <Button
+          size="sm"
+          onClick={() => setShowAppendImport(true)}
+          className="bg-green-600 hover:bg-green-700 text-white gap-2"
+        >
+          <Upload className="w-4 h-4" />
+          Doimportuj
+        </Button>
         <Badge variant="outline" className="text-xs">
           {new Date(pkg.created_date).toLocaleDateString("pl-PL")}
         </Badge>
@@ -323,6 +333,23 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
             </Button>
           </div>
         </div>
+      )}
+
+      {showAppendImport && (
+        <PackageImportModal
+          currentUser={currentUser}
+          allGroups={allGroups}
+          existingPackage={pkg}
+          onClose={() => setShowAppendImport(false)}
+          onSuccess={async () => {
+            setShowAppendImport(false);
+            await Promise.all([
+              qc.refetchQueries({ queryKey: ["leads", pkg.id] }),
+              qc.refetchQueries({ queryKey: ["contact-packages"] }),
+            ]);
+            if (onPackageUpdated) onPackageUpdated();
+          }}
+        />
       )}
 
       {/* Lead list */}

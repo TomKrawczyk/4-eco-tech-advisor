@@ -118,12 +118,13 @@ function parseExcel(file) {
   });
 }
 
-export default function PackageImportModal({ currentUser, allGroups = [], onClose, onSuccess }) {
+export default function PackageImportModal({ currentUser, allGroups = [], existingPackage = null, onClose, onSuccess }) {
   const isAdmin = currentUser?.role === "admin";
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedGroupId, setSelectedGroupId] = useState(currentUser?.groupId || "");
-  const [selectedGroupName, setSelectedGroupName] = useState(currentUser?.groupName || "");
+  const isAppendMode = !!existingPackage;
+  const [name, setName] = useState(existingPackage?.name || "");
+  const [description, setDescription] = useState(existingPackage?.description || "");
+  const [selectedGroupId, setSelectedGroupId] = useState(existingPackage?.group_id || currentUser?.groupId || "");
+  const [selectedGroupName, setSelectedGroupName] = useState(existingPackage?.group_name || currentUser?.groupName || "");
   const [file, setFile] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [mapping, setMapping] = useState(null);
@@ -155,10 +156,10 @@ export default function PackageImportModal({ currentUser, allGroups = [], onClos
   };
 
   const handleImport = async () => {
-    if (!name.trim() || contacts.length === 0) return;
+    if ((!isAppendMode && !name.trim()) || contacts.length === 0) return;
     setImporting(true);
-    const effectiveGroupId = isAdmin ? selectedGroupId : (currentUser.groupId || "");
-    const effectiveGroupName = isAdmin ? selectedGroupName : (currentUser.groupName || "");
+    const effectiveGroupId = isAppendMode ? existingPackage.group_id : (isAdmin ? selectedGroupId : (currentUser.groupId || ""));
+    const effectiveGroupName = isAppendMode ? existingPackage.group_name : (isAdmin ? selectedGroupName : (currentUser.groupName || ""));
 
     if (!effectiveGroupId) {
       setParseError(isAdmin ? "Wybierz grupę przed importem." : "Twoje konto nie ma przypisanej grupy. Skontaktuj się z administratorem.");
@@ -167,6 +168,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], onClos
     }
     try {
       const res = await base44.functions.invoke("importContactLeads", {
+        packageId: existingPackage?.id || null,
         packageMeta: {
           name: name.trim(),
           description: description.trim(),
@@ -192,7 +194,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], onClos
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900">Importuj paczkę kontaktów</h2>
+          <h2 className="text-lg font-bold text-gray-900">{isAppendMode ? "Doimportuj kontakty" : "Importuj paczkę kontaktów"}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -201,16 +203,25 @@ export default function PackageImportModal({ currentUser, allGroups = [], onClos
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           {!done ? (
             <>
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1.5">Nazwa paczki *</label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="np. Kontakty kwiecień 2026" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1.5">Opis (opcjonalny)</label>
-                <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="np. Rejon Kraków, kampania wiosenna" />
-              </div>
+              {isAppendMode ? (
+                <div className="bg-green-50 border border-green-100 rounded-xl p-3">
+                  <p className="text-sm text-green-800">Nowe kontakty zostaną dopisane do paczki:</p>
+                  <p className="font-semibold text-green-900">{existingPackage.name}</p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1.5">Nazwa paczki *</label>
+                    <Input value={name} onChange={e => setName(e.target.value)} placeholder="np. Kontakty kwiecień 2026" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1.5">Opis (opcjonalny)</label>
+                    <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="np. Rejon Kraków, kampania wiosenna" />
+                  </div>
+                </>
+              )}
 
-              {isAdmin && (
+              {isAdmin && !isAppendMode && (
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1.5">Przypisz do grupy *</label>
                   <select
@@ -339,7 +350,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], onClos
               <Button variant="outline" onClick={onClose} disabled={importing}>Anuluj</Button>
               <Button
                 onClick={handleImport}
-                disabled={!name.trim() || contacts.length === 0 || importing}
+                disabled={(!isAppendMode && !name.trim()) || contacts.length === 0 || importing}
                 className="bg-green-600 hover:bg-green-700 text-white gap-2"
               >
                 {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
