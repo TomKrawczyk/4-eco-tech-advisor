@@ -29,6 +29,7 @@ function detectColumns(headers, sampleRows) {
   let phoneIdx = findCol(headers, ["telefon", "tel", "phone", "numer", "komórka", "komorka", "mobile", "gsm"]);
   let addressIdx = findCol(headers, ["adres", "address", "miejscowość", "miejscowosc", "miasto", "ulica", "lokalizacja"]);
   let notesIdx = findCol(headers, ["notatki", "uwagi", "notes", "komentarz", "comments", "info", "opis"]);
+  let statusIdx = findCol(headers, ["status", "status kontaktu", "wynik", "etap", "stan", "opis statusu"]);
 
   // Jeśli nie znaleziono po nagłówkach — wykryj po zawartości (pierwsze 10 wierszy)
   if (nameIdx === -1 || phoneIdx === -1) {
@@ -57,7 +58,7 @@ function detectColumns(headers, sampleRows) {
     }
   }
 
-  return { nameIdx, phoneIdx, addressIdx, notesIdx };
+  return { nameIdx, phoneIdx, addressIdx, notesIdx, statusIdx };
 }
 
 function parseExcel(file) {
@@ -78,7 +79,7 @@ function parseExcel(file) {
         const dataRows = hasHeaders ? rows.slice(1) : rows;
 
         const sampleRows = dataRows.slice(0, 15);
-        const { nameIdx, phoneIdx, addressIdx, notesIdx } = detectColumns(headers, sampleRows);
+        const { nameIdx, phoneIdx, addressIdx, notesIdx, statusIdx } = detectColumns(headers, sampleRows);
 
         const contacts = [];
         for (const row of dataRows) {
@@ -88,7 +89,11 @@ function parseExcel(file) {
           if (nameIdx >= 0 && row[nameIdx]) contact.client_name = row[nameIdx].toString().trim();
           if (phoneIdx >= 0 && row[phoneIdx]) contact.client_phone = row[phoneIdx].toString().trim();
           if (addressIdx >= 0 && row[addressIdx]) contact.client_address = row[addressIdx].toString().trim();
-          if (notesIdx >= 0 && row[notesIdx]) contact.notes = row[notesIdx].toString().trim();
+
+          const noteParts = [];
+          if (notesIdx >= 0 && row[notesIdx]) noteParts.push(row[notesIdx].toString().trim());
+          if (statusIdx >= 0 && row[statusIdx]) noteParts.push(`Status z arkusza: ${row[statusIdx].toString().trim()}`);
+          if (noteParts.length > 0) contact.notes = noteParts.join("\n");
 
           // Fallback — jeśli nadal nie mamy imienia, bierz pierwszą niepustą kolumnę tekstową
           if (!contact.client_name) {
@@ -106,7 +111,7 @@ function parseExcel(file) {
 
         resolve({
           contacts,
-          mapping: { nameIdx, phoneIdx, addressIdx, notesIdx },
+          mapping: { nameIdx, phoneIdx, addressIdx, notesIdx, statusIdx },
           headers,
         });
       } catch (err) {
@@ -290,6 +295,12 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                       <>
                         <span className="text-gray-500">Notatki:</span>
                         <span className="font-medium text-gray-800">{colName(mapping.notesIdx)}</span>
+                      </>
+                    )}
+                    {mapping.statusIdx >= 0 && (
+                      <>
+                        <span className="text-gray-500">Status:</span>
+                        <span className="font-medium text-gray-800">{colName(mapping.statusIdx)}</span>
                       </>
                     )}
                   </div>
