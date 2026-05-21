@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  ArrowLeft, Users, Search, UserCheck, ChevronDown, CheckSquare, Square,
-  Trash2, RotateCcw, MoreVertical, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload, Archive, ArchiveRestore
+  ArrowLeft, Search, UserCheck, CheckSquare, Square,
+  RotateCcw, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload, Archive, ArchiveRestore
 } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 
@@ -59,16 +59,15 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     queryFn: () => base44.entities.ContactLead.filter({ package_id: pkg.id }),
   });
 
-  // Użytkownicy w grupie — handlowcy do przypisania
+  // Użytkownicy do przypisania — pobieramy pełną listę, żeby uwzględnić też liderów grupy
   const { data: allUsers = [] } = useQuery({
-    queryKey: ["allowed-users-group", pkg.group_id],
-    queryFn: () => base44.entities.AllowedUser.filter({ group_id: pkg.group_id }),
+    queryKey: ["allowed-users-assign", pkg.group_id],
+    queryFn: () => base44.entities.AllowedUser.list(),
   });
 
   const { data: allGroups = [] } = useQuery({
     queryKey: ["groups-all"],
     queryFn: () => base44.entities.Group.list(),
-    enabled: isAdmin,
   });
 
   const updateGroupMutation = useMutation({
@@ -84,16 +83,25 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     },
   });
 
+  const currentGroup = allGroups.find(g => g.id === pkg.group_id);
+  const groupLeaderIds = currentGroup?.group_leader_ids || currentGroup?.data?.group_leader_ids || [];
+  const groupLeaderId = currentGroup?.group_leader_id || currentGroup?.data?.group_leader_id;
+  const allowedGroupLeaderIds = new Set([groupLeaderId, ...groupLeaderIds].filter(Boolean));
+
   const assignableUsers = allUsers
     .map(u => ({
       id: u.id,
       email: u.email || u.data?.email,
       name: u.name || u.data?.name || u.email || u.data?.email,
       role: u.role || u.data?.role,
+      group_id: u.group_id || u.data?.group_id,
     }))
-    .filter(u =>
-      u.email && (u.role === "advisor" || u.role === "team_leader" || u.role === "group_leader")
-    );
+    .filter(u => {
+      if (!u.email) return false;
+      if (u.role === "advisor" || u.role === "team_leader") return u.group_id === pkg.group_id;
+      if (u.role === "group_leader") return u.group_id === pkg.group_id || allowedGroupLeaderIds.has(u.id);
+      return false;
+    });
 
   const canAssignToSelf = currentUser?.role === "team_leader" || currentUser?.role === "group_leader";
   const advisors = canAssignToSelf && currentUser?.email && !assignableUsers.some(u => u.email === currentUser.email)
@@ -107,6 +115,17 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         ...assignableUsers,
       ]
     : assignableUsers;
+
+  const handleAssignSelected = () => {
+    const user = advisors.find(u => u.email === assignTarget);
+    if (!user) return;
+
+    assignMutation.mutate({
+      leadIds: Array.from(selected),
+      userEmail: user.email,
+      userName: user.name,
+    });
+  };
 
   // Wspólna funkcja do przeliczenia i zapisania assigned_count w paczce
   const recalcAssignedCount = async () => {
@@ -132,6 +151,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     },
     onSuccess: async () => {
       setSelected(new Set());
+      setAssignTarget("");
       setAssignDropdown(false);
       // Wymuś refetch zamiast tylko invalidate — gwarancja świeżych danych w UI
       await Promise.all([
@@ -364,45 +384,28 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
             Wybrano: {selected.size} kontaktów
           </span>
           <div className="flex items-center gap-2 ml-auto flex-wrap">
-            {/* Assign dropdown */}
-            <div className="relative">
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={assignTarget}
+                onChange={(e) => setAssignTarget(e.target.value)}
+                className="h-8 rounded-md border border-green-200 bg-white px-3 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-200"
+              >
+                <option value="">Wybierz osobę…</option>
+                {advisors.map(u => (
+                  <option key={u.id} value={u.email}>
+                    {u.name} ({u.role === "group_leader" ? "lider grupy" : u.role === "team_leader" ? "team leader" : "handlowiec"})
+                  </option>
+                ))}
+              </select>
               <Button
                 size="sm"
+                disabled={!assignTarget || assignMutation.isPending}
                 className="bg-green-600 hover:bg-green-700 text-white gap-1"
-                onClick={() => setAssignDropdown(d => !d)}
+                onClick={handleAssignSelected}
               >
                 <UserCheck className="w-4 h-4" />
-                Przypisz do…
-                <ChevronDown className="w-3 h-3" />
+                Przypisz
               </Button>
-              {assignDropdown && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 min-w-[200px] py-1 max-h-56 overflow-y-auto">
-                  {advisors.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-gray-400">Brak handlowców w grupie</p>
-                  ) : (
-                    advisors.map(u => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-green-50 transition-colors"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          assignMutation.mutate({
-                            leadIds: Array.from(selected),
-                            userEmail: u.email,
-                            userName: u.name,
-                          });
-                        }}
-                      >
-                        <div className="font-medium text-gray-900">{u.name}</div>
-                        <div className="text-xs text-gray-400">{u.email}</div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
             </div>
             {archiveTab === "active" ? (
               <>

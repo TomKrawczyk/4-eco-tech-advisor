@@ -25,8 +25,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Brak uprawnień do przypisywania kontaktów' }, { status: 403 });
     }
 
-    const packages = await base44.asServiceRole.entities.ContactPackage.filter({ id: packageId });
-    const pkg = packages[0];
+    const packages = await base44.asServiceRole.entities.ContactPackage.list();
+    const pkg = packages.find((item) => item.id === packageId);
     if (!pkg) {
       return Response.json({ error: 'Nie znaleziono paczki' }, { status: 404 });
     }
