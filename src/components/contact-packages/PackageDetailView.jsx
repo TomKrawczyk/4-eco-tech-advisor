@@ -116,14 +116,12 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
 
   const assignMutation = useMutation({
     mutationFn: async ({ leadIds, userEmail, userName }) => {
-      for (const id of leadIds) {
-        await base44.entities.ContactLead.update(id, {
-          assigned_user_email: userEmail,
-          assigned_user_name: userName,
-          status: "assigned",
-        });
-      }
-      await recalcAssignedCount();
+      await base44.functions.invoke('assignContactLeads', {
+        leadIds,
+        userEmail,
+        userName,
+        packageId: pkg.id,
+      });
     },
     onSuccess: async () => {
       setSelected(new Set());
