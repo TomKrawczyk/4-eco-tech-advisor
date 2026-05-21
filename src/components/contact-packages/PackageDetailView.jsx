@@ -84,9 +84,16 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     },
   });
 
-  const assignableUsers = allUsers.filter(u =>
-    u.role === "advisor" || u.role === "team_leader" || u.role === "group_leader"
-  );
+  const assignableUsers = allUsers
+    .map(u => ({
+      id: u.id,
+      email: u.email || u.data?.email,
+      name: u.name || u.data?.name || u.email || u.data?.email,
+      role: u.role || u.data?.role,
+    }))
+    .filter(u =>
+      u.email && (u.role === "advisor" || u.role === "team_leader" || u.role === "group_leader")
+    );
 
   const canAssignToSelf = currentUser?.role === "team_leader" || currentUser?.role === "group_leader";
   const advisors = canAssignToSelf && currentUser?.email && !assignableUsers.some(u => u.email === currentUser.email)
