@@ -32,8 +32,20 @@ Deno.serve(async (req) => {
     }
 
     const packageGroupId = pkg.group_id || pkg.data?.group_id || '';
-    if (currentRole !== 'admin' && packageGroupId && currentGroupId && packageGroupId !== currentGroupId) {
-      return Response.json({ error: 'Brak dostępu do tej paczki kontaktów' }, { status: 403 });
+    if (currentRole !== 'admin') {
+      const groups = await base44.asServiceRole.entities.Group.list();
+      const managedGroupIds = groups
+        .filter((group) => {
+          const leaderIds = group.group_leader_ids || group.data?.group_leader_ids || [];
+          const leaderId = group.group_leader_id || group.data?.group_leader_id || '';
+          return leaderId === currentAccess?.id || leaderIds.includes(currentAccess?.id);
+        })
+        .map((group) => group.id);
+
+      const hasAccessToPackageGroup = !packageGroupId || packageGroupId === currentGroupId || managedGroupIds.includes(packageGroupId);
+      if (!hasAccessToPackageGroup) {
+        return Response.json({ error: 'Brak dostępu do tej paczki kontaktów' }, { status: 403 });
+      }
     }
 
     for (const id of leadIds) {
