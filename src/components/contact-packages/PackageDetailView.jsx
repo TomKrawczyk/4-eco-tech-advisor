@@ -84,9 +84,22 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     },
   });
 
-  const advisors = allUsers.filter(u =>
-    u.role === "advisor" || u.role === "team_leader"
+  const assignableUsers = allUsers.filter(u =>
+    u.role === "advisor" || u.role === "team_leader" || u.role === "group_leader"
   );
+
+  const canAssignToSelf = currentUser?.role === "team_leader" || currentUser?.role === "group_leader";
+  const advisors = canAssignToSelf && currentUser?.email && !assignableUsers.some(u => u.email === currentUser.email)
+    ? [
+        {
+          id: "self",
+          email: currentUser.email,
+          name: currentUser.displayName || currentUser.full_name || currentUser.email,
+          role: currentUser.role,
+        },
+        ...assignableUsers,
+      ]
+    : assignableUsers;
 
   // Wspólna funkcja do przeliczenia i zapisania assigned_count w paczce
   const recalcAssignedCount = async () => {
