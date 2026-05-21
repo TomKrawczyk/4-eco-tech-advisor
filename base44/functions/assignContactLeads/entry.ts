@@ -25,12 +25,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Brak uprawnień do przypisywania kontaktów' }, { status: 403 });
     }
 
-    const pkg = await base44.asServiceRole.entities.ContactPackage.get(packageId);
+    const packages = await base44.asServiceRole.entities.ContactPackage.filter({ id: packageId });
+    const pkg = packages[0];
     if (!pkg) {
       return Response.json({ error: 'Nie znaleziono paczki' }, { status: 404 });
     }
 
-    if (currentRole !== 'admin' && pkg.group_id && currentGroupId && pkg.group_id !== currentGroupId) {
+    const packageGroupId = pkg.group_id || pkg.data?.group_id || '';
+    if (currentRole !== 'admin' && packageGroupId && currentGroupId && packageGroupId !== currentGroupId) {
       return Response.json({ error: 'Brak dostępu do tej paczki kontaktów' }, { status: 403 });
     }
 

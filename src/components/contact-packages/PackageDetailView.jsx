@@ -383,8 +383,12 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                     advisors.map(u => (
                       <button
                         key={u.id}
+                        type="button"
                         className="w-full text-left px-4 py-2.5 text-sm hover:bg-green-50 transition-colors"
-                        onClick={() => {
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           assignMutation.mutate({
                             leadIds: Array.from(selected),
                             userEmail: u.email,
