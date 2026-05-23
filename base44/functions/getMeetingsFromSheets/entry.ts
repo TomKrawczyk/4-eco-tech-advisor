@@ -1,18 +1,36 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-const SPREADSHEET_ID = Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID') || '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
+function extractSpreadsheetId(value) {
+  if (!value) return '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
+  const match = String(value).match(/\/spreadsheets\/d\/([^/]+)/);
+  return match ? match[1] : String(value).trim();
+}
 
-async function getGoogleSheetsConnection(base44) {
-  let lastError = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      return await base44.asServiceRole.connectors.getConnection('googlesheets');
-    } catch (error) {
-      lastError = error;
-      await new Promise(resolve => setTimeout(resolve, attempt * 500));
-    }
-  }
-  throw lastError;
+const SPREADSHEET_ID = extractSpreadsheetId(Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID'));
+
+function normalizeAccessToken(tokenData) {
+  if (typeof tokenData === 'string') return tokenData;
+  if (tokenData?.accessToken) return tokenData.accessToken;
+  if (tokenData?.access_token) return tokenData.access_token;
+  return '';
+}
+
+async function getGoogleSheetsAccessTokens(base44) {
+  const tokens = [];
+  try {
+    const connection = await base44.asServiceRole.connectors.getConnection('googlesheets');
+    const token = normalizeAccessToken(connection);
+    if (token) tokens.push(token);
+  } catch (_) {}
+
+  try {
+    const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
+    const token = normalizeAccessToken(accessToken);
+    if (token && !tokens.includes(token)) tokens.push(token);
+  } catch (_) {}
+
+  if (tokens.length === 0) throw new Error('Nie udało się odczytać tokenu Google Sheets');
+  return tokens;
 }
 
 async function getAllSheetTabs(accessToken) {
@@ -180,8 +198,18 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden – brak uprawnień' }, { status: 403 });
     }
 
-    const { accessToken } = await getGoogleSheetsConnection(base44);
-    const allTabs = await getAllSheetTabs(accessToken);
+    const accessTokens = await getGoogleSheetsAccessTokens(base44);
+    let accessToken = accessTokens[0];
+    let allTabs = [];
+
+    for (const token of accessTokens) {
+      const tabs = await getAllSheetTabs(token);
+      if (tabs.length > 0) {
+        accessToken = token;
+        allTabs = tabs;
+        break;
+      }
+    }
 
     // Pobierz konfigurację arkuszy – wyklucz wyłączone
     const sheetMappings = await base44.asServiceRole.entities.SheetGroupMapping.list();
