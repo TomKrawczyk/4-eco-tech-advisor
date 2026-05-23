@@ -27,25 +27,15 @@ function normalizeAccessToken(tokenData) {
   return '';
 }
 
-async function getGoogleSheetsAccessTokens(base44) {
-  const tokens = [];
+async function getGoogleSheetsAccessToken(base44) {
+  const connection = await base44.asServiceRole.connectors.getConnection('googlesheets');
+  const token = normalizeAccessToken(connection);
 
-  try {
-    const token = normalizeAccessToken(await base44.asServiceRole.connectors.getAccessToken('googlesheets'));
-    if (token && token.length > 20) tokens.push(token);
-  } catch (e) {
-    console.log('getAccessToken error:', e.message);
+  if (!token || token === 'ya29...' || token.length < 20) {
+    throw new Error('Połączenie Google Sheets nadal zwraca nieprawidłowy token. Odłącz i połącz konektor Google Sheets ponownie, wybierając konto z dostępem do arkusza.');
   }
 
-  try {
-    const token = normalizeAccessToken(await base44.asServiceRole.connectors.getConnection('googlesheets'));
-    if (token && token.length > 20 && !tokens.includes(token)) tokens.push(token);
-  } catch (e) {
-    console.log('getConnection error:', e.message);
-  }
-
-  if (tokens.length === 0) throw new Error('Nie udało się odczytać prawidłowego tokenu Google Sheets');
-  return tokens;
+  return token;
 }
 
 async function getAllSheetTabs(accessToken) {
@@ -70,7 +60,10 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
     `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
-  if (!res.ok) return { meetings: [], phoneContacts: [] };
+  if (!res.ok) {
+    console.log(`[${sheetTitle}] Google API error ${res.status}: ${await res.text()}`);
+    return { meetings: [], phoneContacts: [] };
+  }
   const data = await res.json();
   const rows = data.values || [];
   if (rows.length < 2) return { meetings: [], phoneContacts: [] };
@@ -217,31 +210,18 @@ Deno.serve(async (req) => {
 
     console.log(`User has access. isLeaderOrAdmin=${isLeaderOrAdmin}, isAdvisor=${isAdvisor}`);
 
-    console.log('About to call getGoogleSheetsAccessTokens...');
-    const accessTokens = await getGoogleSheetsAccessTokens(base44);
-    let accessToken = accessTokens[0];
-    let allTabs = [];
-
-    console.log(`Pobranie tokenów: ${accessTokens.length}`);
-    for (const token of accessTokens) {
-      const tabs = await getAllSheetTabs(token);
-      console.log(`Token ${token.substring(0, 20)}... dał ${tabs.length} zakładek`);
-      if (tabs.length > 0) {
-        accessToken = token;
-        allTabs = tabs;
-        break;
-      }
-    }
-    console.log(`Ostateczna liczba zakładek: ${allTabs.length}`);
+    const accessToken = await getGoogleSheetsAccessToken(base44);
+    const allTabs = await getAllSheetTabs(accessToken);
 
     // Pobierz konfigurację arkuszy – wyklucz wyłączone
     const sheetMappings = await base44.asServiceRole.entities.SheetGroupMapping.list();
     const activeTabs = allTabs.filter(tab => {
       const mapping = sheetMappings.find(m => (m.sheet_name || m.data?.sheet_name) === tab);
       const isActive = mapping?.is_active ?? mapping?.data?.is_active;
-      // Jeśli brak wpisu – domyślnie aktywny; jeśli is_active === false – pomijamy
       return !mapping || isActive !== false;
     });
+
+    console.log(`Aktywne zakładki do pobrania: ${activeTabs.length}`);
 
     const results = await Promise.all(activeTabs.map(tab => fetchLeadsFromSheet(accessToken, tab)));
 
