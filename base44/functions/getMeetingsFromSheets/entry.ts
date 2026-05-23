@@ -1,15 +1,34 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-const SPREADSHEET_ID = '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
+const SPREADSHEET_ID = Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID') || '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
+
+async function getGoogleSheetsConnection(base44) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await base44.asServiceRole.connectors.getConnection('googlesheets');
+    } catch (error) {
+      lastError = error;
+      await new Promise(resolve => setTimeout(resolve, attempt * 500));
+    }
+  }
+  throw lastError;
+}
 
 async function getAllSheetTabs(accessToken) {
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?includeGridData=false`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
-  if (!res.ok) return [];
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.log(`Google Sheets tabs error ${res.status}: ${errorText}`);
+    return [];
+  }
   const meta = await res.json();
-  return meta.sheets.map(s => s.properties.title);
+  const tabs = meta.sheets.map(s => s.properties.title);
+  console.log(`Google Sheets spreadsheet ${SPREADSHEET_ID}: ${tabs.length} zakładek`);
+  return tabs;
 }
 
 async function fetchLeadsFromSheet(accessToken, sheetTitle) {
@@ -161,15 +180,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden – brak uprawnień' }, { status: 403 });
     }
 
-    const { accessToken } = await base44.asServiceRole.connectors.getConnection('googlesheets');
+    const { accessToken } = await getGoogleSheetsConnection(base44);
     const allTabs = await getAllSheetTabs(accessToken);
 
     // Pobierz konfigurację arkuszy – wyklucz wyłączone
     const sheetMappings = await base44.asServiceRole.entities.SheetGroupMapping.list();
     const activeTabs = allTabs.filter(tab => {
-      const mapping = sheetMappings.find(m => m.sheet_name === tab);
+      const mapping = sheetMappings.find(m => (m.sheet_name || m.data?.sheet_name) === tab);
+      const isActive = mapping?.is_active ?? mapping?.data?.is_active;
       // Jeśli brak wpisu – domyślnie aktywny; jeśli is_active === false – pomijamy
-      return !mapping || mapping.is_active !== false;
+      return !mapping || isActive !== false;
     });
 
     const results = await Promise.all(activeTabs.map(tab => fetchLeadsFromSheet(accessToken, tab)));

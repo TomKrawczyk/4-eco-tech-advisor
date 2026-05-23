@@ -49,6 +49,13 @@ function extractTime(calStr) {
   return match ? `${match[1].padStart(2, "0")}:${match[2]}` : "";
 }
 
+function findSheetMapping(sheetMappings, sheetName) {
+  return sheetMappings.find(sm => {
+    const mappedName = sm.sheet_name || sm.data?.sheet_name || "";
+    return mappedName === sheetName || sheetName.startsWith(`${mappedName} `) || sheetName.startsWith(`${mappedName}-`);
+  });
+}
+
 // Widok spotkań dla zwykłego użytkownika – z pełnymi szczegółami i akcjami
 function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen }) {
   const groupedByDate = useMemo(() => {
@@ -365,8 +372,8 @@ export default function Meetings() {
       );
       let matchGroup = true;
       if (groupFilter !== "all") {
-        const mapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
-        matchGroup = mapping?.group_id === groupFilter;
+        const mapping = findSheetMapping(sheetMappings, m.sheet);
+        matchGroup = (mapping?.group_id || mapping?.data?.group_id) === groupFilter;
       }
       const matchSheet = sheetFilter === "all" || m.sheet === sheetFilter;
 
@@ -378,8 +385,8 @@ export default function Meetings() {
       } else if (currentUser?.role === "group_leader") {
         // Group leader widzi spotkania z arkuszy przypisanych do jego grupy
         if (currentUserGroupId) {
-          const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
-          const isSheetInMyGroup = sheetMapping?.group_id === currentUserGroupId;
+          const sheetMapping = findSheetMapping(sheetMappings, m.sheet);
+          const isSheetInMyGroup = (sheetMapping?.group_id || sheetMapping?.data?.group_id) === currentUserGroupId;
           // Lub spotkania przypisane do jego grupy (przez MeetingAssignment)
           const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
           const assignment = meetingAssignments.find(a => a.meeting_key === key);
@@ -399,8 +406,8 @@ export default function Meetings() {
         } else {
           // Nieprzypisane spotkanie – team leader widzi je jeśli arkusz jest przypisany do jego grupy
           if (currentUserGroupId) {
-            const sheetMapping = sheetMappings.find(sm => sm.sheet_name === m.sheet);
-            matchRole = sheetMapping?.group_id === currentUserGroupId;
+            const sheetMapping = findSheetMapping(sheetMappings, m.sheet);
+            matchRole = (sheetMapping?.group_id || sheetMapping?.data?.group_id) === currentUserGroupId;
           } else {
             matchRole = false;
           }
@@ -652,10 +659,11 @@ export default function Meetings() {
                       ) : null;
                     })()}
                     {(() => {
-                      const mapping = sheetMappings.find(sm => sm.sheet_name === sheet);
-                      return mapping?.group_name ? (
+                      const mapping = findSheetMapping(sheetMappings, sheet);
+                      const groupName = mapping?.group_name || mapping?.data?.group_name;
+                      return groupName ? (
                         <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px]">
-                          {mapping.group_name}
+                          {groupName}
                         </Badge>
                       ) : null;
                     })()}
