@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 function extractSpreadsheetId(value) {
   if (!value) return '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
@@ -29,16 +29,22 @@ function normalizeAccessToken(tokenData) {
 
 async function getGoogleSheetsAccessTokens(base44) {
   const tokens = [];
+
   try {
-    const connection = await base44.asServiceRole.connectors.getConnection('googlesheets');
-    const token = normalizeAccessToken(connection);
-    console.log('Token extracted, length:', token.length, 'starts with ya29:', token.startsWith('ya29'));
-    if (token) tokens.push(token);
+    const token = normalizeAccessToken(await base44.asServiceRole.connectors.getAccessToken('googlesheets'));
+    if (token && token.length > 20) tokens.push(token);
+  } catch (e) {
+    console.log('getAccessToken error:', e.message);
+  }
+
+  try {
+    const token = normalizeAccessToken(await base44.asServiceRole.connectors.getConnection('googlesheets'));
+    if (token && token.length > 20 && !tokens.includes(token)) tokens.push(token);
   } catch (e) {
     console.log('getConnection error:', e.message);
   }
 
-  if (tokens.length === 0) throw new Error('Nie udało się odczytać tokenu Google Sheets');
+  if (tokens.length === 0) throw new Error('Nie udało się odczytać prawidłowego tokenu Google Sheets');
   return tokens;
 }
 
@@ -213,7 +219,6 @@ Deno.serve(async (req) => {
 
     console.log('About to call getGoogleSheetsAccessTokens...');
     const accessTokens = await getGoogleSheetsAccessTokens(base44);
-    console.log('getGoogleSheetsAccessTokens returned:', accessTokens);
     let accessToken = accessTokens[0];
     let allTabs = [];
 
