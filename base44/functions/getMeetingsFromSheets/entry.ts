@@ -9,9 +9,21 @@ function extractSpreadsheetId(value) {
 const SPREADSHEET_ID = extractSpreadsheetId(Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID'));
 
 function normalizeAccessToken(tokenData) {
+  // getConnection returns { accessToken, connectionConfig }
   if (typeof tokenData === 'string') return tokenData;
-  if (tokenData?.accessToken) return tokenData.accessToken;
+  if (tokenData?.accessToken && typeof tokenData.accessToken === 'string') {
+    console.log('Extracted accessToken from object');
+    return tokenData.accessToken;
+  }
   if (tokenData?.access_token) return tokenData.access_token;
+  if (typeof tokenData === 'object' && tokenData) {
+    const firstValue = Object.values(tokenData).find(v => typeof v === 'string' && v.startsWith('ya29'));
+    if (firstValue) {
+      console.log('Extracted ya29 token from object values');
+      return firstValue;
+    }
+  }
+  console.log('normalizeAccessToken could not extract token');
   return '';
 }
 
@@ -20,14 +32,11 @@ async function getGoogleSheetsAccessTokens(base44) {
   try {
     const connection = await base44.asServiceRole.connectors.getConnection('googlesheets');
     const token = normalizeAccessToken(connection);
+    console.log('Token extracted, length:', token.length, 'starts with ya29:', token.startsWith('ya29'));
     if (token) tokens.push(token);
-  } catch (_) {}
-
-  try {
-    const accessToken = await base44.asServiceRole.connectors.getAccessToken('googlesheets');
-    const token = normalizeAccessToken(accessToken);
-    if (token && !tokens.includes(token)) tokens.push(token);
-  } catch (_) {}
+  } catch (e) {
+    console.log('getConnection error:', e.message);
+  }
 
   if (tokens.length === 0) throw new Error('Nie udało się odczytać tokenu Google Sheets');
   return tokens;
@@ -191,6 +200,8 @@ Deno.serve(async (req) => {
     const ua = allowedUsers.find(a => (a.email || a.data?.email) === user.email);
     const role = ua?.role || ua?.data?.role;
 
+    console.log(`User: ${user.email}, Role: ${role}, UA:`, ua);
+
     const isLeaderOrAdmin = role === 'admin' || role === 'group_leader' || role === 'team_leader';
     const isAdvisor = role === 'advisor' || role === 'user';
 
@@ -198,18 +209,25 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden – brak uprawnień' }, { status: 403 });
     }
 
+    console.log(`User has access. isLeaderOrAdmin=${isLeaderOrAdmin}, isAdvisor=${isAdvisor}`);
+
+    console.log('About to call getGoogleSheetsAccessTokens...');
     const accessTokens = await getGoogleSheetsAccessTokens(base44);
+    console.log('getGoogleSheetsAccessTokens returned:', accessTokens);
     let accessToken = accessTokens[0];
     let allTabs = [];
 
+    console.log(`Pobranie tokenów: ${accessTokens.length}`);
     for (const token of accessTokens) {
       const tabs = await getAllSheetTabs(token);
+      console.log(`Token ${token.substring(0, 20)}... dał ${tabs.length} zakładek`);
       if (tabs.length > 0) {
         accessToken = token;
         allTabs = tabs;
         break;
       }
     }
+    console.log(`Ostateczna liczba zakładek: ${allTabs.length}`);
 
     // Pobierz konfigurację arkuszy – wyklucz wyłączone
     const sheetMappings = await base44.asServiceRole.entities.SheetGroupMapping.list();
