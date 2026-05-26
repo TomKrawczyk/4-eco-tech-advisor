@@ -169,7 +169,7 @@ function MeetingForm({ initialData, onSave, onCancel, saving }) {
 }
 
 function MeetingDetail({ report, onBack, onDelete, onEdit }) {
-  const st = statusConfig[report.status || "planned"];
+  const st = statusConfig[report.status] || statusConfig.planned;
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
 
   return (
@@ -326,8 +326,15 @@ export default function MeetingReports() {
     }),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["meetingReports"] });
-      setSelectedReport(created);
-      setView("detail");
+      if (created && typeof created === "object" && created.id) {
+        setSelectedReport(created);
+        setView("detail");
+      } else {
+        setView("list");
+      }
+    },
+    onError: (err) => {
+      alert("Nie udało się zapisać raportu: " + (err?.message || "nieznany błąd"));
     },
   });
 
@@ -335,8 +342,15 @@ export default function MeetingReports() {
     mutationFn: ({ id, data }) => base44.entities.MeetingReport.update(id, data),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ["meetingReports"] });
-      setSelectedReport(updated);
-      setView("detail");
+      if (updated && typeof updated === "object" && updated.id) {
+        setSelectedReport(updated);
+        setView("detail");
+      } else {
+        setView("list");
+      }
+    },
+    onError: (err) => {
+      alert("Nie udało się zaktualizować raportu: " + (err?.message || "nieznany błąd"));
     },
   });
 
@@ -479,7 +493,7 @@ export default function MeetingReports() {
       ) : (
         <div className="space-y-2">
           {filtered.map((report, i) => {
-            const st = statusConfig[report.status || "planned"];
+            const st = statusConfig[report.status] || statusConfig.planned;
             return (
               <motion.button
                 key={report.id}
