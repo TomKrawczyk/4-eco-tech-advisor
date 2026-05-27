@@ -230,7 +230,7 @@ export default function Calendar() {
     queryKey: ["sheetMeetings"],
     queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data),
     enabled: !!currentUser && isLeaderOrAdmin,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
   });
 
   const { data: meetingAssignments = [] } = useQuery({
@@ -380,6 +380,11 @@ export default function Calendar() {
           owner_name: assignment?.assigned_user_name || `(${m.sheet})`,
           source: "sheet",
           is_sheet_meeting: true,
+          comments: m.comments || "",
+          interview_data: m.interview_data || null,
+          agent: m.agent || "",
+          sheet: m.sheet || "",
+          status_label: m.status || "",
         };
       });
   }, [allSheetMeetings, currentUser, isLeaderOrAdmin, meetingAssignments, events, sheetMappings, teamMemberEmails]);
