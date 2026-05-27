@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, isPast, isToday } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Plus, Pencil, Trash2, MapPin, Clock, User, FileText, CheckCircle2, XCircle, CalendarDays, Info, Phone } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Clock, User, FileText, CheckCircle2, XCircle, CalendarDays, Info, Phone, MessageSquare, HelpCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -201,39 +201,51 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                     </div>
 
                     {expandedId === ev.id && (
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-1.5 text-xs text-gray-700">
-                        <div className="font-semibold text-blue-800 text-[11px] uppercase tracking-wide mb-1">Szczegóły</div>
-                        {ev.client_name && (
-                          <div className="flex items-start gap-2">
-                            <User className="w-3 h-3 text-gray-400 mt-0.5 shrink-0" />
-                            <span className="break-words">{ev.client_name}</span>
+                      <div className="space-y-2">
+                        {/* Komentarz */}
+                        {ev.comments && (
+                          <div className="bg-emerald-50 border-l-4 border-emerald-400 rounded-r-lg p-3">
+                            <div className="flex items-center gap-1.5 text-emerald-700 text-[10px] font-bold uppercase tracking-wide mb-1.5">
+                              <MessageSquare className="w-3.5 h-3.5" /> Komentarz
+                            </div>
+                            <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{ev.comments}</p>
                           </div>
                         )}
-                        {ev.client_phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="w-3 h-3 text-gray-400 shrink-0" />
-                            <span>{ev.client_phone}</span>
+
+                        {/* Pytania i odpowiedzi */}
+                        {ev.interview_data && Object.keys(ev.interview_data).filter(k => ev.interview_data[k]).length > 0 && (
+                          <div className="bg-purple-50 border-l-4 border-purple-400 rounded-r-lg p-3">
+                            <div className="flex items-center gap-1.5 text-purple-700 text-[10px] font-bold uppercase tracking-wide mb-2">
+                              <HelpCircle className="w-3.5 h-3.5" /> Pytania i odpowiedzi
+                            </div>
+                            <div className="space-y-1.5">
+                              {Object.entries(ev.interview_data)
+                                .filter(([, v]) => v)
+                                .map(([k, v]) => (
+                                  <div key={k} className="bg-white rounded-md p-2 border border-purple-100">
+                                    <div className="text-[11px] font-semibold text-purple-700 mb-0.5">{k}</div>
+                                    <div className="text-sm text-gray-800 break-words">{v}</div>
+                                  </div>
+                                ))}
+                            </div>
                           </div>
                         )}
-                        {(ev.location || ev.client_address) && (
-                          <div className="flex items-start gap-2">
-                            <MapPin className="w-3 h-3 text-gray-400 mt-0.5 shrink-0" />
-                            <span className="break-words">{ev.location || ev.client_address}</span>
+
+                        {/* Dodatkowe info */}
+                        {(ev.agent || ev.sheet || ev.owner_name) && (
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-[11px] text-gray-600 space-y-0.5">
+                            {ev.agent && <div><span className="font-semibold">Agent:</span> {ev.agent}</div>}
+                            {ev.sheet && <div><span className="font-semibold">Arkusz:</span> {ev.sheet}</div>}
+                            {ev.owner_name && !ev.agent && (
+                              <div><span className="font-semibold">Handlowiec:</span> {ev.owner_name}</div>
+                            )}
                           </div>
                         )}
-                        {ev.description && (
-                          <div className="pt-1.5 border-t border-blue-200 mt-1.5">
-                            <div className="text-[10px] text-gray-500 uppercase mb-0.5">Opis</div>
-                            <p className="whitespace-pre-wrap break-words">{ev.description}</p>
+
+                        {!ev.comments && (!ev.interview_data || Object.keys(ev.interview_data).filter(k => ev.interview_data[k]).length === 0) && !ev.agent && !ev.sheet && (
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-500 italic text-center">
+                            Brak dodatkowych szczegółów od agenta
                           </div>
-                        )}
-                        {ev.owner_name && (
-                          <div className="text-[10px] text-gray-500 pt-1 border-t border-blue-200 mt-1.5">
-                            Handlowiec: {ev.owner_name}{ev.owner_email && ` (${ev.owner_email})`}
-                          </div>
-                        )}
-                        {!ev.client_name && !ev.client_phone && !ev.location && !ev.client_address && !ev.description && (
-                          <p className="text-gray-500 italic">Brak dodatkowych szczegółów</p>
                         )}
                       </div>
                     )}
