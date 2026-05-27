@@ -68,37 +68,45 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const rows = data.values || [];
   if (rows.length < 2) return { meetings: [], phoneContacts: [] };
 
-  const headers = rows[0];
+  // Normalizuj nagłówki: usuń NBSP, zamień wielokrotne spacje na pojedyncze, trim
+  const normHeader = (h) => String(h || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const headers = rows[0].map(normHeader);
+  const headersLower = headers.map(h => h.toLowerCase());
+
+  const findHeader = (predicate) => headersLower.findIndex(predicate);
 
   // Mapowanie kolumn na podstawie dokładnych nagłówków
   const columnMap = {
-    nameIdx: headers.findIndex(h => h.includes('Imię i nazwisko')),
-    phoneIdx: headers.findIndex(h =>
-      h.includes('Numer telefonu') ||
-      h.toLowerCase().includes('telefon') ||
-      h.toLowerCase().includes('tel.') ||
-      h.toLowerCase() === 'tel' ||
-      h.toLowerCase().includes('phone') ||
-      h.toLowerCase().includes('kontakt') && h.toLowerCase().includes('nr')
+    nameIdx: findHeader(h => h.includes('imię i nazwisko') || (h.includes('imię') && h.includes('nazwisko'))),
+    phoneIdx: findHeader(h =>
+      h.includes('numer telefonu') ||
+      h.includes('telefon') ||
+      h.includes('tel.') ||
+      h === 'tel' ||
+      h.includes('phone') ||
+      (h.includes('kontakt') && h.includes('nr'))
     ),
-    addressIdx: headers.findIndex(h => h === 'Adres'),
-    dateIdx: headers.findIndex(h => h === 'Data kontaktu'),
-    agentIdx: headers.findIndex(h => h === 'Agent dzwoniący'),
-    assignedIdx: headers.findIndex(h => h === 'Komu przypisane'),
+    addressIdx: findHeader(h => h === 'adres'),
+    dateIdx: findHeader(h => h === 'data kontaktu'),
+    agentIdx: findHeader(h => h === 'agent dzwoniący' || h.startsWith('agent ')),
+    assignedIdx: findHeader(h => h === 'komu przypisane' || h.includes('komu przypisane')),
     commentIdx: (() => {
-      // Najpierw szukamy dokładnie 'Komentarz DWS', potem szerzej 'komentarz', potem 'uwagi'/'notatki'
-      const exact = headers.findIndex(h => h && h.includes('Komentarz DWS'));
+      const exact = findHeader(h => h.includes('komentarz dws'));
       if (exact >= 0) return exact;
-      const broad = headers.findIndex(h => h && h.toLowerCase().includes('komentarz'));
+      const broad = findHeader(h => h.includes('komentarz'));
       if (broad >= 0) return broad;
-      return headers.findIndex(h => h && (h.toLowerCase().includes('uwagi') || h.toLowerCase().includes('notatki')));
+      return findHeader(h => h.includes('uwagi') || h.includes('notatki'));
     })(),
-    intIdx: headers.findIndex(h => h.includes('Zainteresowany rozmową z doradcą')),
-    calendarIdx: headers.findIndex(h => h.includes('Data i godzina spotkania')),
+    intIdx: findHeader(h => h.includes('zainteresowany rozmową z doradcą') || (h.includes('zainteresowany') && h.includes('doradc'))),
+    calendarIdx: findHeader(h => h.includes('data i godzina spotkania') || (h.includes('data') && h.includes('godzina') && h.includes('spotkan'))),
   };
 
   const { nameIdx, phoneIdx, addressIdx, dateIdx, agentIdx, assignedIdx, commentIdx, intIdx, calendarIdx } = columnMap;
 
+  console.log(`[${sheetTitle}] Headers:`, headers);
   console.log(`[${sheetTitle}] Mapowanie kolumn:`, columnMap);
 
   // Mapowanie pytań z nagłówków
@@ -126,17 +134,35 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
     }
   });
 
+  // Indeksy kolumn, które SĄ już użyte gdzie indziej i nie chcemy ich duplikować w interview
+  const reservedIdx = new Set(
+    [nameIdx, phoneIdx, addressIdx, dateIdx, agentIdx, assignedIdx, commentIdx, intIdx, calendarIdx]
+      .filter(i => typeof i === 'number' && i >= 0)
+  );
+  const mappedQuestionIdx = new Set(Object.values(questions).filter(i => typeof i === 'number' && i >= 0));
+
   const buildInterviewData = (row) => {
     const data = {};
 
+    // 1. Najpierw znane pytania (z porządnymi etykietami)
     for (const [key, idx] of Object.entries(questions)) {
       if (typeof idx === 'number' && idx >= 0) {
-        const answer = (row[idx] || '').trim();
-        if (answer) {
-          data[key] = answer;
-        }
+        const answer = (row[idx] || '').toString().trim();
+        if (answer) data[key] = answer;
       }
     }
+
+    // 2. Fallback: KAŻDA inna nie-pusta kolumna której nie użyliśmy nigdzie indziej
+    for (let i = 0; i < headers.length; i++) {
+      if (reservedIdx.has(i) || mappedQuestionIdx.has(i)) continue;
+      const label = headers[i];
+      if (!label) continue;
+      const value = (row[i] || '').toString().trim();
+      if (!value) continue;
+      // unikaj nadpisania już znanego klucza
+      if (!data[label]) data[label] = value;
+    }
+
     return Object.keys(data).length > 0 ? data : null;
   };
 
