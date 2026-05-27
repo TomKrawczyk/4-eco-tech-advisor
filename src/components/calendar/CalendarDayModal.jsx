@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, isPast, isToday } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Plus, Pencil, Trash2, MapPin, Clock, User, FileText, CheckCircle2, XCircle, CalendarDays } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Clock, User, FileText, CheckCircle2, XCircle, CalendarDays, Info, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -44,6 +44,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
   const queryClient = useQueryClient();
   const [postponeFor, setPostponeFor] = useState(null);
   const [newDate, setNewDate] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.CalendarEvent.update(id, { status }),
@@ -144,6 +145,16 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                       </div>
 
                       <div className="flex gap-1 shrink-0 flex-wrap justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-blue-700 border-blue-300 hover:bg-blue-50 text-[10px] gap-1"
+                          onClick={() => setExpandedId(expandedId === ev.id ? null : ev.id)}
+                          title="Pokaż szczegóły"
+                        >
+                          <Info className="w-3 h-3" />
+                          Szczegóły
+                        </Button>
                         {(ev.event_type === "meeting" || ev.is_sheet_meeting || ev.is_assignment) && (ev.owner_email === currentUser?.email || currentUser?.role === "admin" || !ev.owner_email) && (
                           <Link to={makeReportUrl(ev, day)} onClick={onClose}>
                             <Button size="sm" variant="outline" className="h-7 px-2 text-green-700 border-green-300 hover:bg-green-50 text-[10px] gap-1">
@@ -188,6 +199,44 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                         )}
                       </div>
                     </div>
+
+                    {expandedId === ev.id && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-1.5 text-xs text-gray-700">
+                        <div className="font-semibold text-blue-800 text-[11px] uppercase tracking-wide mb-1">Szczegóły</div>
+                        {ev.client_name && (
+                          <div className="flex items-start gap-2">
+                            <User className="w-3 h-3 text-gray-400 mt-0.5 shrink-0" />
+                            <span className="break-words">{ev.client_name}</span>
+                          </div>
+                        )}
+                        {ev.client_phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3 h-3 text-gray-400 shrink-0" />
+                            <span>{ev.client_phone}</span>
+                          </div>
+                        )}
+                        {(ev.location || ev.client_address) && (
+                          <div className="flex items-start gap-2">
+                            <MapPin className="w-3 h-3 text-gray-400 mt-0.5 shrink-0" />
+                            <span className="break-words">{ev.location || ev.client_address}</span>
+                          </div>
+                        )}
+                        {ev.description && (
+                          <div className="pt-1.5 border-t border-blue-200 mt-1.5">
+                            <div className="text-[10px] text-gray-500 uppercase mb-0.5">Opis</div>
+                            <p className="whitespace-pre-wrap break-words">{ev.description}</p>
+                          </div>
+                        )}
+                        {ev.owner_name && (
+                          <div className="text-[10px] text-gray-500 pt-1 border-t border-blue-200 mt-1.5">
+                            Handlowiec: {ev.owner_name}{ev.owner_email && ` (${ev.owner_email})`}
+                          </div>
+                        )}
+                        {!ev.client_name && !ev.client_phone && !ev.location && !ev.client_address && !ev.description && (
+                          <p className="text-gray-500 italic">Brak dodatkowych szczegółów</p>
+                        )}
+                      </div>
+                    )}
 
                     {postponeFor === ev.id && (
                       <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-2">
