@@ -408,15 +408,30 @@ export default function Calendar() {
     } else {
       calEvents = events.filter(e => e.owner_email === currentUser.email);
     }
+
+    const enrichedCalEvents = calEvents.map((event) => {
+      if (event.source !== "meeting_assignment" || !event.meeting_assignment_id) return event;
+      const assignment = meetingAssignments.find(a => a.meeting_key === event.meeting_assignment_id);
+      if (!assignment) return event;
+      return {
+        ...event,
+        comments: assignment.comments || event.comments || "",
+        agent: assignment.agent || event.agent || "",
+        sheet: assignment.sheet || event.sheet || "",
+        status_label: assignment.status || event.status_label || "Spotkanie",
+        interview_data: assignment.interview_data || event.interview_data || null,
+      };
+    });
+
     if (viewMode === "team" && isLeaderOrAdmin) {
-      const combinedEvents = [...calEvents, ...sheetMeetingEvents];
+      const combinedEvents = [...enrichedCalEvents, ...sheetMeetingEvents];
       if (selectedUserEmail !== "all") {
         return combinedEvents.filter(e => e.owner_email === selectedUserEmail);
       }
       return combinedEvents;
     }
-    return calEvents;
-  }, [events, currentUser, viewMode, groupUserEmails, isLeaderOrAdmin, sheetMeetingEvents, teamMemberEmails, selectedUserEmail]);
+    return enrichedCalEvents;
+  }, [events, currentUser, viewMode, groupUserEmails, isLeaderOrAdmin, sheetMeetingEvents, teamMemberEmails, selectedUserEmail, meetingAssignments]);
 
   // Dni miesiąca
   const monthStart = startOfMonth(currentMonth);
