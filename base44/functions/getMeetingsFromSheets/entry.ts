@@ -85,7 +85,14 @@ async function fetchLeadsFromSheet(accessToken, sheetTitle) {
     dateIdx: headers.findIndex(h => h === 'Data kontaktu'),
     agentIdx: headers.findIndex(h => h === 'Agent dzwoniący'),
     assignedIdx: headers.findIndex(h => h === 'Komu przypisane'),
-    commentIdx: headers.findIndex(h => h.includes('Komentarz DWS')),
+    commentIdx: (() => {
+      // Najpierw szukamy dokładnie 'Komentarz DWS', potem szerzej 'komentarz', potem 'uwagi'/'notatki'
+      const exact = headers.findIndex(h => h && h.includes('Komentarz DWS'));
+      if (exact >= 0) return exact;
+      const broad = headers.findIndex(h => h && h.toLowerCase().includes('komentarz'));
+      if (broad >= 0) return broad;
+      return headers.findIndex(h => h && (h.toLowerCase().includes('uwagi') || h.toLowerCase().includes('notatki')));
+    })(),
     intIdx: headers.findIndex(h => h.includes('Zainteresowany rozmową z doradcą')),
     calendarIdx: headers.findIndex(h => h.includes('Data i godzina spotkania')),
   };

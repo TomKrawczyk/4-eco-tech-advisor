@@ -233,27 +233,9 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                             </div>
                           )}
 
-                          {/* Informacje z arkusza (fallback gdy nie ma komentarza ani Q&A) */}
-                          {!ev.comments && interviewEntries.length === 0 && ev.description && (
-                            <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3">
-                              <div className="flex items-center gap-1.5 text-blue-700 text-[10px] font-bold uppercase tracking-wide mb-1.5">
-                                <Info className="w-3.5 h-3.5" /> Informacje z arkusza
-                              </div>
-                              <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{ev.description}</p>
-                            </div>
-                          )}
-
-                          {/* Meta info */}
-                          {(ev.agent || ev.sheet) && (
-                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-[11px] text-gray-600 space-y-0.5">
-                              {ev.agent && <div><span className="font-semibold">Agent:</span> {ev.agent}</div>}
-                              {ev.sheet && <div><span className="font-semibold">Arkusz:</span> {ev.sheet}</div>}
-                            </div>
-                          )}
-
-                          {!hasAny && (
+                          {!ev.comments && interviewEntries.length === 0 && !ev.agent && !ev.sheet && (
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-500 italic text-center">
-                              Brak dodatkowych szczegółów
+                              Brak komentarza i pytań w arkuszu
                             </div>
                           )}
                         </div>
