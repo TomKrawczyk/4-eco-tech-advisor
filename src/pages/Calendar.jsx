@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "@/components/shared/PageHeader";
-import { ChevronLeft, ChevronRight, Plus, Users, LayoutGrid, X, Phone, MapPin, Clock, EyeOff, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Users, LayoutGrid, X, Phone, MapPin, Clock, EyeOff, Eye, Info } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, isSameDay, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import CalendarEventModal from "@/components/calendar/CalendarEventModal.jsx";
@@ -26,6 +26,8 @@ function parseMeetingDate(str) {
 
 // Modal z listą spotkań/kontaktów dla danego dnia w trybie grup
 function GroupDayModal({ day, items, groupName, onClose, onHide, onUnhide, isAdmin, hiddenMeetings = [] }) {
+  const [expandedMeeting, setExpandedMeeting] = React.useState(null);
+  const [expandedContact, setExpandedContact] = React.useState(null);
   const meetings = items.filter(i => i.type === "meeting");
   const contacts = items.filter(i => i.type === "phone_contact");
 
@@ -59,48 +61,62 @@ function GroupDayModal({ day, items, groupName, onClose, onHide, onUnhide, isAdm
                 {meetings.map((m, i) => (
                   <div key={i} className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-1">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="font-semibold text-gray-900 text-sm">{m.client_name}</div>
-                      {isAdmin && m.meeting_key && (() => {
-                        const hiddenRecord = hiddenMeetings.find(h => h.meeting_key === m.meeting_key);
-                        return hiddenRecord ? (
-                          <button
-                            onClick={() => onUnhide(hiddenRecord.id)}
-                            className="shrink-0 flex items-center gap-1 text-[10px] text-green-600 hover:text-green-800 hover:bg-green-50 rounded px-1.5 py-0.5 border border-green-300 transition-colors"
-                            title="Odkryj spotkanie dla grupy"
-                          >
-                            <Eye className="w-3 h-3" /> Odkryj
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => onHide(m.meeting_key)}
-                            className="shrink-0 flex items-center gap-1 text-[10px] text-red-500 hover:text-red-700 hover:bg-red-50 rounded px-1.5 py-0.5 border border-red-200 transition-colors"
-                            title="Ukryj spotkanie przed grupą"
-                          >
-                            <EyeOff className="w-3 h-3" /> Ukryj
-                          </button>
-                        );
-                      })()}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 text-sm">{m.client_name}</div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => setExpandedMeeting(expandedMeeting === i ? null : i)}
+                          className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded px-1.5 py-0.5 border border-blue-300 transition-colors"
+                          title="Pokaż szczegóły"
+                        >
+                          <Info className="w-3 h-3" /> Szczegóły
+                        </button>
+                        {isAdmin && m.meeting_key && (() => {
+                          const hiddenRecord = hiddenMeetings.find(h => h.meeting_key === m.meeting_key);
+                          return hiddenRecord ? (
+                            <button
+                              onClick={() => onUnhide(hiddenRecord.id)}
+                              className="shrink-0 flex items-center gap-1 text-[10px] text-green-600 hover:text-green-800 hover:bg-green-50 rounded px-1.5 py-0.5 border border-green-300 transition-colors"
+                              title="Odkryj spotkanie dla grupy"
+                            >
+                              <Eye className="w-3 h-3" /> Odkryj
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => onHide(m.meeting_key)}
+                              className="shrink-0 flex items-center gap-1 text-[10px] text-red-500 hover:text-red-700 hover:bg-red-50 rounded px-1.5 py-0.5 border border-red-200 transition-colors"
+                              title="Ukryj spotkanie przed grupą"
+                            >
+                              <EyeOff className="w-3 h-3" /> Ukryj
+                            </button>
+                          );
+                        })()}
+                      </div>
                     </div>
+                    {expandedMeeting === i && (
+                      <div className="border-t border-emerald-200 pt-2 mt-2 space-y-1 text-xs text-gray-600">
+                        {m.location && (
+                          <div className="flex items-start gap-2">
+                            <MapPin className="w-3 h-3 text-gray-400 mt-0.5 shrink-0" />
+                            <span className="break-words">{m.location}</span>
+                          </div>
+                        )}
+                        {m.client_phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3 h-3 text-gray-400 shrink-0" />
+                            <span>{m.client_phone}</span>
+                          </div>
+                        )}
+                        {m.comments && (
+                          <div className="text-gray-500 italic">{m.comments}</div>
+                        )}
+                      </div>
+                    )}
                     {m.event_time && (
                       <div className="flex items-center gap-1 text-xs text-gray-600">
                         <Clock className="w-3 h-3" /> {m.event_time}
                       </div>
-                    )}
-                    {m.client_phone && (
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <Phone className="w-3 h-3" /> {m.client_phone}
-                      </div>
-                    )}
-                    {m.location && (
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <MapPin className="w-3 h-3" /> {m.location}
-                      </div>
-                    )}
-                    {m.agent && (
-                      <div className="text-xs text-gray-500">Agent: {m.agent}</div>
-                    )}
-                    {m.comments && (
-                      <div className="text-xs text-gray-500 italic">{m.comments}</div>
                     )}
                   </div>
                 ))}
@@ -116,30 +132,46 @@ function GroupDayModal({ day, items, groupName, onClose, onHide, onUnhide, isAdm
               <div className="space-y-2">
                 {contacts.map((c, i) => (
                   <div key={i} className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1">
-                    <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
-                    {c.event_time && (
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <Clock className="w-3 h-3" /> {c.event_time}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
                       </div>
-                    )}
-                    {c.client_phone && (
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <Phone className="w-3 h-3" /> {c.client_phone}
+                      <button
+                        onClick={() => setExpandedContact(expandedContact === i ? null : i)}
+                        className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded px-1.5 py-0.5 border border-blue-300 transition-colors shrink-0"
+                        title="Pokaż szczegóły"
+                      >
+                        <Info className="w-3 h-3" /> Szczegóły
+                      </button>
+                    </div>
+                    {expandedContact === i && (
+                      <div className="border-t border-blue-200 pt-2 mt-2 space-y-1 text-xs text-gray-600">
+                        {c.event_time && (
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-3 h-3 text-gray-400 shrink-0" /> {c.event_time}
+                          </div>
+                        )}
+                        {c.client_phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3 h-3 text-gray-400 shrink-0" /> {c.client_phone}
+                          </div>
+                        )}
+                        {c.address && (
+                          <div className="flex items-start gap-2">
+                            <MapPin className="w-3 h-3 text-gray-400 mt-0.5 shrink-0" />
+                            <span className="break-words">{c.address}</span>
+                          </div>
+                        )}
+                        {c.agent && (
+                          <div>Agent: {c.agent}</div>
+                        )}
+                        {c.status && (
+                          <div>Status: {c.status}</div>
+                        )}
+                        {c.comments && (
+                          <div className="italic">{c.comments}</div>
+                        )}
                       </div>
-                    )}
-                    {c.address && (
-                      <div className="flex items-center gap-1 text-xs text-gray-600">
-                        <MapPin className="w-3 h-3" /> {c.address}
-                      </div>
-                    )}
-                    {c.agent && (
-                      <div className="text-xs text-gray-500">Agent: {c.agent}</div>
-                    )}
-                    {c.status && (
-                      <div className="text-xs text-gray-500">Status: {c.status}</div>
-                    )}
-                    {c.comments && (
-                      <div className="text-xs text-gray-500 italic">{c.comments}</div>
                     )}
                   </div>
                 ))}
