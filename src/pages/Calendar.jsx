@@ -226,11 +226,14 @@ export default function Calendar() {
     enabled: !!currentUser,
   });
 
-  const { data: sheetResult } = useQuery({
+  const { data: sheetResult, refetch: refetchSheetMeetings } = useQuery({
     queryKey: ["sheetMeetings"],
     queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data),
     enabled: !!currentUser && isLeaderOrAdmin,
-    staleTime: 30 * 1000,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const { data: meetingAssignments = [] } = useQuery({

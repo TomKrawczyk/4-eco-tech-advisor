@@ -203,39 +203,44 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                       const interviewEntries = ev.interview_data
                         ? Object.entries(ev.interview_data).filter(([, v]) => v)
                         : [];
-                      const hasAny = ev.comments || interviewEntries.length > 0 || ev.description || ev.agent || ev.sheet;
                       return (
                         <div className="space-y-2">
-                          {/* Komentarz */}
+                          {(ev.sheet || ev.agent || ev.status_label) && (
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1 text-xs text-slate-600">
+                              {ev.sheet && <div><span className="font-semibold text-slate-800">Arkusz:</span> {ev.sheet}</div>}
+                              {ev.agent && <div><span className="font-semibold text-slate-800">Handlowiec z arkusza:</span> {ev.agent}</div>}
+                              {ev.status_label && <div><span className="font-semibold text-slate-800">Status z arkusza:</span> {ev.status_label}</div>}
+                            </div>
+                          )}
+
                           {ev.comments && (
                             <div className="bg-emerald-50 border-l-4 border-emerald-400 rounded-r-lg p-3">
                               <div className="flex items-center gap-1.5 text-emerald-700 text-[10px] font-bold uppercase tracking-wide mb-1.5">
-                                <MessageSquare className="w-3.5 h-3.5" /> Komentarz
+                                <MessageSquare className="w-3.5 h-3.5" /> Komentarz z arkusza
                               </div>
                               <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{ev.comments}</p>
                             </div>
                           )}
 
-                          {/* Pytania i odpowiedzi */}
                           {interviewEntries.length > 0 && (
                             <div className="bg-purple-50 border-l-4 border-purple-400 rounded-r-lg p-3">
                               <div className="flex items-center gap-1.5 text-purple-700 text-[10px] font-bold uppercase tracking-wide mb-2">
-                                <HelpCircle className="w-3.5 h-3.5" /> Pytania i odpowiedzi
+                                <HelpCircle className="w-3.5 h-3.5" /> Dane z arkusza
                               </div>
                               <div className="space-y-1.5">
                                 {interviewEntries.map(([k, v]) => (
                                   <div key={k} className="bg-white rounded-md p-2 border border-purple-100">
                                     <div className="text-[11px] font-semibold text-purple-700 mb-0.5">{k}</div>
-                                    <div className="text-sm text-gray-800 break-words">{v}</div>
+                                    <div className="text-sm text-gray-800 break-words whitespace-pre-wrap">{String(v)}</div>
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
 
-                          {!ev.comments && interviewEntries.length === 0 && !ev.agent && !ev.sheet && (
+                          {!ev.comments && interviewEntries.length === 0 && !ev.agent && !ev.sheet && !ev.status_label && (
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-500 italic text-center">
-                              Brak komentarza i pytań w arkuszu
+                              Brak danych z arkusza do pokazania
                             </div>
                           )}
                         </div>
