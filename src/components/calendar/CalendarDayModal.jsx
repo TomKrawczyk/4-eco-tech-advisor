@@ -146,14 +146,13 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
 
                       <div className="flex gap-1 shrink-0 flex-wrap justify-end">
                         <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-2 text-blue-700 border-blue-300 hover:bg-blue-50 text-[10px] gap-1"
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-blue-600 hover:bg-blue-50"
                           onClick={() => setExpandedId(expandedId === ev.id ? null : ev.id)}
                           title="Pokaż szczegóły"
                         >
-                          <Info className="w-3 h-3" />
-                          Szczegóły
+                          <Info className="w-3.5 h-3.5" />
                         </Button>
                         {(ev.event_type === "meeting" || ev.is_sheet_meeting || ev.is_assignment) && (ev.owner_email === currentUser?.email || currentUser?.role === "admin" || !ev.owner_email) && (
                           <Link to={makeReportUrl(ev, day)} onClick={onClose}>
@@ -200,55 +199,66 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                       </div>
                     </div>
 
-                    {expandedId === ev.id && (
-                      <div className="space-y-2">
-                        {/* Komentarz */}
-                        {ev.comments && (
-                          <div className="bg-emerald-50 border-l-4 border-emerald-400 rounded-r-lg p-3">
-                            <div className="flex items-center gap-1.5 text-emerald-700 text-[10px] font-bold uppercase tracking-wide mb-1.5">
-                              <MessageSquare className="w-3.5 h-3.5" /> Komentarz
+                    {expandedId === ev.id && (() => {
+                      const interviewEntries = ev.interview_data
+                        ? Object.entries(ev.interview_data).filter(([, v]) => v)
+                        : [];
+                      const hasAny = ev.comments || interviewEntries.length > 0 || ev.description || ev.agent || ev.sheet;
+                      return (
+                        <div className="space-y-2">
+                          {/* Komentarz */}
+                          {ev.comments && (
+                            <div className="bg-emerald-50 border-l-4 border-emerald-400 rounded-r-lg p-3">
+                              <div className="flex items-center gap-1.5 text-emerald-700 text-[10px] font-bold uppercase tracking-wide mb-1.5">
+                                <MessageSquare className="w-3.5 h-3.5" /> Komentarz
+                              </div>
+                              <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{ev.comments}</p>
                             </div>
-                            <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{ev.comments}</p>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Pytania i odpowiedzi */}
-                        {ev.interview_data && Object.keys(ev.interview_data).filter(k => ev.interview_data[k]).length > 0 && (
-                          <div className="bg-purple-50 border-l-4 border-purple-400 rounded-r-lg p-3">
-                            <div className="flex items-center gap-1.5 text-purple-700 text-[10px] font-bold uppercase tracking-wide mb-2">
-                              <HelpCircle className="w-3.5 h-3.5" /> Pytania i odpowiedzi
-                            </div>
-                            <div className="space-y-1.5">
-                              {Object.entries(ev.interview_data)
-                                .filter(([, v]) => v)
-                                .map(([k, v]) => (
+                          {/* Pytania i odpowiedzi */}
+                          {interviewEntries.length > 0 && (
+                            <div className="bg-purple-50 border-l-4 border-purple-400 rounded-r-lg p-3">
+                              <div className="flex items-center gap-1.5 text-purple-700 text-[10px] font-bold uppercase tracking-wide mb-2">
+                                <HelpCircle className="w-3.5 h-3.5" /> Pytania i odpowiedzi
+                              </div>
+                              <div className="space-y-1.5">
+                                {interviewEntries.map(([k, v]) => (
                                   <div key={k} className="bg-white rounded-md p-2 border border-purple-100">
                                     <div className="text-[11px] font-semibold text-purple-700 mb-0.5">{k}</div>
                                     <div className="text-sm text-gray-800 break-words">{v}</div>
                                   </div>
                                 ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Dodatkowe info */}
-                        {(ev.agent || ev.sheet || ev.owner_name) && (
-                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-[11px] text-gray-600 space-y-0.5">
-                            {ev.agent && <div><span className="font-semibold">Agent:</span> {ev.agent}</div>}
-                            {ev.sheet && <div><span className="font-semibold">Arkusz:</span> {ev.sheet}</div>}
-                            {ev.owner_name && !ev.agent && (
-                              <div><span className="font-semibold">Handlowiec:</span> {ev.owner_name}</div>
-                            )}
-                          </div>
-                        )}
+                          {/* Informacje z arkusza (fallback gdy nie ma komentarza ani Q&A) */}
+                          {!ev.comments && interviewEntries.length === 0 && ev.description && (
+                            <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3">
+                              <div className="flex items-center gap-1.5 text-blue-700 text-[10px] font-bold uppercase tracking-wide mb-1.5">
+                                <Info className="w-3.5 h-3.5" /> Informacje z arkusza
+                              </div>
+                              <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{ev.description}</p>
+                            </div>
+                          )}
 
-                        {!ev.comments && (!ev.interview_data || Object.keys(ev.interview_data).filter(k => ev.interview_data[k]).length === 0) && !ev.agent && !ev.sheet && (
-                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-500 italic text-center">
-                            Brak dodatkowych szczegółów od agenta
-                          </div>
-                        )}
-                      </div>
-                    )}
+                          {/* Meta info */}
+                          {(ev.agent || ev.sheet) && (
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-[11px] text-gray-600 space-y-0.5">
+                              {ev.agent && <div><span className="font-semibold">Agent:</span> {ev.agent}</div>}
+                              {ev.sheet && <div><span className="font-semibold">Arkusz:</span> {ev.sheet}</div>}
+                            </div>
+                          )}
+
+                          {!hasAny && (
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-500 italic text-center">
+                              Brak dodatkowych szczegółów
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {postponeFor === ev.id && (
                       <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-2">
