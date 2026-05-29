@@ -1,0 +1,34 @@
+{
+  "name": "ChecklistTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nazwa checklisty"
+    },
+    "slug": {
+      "type": "string",
+      "description": "Unikalny identyfikator checklisty"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Czy checklista jest aktywna"
+    },
+    "allowed_group_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista ID grup, kt\u00f3re mog\u0105 korzysta\u0107 z checklisty"
+    },
+    "version": {
+      "type": "string",
+      "description": "Wersja checklisty"
+    }
+  },
+  "required": [
+    "name",
+    "slug"
+  ]
+}

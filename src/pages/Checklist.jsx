@@ -10,6 +10,7 @@ import { smartUpdate } from "@/components/offline/offlineSync";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import SignaturePad from "@/components/shared/SignaturePad";
 import PhotoUploader from "@/components/shared/PhotoUploader";
+import ChecklistAccessNotice from "@/components/checklist/ChecklistAccessNotice";
 
 const Check = () => (
   <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor">
@@ -90,6 +91,11 @@ export default function Checklist() {
 
   const { currentUser } = useCurrentUser();
   const isAdmin = currentUser?.role === "admin";
+  const [checklistTemplates, setChecklistTemplates] = useState([]);
+  const currentUserGroupId = currentUser?.group_id || currentUser?.data?.group_id || null;
+  const activeNewChecklist = checklistTemplates.find(t => (t.data?.slug || t.slug) === "nowa-checklista-przegladu" && ((t.data?.is_active ?? t.is_active) !== false));
+  const allowedGroupIds = activeNewChecklist?.data?.allowed_group_ids || activeNewChecklist?.allowed_group_ids || [];
+  const canUseNewChecklist = isAdmin || allowedGroupIds.length === 0 || (currentUserGroupId && allowedGroupIds.includes(currentUserGroupId));
 
   const [checklistMode, setChecklistMode] = useState("PV");
 
@@ -119,6 +125,7 @@ export default function Checklist() {
 
   useEffect(() => {
     base44.functions.invoke('logActivity', { action_type: 'page_view', page_name: 'Checklist' }).catch(() => {});
+    base44.entities.ChecklistTemplate.list().then(setChecklistTemplates).catch(() => setChecklistTemplates([]));
   }, []);
 
   // Load PV report into form
@@ -317,6 +324,16 @@ export default function Checklist() {
       ))}
     </div>
   );
+
+  // ── Access control for new checklist ─────────────────────────────────────
+  if (!canUseNewChecklist) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Checklista Doradcy Technicznego" subtitle="Analiza i modernizacja instalacji" />
+        <ChecklistAccessNotice />
+      </div>
+    );
+  }
 
   // ── No report selected (PV mode) ─────────────────────────────────────────
   if (!currentReport && checklistMode === "PV") {
