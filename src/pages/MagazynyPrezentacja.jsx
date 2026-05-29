@@ -5,7 +5,8 @@ import useCurrentUser from "@/components/shared/useCurrentUser";
 import ChecklistAccessNotice from "@/components/checklist/ChecklistAccessNotice";
 import GroupAccessManager from "@/components/external-apps/GroupAccessManager";
 
-const APP_URL = "https://4-eco-prezentacja-magazyny-app.base44.app/";
+const ADMIN_APP_URL = "https://4-eco-prezentacja-magazyny-app.base44.app/";
+const VIEW_ONLY_APP_URL = "https://4-eco-prezentacja-magazyny-app.base44.app/?view=preview";
 const TEMPLATE_SLUG = "magazyny-prezentacja";
 
 export default function MagazynyPrezentacja() {
@@ -75,9 +76,11 @@ export default function MagazynyPrezentacja() {
     );
   }
 
+  const iframeUrl = isAdmin ? ADMIN_APP_URL : VIEW_ONLY_APP_URL;
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Prezentacja magazynów" subtitle="Osadzony widok z przypisaniem do grup" />
+      <PageHeader title="Prezentacja magazynów" subtitle={isAdmin ? "Admin zarządza dostępem i treścią" : "Podgląd prezentacji dla przypisanych grup"} />
 
       {isAdmin && (
         <GroupAccessManager
@@ -91,9 +94,15 @@ export default function MagazynyPrezentacja() {
         />
       )}
 
+      {!isAdmin && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+          Masz dostęp tylko do podglądu całej prezentacji. Dodawanie i edycja filmu są dostępne wyłącznie dla administratora.
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <iframe
-          src={APP_URL}
+          src={iframeUrl}
           title="Prezentacja magazynów"
           className="w-full min-h-[80vh]"
         />
