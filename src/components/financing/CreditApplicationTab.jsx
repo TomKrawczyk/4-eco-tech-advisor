@@ -160,6 +160,12 @@ export default function CreditApplicationTab() {
               ["borrower_mother_maiden_name", "Nazwisko rodowe mamy"], ["borrower_marital_status", "Stan cywilny"],
               ["borrower_children_count", "Ilość dzieci do 18 lat"], ["borrower_children_birth_dates", "Daty urodzin dzieci"],
               ["borrower_phone", "Nr telefonu"], ["borrower_email", "Adres mail", "email"], ["borrower_education", "Wykształcenie"],
+              ["borrower_net_income", "Dochód netto"], ["borrower_monthly_expenses", "Wydatki miesięczne"],
+              ["borrower_income_type", "Typ dochodu"], ["borrower_income_from", "Dochód od kiedy", "date"], ["borrower_income_to", "Dochód do kiedy", "date"],
+              ["borrower_employer_nip", "NIP pracodawcy"], ["borrower_employer_name", "Nazwa pracodawcy"], ["borrower_employer_phone", "Telefon pracodawcy"], ["borrower_position", "Stanowisko"],
+              ["borrower_home_street", "Adres zamieszkania - ulica / numer"], ["borrower_home_postal", "Adres zamieszkania - kod pocztowy"], ["borrower_home_city", "Adres zamieszkania - miejscowość / poczta"],
+              ["borrower_correspondence_street", "Adres korespondencyjny - ulica / numer"], ["borrower_correspondence_postal", "Adres korespondencyjny - kod pocztowy"], ["borrower_correspondence_city", "Adres korespondencyjny - miejscowość / poczta"],
+              ["borrower_installation_street", "Adres montażu - ulica / numer"], ["borrower_installation_postal", "Adres montażu - kod pocztowy"], ["borrower_installation_city", "Adres montażu - miejscowość / poczta"],
             ]}
             formData={formData}
             onFieldChange={onFieldChange}
@@ -172,10 +178,24 @@ export default function CreditApplicationTab() {
               ["coborrower_mother_maiden_name", "Nazwisko rodowe mamy"], ["coborrower_marital_status", "Stan cywilny"],
               ["coborrower_children_count", "Ilość dzieci do 18 lat"], ["coborrower_children_birth_dates", "Daty urodzin dzieci"],
               ["coborrower_phone", "Nr telefonu"], ["coborrower_email", "Adres mail", "email"], ["coborrower_education", "Wykształcenie"],
+              ["coborrower_net_income", "Dochód netto"], ["coborrower_monthly_expenses", "Wydatki miesięczne"],
+              ["coborrower_income_type", "Typ dochodu"], ["coborrower_income_from", "Dochód od kiedy", "date"], ["coborrower_income_to", "Dochód do kiedy", "date"],
+              ["coborrower_employer_nip", "NIP pracodawcy"], ["coborrower_employer_name", "Nazwa pracodawcy"], ["coborrower_employer_phone", "Telefon pracodawcy"], ["coborrower_position", "Stanowisko"],
+              ["coborrower_home_street", "Adres zamieszkania - ulica / numer"], ["coborrower_home_postal", "Adres zamieszkania - kod pocztowy"], ["coborrower_home_city", "Adres zamieszkania - miejscowość / poczta"],
+              ["coborrower_correspondence_street", "Adres korespondencyjny - ulica / numer"], ["coborrower_correspondence_postal", "Adres korespondencyjny - kod pocztowy"], ["coborrower_correspondence_city", "Adres korespondencyjny - miejscowość / poczta"],
+              ["coborrower_installation_street", "Adres montażu - ulica / numer"], ["coborrower_installation_postal", "Adres montażu - kod pocztowy"], ["coborrower_installation_city", "Adres montażu - miejscowość / poczta"],
             ]}
             formData={formData}
             onFieldChange={onFieldChange}
           />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <SmallField label="Dochód netto kredytobiorcy" value={formData.borrower_net_income} onChange={(e) => onFieldChange("borrower_net_income", e.target.value)} />
+          <SmallField label="Wydatki miesięczne kredytobiorcy" value={formData.borrower_monthly_expenses} onChange={(e) => onFieldChange("borrower_monthly_expenses", e.target.value)} />
+          <SmallField label="Dochód netto współkredytobiorcy" value={formData.coborrower_net_income} onChange={(e) => onFieldChange("coborrower_net_income", e.target.value)} />
+          <SmallField label="Wydatki miesięczne współkredytobiorcy" value={formData.coborrower_monthly_expenses} onChange={(e) => onFieldChange("coborrower_monthly_expenses", e.target.value)} />
+          <SmallField label="Imię i nazwisko przedstawiciela" value={formData.representative_name} onChange={(e) => onFieldChange("representative_name", e.target.value)} />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
