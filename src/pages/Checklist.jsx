@@ -11,6 +11,8 @@ import useCurrentUser from "@/components/shared/useCurrentUser";
 import SignaturePad from "@/components/shared/SignaturePad";
 import PhotoUploader from "@/components/shared/PhotoUploader";
 import ChecklistAccessNotice from "@/components/checklist/ChecklistAccessNotice";
+import PvTechnicalReviewForm from "@/components/checklist/PvTechnicalReviewForm";
+import { pvTechnicalReviewInitialState } from "@/components/checklist/pvTechnicalReviewConfig";
 
 const Check = () => (
   <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor">
@@ -92,6 +94,7 @@ export default function Checklist() {
   const { currentUser } = useCurrentUser();
   const isAdmin = currentUser?.role === "admin";
   const [checklistTemplates, setChecklistTemplates] = useState([]);
+  const [groups, setGroups] = useState([]);
   const currentUserGroupId = currentUser?.group_id || currentUser?.data?.group_id || null;
   const activeNewChecklist = checklistTemplates.find(t => (t.data?.slug || t.slug) === "nowa-checklista-przegladu" && ((t.data?.is_active ?? t.is_active) !== false));
   const allowedGroupIds = activeNewChecklist?.data?.allowed_group_ids || activeNewChecklist?.allowed_group_ids || [];
@@ -99,6 +102,9 @@ export default function Checklist() {
 
   const [checklistMode, setChecklistMode] = useState("PV");
   const isNewChecklistMode = checklistMode === "NOWA";
+  const [pvTechnicalReviewForm, setPvTechnicalReviewForm] = useState(pvTechnicalReviewInitialState);
+  const [selectedTemplateGroupIds, setSelectedTemplateGroupIds] = useState([]);
+  const [savingTemplateGroups, setSavingTemplateGroups] = useState(false);
 
   // ── PV state ────────────────────────────────────────────────────────────
   const [currentReport, setCurrentReport] = useState(null);
@@ -126,7 +132,16 @@ export default function Checklist() {
 
   useEffect(() => {
     base44.functions.invoke('logActivity', { action_type: 'page_view', page_name: 'Checklist' }).catch(() => {});
-    base44.entities.ChecklistTemplate.list().then(setChecklistTemplates).catch(() => setChecklistTemplates([]));
+    Promise.all([
+      base44.entities.ChecklistTemplate.list(),
+      base44.entities.Group.list(),
+    ]).then(([templates, availableGroups]) => {
+      setChecklistTemplates(templates);
+      setGroups(availableGroups);
+    }).catch(() => {
+      setChecklistTemplates([]);
+      setGroups([]);
+    });
   }, []);
 
   // Load PV report into form
@@ -304,6 +319,32 @@ export default function Checklist() {
     setGeneratingPdf(false);
   };
 
+  useEffect(() => {
+    setSelectedTemplateGroupIds(allowedGroupIds);
+  }, [activeNewChecklist?.id, JSON.stringify(allowedGroupIds)]);
+
+  const updatePvTechnicalReviewForm = (key, value) => {
+    setPvTechnicalReviewForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const toggleTemplateGroup = (groupId) => {
+    setSelectedTemplateGroupIds(prev => prev.includes(groupId)
+      ? prev.filter(id => id !== groupId)
+      : [...prev, groupId]
+    );
+  };
+
+  const saveTemplateGroups = async () => {
+    if (!activeNewChecklist?.id || !isAdmin) return;
+    setSavingTemplateGroups(true);
+    await base44.entities.ChecklistTemplate.update(activeNewChecklist.id, {
+      allowed_group_ids: selectedTemplateGroupIds,
+    });
+    const templates = await base44.entities.ChecklistTemplate.list();
+    setChecklistTemplates(templates);
+    setSavingTemplateGroups(false);
+  };
+
   const completedCount = Object.values(completedItems).filter(Boolean).length;
   const totalItems = pvChecklistItems.length;
   const progress = totalItems > 0 ? (completedCount / totalItems) * 100 : 0;
@@ -351,29 +392,23 @@ export default function Checklist() {
   if (isNewChecklistMode) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Przegląd techniczny PV" subtitle="Wersja przypisywana do grup" />
+        <PageHeader title="Przegląd techniczny PV" subtitle="Formularz na podstawie dostarczonego wzoru" />
         <div className="flex items-center justify-between flex-wrap gap-2">
           <ModeToggle />
+          {isAdmin && (
+            <Button onClick={saveTemplateGroups} disabled={savingTemplateGroups} className="bg-green-600 hover:bg-green-700">
+              {savingTemplateGroups ? "Zapisywanie..." : "Zapisz dostęp grup"}
+            </Button>
+          )}
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-6 md:p-8 space-y-6">
-          <div className="rounded-lg bg-green-50 border border-green-200 p-4">
-            <div className="text-sm font-semibold text-green-800">Wersja „Przegląd techniczny PV” jest już dostępna.</div>
-            <div className="text-sm text-green-700 mt-1">To osobny wariant z kontrolą dostępu po grupach. Jeśli chcesz, w kolejnym kroku odwzoruję dokładnie cały formularz z przesłanego wzoru.</div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border border-gray-200 p-4">
-              <div className="text-sm font-semibold text-gray-900 mb-2">Nazwa</div>
-              <div className="text-sm text-gray-600">{activeNewChecklist?.data?.name || activeNewChecklist?.name}</div>
-            </div>
-            <div className="rounded-lg border border-gray-200 p-4">
-              <div className="text-sm font-semibold text-gray-900 mb-2">Wersja</div>
-              <div className="text-sm text-gray-600">{activeNewChecklist?.data?.version || activeNewChecklist?.version || "-"}</div>
-            </div>
-          </div>
-          <div className="rounded-lg border border-dashed border-gray-300 p-5 text-sm text-gray-600">
-            Tutaj będzie nowy formularz checklisty z Twojego zdjęcia.
-          </div>
-        </div>
+        <PvTechnicalReviewForm
+          form={pvTechnicalReviewForm}
+          onChange={updatePvTechnicalReviewForm}
+          availableGroups={groups}
+          selectedGroupIds={selectedTemplateGroupIds}
+          onToggleGroup={toggleTemplateGroup}
+          isAdmin={isAdmin}
+        />
       </div>
     );
   }
