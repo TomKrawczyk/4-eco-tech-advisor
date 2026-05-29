@@ -76,7 +76,7 @@ export default function MagazynyPrezentacja() {
     );
   }
 
-  const iframeUrl = isAdmin ? ADMIN_APP_URL : VIEW_ONLY_APP_URL;
+  const cacheBustedUrl = `${isAdmin ? ADMIN_APP_URL : VIEW_ONLY_APP_URL}${(isAdmin ? ADMIN_APP_URL : VIEW_ONLY_APP_URL).includes("?") ? "&" : "?"}v=${Date.now()}`;
 
   return (
     <div className="space-y-6">
@@ -96,7 +96,8 @@ export default function MagazynyPrezentacja() {
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <iframe
-          src={iframeUrl}
+          key={cacheBustedUrl}
+          src={cacheBustedUrl}
           title="Prezentacja magazynów"
           className="w-full min-h-[80vh]"
         />
