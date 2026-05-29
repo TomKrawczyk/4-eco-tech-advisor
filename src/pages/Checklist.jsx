@@ -369,7 +369,11 @@ export default function Checklist() {
   // ── Mode Toggle ──────────────────────────────────────────────────────────
   const ModeToggle = () => (
     <div className="flex items-center bg-gray-100 rounded-xl p-1 w-fit">
-      {["PV", "PC", "NOWA"].map(mode => (
+      {[
+        "PV",
+        ...(isAdmin ? ["PC"] : []),
+        ...((isAdmin || canUseNewChecklist) ? ["NOWA"] : []),
+      ].map(mode => (
         <button key={mode} onClick={() => setChecklistMode(mode)}
           className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
             checklistMode === mode ? "bg-white text-green-700 shadow-sm border border-green-200" : "text-gray-500 hover:text-gray-700"
@@ -395,7 +399,7 @@ export default function Checklist() {
     return (
       <div className="space-y-6">
         <PageHeader title="Checklista Doradcy Technicznego" subtitle="Analiza i modernizacja instalacji" />
-        {isAdmin && <ModeToggle />}
+        {(isAdmin || canUseNewChecklist) && <ModeToggle />}
         <ReportSelector onSelectReport={setCurrentReport} currentReport={null} />
       </div>
     );
@@ -541,7 +545,7 @@ export default function Checklist() {
   return (
     <div className="space-y-6">
       <PageHeader title="Checklista Doradcy Technicznego" subtitle="Analiza i modernizacja instalacji" />
-      {isAdmin && <ModeToggle />}
+      {(isAdmin || canUseNewChecklist) && <ModeToggle />}
       <ReportSelector onSelectReport={setCurrentReport} currentReport={currentReport} />
 
       {/* Progress */}
