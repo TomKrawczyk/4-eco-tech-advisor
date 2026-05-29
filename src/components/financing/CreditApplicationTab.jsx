@@ -101,21 +101,10 @@ export default function CreditApplicationTab() {
     const canvas = await html2canvas(element, { scale: 2, backgroundColor: "#ffffff" });
     const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("p", "mm", "a4");
-    const pdfWidth = 210;
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    let heightLeft = pdfHeight;
-    let position = 0;
+    const pageWidth = 210;
+    const pageHeight = 297;
 
-    pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-    heightLeft -= 297;
-
-    while (heightLeft > 0) {
-      position = heightLeft - pdfHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-      heightLeft -= 297;
-    }
-
+    pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight);
     pdf.save("wniosek-kredytowy.pdf");
   };
 
