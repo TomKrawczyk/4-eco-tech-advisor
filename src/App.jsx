@@ -14,6 +14,7 @@ import ExportReports from '@/pages/ExportReports';
 import Documentation from '@/pages/Documentation';
 import AllReports from '@/pages/AllReports';
 import MagazynyPrezentacja from '@/pages/MagazynyPrezentacja';
+import Finansowanie from '@/pages/Finansowanie';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -118,6 +119,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="MagazynyPrezentacja">
             <MagazynyPrezentacja />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/Finansowanie"
+        element={
+          <LayoutWrapper currentPageName="Finansowanie">
+            <Finansowanie />
           </LayoutWrapper>
         }
       />
