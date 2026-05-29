@@ -80,7 +80,7 @@ export default function MagazynyPrezentacja() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Prezentacja magazynów" subtitle={isAdmin ? "Admin zarządza dostępem i treścią" : "Podgląd prezentacji dla przypisanych grup"} />
+      <PageHeader title="Prezentacja magazynów" />
 
       {isAdmin && (
         <GroupAccessManager
