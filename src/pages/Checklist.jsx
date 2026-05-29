@@ -95,10 +95,10 @@ export default function Checklist() {
   const isAdmin = currentUser?.role === "admin";
   const [checklistTemplates, setChecklistTemplates] = useState([]);
   const [groups, setGroups] = useState([]);
-  const currentUserGroupId = currentUser?.group_id || currentUser?.data?.group_id || null;
+  const effectiveUserGroupId = currentUser?.group_id || currentUser?.data?.group_id || currentUser?.allowedUser?.group_id || currentUser?.allowedUser?.data?.group_id || null;
   const activeNewChecklist = checklistTemplates.find(t => (t.data?.slug || t.slug) === "nowa-checklista-przegladu" && ((t.data?.is_active ?? t.is_active) !== false));
   const allowedGroupIds = activeNewChecklist?.data?.allowed_group_ids || activeNewChecklist?.allowed_group_ids || [];
-  const canUseNewChecklist = isAdmin || allowedGroupIds.length === 0 || (currentUserGroupId && allowedGroupIds.includes(currentUserGroupId));
+  const canUseNewChecklist = isAdmin || allowedGroupIds.length === 0 || (effectiveUserGroupId && allowedGroupIds.includes(effectiveUserGroupId));
 
   const [checklistMode, setChecklistMode] = useState("PV");
   const isNewChecklistMode = checklistMode === "NOWA";
