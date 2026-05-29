@@ -51,6 +51,8 @@ export default function PvTechnicalReviewForm({
                   value={form[field.key] || ""}
                   onChange={(e) => onChange(field.key, e.target.value)}
                   placeholder={field.placeholder}
+                  readOnly={field.readOnly}
+                  disabled={field.readOnly}
                 />
               </div>
             ))}

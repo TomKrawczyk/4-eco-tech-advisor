@@ -323,8 +323,21 @@ export default function Checklist() {
     setSelectedTemplateGroupIds(allowedGroupIds);
   }, [activeNewChecklist?.id, JSON.stringify(allowedGroupIds)]);
 
+  const parseCurrencyValue = (value) => {
+    const normalized = String(value || "").replace(/\s/g, "").replace(/,/g, ".").replace(/[^\d.-]/g, "");
+    const parsed = parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
   const updatePvTechnicalReviewForm = (key, value) => {
-    setPvTechnicalReviewForm(prev => ({ ...prev, [key]: value }));
+    setPvTechnicalReviewForm(prev => {
+      const next = { ...prev, [key]: value };
+      if (["system_price", "grant_amount", "thermomodernization_relief"].includes(key)) {
+        const finalAmount = parseCurrencyValue(next.system_price) - parseCurrencyValue(next.grant_amount) - parseCurrencyValue(next.thermomodernization_relief);
+        next.final_amount = finalAmount > 0 ? `${finalAmount}` : "0";
+      }
+      return next;
+    });
   };
 
   const toggleTemplateGroup = (groupId) => {

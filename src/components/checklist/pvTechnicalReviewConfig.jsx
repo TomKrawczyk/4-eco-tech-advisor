@@ -41,7 +41,7 @@ export const pvTechnicalReviewSections = [
       { key: "system_price", label: "Cena systemu", placeholder: "np. 39 900 zł" },
       { key: "grant_amount", label: "Dotacja", placeholder: "np. 10 000 zł" },
       { key: "thermomodernization_relief", label: "Termomodernizacja", placeholder: "np. 6 000 zł" },
-      { key: "final_amount", label: "Finalny", placeholder: "np. 23 900 zł" },
+      { key: "final_amount", label: "Finalny", placeholder: "np. 23 900 zł", readOnly: true },
       { key: "subscription_months", label: "Abonament (płatny po ... miesiącach)", placeholder: "np. 12" },
     ],
   },
