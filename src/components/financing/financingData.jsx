@@ -80,6 +80,38 @@ export const financialMaterials = [
   },
 ];
 
+export const incomeTypeOptions = [
+  "Umowa o pracę",
+  "Umowa o dzieło",
+  "Umowa zlecenie",
+  "Os. prowadząca działaność gospodarczą",
+  "Spółka cywilna",
+  "Emerytura",
+  "Świadczenie przedemerytalne",
+  "Renta",
+  "Renta socjalna",
+  "Renta resortowa",
+  "Gospodarstwo rolne",
+  "Działy specjalne produkcji rolnej",
+  "Umowa najmu",
+  "Mianowanie",
+  "Powołanie",
+  "Kontrakt marynarski",
+  "Kontrakt wojskowy",
+  "Kontrakt menedżerski",
+  "Prezesi i członkowie zarządu",
+  "Osoby duchowne",
+  "Radny",
+  "Posłowie",
+];
+
+export const pensionCardRequiredTypes = [
+  "Emerytura",
+  "Renta",
+  "Renta socjalna",
+  "Renta resortowa",
+];
+
 export const creditFormInitialData = {
   product_name: "",
   product_price: "",
@@ -132,6 +164,8 @@ export const creditFormInitialData = {
   coborrower_installation_city: "",
   borrower_income_type: "",
   coborrower_income_type: "",
+  borrower_pension_card_number: "",
+  coborrower_pension_card_number: "",
   borrower_income_from: "",
   coborrower_income_from: "",
   borrower_income_to: "",

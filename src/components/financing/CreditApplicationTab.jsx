@@ -6,7 +6,8 @@ import SignaturePad from "@/components/shared/SignaturePad";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { creditFormInitialData } from "./financingData";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { creditFormInitialData, incomeTypeOptions, pensionCardRequiredTypes } from "./financingData";
 
 const fieldRows = [
   ["borrower_pesel", "coborrower_pesel", "Pesel"],
@@ -46,6 +47,7 @@ const addressSections = [
 
 const incomeRows = [
   ["borrower_income_type", "coborrower_income_type", "Typ dochodu"],
+  ["borrower_pension_card_number", "coborrower_pension_card_number", "Nr legitymacji"],
   ["borrower_income_from", "coborrower_income_from", "Od kiedy"],
   ["borrower_income_to", "coborrower_income_to", "Do kiedy"],
   ["borrower_employer_nip", "coborrower_employer_nip", "NIP pracodawcy"],
@@ -63,19 +65,59 @@ function SmallField({ label, value, onChange, type = "text" }) {
   );
 }
 
+function IncomeTypeField({ label, value, onChange }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-gray-600">{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-9">
+          <SelectValue placeholder="Wybierz typ dochodu" />
+        </SelectTrigger>
+        <SelectContent>
+          {incomeTypeOptions.map((option) => (
+            <SelectItem key={option} value={option}>{option}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 function PersonColumn({ title, rows, formData, onFieldChange }) {
   return (
     <div className="space-y-3">
       <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-      {rows.map(([field, label, type]) => (
-        <SmallField
-          key={field}
-          label={label}
-          type={type || "text"}
-          value={formData[field]}
-          onChange={(e) => onFieldChange(field, e.target.value)}
-        />
-      ))}
+      {rows.map(([field, label, type]) => {
+        const isIncomeType = field.endsWith("_income_type");
+        const cardField = field.startsWith("borrower_") ? "borrower_pension_card_number" : "coborrower_pension_card_number";
+        const showCardField = isIncomeType && pensionCardRequiredTypes.includes(formData[field]);
+
+        return (
+          <div key={field} className="space-y-3">
+            {isIncomeType ? (
+              <IncomeTypeField
+                label={label}
+                value={formData[field]}
+                onChange={(value) => onFieldChange(field, value)}
+              />
+            ) : (
+              <SmallField
+                label={label}
+                type={type || "text"}
+                value={formData[field]}
+                onChange={(e) => onFieldChange(field, e.target.value)}
+              />
+            )}
+            {showCardField && (
+              <SmallField
+                label="Numer legitymacji"
+                value={formData[cardField]}
+                onChange={(e) => onFieldChange(cardField, e.target.value)}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
