@@ -13,6 +13,7 @@ import CleanupMeetings from '@/pages/CleanupMeetings';
 import ExportReports from '@/pages/ExportReports';
 import Documentation from '@/pages/Documentation';
 import AllReports from '@/pages/AllReports';
+import MagazynyPrezentacja from '@/pages/MagazynyPrezentacja';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -109,6 +110,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="Documentation">
             <Documentation />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/MagazynyPrezentacja"
+        element={
+          <LayoutWrapper currentPageName="MagazynyPrezentacja">
+            <MagazynyPrezentacja />
           </LayoutWrapper>
         }
       />
