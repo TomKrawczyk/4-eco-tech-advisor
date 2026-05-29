@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { RotateCw } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/shared/PageHeader";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import ChecklistAccessNotice from "@/components/checklist/ChecklistAccessNotice";
@@ -18,6 +20,7 @@ export default function MagazynyPrezentacja() {
   const [groups, setGroups] = useState([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [iframeVersion, setIframeVersion] = useState(Date.now());
 
   useEffect(() => {
     Promise.all([
@@ -76,11 +79,18 @@ export default function MagazynyPrezentacja() {
     );
   }
 
-  const cacheBustedUrl = `${isAdmin ? ADMIN_APP_URL : VIEW_ONLY_APP_URL}${(isAdmin ? ADMIN_APP_URL : VIEW_ONLY_APP_URL).includes("?") ? "&" : "?"}v=${Date.now()}`;
+  const embeddedBaseUrl = `${ADMIN_APP_URL}?view=preview&hideNotice=1&presenter=0&notes=0`;
+  const cacheBustedUrl = `${embeddedBaseUrl}&v=${iframeVersion}`;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Prezentacja magazynów" />
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <PageHeader title="Prezentacja magazynów" />
+        <Button variant="outline" onClick={() => setIframeVersion(Date.now())} className="gap-2">
+          <RotateCw className="w-4 h-4" />
+          Odśwież prezentację
+        </Button>
+      </div>
 
       {isAdmin && (
         <GroupAccessManager
@@ -100,6 +110,7 @@ export default function MagazynyPrezentacja() {
           src={cacheBustedUrl}
           title="Prezentacja magazynów"
           className="w-full min-h-[80vh]"
+          allow="fullscreen"
         />
       </div>
     </div>
