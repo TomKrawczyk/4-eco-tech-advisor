@@ -220,15 +220,20 @@ export default function CreditApplicationTab() {
               <tbody>
                 {fieldRows.map(([borrowerField, coborrowerField, label]) => (
                   <tr key={label}>
-                    <td className="border border-gray-300 p-1 font-medium">{label}</td>
-                    <td className="border border-gray-300 p-1">{formData[borrowerField]}</td>
-                    <td className="border border-gray-300 p-1">{formData[coborrowerField]}</td>
+                    <td className="w-[20%] border border-gray-300 p-1 font-medium">{label}</td>
+                    <td className="w-[40%] border border-gray-300 p-1">{formData[borrowerField]}</td>
+                    <td className="w-[40%] border border-gray-300 p-1">{formData[coborrowerField]}</td>
                   </tr>
                 ))}
                 {addressSections.map((section) => (
                   <tr key={section.title}>
-                    <td className="border border-gray-300 p-1 font-medium align-top text-[7px]">{section.title}</td>
-                    <td className="border border-gray-300 p-1">
+                    <td className="w-[20%] border border-gray-300 p-1 font-medium align-top text-[7px]">{section.title}</td>
+                    <td className="w-[40%] border border-gray-300 p-1">
+                      {section.labels.map((label, index) => (
+                        <div key={label}><span className="font-medium">{label}:</span> {formData[`borrower_${section.prefix}_${section.fields[index]}`]}</div>
+                      ))}
+                    </td>
+                    <td className="w-[40%] border border-gray-300 p-1">
                       {section.labels.map((label, index) => (
                         <div key={label}><span className="font-medium">{label}:</span> {formData[`coborrower_${section.prefix}_${section.fields[index]}`]}</div>
                       ))}
@@ -236,27 +241,27 @@ export default function CreditApplicationTab() {
                   </tr>
                 ))}
                 <tr>
-                  <td className="border border-gray-300 p-1 font-medium align-top text-[7px]">Źródło dochodów</td>
-                  <td className="border border-gray-300 p-1">
+                  <td className="w-[20%] border border-gray-300 p-1 font-medium align-top text-[7px]">Źródło dochodów</td>
+                  <td className="w-[40%] border border-gray-300 p-1">
                     {incomeRows.map(([field, , label]) => <div key={field}><span className="font-medium">{label}:</span> {formData[field]}</div>)}
                   </td>
-                  <td className="border border-gray-300 p-1">
+                  <td className="w-[40%] border border-gray-300 p-1">
                     {incomeRows.map(([, field, label]) => <div key={field}><span className="font-medium">{label}:</span> {formData[field]}</div>)}
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 p-1 font-medium">Dochód netto</td>
-                  <td className="border border-gray-300 p-1">{formData.borrower_net_income}</td>
-                  <td className="border border-gray-300 p-1">{formData.coborrower_net_income}</td>
+                  <td className="w-[20%] border border-gray-300 p-1 font-medium">Dochód netto</td>
+                  <td className="w-[40%] border border-gray-300 p-1">{formData.borrower_net_income}</td>
+                  <td className="w-[40%] border border-gray-300 p-1">{formData.coborrower_net_income}</td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 p-1 font-medium">Wydatki (mies.)</td>
-                  <td className="border border-gray-300 p-1">{formData.borrower_monthly_expenses}</td>
-                  <td className="border border-gray-300 p-1">{formData.coborrower_monthly_expenses}</td>
+                  <td className="w-[20%] border border-gray-300 p-1 font-medium">Wydatki (mies.)</td>
+                  <td className="w-[40%] border border-gray-300 p-1">{formData.borrower_monthly_expenses}</td>
+                  <td className="w-[40%] border border-gray-300 p-1">{formData.coborrower_monthly_expenses}</td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 p-1 font-medium">IMIĘ I NAZWISKO Przedstawiciela</td>
-                  <td className="border border-gray-300 p-1" colSpan={2}>{formData.representative_name}</td>
+                  <td className="w-[20%] border border-gray-300 p-1 font-medium">IMIĘ I NAZWISKO Przedstawiciela</td>
+                  <td className="w-[40%] border border-gray-300 p-1" colSpan={2}>{formData.representative_name}</td>
                 </tr>
               </tbody>
             </table>
@@ -271,9 +276,12 @@ export default function CreditApplicationTab() {
               <li>Podpisanie wniosku oraz umowy kredytowej w procesie paperless.</li>
               <li>Pełny obowiązek informacyjny: https://4-eco.pl/rodo.</li>
             </ol>
+            <p>
+              Wyrażam również zgodę na kontakt oraz przetwarzanie danych osobowych przez 4 ECO sp. z o.o. w zakresie niezbędnym do przygotowania oferty, obsługi procesu finansowania oraz kontaktu związanego z realizacją usługi.
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="grid grid-cols-3 gap-3 pt-2">
             <div className="text-center">
               {formData.advisor_signature ? <img src={formData.advisor_signature} alt="Podpis doradcy" className="h-12 mx-auto object-contain" /> : <div className="h-12" />}
               <div className="border-t border-gray-400 pt-1 text-[7px]">Data i podpis Sprzedawcy</div>
@@ -281,6 +289,10 @@ export default function CreditApplicationTab() {
             <div className="text-center">
               {formData.customer_signature ? <img src={formData.customer_signature} alt="Podpis klienta" className="h-12 mx-auto object-contain" /> : <div className="h-12" />}
               <div className="border-t border-gray-400 pt-1 text-[7px]">Data i podpis Kredytobiorcy</div>
+            </div>
+            <div className="text-center">
+              {formData.customer_signature ? <img src={formData.customer_signature} alt="Podpis klienta RODO" className="h-12 mx-auto object-contain" /> : <div className="h-12" />}
+              <div className="border-t border-gray-400 pt-1 text-[7px]">Podpis klienta pod zgodą RODO</div>
             </div>
           </div>
 
