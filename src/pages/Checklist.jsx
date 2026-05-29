@@ -98,6 +98,7 @@ export default function Checklist() {
   const canUseNewChecklist = isAdmin || allowedGroupIds.length === 0 || (currentUserGroupId && allowedGroupIds.includes(currentUserGroupId));
 
   const [checklistMode, setChecklistMode] = useState("PV");
+  const isNewChecklistMode = checklistMode === "NOWA";
 
   // ── PV state ────────────────────────────────────────────────────────────
   const [currentReport, setCurrentReport] = useState(null);
@@ -314,22 +315,22 @@ export default function Checklist() {
   // ── Mode Toggle ──────────────────────────────────────────────────────────
   const ModeToggle = () => (
     <div className="flex items-center bg-gray-100 rounded-xl p-1 w-fit">
-      {["PV", "PC"].map(mode => (
+      {["PV", "PC", "NOWA"].map(mode => (
         <button key={mode} onClick={() => setChecklistMode(mode)}
           className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
             checklistMode === mode ? "bg-white text-green-700 shadow-sm border border-green-200" : "text-gray-500 hover:text-gray-700"
           }`}>
-          {mode === "PV" ? "Fotowoltaika (PV)" : "Pompa ciepła (PC)"}
+          {mode === "PV" ? "Fotowoltaika (PV)" : mode === "PC" ? "Pompa ciepła (PC)" : "Nowa checklista"}
         </button>
       ))}
     </div>
   );
 
   // ── Access control for new checklist ─────────────────────────────────────
-  if (!canUseNewChecklist) {
+  if (isNewChecklistMode && !canUseNewChecklist) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Checklista Doradcy Technicznego" subtitle="Analiza i modernizacja instalacji" />
+        <PageHeader title="Nowa checklista przeglądu technicznego" subtitle="Wersja przypisywana do grup" />
         <ChecklistAccessNotice />
       </div>
     );
@@ -342,6 +343,37 @@ export default function Checklist() {
         <PageHeader title="Checklista Doradcy Technicznego" subtitle="Analiza i modernizacja instalacji" />
         {isAdmin && <ModeToggle />}
         <ReportSelector onSelectReport={setCurrentReport} currentReport={null} />
+      </div>
+    );
+  }
+
+  // ── NOWA CHECKLISTA ──────────────────────────────────────────────────────
+  if (isNewChecklistMode) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Nowa checklista przeglądu technicznego" subtitle="Wersja przypisywana do grup" />
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <ModeToggle />
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-6 md:p-8 space-y-6">
+          <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+            <div className="text-sm font-semibold text-green-800">Nowa wersja checklisty jest już dostępna.</div>
+            <div className="text-sm text-green-700 mt-1">To osobny wariant z kontrolą dostępu po grupach. Jeśli chcesz, w kolejnym kroku odwzoruję dokładnie cały formularz z przesłanego wzoru.</div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-gray-200 p-4">
+              <div className="text-sm font-semibold text-gray-900 mb-2">Nazwa</div>
+              <div className="text-sm text-gray-600">{activeNewChecklist?.data?.name || activeNewChecklist?.name}</div>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-4">
+              <div className="text-sm font-semibold text-gray-900 mb-2">Wersja</div>
+              <div className="text-sm text-gray-600">{activeNewChecklist?.data?.version || activeNewChecklist?.version || "-"}</div>
+            </div>
+          </div>
+          <div className="rounded-lg border border-dashed border-gray-300 p-5 text-sm text-gray-600">
+            Tutaj będzie nowy formularz checklisty z Twojego zdjęcia.
+          </div>
+        </div>
       </div>
     );
   }
