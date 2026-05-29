@@ -320,7 +320,7 @@ export default function Checklist() {
           className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
             checklistMode === mode ? "bg-white text-green-700 shadow-sm border border-green-200" : "text-gray-500 hover:text-gray-700"
           }`}>
-          {mode === "PV" ? "Fotowoltaika (PV)" : mode === "PC" ? "Pompa ciepła (PC)" : "Nowa checklista"}
+          {mode === "PV" ? "Fotowoltaika (PV)" : mode === "PC" ? "Pompa ciepła (PC)" : "Przegląd techniczny PV"}
         </button>
       ))}
     </div>
@@ -330,7 +330,7 @@ export default function Checklist() {
   if (isNewChecklistMode && !canUseNewChecklist) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Nowa checklista przeglądu technicznego" subtitle="Wersja przypisywana do grup" />
+        <PageHeader title="Przegląd techniczny PV" subtitle="Wersja przypisywana do grup" />
         <ChecklistAccessNotice />
       </div>
     );
@@ -351,13 +351,13 @@ export default function Checklist() {
   if (isNewChecklistMode) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Nowa checklista przeglądu technicznego" subtitle="Wersja przypisywana do grup" />
+        <PageHeader title="Przegląd techniczny PV" subtitle="Wersja przypisywana do grup" />
         <div className="flex items-center justify-between flex-wrap gap-2">
           <ModeToggle />
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-6 md:p-8 space-y-6">
           <div className="rounded-lg bg-green-50 border border-green-200 p-4">
-            <div className="text-sm font-semibold text-green-800">Nowa wersja checklisty jest już dostępna.</div>
+            <div className="text-sm font-semibold text-green-800">Wersja „Przegląd techniczny PV” jest już dostępna.</div>
             <div className="text-sm text-green-700 mt-1">To osobny wariant z kontrolą dostępu po grupach. Jeśli chcesz, w kolejnym kroku odwzoruję dokładnie cały formularz z przesłanego wzoru.</div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
