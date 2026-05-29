@@ -94,12 +94,6 @@ export default function MagazynyPrezentacja() {
         />
       )}
 
-      {!isAdmin && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
-          Masz dostęp tylko do podglądu całej prezentacji. Dodawanie i edycja filmu są dostępne wyłącznie dla administratora.
-        </div>
-      )}
-
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <iframe
           src={iframeUrl}
