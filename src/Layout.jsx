@@ -60,26 +60,19 @@ function DesktopDropdown({ label, items, isGroupActive, currentPageName }) {
 // Struktura nawigacji: pojedyncze linki lub grupy z dropdown
 const navStructure = [
   { name: "Dashboard", label: "Start" },
+  { name: "Checklist", label: "Checklista" },
+  { name: "Interview", label: "Wywiad" },
+  { name: "AutoconsumptionCalc", label: "Autokonsumpcja" },
   {
-    group: "Sprzedaż",
+    group: "Kalkulatory",
     items: [
-      { name: "Checklist", label: "Checklista" },
-      { name: "Interview", label: "Wywiad" },
-      { name: "Calendar", label: "Kalendarz" },
-      { name: "Referrals", label: "Polecenia" },
-      { name: "ContactPackages", label: "Paczki kontaktów", roles: ["admin", "group_leader", "team_leader", "advisor"] },
-    ]
-  },
-  {
-    group: "Kalkulatory i finanse",
-    items: [
-      { name: "AutoconsumptionCalc", label: "Autokonsumpcja" },
       { name: "PVCalculator", label: "Kalkulator PV" },
       { name: "ROICalculator", label: "Opłacalność" },
       { name: "Finansowanie", label: "Finansowanie" },
-      { name: "MagazynyPrezentacja", label: "Prezentacja magazynów" },
     ]
   },
+  { name: "Calendar", label: "Kalendarz" },
+  { name: "Referrals", label: "Polecenia" },
   {
     group: "Raportowanie",
     items: [
@@ -99,14 +92,11 @@ const navStructure = [
       { name: "PhoneContacts", label: "Kontakt telefoniczny" },
     ]
   },
-  {
-    group: "System",
-    items: [
-      { name: "Education", label: "Szkolenia" },
-      { name: "Documentation", label: "Dokumentacja", adminOnly: true },
-      { name: "UserManagement", label: "Użytkownicy", adminOnly: false, roles: ["admin", "hr_admin"] },
-    ]
-  },
+  { name: "Education", label: "Szkolenia" },
+  { name: "ContactPackages", label: "Paczki kontaktów", roles: ["admin", "group_leader", "team_leader", "advisor"] },
+  { name: "Documentation", label: "Dokumentacja", adminOnly: true },
+  { name: "MagazynyPrezentacja", label: "Prezentacja magazynów" },
+  { name: "UserManagement", label: "Użytkownicy", adminOnly: false, roles: ["admin", "hr_admin"] },
 ];
 
 export default function Layout({ children, currentPageName }) {
