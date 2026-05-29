@@ -6,7 +6,7 @@ import ChecklistAccessNotice from "@/components/checklist/ChecklistAccessNotice"
 import GroupAccessManager from "@/components/external-apps/GroupAccessManager";
 
 const ADMIN_APP_URL = "https://4-eco-prezentacja-magazyny-app.base44.app/";
-const VIEW_ONLY_APP_URL = "https://4-eco-prezentacja-magazyny-app.base44.app/?view=preview";
+const VIEW_ONLY_APP_URL = "https://4-eco-prezentacja-magazyny-app.base44.app/?view=preview&hideNotice=1";
 const TEMPLATE_SLUG = "magazyny-prezentacja";
 
 export default function MagazynyPrezentacja() {
