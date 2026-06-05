@@ -25,15 +25,15 @@ function parseMeetingCalendar(str) {
   return null;
 }
 
-export default function MeetingCard({ meeting, assignment, salespeople, assignmentsForDate, currentUserRole, meetingReports = [], groups = [], allAllowedUsers = [] }) {
+export default function MeetingCard({ meeting, assignment, salespeople, assignmentCountsForDate = {}, currentUserRole, meetingReports = [], groups = [], allAllowedUsers = [] }) {
   const [showDetail, setShowDetail] = useState(false);
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [overloadConfirm, setOverloadConfirm] = useState(null); // { userEmail, userName, count }
   const queryClient = useQueryClient();
 
-  const getAssignmentsCountForUserOnDate = (userEmail, date) => {
-    return assignmentsForDate.filter(a => a.assigned_user_email === userEmail && a.meeting_date === date).length;
+  const getAssignmentsCountForUserOnDate = (userEmail) => {
+    return assignmentCountsForDate[userEmail] || 0;
   };
 
   const meetingKey = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
@@ -373,7 +373,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                 <Select
                   onValueChange={(val) => {
                     const sp = salespeople.find(s => s.email === val);
-                    const count = getAssignmentsCountForUserOnDate(val, meeting.meeting_date);
+                    const count = getAssignmentsCountForUserOnDate(val);
                     if (count >= 5) {
                       setOverloadConfirm({ userEmail: val, userName: sp?.name || val, count });
                       return;
@@ -389,7 +389,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
                   </SelectTrigger>
                   <SelectContent>
                     {salespeople.map(sp => {
-                      const count = getAssignmentsCountForUserOnDate(sp.email, meeting.meeting_date);
+                      const count = getAssignmentsCountForUserOnDate(sp.email);
                       const full = count >= 5;
                       const warn = count >= 3 && count < 5;
                       return (

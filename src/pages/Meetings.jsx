@@ -283,6 +283,22 @@ export default function Meetings() {
     });
     return map;
   }, [allMeetings]);
+  const meetingAssignmentsByKey = useMemo(() => {
+    const map = {};
+    meetingAssignments.forEach(item => {
+      if (item.meeting_key) map[item.meeting_key] = item;
+    });
+    return map;
+  }, [meetingAssignments]);
+  const assignmentCountsByDate = useMemo(() => {
+    const map = {};
+    meetingAssignments.forEach(item => {
+      if (!item.meeting_date || !item.assigned_user_email) return;
+      if (!map[item.meeting_date]) map[item.meeting_date] = {};
+      map[item.meeting_date][item.assigned_user_email] = (map[item.meeting_date][item.assigned_user_email] || 0) + 1;
+    });
+    return map;
+  }, [meetingAssignments]);
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
   // Okno dat: dziś + 14 dni dla wszystkich (zwiększone z 3)
@@ -389,7 +405,7 @@ export default function Meetings() {
           const isSheetInMyGroup = (sheetMapping?.group_id || sheetMapping?.data?.group_id) === currentUserGroupId;
           // Lub spotkania przypisane do jego grupy (przez MeetingAssignment)
           const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-          const assignment = meetingAssignments.find(a => a.meeting_key === key);
+          const assignment = meetingAssignmentsByKey[key];
           const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
           matchRole = isSheetInMyGroup || isAssignedToMyGroup;
         }
@@ -397,7 +413,7 @@ export default function Meetings() {
       } else if (currentUser?.role === "team_leader") {
         // Team leader widzi spotkania przypisane bezpośrednio do niego lub do członków jego zespołu
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-        const assignment = meetingAssignments.find(a => a.meeting_key === key);
+        const assignment = meetingAssignmentsByKey[key];
         if (assignment) {
           const isAssignedToMe = assignment.assigned_user_email === currentUser.email;
           const isAssignedToMyTeam = teamMemberEmails.includes(assignment.assigned_user_email);
@@ -416,7 +432,7 @@ export default function Meetings() {
 
       return matchSearch && matchGroup && matchSheet && matchRole;
     });
-  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings, currentUser, currentUserGroupId, meetingAssignments, teamMemberEmails]);
+  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings, currentUser, currentUserGroupId, meetingAssignmentsByKey, teamMemberEmails]);
 
   // Grupuj po zakładce, potem po dacie
   const sheetGroups = useMemo(() => {
@@ -649,7 +665,7 @@ export default function Meetings() {
                     {(() => {
                       const unassigned = dates.reduce((acc, d) => acc + d.meetings.filter(m => {
                         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-                        const assignment = meetingAssignments.find(a => a.meeting_key === key);
+                        const assignment = meetingAssignmentsByKey[key];
                         return !assignment?.assigned_user_email;
                       }).length, 0);
                       return unassigned > 0 ? (
@@ -694,7 +710,7 @@ export default function Meetings() {
                             <div className="space-y-2">
                               {meetings.map((meeting, i) => {
                                 const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
-                                const assignment = meetingAssignments.find(a => a.meeting_key === key);
+                                const assignment = meetingAssignmentsByKey[key];
                                 return (
                                   <div key={i} className="flex gap-2 items-start">
                                     {(assignment?.comments || assignment?.agent || meeting.agent || meeting.interview_data) && (
@@ -718,7 +734,7 @@ export default function Meetings() {
                                        meeting={meeting}
                                        assignment={assignment}
                                        salespeople={salespeople}
-                                       assignmentsForDate={meetingAssignments.filter(a => a.meeting_date === meeting.meeting_date)}
+                                       assignmentCountsForDate={assignmentCountsByDate[meeting.meeting_date] || {}}
                                        currentUserRole={currentUser?.role}
                                        meetingReports={meetingReports}
                                        groups={groups}
