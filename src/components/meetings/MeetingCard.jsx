@@ -36,6 +36,25 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
     return assignmentsForDate.filter(a => a.assigned_user_email === userEmail && a.meeting_date === date).length;
   };
 
+  const meetingKey = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
+
+  const buildAssignmentPayload = ({ userEmail = "", userName = "" } = {}) => ({
+    meeting_key: meetingKey,
+    sheet: meeting.sheet,
+    client_name: meeting.client_name,
+    client_phone: meeting.phone || assignment?.client_phone || "",
+    client_address: meeting.address || assignment?.client_address || "",
+    meeting_calendar: meeting.meeting_calendar,
+    meeting_date: meeting.meeting_date,
+    agent: meeting.agent || assignment?.agent || "",
+    comments: meeting.comments || assignment?.comments || "",
+    interview_data: meeting.interview_data || assignment?.interview_data || {},
+    assigned_user_email: userEmail,
+    assigned_user_name: userName,
+    assigned_group_id: assignment?.assigned_group_id || null,
+    assigned_group_name: assignment?.assigned_group_name || null,
+  });
+
   const existingReport = meetingReports.find(r => {
     const nameMatch = (r.client_name || '').toLowerCase().trim() === (meeting.client_name || '').toLowerCase().trim();
     const authorMatch = !assignment || r.author_email === assignment.assigned_user_email || r.created_by === assignment.assigned_user_email;
@@ -140,86 +159,95 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
 
   const assignMutation = useMutation({
     mutationFn: async ({ userEmail, userName }) => {
-      const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
-      const contactData = {
-        client_phone: meeting.phone || assignment?.client_phone || "",
-        client_address: meeting.address || assignment?.client_address || "",
-        agent: meeting.agent || assignment?.agent || "",
-        comments: meeting.comments || assignment?.comments || "",
-        interview_data: meeting.interview_data || assignment?.interview_data || {},
+      const payload = buildAssignmentPayload({ userEmail, userName });
+      const savedAssignment = assignment
+        ? await base44.entities.MeetingAssignment.update(assignment.id, payload)
+        : await base44.entities.MeetingAssignment.create(payload);
+
+      const parsed = parseMeetingCalendar(meeting.meeting_calendar);
+      if (parsed && userEmail) {
+        Promise.resolve().then(async () => {
+          const existingEvents = await base44.entities.CalendarEvent.filter({ meeting_assignment_id: meetingKey });
+          const eventData = {
+            title: `Spotkanie: ${meeting.client_name}`,
+            description: `Arkusz: ${meeting.sheet}${payload.client_address ? `\nAdres: ${payload.client_address}` : ""}${payload.client_phone ? `\nTel: ${payload.client_phone}` : ""}`,
+            event_date: parsed.date,
+            event_time: parsed.time,
+            event_type: "meeting",
+            status: "planned",
+            client_name: meeting.client_name,
+            client_phone: payload.client_phone,
+            location: payload.client_address,
+            owner_email: userEmail,
+            owner_name: userName,
+            source: "meeting_assignment",
+            meeting_assignment_id: meetingKey,
+          };
+          await Promise.all([
+            ...existingEvents.map(ev => base44.entities.CalendarEvent.delete(ev.id)),
+            base44.entities.CalendarEvent.create(eventData),
+          ]);
+          queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
+        }).catch(() => {});
+      }
+
+      return savedAssignment;
+    },
+    onMutate: async ({ userEmail, userName }) => {
+      await queryClient.cancelQueries({ queryKey: ["meetingAssignments"] });
+      const previousAssignments = queryClient.getQueryData(["meetingAssignments"]) || [];
+      const optimisticAssignment = {
+        id: assignment?.id || `optimistic_${meetingKey}`,
+        ...buildAssignmentPayload({ userEmail, userName }),
       };
 
-      // Zapis przypisania i synchronizacja kalendarza – równolegle
-      const parsed = parseMeetingCalendar(meeting.meeting_calendar);
+      queryClient.setQueryData(["meetingAssignments"], (old = []) => {
+        const exists = old.some(item => item.meeting_key === meetingKey);
+        if (exists) {
+          return old.map(item => item.meeting_key === meetingKey ? { ...item, ...optimisticAssignment } : item);
+        }
+        return [...old, optimisticAssignment];
+      });
 
-      const [, existingEvents] = await Promise.all([
-        assignment
-          ? base44.entities.MeetingAssignment.update(assignment.id, {
-              assigned_user_email: userEmail,
-              assigned_user_name: userName,
-              ...contactData,
-            })
-          : base44.entities.MeetingAssignment.create({
-              meeting_key: key,
-              sheet: meeting.sheet,
-              client_name: meeting.client_name,
-              meeting_calendar: meeting.meeting_calendar,
-              meeting_date: meeting.meeting_date,
-              assigned_user_email: userEmail,
-              assigned_user_name: userName,
-              ...contactData,
-            }),
-        parsed
-          ? base44.entities.CalendarEvent.filter({ meeting_assignment_id: key })
-          : Promise.resolve([]),
-      ]);
-
-      if (parsed) {
-        const eventData = {
-          title: `Spotkanie: ${meeting.client_name}`,
-          description: `Arkusz: ${meeting.sheet}${(meeting.address || assignment?.client_address) ? `\nAdres: ${meeting.address || assignment?.client_address}` : ""}${(meeting.phone || assignment?.client_phone) ? `\nTel: ${meeting.phone || assignment?.client_phone}` : ""}`,
-          event_date: parsed.date,
-          event_time: parsed.time,
-          event_type: "meeting",
-          status: "planned",
-          client_name: meeting.client_name,
-          client_phone: meeting.phone || assignment?.client_phone || "",
-          location: meeting.address || assignment?.client_address || "",
-          owner_email: userEmail,
-          owner_name: userName,
-          source: "meeting_assignment",
-          meeting_assignment_id: key,
-        };
-        // Usuń stare i stwórz nowe równolegle
-        await Promise.all([
-          ...existingEvents.map(ev => base44.entities.CalendarEvent.delete(ev.id)),
-          base44.entities.CalendarEvent.create(eventData),
-        ]);
-      }
+      return { previousAssignments };
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
-      queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
       toast.success("Przypisano handlowca i dodano do kalendarza");
       createAssignmentNotifications(variables).catch(() => {});
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e, _variables, context) => {
+      if (context?.previousAssignments) {
+        queryClient.setQueryData(["meetingAssignments"], context.previousAssignments);
+      }
+      toast.error(e.message);
+    },
   });
 
   const unassignMutation = useMutation({
     mutationFn: async () => {
       if (!assignment) return;
       await base44.entities.MeetingAssignment.delete(assignment.id);
-      const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
-      const existingEvents = await base44.entities.CalendarEvent.filter({ meeting_assignment_id: key });
-      for (const ev of existingEvents) {
-        await base44.entities.CalendarEvent.delete(ev.id);
-      }
+      Promise.resolve().then(async () => {
+        const existingEvents = await base44.entities.CalendarEvent.filter({ meeting_assignment_id: meetingKey });
+        await Promise.all(existingEvents.map(ev => base44.entities.CalendarEvent.delete(ev.id)));
+        queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
+      }).catch(() => {});
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["meetingAssignments"] });
+      const previousAssignments = queryClient.getQueryData(["meetingAssignments"]) || [];
+      queryClient.setQueryData(["meetingAssignments"], (old = []) => old.filter(item => item.meeting_key !== meetingKey));
+      return { previousAssignments };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
-      queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
       toast.success("Usunięto przypisanie i wydarzenie z kalendarza");
+    },
+    onError: (_e, _variables, context) => {
+      if (context?.previousAssignments) {
+        queryClient.setQueryData(["meetingAssignments"], context.previousAssignments);
+      }
     },
   });
 

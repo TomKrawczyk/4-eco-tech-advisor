@@ -191,12 +191,32 @@ export default function PhoneContacts() {
 
   const assignMutation = useMutation({
     mutationFn: ({ contact, email, name }) => upsertContact(contact, { assigned_user_email: email, assigned_user_name: name }),
-    onSuccess: (savedRecord, variables) => {
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ["phoneContactsDB"] });
+      const previousContacts = queryClient.getQueryData(["phoneContactsDB"]) || [];
       queryClient.setQueryData(["phoneContactsDB"], (old = []) => {
         const exists = old.find(db => db.contact_key === variables.contact.contact_key);
         if (exists) {
           return old.map(db => db.contact_key === variables.contact.contact_key
             ? { ...db, assigned_user_email: variables.email, assigned_user_name: variables.name }
+            : db
+          );
+        }
+        return [...old, {
+          ...variables.contact,
+          contact_key: variables.contact.contact_key,
+          assigned_user_email: variables.email,
+          assigned_user_name: variables.name,
+        }];
+      });
+      return { previousContacts };
+    },
+    onSuccess: (savedRecord, variables) => {
+      queryClient.setQueryData(["phoneContactsDB"], (old = []) => {
+        const exists = old.find(db => db.contact_key === variables.contact.contact_key);
+        if (exists) {
+          return old.map(db => db.contact_key === variables.contact.contact_key
+            ? { ...db, ...savedRecord, assigned_user_email: variables.email, assigned_user_name: variables.name }
             : db
           );
         }
@@ -242,6 +262,11 @@ export default function PhoneContacts() {
             is_read: false,
           })),
         ]).catch(() => {});
+      }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousContacts) {
+        queryClient.setQueryData(["phoneContactsDB"], context.previousContacts);
       }
     },
   });
