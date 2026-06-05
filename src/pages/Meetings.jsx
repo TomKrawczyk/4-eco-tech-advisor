@@ -292,13 +292,13 @@ export default function Meetings() {
   }, [meetingAssignments]);
   const assignmentCountsByDate = useMemo(() => {
     const map = {};
-    meetingAssignments.forEach(item => {
-      if (!item.meeting_date || !item.assigned_user_email) return;
+    Object.values(meetingAssignmentsByKey).forEach(item => {
+      if (!item?.meeting_date || !item?.assigned_user_email) return;
       if (!map[item.meeting_date]) map[item.meeting_date] = {};
       map[item.meeting_date][item.assigned_user_email] = (map[item.meeting_date][item.assigned_user_email] || 0) + 1;
     });
     return map;
-  }, [meetingAssignments]);
+  }, [meetingAssignmentsByKey]);
   const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
 
   // Okno dat: dziś + 14 dni dla wszystkich (zwiększone z 3)
