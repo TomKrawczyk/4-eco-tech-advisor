@@ -3,6 +3,15 @@ const QUEUE_KEY = "4eco_offline_queue";
 const CURRENT_USER_CACHE_KEY = "4eco_cached_current_user";
 const QUEUE_EVENT_NAME = "4eco_offline_queue_changed";
 const CACHE_TTL = 24 * 60 * 60 * 1000;
+const OFFLINE_EXCLUDED_ENTITIES = new Set([
+  "AllowedUser",
+  "Group",
+  "SheetGroupMapping",
+  "MeetingAssignment",
+  "CalendarEvent",
+  "PhoneContact",
+  "Notification",
+]);
 
 function safeParse(value, fallback = null) {
   try {
@@ -141,6 +150,10 @@ function getOriginalMethod(entity, methodName) {
   return entity?.__offlineOriginals?.[methodName] || entity?.[methodName];
 }
 
+function isOfflineExcludedEntity(entityName) {
+  return OFFLINE_EXCLUDED_ENTITIES.has(entityName);
+}
+
 async function smartRead(requestFn, entityName, methodName, args, fallbackValue) {
   const cacheKey = buildReadCacheKey(entityName, methodName, args);
 
@@ -205,6 +218,14 @@ export function removeFromQueue(queueId) {
   setQueue(getQueue().filter((item) => item.queueId !== queueId));
 }
 
+function pruneExcludedQueueOperations() {
+  const queue = getQueue();
+  const filteredQueue = queue.filter((item) => !isOfflineExcludedEntity(item.entity));
+  if (filteredQueue.length !== queue.length) {
+    setQueue(filteredQueue);
+  }
+}
+
 export function isOnline() {
   return typeof navigator === "undefined" ? true : navigator.onLine;
 }
@@ -219,7 +240,7 @@ export function getCachedCurrentUser() {
 }
 
 export async function syncQueue(source) {
-  const queue = getQueue();
+  const queue = getQueue().filter((op) => !isOfflineExcludedEntity(op.entity));
   if (queue.length === 0) return { synced: 0, failed: 0 };
 
   const tempIdMap = {};
@@ -362,7 +383,7 @@ export async function smartDelete(entity, entityName, recordId) {
 
 function patchEntity(base44, entityName) {
   const entity = base44?.entities?.[entityName];
-  if (!entity || entity.__offlinePatched) return;
+  if (!entity || entity.__offlinePatched || isOfflineExcludedEntity(entityName)) return;
 
   entity.__offlineOriginals = {
     list: entity.list,
@@ -464,6 +485,7 @@ function patchAuth(base44) {
 export function initializeOfflineSupport(base44) {
   if (!base44 || base44.__offlineSupportInitialized) return base44;
 
+  pruneExcludedQueueOperations();
   patchAuth(base44);
   Object.keys(base44.entities || {}).forEach((entityName) => patchEntity(base44, entityName));
 
