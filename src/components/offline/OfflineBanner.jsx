@@ -37,17 +37,11 @@ export default function OfflineBanner() {
     };
   }, []);
 
-  const entityMap = {
-    VisitReport: base44.entities.VisitReport,
-    Referral: base44.entities.Referral,
-    MeetingReport: base44.entities.MeetingReport,
-  };
-
   const autoSync = async () => {
     if (getQueue().length === 0) return;
     setSyncing(true);
     try {
-      const { synced } = await syncQueue(entityMap);
+      const { synced } = await syncQueue(base44);
       if (synced > 0) {
         setJustSynced(true);
         setTimeout(() => setJustSynced(false), 4000);

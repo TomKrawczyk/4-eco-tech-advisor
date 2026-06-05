@@ -4,6 +4,7 @@ import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
 const AuthContext = createContext();
+const APP_PUBLIC_SETTINGS_CACHE_KEY = '4eco_public_settings_cache';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -36,6 +37,9 @@ export const AuthProvider = ({ children }) => {
       try {
         const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
         setAppPublicSettings(publicSettings);
+        try {
+          localStorage.setItem(APP_PUBLIC_SETTINGS_CACHE_KEY, JSON.stringify(publicSettings));
+        } catch (_) {}
         
         // If we got the app public settings successfully, check if user is authenticated
         if (appParams.token) {
@@ -47,6 +51,23 @@ export const AuthProvider = ({ children }) => {
         setIsLoadingPublicSettings(false);
       } catch (appError) {
         console.error('App state check failed:', appError);
+
+        if (!navigator.onLine) {
+          try {
+            const cachedPublicSettings = localStorage.getItem(APP_PUBLIC_SETTINGS_CACHE_KEY);
+            if (cachedPublicSettings) {
+              setAppPublicSettings(JSON.parse(cachedPublicSettings));
+              if (appParams.token) {
+                await checkUserAuth();
+              } else {
+                setIsLoadingAuth(false);
+                setIsAuthenticated(false);
+              }
+              setIsLoadingPublicSettings(false);
+              return;
+            }
+          } catch (_) {}
+        }
         
         // Handle app-level errors
         if (appError.status === 403 && appError.data?.extra_data?.reason) {
