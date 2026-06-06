@@ -1,5 +1,5 @@
-const STATIC_CACHE = "4eco-static-v1";
-const RUNTIME_CACHE = "4eco-runtime-v1";
+const STATIC_CACHE = "4eco-static-v2";
+const RUNTIME_CACHE = "4eco-runtime-v2";
 const CORE_ASSETS = ["/", "/index.html"];
 
 self.addEventListener("install", (event) => {
@@ -63,8 +63,6 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
-  const url = new URL(request.url);
-
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request));
     return;
@@ -76,7 +74,6 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (
-    url.origin === self.location.origin ||
     request.destination === "script" ||
     request.destination === "style" ||
     request.destination === "worker"
