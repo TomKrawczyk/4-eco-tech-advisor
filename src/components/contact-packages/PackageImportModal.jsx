@@ -46,7 +46,7 @@ function detectColumns(headers, sampleRows) {
   let addressIdx = findCol(headers, ["adres", "address", "miejscowość", "miejscowosc", "miasto", "ulica", "lokalizacja"]);
   let postalCodeIdx = findCol(headers, ["kod pocztowy", "kod", "postal", "zip", "postcode"]);
   let notesIdx = findCol(headers, ["notatki", "uwagi", "notes", "komentarz", "comments", "info", "opis"]);
-  let statusIdx = findCol(headers, ["status", "status kontaktu", "wynik", "etap", "stan", "opis statusu"]);
+  let statusIdx = findCol(headers, ["status", "status kontaktu", "status umowy", "status sprzedaży", "status sprzedazy", "umowa", "wynik", "etap", "stan", "opis statusu"]);
 
   // Jeśli nie znaleziono po nagłówkach — wykryj po zawartości (pierwsze 10 wierszy)
   if (nameIdx === -1 || phoneIdx === -1) {
@@ -89,10 +89,11 @@ function buildContacts(dataRows, mapping) {
     if (detectedPhone) contact.client_phone = detectedPhone;
     if (mapping.addressIdx >= 0 && row[mapping.addressIdx]) contact.client_address = row[mapping.addressIdx].toString().trim();
     if (mapping.postalCodeIdx >= 0 && row[mapping.postalCodeIdx]) contact.postal_code = row[mapping.postalCodeIdx].toString().trim();
+    if (mapping.statusIdx >= 0 && row[mapping.statusIdx]) contact.contract_status_preview = row[mapping.statusIdx].toString().trim();
 
     const noteParts = [];
     if (mapping.notesIdx >= 0 && row[mapping.notesIdx]) noteParts.push(row[mapping.notesIdx].toString().trim());
-    if (mapping.statusIdx >= 0 && row[mapping.statusIdx]) noteParts.push(`Status z arkusza: ${row[mapping.statusIdx].toString().trim()}`);
+    if (contact.contract_status_preview) noteParts.push(`Status umowy: ${contact.contract_status_preview}`);
     if (noteParts.length > 0) contact.notes = noteParts.join("\n");
 
     if (!contact.client_name) {
@@ -296,7 +297,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                     <div className="flex flex-col items-center gap-2">
                       <Upload className="w-8 h-8 text-gray-300" />
                       <p className="text-sm text-gray-500">Kliknij aby wybrać plik</p>
-                      <p className="text-xs text-gray-400">System automatycznie wykryje kolumny z imieniem, telefonem i adresem</p>
+                      <p className="text-xs text-gray-400">System automatycznie wykryje kolumny z imieniem, telefonem, adresem i statusem umowy</p>
                     </div>
                   )}
                   <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileChange} />
@@ -337,16 +338,19 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                       <option value={-1}>— brak —</option>
                       {headers.map((h, i) => <option key={i} value={i}>{h || `Kolumna ${i + 1}`}</option>)}
                     </select>
+                    <span className="text-gray-500">Status umowy:</span>
+                    <select
+                      value={mapping.statusIdx}
+                      onChange={e => updateMapping("statusIdx", e.target.value)}
+                      className="border border-green-200 rounded px-2 py-1 bg-white font-medium text-gray-800"
+                    >
+                      <option value={-1}>— brak —</option>
+                      {headers.map((h, i) => <option key={i} value={i}>{h || `Kolumna ${i + 1}`}</option>)}
+                    </select>
                     {mapping.notesIdx >= 0 && (
                       <>
                         <span className="text-gray-500">Notatki:</span>
                         <span className="font-medium text-gray-800">{colName(mapping.notesIdx)}</span>
-                      </>
-                    )}
-                    {mapping.statusIdx >= 0 && (
-                      <>
-                        <span className="text-gray-500">Status:</span>
-                        <span className="font-medium text-gray-800">{colName(mapping.statusIdx)}</span>
                       </>
                     )}
                   </div>
@@ -365,6 +369,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                           <th className="px-3 py-2 text-left text-gray-500 font-medium">Telefon</th>
                           <th className="px-3 py-2 text-left text-gray-500 font-medium">Kod</th>
                           <th className="px-3 py-2 text-left text-gray-500 font-medium">Adres</th>
+                          <th className="px-3 py-2 text-left text-gray-500 font-medium">Status umowy</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -374,6 +379,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                             <td className="px-3 py-2 text-gray-600">{c.client_phone || <span className="text-gray-300">—</span>}</td>
                             <td className="px-3 py-2 text-gray-600">{c.postal_code || <span className="text-gray-300">—</span>}</td>
                             <td className="px-3 py-2 text-gray-600 max-w-[120px] truncate">{c.client_address || <span className="text-gray-300">—</span>}</td>
+                            <td className="px-3 py-2 text-gray-600 max-w-[160px] truncate">{c.contract_status_preview || <span className="text-gray-300">—</span>}</td>
                           </tr>
                         ))}
                       </tbody>
