@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { creditFormInitialData, incomeTypeOptions, pensionCardRequiredTypes } from "./financingData";
+import { creditFormInitialData, incomeTypeOptions, pensionCardRequiredTypes, benefitNumberRequiredTypes } from "./financingData";
 
 const fieldRows = [
   ["borrower_pesel", "coborrower_pesel", "Pesel"],
@@ -48,6 +48,7 @@ const addressSections = [
 const incomeRows = [
   ["borrower_income_type", "coborrower_income_type", "Typ dochodu"],
   ["borrower_pension_card_number", "coborrower_pension_card_number", "Nr legitymacji"],
+  ["borrower_benefit_number", "coborrower_benefit_number", "Nr świadczenia"],
   ["borrower_income_from", "coborrower_income_from", "Od kiedy"],
   ["borrower_income_to", "coborrower_income_to", "Do kiedy"],
   ["borrower_employer_nip", "coborrower_employer_nip", "NIP pracodawcy"],
@@ -89,8 +90,11 @@ function PersonColumn({ title, rows, formData, onFieldChange }) {
       <h3 className="text-base font-semibold text-gray-900">{title}</h3>
       {rows.map(([field, label, type]) => {
         const isIncomeType = field.endsWith("_income_type");
-        const cardField = field.startsWith("borrower_") ? "borrower_pension_card_number" : "coborrower_pension_card_number";
+        const isBorrower = field.startsWith("borrower_");
+        const cardField = isBorrower ? "borrower_pension_card_number" : "coborrower_pension_card_number";
+        const benefitField = isBorrower ? "borrower_benefit_number" : "coborrower_benefit_number";
         const showCardField = isIncomeType && pensionCardRequiredTypes.includes(formData[field]);
+        const showBenefitField = isIncomeType && benefitNumberRequiredTypes.includes(formData[field]);
 
         return (
           <div key={field} className="space-y-3">
@@ -113,6 +117,13 @@ function PersonColumn({ title, rows, formData, onFieldChange }) {
                 label="Numer legitymacji"
                 value={formData[cardField]}
                 onChange={(e) => onFieldChange(cardField, e.target.value)}
+              />
+            )}
+            {showBenefitField && (
+              <SmallField
+                label="Numer świadczenia"
+                value={formData[benefitField]}
+                onChange={(e) => onFieldChange(benefitField, e.target.value)}
               />
             )}
           </div>

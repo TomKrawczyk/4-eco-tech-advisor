@@ -112,6 +112,10 @@ export const pensionCardRequiredTypes = [
   "Renta resortowa",
 ];
 
+export const benefitNumberRequiredTypes = [
+  "Świadczenie przedemerytalne",
+];
+
 export const creditFormInitialData = {
   product_name: "",
   product_price: "",
@@ -166,6 +170,8 @@ export const creditFormInitialData = {
   coborrower_income_type: "",
   borrower_pension_card_number: "",
   coborrower_pension_card_number: "",
+  borrower_benefit_number: "",
+  coborrower_benefit_number: "",
   borrower_income_from: "",
   coborrower_income_from: "",
   borrower_income_to: "",
