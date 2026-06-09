@@ -17,7 +17,20 @@ export default function FinancialMaterialsTab() {
             {section.points.map((point) => (
               <li key={point} className="flex gap-2">
                 <span className="text-green-600 font-bold">•</span>
-                <span>{point}</span>
+                <span>
+                  {point.includes("Kredytobiorca musi być nabywcą na umowie") ? (
+                    <>
+                      {point.split("Kredytobiorca musi być nabywcą na umowie").map((part, i) => (
+                        <React.Fragment key={i}>
+                          {i > 0 && <strong>Kredytobiorca musi być nabywcą na umowie</strong>}
+                          {part}
+                        </React.Fragment>
+                      ))}
+                    </>
+                  ) : (
+                    point
+                  )}
+                </span>
               </li>
             ))}
           </ul>
