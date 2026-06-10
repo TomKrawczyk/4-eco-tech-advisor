@@ -9,6 +9,7 @@ import {
   RotateCcw, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload, Archive, ArchiveRestore
 } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
+import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
 
 const STATUS_LABELS = {
   unassigned: "Nieprzypisany",
@@ -45,6 +46,8 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [showAppendImport, setShowAppendImport] = useState(false);
   const [archiveTab, setArchiveTab] = useState("active");
   const [sortMode, setSortMode] = useState("created");
+  const [leadDrafts, setLeadDrafts] = useState({});
+  const [meetingLead, setMeetingLead] = useState(null);
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -204,6 +207,18 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     },
   });
 
+  const updateLeadStatusMutation = useMutation({
+    mutationFn: ({ id, status, notes }) =>
+      base44.entities.ContactLead.update(id, {
+        status,
+        contact_notes: notes,
+        contacted_at: new Date().toISOString(),
+      }),
+    onSuccess: async () => {
+      await qc.refetchQueries({ queryKey: ["leads", pkg.id] });
+    },
+  });
+
   const filtered = useMemo(() => {
     return leads.filter(l => {
       const matchSearch =
@@ -247,6 +262,36 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     const interested = activeLeads.filter(l => l.status === "interested" || l.status === "meeting_scheduled").length;
     return { total, assigned, unassigned, interested, archived };
   }, [leads]);
+
+  const getLeadDraft = (lead) => leadDrafts[lead.id] || {
+    status: lead.status,
+    notes: lead.contact_notes || "",
+  };
+
+  const updateLeadDraft = (lead, patch) => {
+    setLeadDrafts((prev) => ({
+      ...prev,
+      [lead.id]: {
+        status: prev[lead.id]?.status ?? lead.status,
+        notes: prev[lead.id]?.notes ?? lead.contact_notes ?? "",
+        ...patch,
+      },
+    }));
+  };
+
+  const handleLeadSave = (lead) => {
+    const draft = getLeadDraft(lead);
+    if (draft.status === "meeting_scheduled") {
+      setMeetingLead({ ...lead, contact_notes: draft.notes });
+      return;
+    }
+
+    updateLeadStatusMutation.mutate({
+      id: lead.id,
+      status: draft.status,
+      notes: draft.notes,
+    });
+  };
 
   return (
     <div className="space-y-5">
@@ -494,6 +539,12 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                   ? new Date(lead.scheduled_meeting_date).toLocaleDateString("pl-PL", { day: "2-digit", month: "long", year: "numeric" })
                   : "";
 
+                const canEditOwnAssignedLead =
+                  archiveTab === "active" &&
+                  ["group_leader", "team_leader"].includes(currentUser?.role) &&
+                  lead.assigned_user_email === currentUser?.email;
+                const leadDraft = getLeadDraft(lead);
+
                 return (
                   <div key={lead.id} className={selected.has(lead.id) ? "bg-green-50/50" : ""}>
                     <div
@@ -548,8 +599,40 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                           <div className="text-gray-500">{lead.client_address || "Brak adresu"}</div>
                         </div>
                         <div className="bg-green-50 rounded-lg p-3">
-                          <div className="text-xs font-semibold text-green-700 uppercase mb-1">Notatka doradcy</div>
-                          {advisorNote ? (
+                          <div className="text-xs font-semibold text-green-700 uppercase mb-2">
+                            {canEditOwnAssignedLead ? "Status i notatka" : "Notatka doradcy"}
+                          </div>
+                          {canEditOwnAssignedLead ? (
+                            <div className="space-y-3">
+                              <select
+                                value={leadDraft.status}
+                                onChange={(e) => updateLeadDraft(lead, { status: e.target.value })}
+                                className="border border-green-200 rounded-lg px-3 py-2 text-sm bg-white w-full"
+                              >
+                                {Object.entries(STATUS_LABELS).filter(([value]) => value !== "unassigned" && value !== "assigned").map(([value, label]) => (
+                                  <option key={value} value={value}>{label}</option>
+                                ))}
+                              </select>
+                              {leadDraft.status === "meeting_scheduled" && (
+                                <p className="text-xs text-purple-600">Kliknij „Zapisz zmiany”, aby wybrać termin spotkania.</p>
+                              )}
+                              <textarea
+                                value={leadDraft.notes}
+                                onChange={(e) => updateLeadDraft(lead, { notes: e.target.value })}
+                                rows={3}
+                                className="border border-green-200 rounded-lg px-3 py-2 text-sm w-full resize-none focus:outline-none focus:ring-2 focus:ring-green-200"
+                                placeholder="Notatki z rozmowy..."
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleLeadSave(lead)}
+                                disabled={updateLeadStatusMutation.isPending}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                Zapisz zmiany
+                              </Button>
+                            </div>
+                          ) : advisorNote ? (
                             <p className="text-gray-700 whitespace-pre-wrap">{advisorNote}</p>
                           ) : (
                             <p className="text-gray-400 italic">Brak notatki doradcy</p>
@@ -580,6 +663,18 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
             </div>
           )}
         </div>
+      )}
+
+      {meetingLead && (
+        <ScheduleMeetingModal
+          lead={meetingLead}
+          currentUser={currentUser}
+          onClose={() => setMeetingLead(null)}
+          onSuccess={async () => {
+            setMeetingLead(null);
+            await qc.refetchQueries({ queryKey: ["leads", pkg.id] });
+          }}
+        />
       )}
     </div>
   );
