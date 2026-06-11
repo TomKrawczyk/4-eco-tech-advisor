@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
     try { body = await req.json(); } catch (_) {}
     const date = body?.date || localYMD(new Date());
     const compact = body?.compact === true;
+    const saveToStorage = body?.save_to_storage === true;
     const svc = base44.asServiceRole.entities;
     const [allowedUsers, groups, meetingAssign, meetingReports, phoneContacts, phoneReports] = await Promise.all([
       fetchAll(svc.AllowedUser), fetchAll(svc.Group),
@@ -84,17 +85,43 @@ Deno.serve(async (req) => {
     for (const r of B.phone_reported) { const e = em(r.author_email); if (e) ensureB(e).pr++; }
 
     const fbCount = A.phone_assigned.filter((r) => isFb(r.contact_key)).length;
+    const generatedAt = new Date().toISOString();
 
-    const responseBody = {
+    const compactResponseBody = {
       report_date: date,
-      generated_at: new Date().toISOString(),
-      ...(compact ? { advisorsByEmail } : { advisors }),
+      generated_at: generatedAt,
+      advisorsByEmail,
       totals_A: { meetings_assigned: A.meetings_assigned.length, meeting_reports: A.meeting_reports.length, phone_assigned: A.phone_assigned.length, phone_reported: A.phone_reported.length, facebook: fbCount },
       totals_B: { meeting_reports: B.meeting_reports.length, phone_reported: B.phone_reported.length },
       perGroup,
       perPersonA,
       perPersonB,
     };
+
+    const responseBody = compact
+      ? compactResponseBody
+      : {
+          report_date: date,
+          generated_at: generatedAt,
+          advisors,
+          totals_A: compactResponseBody.totals_A,
+          totals_B: compactResponseBody.totals_B,
+          perGroup,
+          perPersonA,
+          perPersonB,
+        };
+
+    if (saveToStorage) {
+      try {
+        const jsonFile = new File(
+          [JSON.stringify(compactResponseBody, null, 2)],
+          `raport_dane_${date}.json`,
+          { type: 'application/json' }
+        );
+        const uploadResult = await base44.integrations.Core.UploadFile({ file: jsonFile });
+        if (uploadResult?.file_url) responseBody.file_url = uploadResult.file_url;
+      } catch (_) {}
+    }
 
     return new Response(JSON.stringify(responseBody), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
