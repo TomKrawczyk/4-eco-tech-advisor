@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
     let body = {};
     try { body = await req.json(); } catch (_) {}
     const date = body?.date || localYMD(new Date());
+    const compact = body?.compact === true;
     const svc = base44.asServiceRole.entities;
     const [allowedUsers, groups, meetingAssign, meetingReports, phoneContacts, phoneReports] = await Promise.all([
       fetchAll(svc.AllowedUser), fetchAll(svc.Group),
@@ -42,8 +43,14 @@ Deno.serve(async (req) => {
     const advisors = allowedUsers
       .filter((u) => (u.role === 'advisor' || u.role === 'group_leader') && u.group_id !== TEST_GROUP)
       .map((u) => ({ name: u.name || '', email: (u.email || '').trim(), role: u.role, group: u.group_id ? (groupName[u.group_id] || '—') : '—' }));
+    const advisorsByEmail = {};
     const advGroup = {};
-    for (const a of advisors) advGroup[em(a.email)] = a.group;
+    for (const a of advisors) {
+      const emailKey = em(a.email);
+      if (!emailKey) continue;
+      advisorsByEmail[emailKey] = { name: a.name, group: a.group };
+      advGroup[emailKey] = a.group;
+    }
 
     const A = {
       meetings_assigned: meetingAssign.filter((r) => r.meeting_date === date),
@@ -78,12 +85,18 @@ Deno.serve(async (req) => {
 
     const fbCount = A.phone_assigned.filter((r) => isFb(r.contact_key)).length;
 
-    return new Response(JSON.stringify({
-      report_date: date, generated_at: new Date().toISOString(), advisors,
+    const responseBody = {
+      report_date: date,
+      generated_at: new Date().toISOString(),
+      ...(compact ? { advisorsByEmail } : { advisors }),
       totals_A: { meetings_assigned: A.meetings_assigned.length, meeting_reports: A.meeting_reports.length, phone_assigned: A.phone_assigned.length, phone_reported: A.phone_reported.length, facebook: fbCount },
       totals_B: { meeting_reports: B.meeting_reports.length, phone_reported: B.phone_reported.length },
-      perGroup, perPersonA, perPersonB,
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      perGroup,
+      perPersonA,
+      perPersonB,
+    };
+
+    return new Response(JSON.stringify(responseBody), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e?.message || e) }), { status: 500 });
   }
