@@ -105,6 +105,13 @@ Deno.serve(async (req) => {
       totals_B: { meeting_reports: B.meeting_reports.length, phone_reported: B.phone_reported.length },
       perGroup, unassigned, perPersonA, perPersonB, facebook,
     };
+
+    if (body?.agg) {
+      const slim = { ...result };
+      delete slim.advisorsByEmail;
+      return new Response(JSON.stringify(slim, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
     return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e?.message || e) }), { status: 500 });
