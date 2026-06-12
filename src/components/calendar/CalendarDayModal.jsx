@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, isPast, isToday } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Plus, Pencil, Trash2, MapPin, Clock, User, FileText, CheckCircle2, XCircle, CalendarDays, Info, Phone, MessageSquare, HelpCircle } from "lucide-react";
@@ -40,7 +41,7 @@ function makeReportUrl(ev, day) {
   return `/MeetingReports?${params.toString()}`;
 }
 
-export default function CalendarDayModal({ day, events, currentUser, viewMode, onClose, onEdit, onDelete, onAdd }) {
+export default function CalendarDayModal({ day, events, currentUser, viewMode, reassignableUsers = [], onClose, onEdit, onDelete, onAdd }) {
   const queryClient = useQueryClient();
   const [postponeFor, setPostponeFor] = useState(null);
   const [newDate, setNewDate] = useState("");
@@ -74,7 +75,8 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
         location: event.location,
         owner_email: event.owner_email,
         owner_name: event.owner_name,
-        source: "manual",
+        source: event.source || "manual",
+        meeting_assignment_id: event.meeting_assignment_id || "",
       });
     },
     onSuccess: () => {
@@ -84,6 +86,32 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
       setNewDate("");
     },
     onError: () => toast.error("Błąd podczas przenoszenia spotkania"),
+  });
+
+  const reassignMutation = useMutation({
+    mutationFn: async ({ event, userEmail, userName }) => {
+      await base44.entities.CalendarEvent.update(event.id, {
+        owner_email: userEmail,
+        owner_name: userName,
+      });
+
+      if (event.meeting_assignment_id) {
+        const assignments = await base44.entities.MeetingAssignment.filter({ meeting_key: event.meeting_assignment_id });
+        const assignment = assignments?.[0];
+        if (assignment) {
+          await base44.entities.MeetingAssignment.update(assignment.id, {
+            assigned_user_email: userEmail,
+            assigned_user_name: userName,
+          });
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["calendarEvents"]);
+      queryClient.invalidateQueries(["meetingAssignments"]);
+      toast.success("Spotkanie zostało przepisane");
+    },
+    onError: () => toast.error("Nie udało się przepisać spotkania"),
   });
 
   return (
@@ -103,6 +131,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
               .sort((a, b) => (a.event_time || "").localeCompare(b.event_time || ""))
               .map(ev => {
                 const canEdit = currentUser?.email === ev.owner_email || currentUser?.role === "admin";
+                const canReassign = ["admin", "group_leader"].includes(currentUser?.role) && ev.event_type === "meeting" && !ev.is_sheet_meeting && ev.status !== "completed" && ev.status !== "cancelled";
                 return (
                   <div key={ev.id} className="border border-gray-200 rounded-lg p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -205,6 +234,33 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                         : [];
                       return (
                         <div className="space-y-2">
+                          {canReassign && reassignableUsers.length > 0 && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                              <div className="text-xs font-medium text-blue-800">Przepisz spotkanie do innego handlowca</div>
+                              <Select
+                                disabled={reassignMutation.isPending}
+                                onValueChange={(value) => {
+                                  const nextUser = reassignableUsers.find(user => user.email === value);
+                                  if (!nextUser || value === ev.owner_email) return;
+                                  reassignMutation.mutate({ event: ev, userEmail: nextUser.email, userName: nextUser.name || nextUser.email });
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-xs bg-white">
+                                  <SelectValue placeholder="Wybierz handlowca lub doradcę" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {reassignableUsers.map(user => (
+                                    <SelectItem key={user.email} value={user.email}>
+                                      {user.name} ({user.email})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {ev.owner_name && (
+                                <div className="text-[10px] text-blue-700">Obecnie przypisane do: {ev.owner_name}{ev.owner_email ? ` (${ev.owner_email})` : ""}</div>
+                              )}
+                            </div>
+                          )}
                           {(ev.sheet || ev.agent || ev.status_label) && (
                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1 text-xs text-slate-600">
                               {ev.sheet && <div><span className="font-semibold text-slate-800">Arkusz:</span> {ev.sheet}</div>}
@@ -270,7 +326,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, o
                             Anuluj
                           </Button>
                         </div>
-                        <p className="text-[10px] text-orange-600">Spotkanie zostanie oznaczone jako przełożone, a raport będzie wymagany po nowej dacie.</p>
+                        <p className="text-[10px] text-orange-600">Spotkanie zostanie oznaczone jako przełożone, a raport będzie wymagany po nowej dacie; po przeniesieniu możesz też przepisać je na inną osobę.</p>
                       </div>
                     )}
                   </div>

@@ -327,6 +327,10 @@ export default function Calendar() {
       .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email, "pl"));
   }, [allUsers, currentUser, isLeaderOrAdmin, groupUserEmails, teamMemberEmails]);
 
+  const reassignableUsers = useMemo(() => {
+    return availableCalendarUsers.filter(user => ["advisor", "team_leader", "group_leader"].includes(user.role));
+  }, [availableCalendarUsers]);
+
   const sheetMeetingEvents = useMemo(() => {
     if (!currentUser || !isLeaderOrAdmin) return [];
     const currentUserGroupId = currentUser.role === "admin" ? null : (currentUser.groupId || null);
@@ -746,6 +750,7 @@ export default function Calendar() {
           events={getEventsForDay(selectedDay)}
           currentUser={currentUser}
           viewMode={viewMode}
+          reassignableUsers={reassignableUsers}
           onClose={() => setSelectedDay(null)}
           onEdit={(ev) => {
             if (ev.is_sheet_meeting) return;
