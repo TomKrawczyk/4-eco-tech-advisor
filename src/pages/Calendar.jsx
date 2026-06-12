@@ -419,6 +419,9 @@ export default function Calendar() {
       if (!assignment) return event;
       return {
         ...event,
+        client_name: assignment.client_name || event.client_name || "",
+        client_phone: assignment.client_phone || event.client_phone || "",
+        location: assignment.client_address || event.location || "",
         comments: assignment.comments || event.comments || "",
         agent: assignment.agent || event.agent || "",
         sheet: assignment.sheet || event.sheet || "",

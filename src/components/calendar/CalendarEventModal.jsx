@@ -56,7 +56,22 @@ export default function CalendarEventModal({ initialData, currentUser, reassigna
         source: data.source || initialData?.source || "manual",
       };
       if (isEdit) {
-        const updatedEvent = await base44.entities.CalendarEvent.update(initialData.id, payload);
+        const updatePayload = initialData?.source === "meeting_assignment"
+          ? {
+              title: payload.title,
+              description: payload.description,
+              event_date: payload.event_date,
+              event_time: payload.event_time,
+              end_time: payload.end_time,
+              event_type: payload.event_type,
+              status: payload.status,
+              owner_email: payload.owner_email,
+              owner_name: payload.owner_name,
+              source: payload.source,
+              meeting_assignment_id: initialData?.meeting_assignment_id || "",
+            }
+          : payload;
+        const updatedEvent = await base44.entities.CalendarEvent.update(initialData.id, updatePayload);
         if (initialData?.meeting_assignment_id) {
           const assignments = await base44.entities.MeetingAssignment.filter({ meeting_key: initialData.meeting_assignment_id });
           const assignment = assignments?.[0];
