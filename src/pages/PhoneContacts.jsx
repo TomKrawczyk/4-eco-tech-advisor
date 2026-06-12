@@ -318,17 +318,16 @@ export default function PhoneContacts() {
         const role = u.data?.role || u.role;
         const uEmail = u.data?.email || u.email;
         if (currentUser?.role === "admin" || currentUser?.role === "hr_admin") {
-          return role === "advisor" || role === "user" || role === "team_leader";
+          return role === "advisor" || role === "user" || role === "team_leader" || role === "group_leader";
         }
         if (currentUser?.role === "group_leader") {
-          // Może przypisać do siebie lub do doradców/team_leaderów w swojej grupie
           if (uEmail === currentUser.email) return true;
-          if (role !== "advisor" && role !== "user" && role !== "team_leader") return false;
+          if (role !== "advisor" && role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
           const uGroupId = u.data?.group_id || u.group_id;
           return uGroupId === currentUserGroupId;
         }
         if (currentUser?.role === "team_leader") {
-          if (role !== "advisor" && role !== "user" && role !== "team_leader") return false;
+          if (role !== "advisor" && role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
           const uGroupId = u.data?.group_id || u.group_id;
           return uGroupId === currentUserGroupId;
         }
