@@ -770,8 +770,12 @@ export default function Calendar() {
         <CalendarEventModal
           initialData={editingEvent}
           currentUser={currentUser}
+          reassignableUsers={reassignableUsers}
           onClose={() => { setShowEventModal(false); setEditingEvent(null); }}
-          onSaved={() => queryClient.invalidateQueries(["calendarEvents"])}
+          onSaved={() => {
+            queryClient.invalidateQueries(["calendarEvents"]);
+            queryClient.invalidateQueries(["meetingAssignments"]);
+          }}
         />
       )}
 

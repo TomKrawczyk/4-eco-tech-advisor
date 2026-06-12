@@ -24,7 +24,7 @@ const statusOptions = [
   { value: "cancelled", label: "Odwołane" },
 ];
 
-export default function CalendarEventModal({ initialData, currentUser, onClose, onSaved }) {
+export default function CalendarEventModal({ initialData, currentUser, reassignableUsers = [], onClose, onSaved }) {
   const isEdit = !!(initialData?.id);
   const [form, setForm] = useState({
     title: "",
@@ -37,19 +37,37 @@ export default function CalendarEventModal({ initialData, currentUser, onClose, 
     client_name: "",
     client_phone: "",
     location: "",
+    owner_email: currentUser?.email || "",
+    owner_name: currentUser?.displayName || currentUser?.full_name || "",
     ...initialData,
   });
 
+  const canReassignInEdit = isEdit && ["admin", "group_leader"].includes(currentUser?.role) && form.event_type === "meeting";
+
   const saveMutation = useMutation({
     mutationFn: async (data) => {
+      const selectedOwner = reassignableUsers.find(user => user.email === data.owner_email);
       const payload = {
         ...data,
-        owner_email: currentUser?.email || "",
-        owner_name: currentUser?.displayName || currentUser?.full_name || "",
-        source: "manual",
+        owner_email: isEdit ? (data.owner_email || initialData?.owner_email || currentUser?.email || "") : (currentUser?.email || ""),
+        owner_name: isEdit
+          ? (selectedOwner?.name || data.owner_name || initialData?.owner_name || currentUser?.displayName || currentUser?.full_name || "")
+          : (currentUser?.displayName || currentUser?.full_name || ""),
+        source: data.source || initialData?.source || "manual",
       };
       if (isEdit) {
-        return base44.entities.CalendarEvent.update(initialData.id, payload);
+        const updatedEvent = await base44.entities.CalendarEvent.update(initialData.id, payload);
+        if (initialData?.meeting_assignment_id) {
+          const assignments = await base44.entities.MeetingAssignment.filter({ meeting_key: initialData.meeting_assignment_id });
+          const assignment = assignments?.[0];
+          if (assignment) {
+            await base44.entities.MeetingAssignment.update(assignment.id, {
+              assigned_user_email: payload.owner_email,
+              assigned_user_name: payload.owner_name,
+            });
+          }
+        }
+        return updatedEvent;
       } else {
         return base44.entities.CalendarEvent.create(payload);
       }
@@ -133,6 +151,34 @@ export default function CalendarEventModal({ initialData, currentUser, onClose, 
             <Label>Opis</Label>
             <Textarea value={form.description} onChange={e => set("description", e.target.value)} rows={3} />
           </div>
+
+          {canReassignInEdit && reassignableUsers.length > 0 && (
+            <div>
+              <Label>Przepisz do handlowca / doradcy</Label>
+              <Select
+                value={form.owner_email || ""}
+                onValueChange={(value) => {
+                  const user = reassignableUsers.find(item => item.email === value);
+                  setForm(prev => ({
+                    ...prev,
+                    owner_email: value,
+                    owner_name: user?.name || value,
+                  }));
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Wybierz osobę" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reassignableUsers.map(user => (
+                    <SelectItem key={user.email} value={user.email}>
+                      {user.name} ({user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-1">
             <Button type="submit" disabled={saveMutation.isPending} className="flex-1 bg-green-600 hover:bg-green-700">
