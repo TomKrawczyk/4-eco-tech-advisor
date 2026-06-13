@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ShieldAlert } from "lucide-react";
 
 function isBlockedShortcut(event) {
@@ -8,13 +8,9 @@ function isBlockedShortcut(event) {
   return hasModifier && (key === "p" || (event.shiftKey && ["3", "4", "5", "s"].includes(key)));
 }
 
-export default function ScreenProtection({ currentUser }) {
+export default function ScreenProtection() {
   const [shieldVisible, setShieldVisible] = useState(false);
   const [message, setMessage] = useState("");
-  const watermark = useMemo(() => {
-    const identity = currentUser?.email || currentUser?.displayName || "Użytkownik";
-    return `${identity} • WIDOK CHRONIONY • ${window.location.host}`;
-  }, [currentUser?.email, currentUser?.displayName]);
 
   useEffect(() => {
     let timeoutId;
@@ -65,18 +61,6 @@ export default function ScreenProtection({ currentUser }) {
 
   return (
     <>
-      <div className="pointer-events-none fixed inset-0 z-[45] select-none overflow-hidden" aria-hidden="true">
-        <div className="grid h-full w-full grid-cols-2 md:grid-cols-3">
-          {Array.from({ length: 12 }).map((_, index) => (
-            <div key={index} className="flex items-center justify-center overflow-hidden">
-              <span className="rotate-[-28deg] text-[10px] font-semibold tracking-[0.35em] text-slate-950/10 md:text-xs">
-                {watermark}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {shieldVisible && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/96 backdrop-blur-md">
           <div className="flex max-w-sm flex-col items-center gap-3 px-6 text-center text-white">

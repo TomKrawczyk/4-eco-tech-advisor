@@ -225,7 +225,7 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-500/10 via-emerald-50 to-green-500/10 text-gray-900">
-      <ScreenProtection currentUser={currentUser} />
+      <ScreenProtection />
       <style>{`
         * { -webkit-tap-highlight-color: transparent; }
         body { background: linear-gradient(135deg, #22c55e15 0%, #10b98120 25%, #ecfdf5 50%, #10b98120 75%, #22c55e15 100%); }
