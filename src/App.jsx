@@ -15,6 +15,7 @@ import Documentation from '@/pages/Documentation';
 import AllReports from '@/pages/AllReports';
 import MagazynyPrezentacja from '@/pages/MagazynyPrezentacja';
 import Finansowanie from '@/pages/Finansowanie';
+import RaportTygodniowyPH from '@/pages/RaportTygodniowyPH';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -127,6 +128,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="Finansowanie">
             <Finansowanie />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/raport-tygodniowy"
+        element={
+          <LayoutWrapper currentPageName="RaportTygodniowyPH">
+            <RaportTygodniowyPH />
           </LayoutWrapper>
         }
       />

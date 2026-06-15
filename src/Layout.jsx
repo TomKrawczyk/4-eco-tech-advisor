@@ -42,7 +42,7 @@ function DesktopDropdown({ label, items, isGroupActive, currentPageName }) {
             return (
               <Link
                 key={item.name}
-                to={createPageUrl(item.name)}
+                to={item.path || createPageUrl(item.name)}
                 onClick={() => setOpen(false)}
                 className={`block px-4 py-2 text-xs font-medium transition-colors ${
                   isActive ? "bg-green-50 text-green-700" : "text-gray-700 hover:bg-gray-50"
@@ -80,6 +80,7 @@ const navStructure = [
       { name: "VisitReports", label: "Raporty wizytowe" },
       { name: "MeetingReports", label: "Raporty po spotkaniu" },
       { name: "ServiceReports", label: "Raporty serwisowe" },
+      { name: "RaportTygodniowyPH", label: "Raport tygodniowy PH", path: "/raport-tygodniowy", roles: ["admin", "owner"] },
       { name: "AllReports", label: "Wszystkie raporty", adminOnly: true },
       { name: "RejectedMeetings", label: "Odrzucone spotkania", adminOnly: true },
       { name: "CleanupMeetings", label: "Usuń niepodjęte", adminOnly: true },
@@ -396,7 +397,7 @@ export default function Layout({ children, currentPageName }) {
                           return (
                             <Link
                               key={item.name}
-                              to={createPageUrl(item.name)}
+                              to={item.path || createPageUrl(item.name)}
                               onClick={() => setMobileMenuOpen(false)}
                               className={`flex items-center pl-5 pr-3 py-2 rounded-lg text-sm font-medium mb-0.5 transition-all ${
                                 isActive
