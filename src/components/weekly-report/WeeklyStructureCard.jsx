@@ -83,7 +83,7 @@ export default function WeeklyStructureCard({ structure }) {
             {activeTab === "meetings" ? (
               <WeeklyClientsTable clients={structure.clients || []} />
             ) : (
-              <WeeklyPhoneContactsTable contacts={phoneContacts} />
+              <WeeklyPhoneContactsTable contacts={phoneContacts} metrics={metrics} />
             )}
           </div>
         </div>
