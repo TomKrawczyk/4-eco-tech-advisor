@@ -2,14 +2,16 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 
 function getStatusConfig(contact) {
-  if (!contact.reported) return { label: "BRAK RAPORTU", className: "border-red-200 bg-red-100 text-red-700" };
-  return { label: "Zaraportowano", className: "border-green-200 bg-green-100 text-green-700" };
+  if (!contact?.reported) return { label: "BRAK RAPORTU", className: "border-red-200 bg-red-100 text-red-700" };
+  const suffix = contact?.report_status ? ` • ${contact.report_status}` : "";
+  return { label: `Zaraportowano${suffix}`, className: "border-green-200 bg-green-100 text-green-700" };
 }
 
 export default function WeeklyPhoneContactsTable({ contacts }) {
-  const missingCount = contacts.filter((contact) => !contact.reported).length;
+  const safeContacts = Array.isArray(contacts) ? contacts : [];
+  const missingCount = safeContacts.filter((contact) => !contact?.reported).length;
 
-  if (contacts.length === 0) {
+  if (safeContacts.length === 0) {
     return <p className="text-sm text-gray-500">Brak przypisanych kontaktów telefonicznych.</p>;
   }
 
@@ -29,7 +31,7 @@ export default function WeeklyPhoneContactsTable({ contacts }) {
             </tr>
           </thead>
           <tbody>
-            {contacts.map((contact, index) => {
+            {safeContacts.map((contact, index) => {
               const status = getStatusConfig(contact);
               return (
                 <tr key={`${contact.client_name}-${contact.client_phone}-${index}`} className={contact.reported ? "border-t border-gray-200 hover:bg-gray-50" : "border-t border-gray-200 bg-red-50 hover:bg-red-50"}>
@@ -51,7 +53,7 @@ export default function WeeklyPhoneContactsTable({ contacts }) {
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-sm text-gray-500">{contacts.length} kontaktów, {missingCount} bez raportu</p>
+      <p className="mt-3 text-sm text-gray-500">{safeContacts.length} kontaktów, {missingCount} bez raportu</p>
     </section>
   );
 }

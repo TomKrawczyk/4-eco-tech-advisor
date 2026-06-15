@@ -16,8 +16,12 @@ function coverageBadge(value) {
 export default function WeeklyStructureCard({ structure }) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("meetings");
-  const meetingCoverage = structure.metrics.report_coverage_pct;
-  const phoneCoverage = structure.metrics.phone_contacts_coverage_pct;
+  const metrics = structure?.metrics || {};
+  const meetingCoverage = metrics.report_coverage_pct;
+  const phoneCoverage = metrics.phone_contacts_coverage_pct;
+  const phoneContactsAssigned = metrics.phone_contacts_assigned ?? metrics.phone_assigned ?? 0;
+  const phoneContactsMissing = metrics.phone_contacts_missing ?? Math.max(0, phoneContactsAssigned - (metrics.phone_contacts_reported ?? metrics.phone_reported ?? 0));
+  const phoneContacts = structure?.phone_contacts || [];
 
   return (
     <Card className="overflow-hidden rounded-xl border border-gray-200 bg-white text-slate-800 shadow-sm">
@@ -27,21 +31,21 @@ export default function WeeklyStructureCard({ structure }) {
             <div>
               <div className="text-lg font-semibold text-slate-800">{structure.name}</div>
               <div className="mt-1 text-sm text-gray-500">
-                {structure.metrics.meetings_assigned} spotkań umówionych • {structure.metrics.phone_contacts_assigned} kontaktów telefonicznych
+                {metrics.meetings_assigned ?? 0} spotkań umówionych • {phoneContactsAssigned} kontaktów telefonicznych
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge className={coverageBadge(meetingCoverage)}>
-                Spotkania: {meetingCoverage === null ? "—" : `${meetingCoverage}%`}
+                Spotkania: {meetingCoverage === null || meetingCoverage === undefined ? "—" : `${meetingCoverage}%`}
               </Badge>
               <Badge className={coverageBadge(phoneCoverage)}>
-                Telefony: {phoneCoverage === null ? "—" : `${phoneCoverage}%`}
+                Telefony: {phoneCoverage === null || phoneCoverage === undefined ? "—" : `${phoneCoverage}%`}
               </Badge>
-              {structure.metrics.missing_reports > 0 && (
-                <Badge className="border-red-200 bg-red-100 text-red-700">spotkania bez raportu: {structure.metrics.missing_reports}</Badge>
+              {(metrics.missing_reports ?? 0) > 0 && (
+                <Badge className="border-red-200 bg-red-100 text-red-700">spotkania bez raportu: {metrics.missing_reports ?? 0}</Badge>
               )}
-              {structure.metrics.phone_contacts_missing > 0 && (
-                <Badge className="border-red-200 bg-red-100 text-red-700">telefony bez raportu: {structure.metrics.phone_contacts_missing}</Badge>
+              {phoneContactsMissing > 0 && (
+                <Badge className="border-red-200 bg-red-100 text-red-700">telefony bez raportu: {phoneContactsMissing}</Badge>
               )}
               <div className="rounded-xl border border-gray-200 bg-white p-2 text-slate-500">
                 {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -73,13 +77,13 @@ export default function WeeklyStructureCard({ structure }) {
                     : "border-gray-200 bg-white text-slate-700 hover:bg-gray-50"
                 }`}
               >
-                Kontakty telefoniczne ({structure.phone_contacts?.length || 0})
+                Kontakty telefoniczne ({phoneContacts.length || 0})
               </button>
             </div>
             {activeTab === "meetings" ? (
               <WeeklyClientsTable clients={structure.clients || []} />
             ) : (
-              <WeeklyPhoneContactsTable contacts={structure.phone_contacts || []} />
+              <WeeklyPhoneContactsTable contacts={phoneContacts} />
             )}
           </div>
         </div>

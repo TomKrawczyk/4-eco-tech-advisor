@@ -264,12 +264,12 @@ Deno.serve(async (req) => {
           reports_planned: structure.reports_planned,
           report_coverage_pct: meetingCoverage,
           missing_reports: structure.meetings_assigned > 0 ? Math.max(0, structure.meetings_assigned - structure.meeting_reports) : 0,
-          phone_contacts_assigned: structure.phone_contacts_assigned,
-          phone_contacts_reported: structure.phone_contacts_reported,
+          phone_contacts_assigned: structure.phone_contacts_assigned ?? 0,
+          phone_contacts_reported: structure.phone_contacts_reported ?? 0,
           phone_contacts_coverage_pct: phoneCoverage,
-          phone_contacts_missing: structure.phone_contacts_missing,
-          phone_assigned: structure.phone_contacts_assigned,
-          phone_reported: structure.phone_contacts_reported,
+          phone_contacts_missing: structure.phone_contacts_missing ?? 0,
+          phone_assigned: structure.phone_contacts_assigned ?? 0,
+          phone_reported: structure.phone_contacts_reported ?? 0,
           advisors: structure.advisors,
         },
         advisors_assigned: Object.entries(structure.people)
@@ -292,9 +292,9 @@ Deno.serve(async (req) => {
           if (a.reported !== b.reported) return a.reported ? 1 : -1;
           return String(a.meeting_calendar).localeCompare(String(b.meeting_calendar));
         }),
-        phone_contacts: structure.phone_contacts.sort((a, b) => {
+        phone_contacts: (structure.phone_contacts || []).sort((a, b) => {
           if (a.reported !== b.reported) return a.reported ? 1 : -1;
-          return String(a.contact_calendar || a.contact_date).localeCompare(String(b.contact_calendar || b.contact_date));
+          return String(a.contact_date || a.contact_calendar).localeCompare(String(b.contact_date || b.contact_calendar));
         }),
       };
     }).sort((a, b) => yCompare(b.metrics.meetings_assigned + b.metrics.phone_contacts_assigned, a.metrics.meetings_assigned + a.metrics.phone_contacts_assigned));
