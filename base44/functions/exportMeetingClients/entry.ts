@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
     const pw = prevWeek();
     const from = body?.from || pw.from;
     const to = body?.to || pw.to;
+    const format = body?.format || 'csv';
     const upload = body?.upload === true;
     const filename = `klienci_do_obdzwonienia_${from}_${to}.csv`;
     const inRange = (date) => !!date && date >= from && date <= to;
@@ -216,6 +217,10 @@ Deno.serve(async (req) => {
     ].map(csvValue).join(';')));
 
     const csv = `\uFEFF${header}\n${lines.join('\n')}`;
+
+    if (format === 'json') {
+      return Response.json(rows);
+    }
 
     if (upload) {
       const file = new File([csv], filename, { type: 'text/csv; charset=utf-8' });

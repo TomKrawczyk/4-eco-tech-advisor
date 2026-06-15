@@ -9,18 +9,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import WeeklyTotalsCard from "@/components/weekly-report/WeeklyTotalsCard";
 import WeeklyStructureCard from "@/components/weekly-report/WeeklyStructureCard";
+import { downloadWeeklyReportExcel } from "@/lib/weeklyReportExcel";
 
 function coverageColor(value) {
   if (value === null || value === undefined) return "text-slate-800";
   if (value >= 70) return "text-green-700";
   if (value >= 30) return "text-amber-700";
   return "text-red-700";
-}
-
-function getFilename(headers, from, to) {
-  const disposition = headers?.["content-disposition"] || headers?.["Content-Disposition"] || "";
-  const match = disposition.match(/filename="?([^";]+)"?/i);
-  return match?.[1] || `klienci_do_obdzwonienia_${from || "zakres"}_${to || "zakres"}.csv`;
 }
 
 export default function RaportTygodniowyPH() {
@@ -65,27 +60,24 @@ export default function RaportTygodniowyPH() {
     setIsExporting(true);
 
     try {
-      const payload = currentFrom && currentTo ? { from: currentFrom, to: currentTo } : {};
+      const payload = currentFrom && currentTo
+        ? { from: currentFrom, to: currentTo, format: "json" }
+        : { format: "json" };
       const response = await base44.functions.invoke("exportMeetingClients", payload);
-      const csv = typeof response.data === "string" ? response.data : "";
-      const file = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = window.URL.createObjectURL(file);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = getFilename(response.headers, currentFrom, currentTo);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      const rows = Array.isArray(response.data) ? response.data : [];
+      const exportFrom = currentFrom || data?.from || "zakres";
+      const exportTo = currentTo || data?.to || "zakres";
+
+      downloadWeeklyReportExcel(rows, exportFrom, exportTo);
 
       toast({
         title: "Eksport gotowy",
-        description: "Plik CSV został pobrany.",
+        description: "Plik Excel został pobrany.",
       });
     } catch (_) {
       toast({
         title: "Błąd eksportu",
-        description: "Nie udało się pobrać pliku CSV.",
+        description: "Nie udało się pobrać pliku Excel.",
       });
     } finally {
       setIsExporting(false);
