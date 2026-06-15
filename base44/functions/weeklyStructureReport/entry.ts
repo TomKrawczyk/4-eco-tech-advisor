@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     const advisorsList = [];
 
     for (const u of allowedUsers) {
-      if ((u.role === 'advisor' || u.role === 'group_leader') && u.group_id !== TEST_GROUP) {
+      if ((u.role === 'advisor' || u.role === 'group_leader' || u.role === 'team_leader') && u.group_id !== TEST_GROUP) {
         const grp = u.group_id ? (groupName[u.group_id] || '—') : '—';
         const em = (u.email || '').trim().toLowerCase();
         if (em) {
