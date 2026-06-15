@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, CalendarRange, FileText, PhoneCall, Users } from "lucide-react";
+import { BarChart3, CalendarRange, Download, FileText, PhoneCall, Users } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
 import WeeklyTotalsCard from "@/components/weekly-report/WeeklyTotalsCard";
 import WeeklyStructureCard from "@/components/weekly-report/WeeklyStructureCard";
 
@@ -16,12 +17,20 @@ function coverageColor(value) {
   return "text-red-700";
 }
 
+function getFilename(headers, from, to) {
+  const disposition = headers?.["content-disposition"] || headers?.["Content-Disposition"] || "";
+  const match = disposition.match(/filename="?([^";]+)"?/i);
+  return match?.[1] || `klienci_do_obdzwonienia_${from || "zakres"}_${to || "zakres"}.csv`;
+}
+
 export default function RaportTygodniowyPH() {
   const { currentUser, accessChecked } = useCurrentUser();
+  const { toast } = useToast();
   const [fromInput, setFromInput] = useState("");
   const [toInput, setToInput] = useState("");
   const [range, setRange] = useState({ from: "", to: "" });
   const [formError, setFormError] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
   const canView = currentUser?.role === "admin" || currentUser?.role === "owner";
 
   const { data, isLoading, isFetching, error } = useQuery({
@@ -41,6 +50,46 @@ export default function RaportTygodniowyPH() {
     }
     setFormError("");
     setRange({ from: fromInput, to: toInput });
+  };
+
+  const handleExport = async () => {
+    const currentFrom = data?.from || range.from || fromInput;
+    const currentTo = data?.to || range.to || toInput;
+
+    if ((currentFrom && !currentTo) || (!currentFrom && currentTo)) {
+      setFormError("Uzupełnij obie daty.");
+      return;
+    }
+
+    setFormError("");
+    setIsExporting(true);
+
+    try {
+      const payload = currentFrom && currentTo ? { from: currentFrom, to: currentTo } : {};
+      const response = await base44.functions.invoke("exportMeetingClients", payload);
+      const csv = typeof response.data === "string" ? response.data : "";
+      const file = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = getFilename(response.headers, currentFrom, currentTo);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Eksport gotowy",
+        description: "Plik CSV został pobrany.",
+      });
+    } catch (_) {
+      toast({
+        title: "Błąd eksportu",
+        description: "Nie udało się pobrać pliku CSV.",
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (!accessChecked) {
@@ -64,20 +113,28 @@ export default function RaportTygodniowyPH() {
             <h1 className="mt-2 text-3xl font-bold text-slate-800">Raport tygodniowy PH</h1>
             <p className="mt-2 text-sm text-gray-500">Zakres raportu: {data?.from || "—"} — {data?.to || "—"}</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Input type="date" value={fromInput} onChange={(e) => setFromInput(e.target.value)} className="border-gray-200 bg-white text-slate-800" />
             <Input type="date" value={toInput} onChange={(e) => setToInput(e.target.value)} className="border-gray-200 bg-white text-slate-800" />
-            <Button onClick={handleShow} disabled={isFetching} className="bg-green-600 text-white hover:bg-green-700">{isFetching ? "Ładowanie..." : "Pokaż"}</Button>
+            <Button onClick={handleShow} disabled={isFetching || isExporting} className="bg-green-600 text-white hover:bg-green-700">
+              {isFetching ? "Ładowanie..." : "Pokaż"}
+            </Button>
+            <Button onClick={handleExport} disabled={isExporting || isFetching || isLoading} className="bg-green-600 text-white hover:bg-green-700">
+              <Download className="mr-2 h-4 w-4" />
+              {isExporting ? "Eksportuję..." : "Eksportuj do Excela"}
+            </Button>
           </div>
         </div>
         {formError && <p className="mt-3 text-sm text-red-600">{formError}</p>}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <WeeklyTotalsCard label="Spotkania umówione" value={data?.totals?.meetings_assigned ?? "—"} icon={CalendarRange} />
-        <WeeklyTotalsCard label="Raporty" value={data?.totals?.meeting_reports ?? "—"} icon={FileText} />
-        <WeeklyTotalsCard label="% pokrycia" value={data?.totals?.report_coverage_pct === null || data?.totals?.report_coverage_pct === undefined ? "—" : `${data.totals.report_coverage_pct}%`} icon={BarChart3} valueClassName={coverageColor(data?.totals?.report_coverage_pct)} />
-        <WeeklyTotalsCard label="Telefony" value={data?.totals?.phone_assigned ?? "—"} icon={PhoneCall} />
+        <WeeklyTotalsCard label="Raporty spotkań" value={data?.totals?.meeting_reports ?? "—"} icon={FileText} />
+        <WeeklyTotalsCard label="Pokrycie spotkań" value={data?.totals?.report_coverage_pct === null || data?.totals?.report_coverage_pct === undefined ? "—" : `${data.totals.report_coverage_pct}%`} icon={BarChart3} valueClassName={coverageColor(data?.totals?.report_coverage_pct)} />
+        <WeeklyTotalsCard label="Kontakty telefoniczne" value={data?.totals?.phone_contacts_assigned ?? "—"} icon={PhoneCall} />
+        <WeeklyTotalsCard label="Raporty telefoniczne" value={data?.totals?.phone_contacts_reported ?? "—"} icon={FileText} />
+        <WeeklyTotalsCard label="Pokrycie telefonów" value={data?.totals?.phone_contacts_coverage_pct === null || data?.totals?.phone_contacts_coverage_pct === undefined ? "—" : `${data.totals.phone_contacts_coverage_pct}%`} icon={BarChart3} valueClassName={coverageColor(data?.totals?.phone_contacts_coverage_pct)} />
       </div>
 
       {isLoading ? (

@@ -1,18 +1,45 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-function last9(phone) {
-  return String(phone || '').replace(/\D/g, '').slice(-9);
+function pickFirstPhone(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const first = text.split(/[\n,;\/|]+/).map((part) => part.trim()).find(Boolean);
+  return first || text;
 }
 
-function localYMD(date) {
-  if (!date) return '';
-  const dt = new Date(date);
+function last9(value) {
+  return pickFirstPhone(value).replace(/\D/g, '').slice(-9);
+}
+
+function localYMD(value) {
+  if (!value) return '';
+  if (typeof value === 'string') {
+    const isoMatch = value.match(/\d{4}-\d{2}-\d{2}/);
+    if (isoMatch) return isoMatch[0];
+    const plMatch = value.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/);
+    if (plMatch) {
+      const day = plMatch[1].padStart(2, '0');
+      const month = plMatch[2].padStart(2, '0');
+      return `${plMatch[3]}-${month}-${day}`;
+    }
+  }
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return '';
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Warsaw',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).format(dt);
+}
+
+function getContactDate(record) {
+  return record.contact_date || localYMD(record.contact_calendar) || localYMD(record.date) || '';
+}
+
+function makePhoneDateKey(phone, date) {
+  const normalizedPhone = last9(phone);
+  return normalizedPhone && date ? `${normalizedPhone}__${date}` : '';
 }
 
 function prevWeek() {
@@ -50,16 +77,15 @@ function csvValue(value) {
   return `"${safe}"`;
 }
 
-function getMeetingTime(meetingCalendar) {
-  if (!meetingCalendar || typeof meetingCalendar !== 'string') return '';
-  const parts = meetingCalendar.split(' ');
+function getTimePart(value) {
+  if (!value || typeof value !== 'string') return '';
+  const parts = value.split(' ');
   return parts.length > 1 ? parts.slice(1).join(' ').trim() : '';
 }
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-
     if (!(await base44.auth.isAuthenticated())) {
       return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 });
     }
@@ -77,10 +103,12 @@ Deno.serve(async (req) => {
     const inRange = (date) => !!date && date >= from && date <= to;
 
     const svc = base44.asServiceRole.entities;
-    const [groups, meetingAssignments, meetingReports] = await Promise.all([
+    const [groups, meetingAssignments, meetingReports, phoneContacts, phoneReports] = await Promise.all([
       fetchAll(svc.Group),
       fetchAll(svc.MeetingAssignment),
       fetchAll(svc.MeetingReport),
+      fetchAll(svc.PhoneContact),
+      fetchAll(svc.PhoneContactReport),
     ]);
 
     const groupNameById = {};
@@ -88,33 +116,68 @@ Deno.serve(async (req) => {
       groupNameById[group.id] = group.name || 'Bez struktury';
     }
 
-    const reportByPhone = {};
+    const meetingReportByPhone = {};
     for (const report of meetingReports) {
       if (!inRange(report.meeting_date)) continue;
       const phone = last9(report.client_phone);
-      if (phone) reportByPhone[phone] = report.status || '';
+      if (phone) meetingReportByPhone[phone] = report.status || '';
+    }
+
+    const phoneReportByKey = {};
+    for (const report of phoneReports) {
+      const contactDate = localYMD(report.contact_date);
+      if (!inRange(contactDate)) continue;
+      const key = makePhoneDateKey(report.client_phone, contactDate);
+      if (key) phoneReportByKey[key] = report.result || '';
     }
 
     const rows = [];
+
     for (const assignment of meetingAssignments) {
       if (!inRange(assignment.meeting_date)) continue;
-
       const phoneLast9 = last9(assignment.client_phone);
-      const reportStatus = phoneLast9 ? (reportByPhone[phoneLast9] || '') : '';
+      const reportStatus = phoneLast9 ? (meetingReportByPhone[phoneLast9] || '') : '';
       const reported = !!reportStatus;
-      const meetingDateTime = assignment.meeting_calendar || assignment.meeting_date || '';
+      const dateTime = assignment.meeting_calendar || assignment.meeting_date || '';
 
       rows.push({
+        typ: 'SPOTKANIE',
         struktura: assignment.assigned_group_name || (assignment.assigned_group_id ? (groupNameById[assignment.assigned_group_id] || 'Bez struktury') : 'Bez struktury'),
         klient: assignment.client_name || '',
         telefon: assignment.client_phone || '',
         telefon_last9: phoneLast9,
         data: assignment.meeting_date || '',
-        godzina: getMeetingTime(assignment.meeting_calendar || ''),
-        data_godzina: meetingDateTime,
+        godzina: getTimePart(assignment.meeting_calendar || ''),
+        data_godzina: dateTime,
         doradca: assignment.assigned_user_name || '',
         doradca_email: assignment.assigned_user_email || '',
         adres: assignment.client_address || '',
+        status_raportu: reportStatus,
+        czy_zaraportowano: reported ? 'TAK' : 'NIE',
+        do_obdzwonienia: reported ? 'NIE' : 'TAK',
+      });
+    }
+
+    for (const contact of phoneContacts) {
+      const contactDate = getContactDate(contact);
+      if (!inRange(contactDate) || contact.is_archived === true) continue;
+      const phoneLast9 = last9(contact.phone);
+      const reportStatus = phoneReportByKey[makePhoneDateKey(contact.phone, contactDate)] || '';
+      const reported = !!reportStatus;
+      const dateTime = contact.contact_calendar || contactDate || '';
+
+      rows.push({
+        typ: 'TELEFON',
+        struktura: contact.assigned_group_name || (contact.assigned_group_id ? (groupNameById[contact.assigned_group_id] || 'Bez struktury') : 'Bez struktury'),
+        klient: contact.client_name || '',
+        telefon: contact.phone || '',
+        telefon_last9: phoneLast9,
+        data: contactDate,
+        godzina: getTimePart(contact.contact_calendar || ''),
+        data_godzina: dateTime,
+        doradca: contact.assigned_user_name || '',
+        doradca_email: contact.assigned_user_email || '',
+        adres: contact.address || '',
         status_raportu: reportStatus,
         czy_zaraportowano: reported ? 'TAK' : 'NIE',
         do_obdzwonienia: reported ? 'NIE' : 'TAK',
@@ -125,11 +188,18 @@ Deno.serve(async (req) => {
       if (a.do_obdzwonienia !== b.do_obdzwonienia) {
         return a.do_obdzwonienia === 'TAK' ? -1 : 1;
       }
+      if (a.typ !== b.typ) {
+        return String(a.typ).localeCompare(String(b.typ));
+      }
+      if (a.data !== b.data) {
+        return String(a.data).localeCompare(String(b.data));
+      }
       return String(a.data_godzina).localeCompare(String(b.data_godzina));
     });
 
-    const header = 'struktura;klient;telefon;telefon_last9;data;godzina;data_godzina;doradca;doradca_email;adres;status_raportu;czy_zaraportowano;do_obdzwonienia';
+    const header = 'typ;struktura;klient;telefon;telefon_last9;data;godzina;data_godzina;doradca;doradca_email;adres;status_raportu;czy_zaraportowano;do_obdzwonienia';
     const lines = rows.map((row) => ([
+      row.typ,
       row.struktura,
       row.klient,
       row.telefon,
