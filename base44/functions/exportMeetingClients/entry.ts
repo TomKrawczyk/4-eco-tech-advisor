@@ -72,6 +72,8 @@ Deno.serve(async (req) => {
     const pw = prevWeek();
     const from = body?.from || pw.from;
     const to = body?.to || pw.to;
+    const upload = body?.upload === true;
+    const filename = `klienci_do_obdzwonienia_${from}_${to}.csv`;
     const inRange = (date) => !!date && date >= from && date <= to;
 
     const svc = base44.asServiceRole.entities;
@@ -145,11 +147,21 @@ Deno.serve(async (req) => {
 
     const csv = `\uFEFF${header}\n${lines.join('\n')}`;
 
+    if (upload) {
+      const file = new File([csv], filename, { type: 'text/csv; charset=utf-8' });
+      const uploaded = await base44.asServiceRole.integrations.Core.UploadFile({ file });
+      return Response.json({
+        url: uploaded.file_url,
+        rows: rows.length,
+        to_call: rows.filter((row) => row.do_obdzwonienia === 'TAK').length,
+      });
+    }
+
     return new Response(csv, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="klienci_do_obdzwonienia.csv"',
+        'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
   } catch (error) {
