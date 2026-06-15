@@ -37,11 +37,6 @@ function getContactDate(record) {
   return record.contact_date || localYMD(record.contact_calendar) || localYMD(record.date) || '';
 }
 
-function makePhoneDateKey(phone, date) {
-  const normalizedPhone = last9(phone);
-  return normalizedPhone && date ? `${normalizedPhone}__${date}` : '';
-}
-
 function normalizeKey(value) {
   return String(value || '').trim();
 }
@@ -127,11 +122,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    const groupOfAssigned = (record) => {
+    const grpOfAssign = (record) => {
       return (record.assigned_group_name || (record.assigned_group_id ? groupNameById[record.assigned_group_id] : '') || '').trim() || 'Bez struktury';
     };
 
-    const groupOfReport = (record) => {
+    const grpOfReport = (record) => {
       const email = (record.author_email || '').trim().toLowerCase();
       return email && emailToGroup[email] ? emailToGroup[email] : 'Bez struktury';
     };
@@ -166,13 +161,9 @@ Deno.serve(async (req) => {
       if (!structuresMap[name]) {
         structuresMap[name] = {
           name,
-          meetings_assigned: 0,
           meeting_reports: 0,
           reports_completed: 0,
           reports_planned: 0,
-          phone_contacts_assigned: 0,
-          phone_contacts_reported: 0,
-          phone_contacts_missing: 0,
           advisors: 0,
           people: {},
           reporters: {},
@@ -185,8 +176,8 @@ Deno.serve(async (req) => {
 
     for (const assignment of meetingAssignments) {
       if (!inRange(assignment.meeting_date)) continue;
-      const structure = getStructure(groupOfAssigned(assignment));
-      structure.meetings_assigned++;
+      const structureName = grpOfAssign(assignment);
+      const structure = getStructure(structureName);
       const advisorEmail = (assignment.assigned_user_email || '').trim().toLowerCase();
       const peopleKey = advisorEmail || '__nieprzypisany__';
       structure.people[peopleKey] = (structure.people[peopleKey] || 0) + 1;
@@ -206,7 +197,7 @@ Deno.serve(async (req) => {
 
     for (const report of meetingReports) {
       if (!inRange(report.meeting_date)) continue;
-      const structure = getStructure(groupOfReport(report));
+      const structure = getStructure(grpOfReport(report));
       structure.meeting_reports++;
       const status = (report.status || '').toLowerCase();
       if (status === 'completed') structure.reports_completed++;
@@ -219,8 +210,8 @@ Deno.serve(async (req) => {
     for (const contact of phoneContacts) {
       const contactDate = getContactDate(contact);
       if (!inRange(contactDate) || contact.is_archived === true) continue;
-      const structure = getStructure(groupOfAssigned(contact));
-      structure.phone_contacts_assigned++;
+      const structureName = grpOfAssign(contact);
+      const structure = getStructure(structureName);
       const advisorEmail = (contact.assigned_user_email || '').trim().toLowerCase();
       const contactKey = normalizeKey(contact.contact_key);
       const phone = last9(contact.phone);
@@ -228,8 +219,7 @@ Deno.serve(async (req) => {
       const fallbackReportStatus = !contactKey && phone ? phoneReportByPhone[phone] : null;
       const reported = (contactKey && phoneReportedKeys.has(contactKey)) || (!contactKey && !!fallbackReportStatus);
       const reportStatus = exactReportStatus || fallbackReportStatus || null;
-      if (reported) structure.phone_contacts_reported++;
-      else structure.phone_contacts_missing++;
+
       structure.phone_contacts.push({
         client_name: contact.client_name || '—',
         client_phone: contact.phone || '',
@@ -248,28 +238,33 @@ Deno.serve(async (req) => {
     }
 
     const structures = Object.values(structuresMap).map((structure) => {
-      const meetingCoverage = structure.meetings_assigned > 0
-        ? Math.round((structure.meeting_reports / structure.meetings_assigned) * 100)
+      const meetingsAssigned = structure.clients.length;
+      const meetingReportsCount = structure.meeting_reports;
+      const phoneContactsAssigned = structure.phone_contacts.length;
+      const phoneContactsReported = structure.phone_contacts.filter((contact) => contact.reported).length;
+      const phoneContactsMissing = Math.max(0, phoneContactsAssigned - phoneContactsReported);
+      const meetingCoverage = meetingsAssigned > 0
+        ? Math.round((meetingReportsCount / meetingsAssigned) * 100)
         : null;
-      const phoneCoverage = structure.phone_contacts_assigned > 0
-        ? Math.round((structure.phone_contacts_reported / structure.phone_contacts_assigned) * 100)
+      const phoneCoverage = phoneContactsAssigned > 0
+        ? Math.round((phoneContactsReported / phoneContactsAssigned) * 100)
         : null;
 
       return {
         name: structure.name,
         metrics: {
-          meetings_assigned: structure.meetings_assigned,
-          meeting_reports: structure.meeting_reports,
+          meetings_assigned: meetingsAssigned,
+          meeting_reports: meetingReportsCount,
           reports_completed: structure.reports_completed,
           reports_planned: structure.reports_planned,
           report_coverage_pct: meetingCoverage,
-          missing_reports: structure.meetings_assigned > 0 ? Math.max(0, structure.meetings_assigned - structure.meeting_reports) : 0,
-          phone_contacts_assigned: structure.phone_contacts_assigned ?? 0,
-          phone_contacts_reported: structure.phone_contacts_reported ?? 0,
+          missing_reports: meetingsAssigned > 0 ? Math.max(0, meetingsAssigned - meetingReportsCount) : 0,
+          phone_contacts_assigned: phoneContactsAssigned,
+          phone_contacts_reported: phoneContactsReported,
           phone_contacts_coverage_pct: phoneCoverage,
-          phone_contacts_missing: structure.phone_contacts_missing ?? 0,
-          phone_assigned: structure.phone_contacts_assigned ?? 0,
-          phone_reported: structure.phone_contacts_reported ?? 0,
+          phone_contacts_missing: phoneContactsMissing,
+          phone_assigned: phoneContactsAssigned,
+          phone_reported: phoneContactsReported,
           advisors: structure.advisors,
         },
         advisors_assigned: Object.entries(structure.people)
@@ -292,7 +287,7 @@ Deno.serve(async (req) => {
           if (a.reported !== b.reported) return a.reported ? 1 : -1;
           return String(a.meeting_calendar).localeCompare(String(b.meeting_calendar));
         }),
-        phone_contacts: (structure.phone_contacts || []).sort((a, b) => {
+        phone_contacts: structure.phone_contacts.sort((a, b) => {
           if (a.reported !== b.reported) return a.reported ? 1 : -1;
           return String(a.contact_date || a.contact_calendar).localeCompare(String(b.contact_date || b.contact_calendar));
         }),
