@@ -42,6 +42,10 @@ function makePhoneDateKey(phone, date) {
   return normalizedPhone && date ? `${normalizedPhone}__${date}` : '';
 }
 
+function normalizeKey(value) {
+  return String(value || '').trim();
+}
+
 function prevWeek() {
   const now = new Date();
   const base = new Date(`${localYMD(now)}T12:00:00Z`);
@@ -134,17 +138,27 @@ Deno.serve(async (req) => {
 
     const meetingReportByPhone = {};
     for (const report of meetingReports) {
-      if (!inRange(report.meeting_date)) continue;
       const phone = last9(report.client_phone);
-      if (phone) meetingReportByPhone[phone] = (report.status || 'reported').toLowerCase();
+      if (phone && !meetingReportByPhone[phone]) {
+        meetingReportByPhone[phone] = (report.status || 'reported').toLowerCase();
+      }
     }
 
-    const phoneReportByKey = {};
+    const phoneReportedKeys = new Set();
+    const phoneReportStatusByKey = {};
+    const phoneReportByPhone = {};
     for (const report of phoneReports) {
-      const contactDate = localYMD(report.contact_date);
-      if (!inRange(contactDate)) continue;
-      const key = makePhoneDateKey(report.client_phone, contactDate);
-      if (key) phoneReportByKey[key] = (report.result || 'reported').toLowerCase();
+      const contactKey = normalizeKey(report.contact_key);
+      if (contactKey) {
+        phoneReportedKeys.add(contactKey);
+        if (!phoneReportStatusByKey[contactKey]) {
+          phoneReportStatusByKey[contactKey] = normalizeKey(report.result).toLowerCase() || null;
+        }
+      }
+      const phone = last9(report.client_phone);
+      if (phone && !phoneReportByPhone[phone]) {
+        phoneReportByPhone[phone] = normalizeKey(report.result).toLowerCase() || null;
+      }
     }
 
     const structuresMap = {};
@@ -208,8 +222,12 @@ Deno.serve(async (req) => {
       const structure = getStructure(groupOfAssigned(contact));
       structure.phone_contacts_assigned++;
       const advisorEmail = (contact.assigned_user_email || '').trim().toLowerCase();
-      const reportStatus = phoneReportByKey[makePhoneDateKey(contact.phone, contactDate)] || '';
-      const reported = !!reportStatus;
+      const contactKey = normalizeKey(contact.contact_key);
+      const phone = last9(contact.phone);
+      const exactReportStatus = contactKey ? phoneReportStatusByKey[contactKey] : null;
+      const fallbackReportStatus = !contactKey && phone ? phoneReportByPhone[phone] : null;
+      const reported = (contactKey && phoneReportedKeys.has(contactKey)) || (!contactKey && !!fallbackReportStatus);
+      const reportStatus = exactReportStatus || fallbackReportStatus || null;
       if (reported) structure.phone_contacts_reported++;
       else structure.phone_contacts_missing++;
       structure.phone_contacts.push({
@@ -221,7 +239,7 @@ Deno.serve(async (req) => {
         advisor_name: contact.assigned_user_name || (advisorEmail ? (emailToName[advisorEmail] || advisorEmail) : '— nieprzypisany —'),
         advisor_email: advisorEmail || null,
         reported,
-        report_status: reportStatus || null,
+        report_status: reportStatus,
       });
     }
 
