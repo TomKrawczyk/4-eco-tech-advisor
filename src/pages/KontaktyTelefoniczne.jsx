@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, CalendarRange, Download, FileText, Users } from "lucide-react";
+import { BarChart3, Download, FileText, PhoneCall, Users } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -8,17 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import WeeklyTotalsCard from "@/components/weekly-report/WeeklyTotalsCard";
-import WeeklyStructureCard from "@/components/weekly-report/WeeklyStructureCard";
-import { downloadWeeklyReportExcel } from "@/lib/weeklyReportExcel";
+import WeeklyPhoneStructureCard from "@/components/weekly-report/WeeklyPhoneStructureCard";
+import { downloadWeeklyPhoneContactsExcel } from "@/lib/weeklyPhoneContactsExcel";
 
 function coverageColor(value) {
   if (value === null || value === undefined) return "text-slate-800";
-  if (value >= 70) return "text-green-700";
-  if (value >= 30) return "text-amber-700";
+  if (value >= 80) return "text-green-700";
+  if (value >= 50) return "text-amber-700";
   return "text-red-700";
 }
 
-export default function RaportTygodniowyPH() {
+export default function KontaktyTelefoniczne() {
   const { currentUser, accessChecked } = useCurrentUser();
   const { toast } = useToast();
   const [fromInput, setFromInput] = useState("");
@@ -29,7 +29,7 @@ export default function RaportTygodniowyPH() {
   const canView = currentUser?.role === "admin" || currentUser?.role === "owner";
 
   const { data, isLoading, isFetching, error } = useQuery({
-    queryKey: ["weeklyStructureReport", range.from || "default", range.to || "default"],
+    queryKey: ["weeklyStructureReport", "phones", range.from || "default", range.to || "default"],
     queryFn: async () => {
       const payload = range.from && range.to ? { from: range.from, to: range.to } : {};
       const response = await base44.functions.invoke("weeklyStructureReport", payload);
@@ -37,6 +37,10 @@ export default function RaportTygodniowyPH() {
     },
     enabled: accessChecked && canView,
   });
+
+  const structures = useMemo(() => {
+    return (data?.structures || []).filter((structure) => (structure?.metrics?.phone_contacts_assigned ?? 0) > 0);
+  }, [data]);
 
   const handleShow = () => {
     if ((fromInput && !toInput) || (!fromInput && toInput)) {
@@ -60,25 +64,24 @@ export default function RaportTygodniowyPH() {
     setIsExporting(true);
 
     try {
-      const payload = currentFrom && currentTo
-        ? { from: currentFrom, to: currentTo, format: "json" }
-        : { format: "json" };
-      const response = await base44.functions.invoke("exportMeetingClients", payload);
-      const rows = Array.isArray(response.data) ? response.data : [];
-      const exportFrom = currentFrom || data?.from || "zakres";
-      const exportTo = currentTo || data?.to || "zakres";
+      const rows = structures.flatMap((structure) =>
+        (structure?.phone_contacts || []).map((contact) => ({
+          struktura: structure?.name || "Bez struktury",
+          klient: contact?.client_name || "",
+          telefon: contact?.client_phone || "",
+          data: contact?.contact_date || "",
+          doradca: contact?.advisor_name || "— nieprzypisany —",
+          doradca_email: contact?.advisor_email || "",
+          adres: contact?.client_address || "",
+          status_raportu: contact?.report_status || "",
+          zaraportowano: contact?.reported ? "TAK" : "NIE",
+        }))
+      );
 
-      downloadWeeklyReportExcel(rows, exportFrom, exportTo);
-
-      toast({
-        title: "Eksport gotowy",
-        description: "Plik Excel został pobrany.",
-      });
+      downloadWeeklyPhoneContactsExcel(rows, currentFrom || data?.from, currentTo || data?.to);
+      toast({ title: "Eksport gotowy", description: "Plik Excel został pobrany." });
     } catch (_) {
-      toast({
-        title: "Błąd eksportu",
-        description: "Nie udało się pobrać pliku Excel.",
-      });
+      toast({ title: "Błąd eksportu", description: "Nie udało się pobrać pliku Excel." });
     } finally {
       setIsExporting(false);
     }
@@ -102,7 +105,7 @@ export default function RaportTygodniowyPH() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-green-700">Kontrola raportowania</p>
-            <h1 className="mt-2 text-3xl font-bold text-slate-800">Raport tygodniowy PH</h1>
+            <h1 className="mt-2 text-3xl font-bold text-slate-800">Kontakty telefoniczne</h1>
             <p className="mt-2 text-sm text-gray-500">Zakres raportu: {data?.from || "—"} — {data?.to || "—"}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -120,28 +123,24 @@ export default function RaportTygodniowyPH() {
         {formError && <p className="mt-3 text-sm text-red-600">{formError}</p>}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <WeeklyTotalsCard label="Spotkania umówione" value={data?.totals?.meetings_assigned ?? "—"} icon={CalendarRange} />
-        <WeeklyTotalsCard label="Raporty spotkań" value={data?.totals?.meeting_reports ?? "—"} icon={FileText} />
-        <WeeklyTotalsCard label="Pokrycie spotkań" value={data?.totals?.report_coverage_pct === null || data?.totals?.report_coverage_pct === undefined ? "—" : `${data.totals.report_coverage_pct}%`} icon={BarChart3} valueClassName={coverageColor(data?.totals?.report_coverage_pct)} />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <WeeklyTotalsCard label="Łączna liczba kontaktów" value={data?.totals?.phone_contacts_assigned ?? "—"} icon={PhoneCall} />
+        <WeeklyTotalsCard label="Zaraportowane" value={data?.totals?.phone_contacts_reported ?? "—"} icon={FileText} />
+        <WeeklyTotalsCard label="Bez raportu" value={data?.totals?.phone_contacts_missing ?? "—"} icon={Users} />
+        <WeeklyTotalsCard label="Pokrycie" value={data?.totals?.phone_contacts_coverage_pct === null || data?.totals?.phone_contacts_coverage_pct === undefined ? "—" : `${data.totals.phone_contacts_coverage_pct}%`} icon={BarChart3} valueClassName={coverageColor(data?.totals?.phone_contacts_coverage_pct)} />
       </div>
 
       {isLoading ? (
-        <Card className="rounded-xl border border-gray-200 bg-white text-slate-700 shadow-sm"><CardContent className="p-8 text-center">Ładowanie raportu...</CardContent></Card>
+        <Card className="rounded-xl border border-gray-200 bg-white text-slate-700 shadow-sm"><CardContent className="p-8 text-center">Ładowanie kontaktów...</CardContent></Card>
       ) : error ? (
-        <Card className="rounded-xl border border-red-200 bg-white text-red-700 shadow-sm"><CardContent className="p-8 text-center">Nie udało się pobrać raportu.</CardContent></Card>
+        <Card className="rounded-xl border border-red-200 bg-white text-red-700 shadow-sm"><CardContent className="p-8 text-center">Nie udało się pobrać kontaktów telefonicznych.</CardContent></Card>
+      ) : structures.length === 0 ? (
+        <Card className="rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm"><CardContent className="p-8 text-center">Brak kontaktów telefonicznych w wybranym okresie.</CardContent></Card>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-slate-700">
-            <Users className="h-5 w-5 text-green-600" />
-            <h2 className="text-lg font-semibold text-slate-800">Struktury</h2>
-          </div>
-          {(data?.structures || []).map((structure) => (
-            <WeeklyStructureCard key={structure.name} structure={structure} />
+          {structures.map((structure) => (
+            <WeeklyPhoneStructureCard key={structure.name} structure={structure} />
           ))}
-          {(!data?.structures || data.structures.length === 0) && (
-            <Card className="rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm"><CardContent className="p-8 text-center">Brak danych w wybranym zakresie.</CardContent></Card>
-          )}
         </div>
       )}
     </div>

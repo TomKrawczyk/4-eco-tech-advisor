@@ -16,6 +16,7 @@ import AllReports from '@/pages/AllReports';
 import MagazynyPrezentacja from '@/pages/MagazynyPrezentacja';
 import Finansowanie from '@/pages/Finansowanie';
 import RaportTygodniowyPH from '@/pages/RaportTygodniowyPH';
+import KontaktyTelefoniczne from '@/pages/KontaktyTelefoniczne';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -136,6 +137,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="RaportTygodniowyPH">
             <RaportTygodniowyPH />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/kontakty-telefoniczne"
+        element={
+          <LayoutWrapper currentPageName="KontaktyTelefoniczne">
+            <KontaktyTelefoniczne />
           </LayoutWrapper>
         }
       />
