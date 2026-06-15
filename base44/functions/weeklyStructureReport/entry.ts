@@ -78,6 +78,7 @@ Deno.serve(async (req) => {
     const TEST_GROUP = '69f255b4e42c9888fdf5f496';
     const email2name = {};
     const email2group = {};
+    const email2role = {};
     const advisorsList = [];
 
     for (const u of allowedUsers) {
@@ -87,6 +88,7 @@ Deno.serve(async (req) => {
         if (em) {
           email2name[em] = u.name || em;
           email2group[em] = grp;
+          email2role[em] = u.role || '';
         }
         advisorsList.push({ name: u.name || '', email: em, group: grp });
       }
@@ -165,6 +167,7 @@ Deno.serve(async (req) => {
             .map(([em, n]) => ({
               name: em === '__nieprzypisany__' ? '— nieprzypisany —' : (email2name[em] || em),
               email: em === '__nieprzypisany__' ? null : em,
+              role: em === '__nieprzypisany__' ? null : (email2role[em] || null),
               assigned: n,
             }))
             .sort((x, y) => y.assigned - x.assigned),
@@ -172,6 +175,7 @@ Deno.serve(async (req) => {
             .map(([em, n]) => ({
               name: em === '__nieznany__' ? '— nieznany —' : (email2name[em] || em),
               email: em === '__nieznany__' ? null : em,
+              role: em === '__nieznany__' ? null : (email2role[em] || null),
               reports: n,
             }))
             .sort((x, y) => y.reports - x.reports),
