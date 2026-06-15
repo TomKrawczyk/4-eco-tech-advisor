@@ -2,10 +2,10 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 
 function getStatusConfig(client) {
-  if (!client.reported) return { label: "BRAK RAPORTU", className: "border-red-500/30 bg-red-500/15 text-red-200" };
-  if (client.report_status === "completed") return { label: "Zrealizowane", className: "border-emerald-500/30 bg-emerald-500/15 text-emerald-200" };
-  if (client.report_status === "planned") return { label: "Przełożone", className: "border-emerald-500/30 bg-emerald-500/15 text-emerald-200" };
-  return { label: "Zaraportowane", className: "border-emerald-500/30 bg-emerald-500/15 text-emerald-200" };
+  if (!client.reported) return { label: "BRAK RAPORTU", className: "border-red-200 bg-red-100 text-red-700" };
+  if (client.report_status === "completed") return { label: "Zrealizowane", className: "border-green-200 bg-green-100 text-green-700" };
+  if (client.report_status === "planned") return { label: "Przełożone", className: "border-amber-200 bg-amber-100 text-amber-700" };
+  return { label: "Zaraportowane", className: "border-green-200 bg-green-100 text-green-700" };
 }
 
 export default function WeeklyClientsTable({ clients }) {
@@ -13,10 +13,10 @@ export default function WeeklyClientsTable({ clients }) {
 
   return (
     <section>
-      <h3 className="mb-3 text-base font-semibold text-white">Klienci do obdzwonienia</h3>
-      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/70">
+      <h3 className="mb-3 text-base font-semibold text-slate-800">Klienci do obdzwonienia</h3>
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-900 text-slate-300">
+          <thead className="bg-gray-50 text-slate-800">
             <tr>
               <th className="px-4 py-3 text-left font-semibold">Status</th>
               <th className="px-4 py-3 text-left font-semibold">Klient</th>
@@ -30,31 +30,31 @@ export default function WeeklyClientsTable({ clients }) {
             {clients.map((client, index) => {
               const status = getStatusConfig(client);
               return (
-                <tr key={`${client.client_name}-${client.client_phone}-${index}`} className={client.reported ? "border-t border-slate-800" : "border-t border-red-900/40 bg-red-500/10"}>
+                <tr key={`${client.client_name}-${client.client_phone}-${index}`} className={client.reported ? "border-t border-gray-200 hover:bg-gray-50" : "border-t border-gray-200 bg-red-50 hover:bg-red-50"}>
                   <td className="px-4 py-3"><Badge className={status.className}>{status.label}</Badge></td>
-                  <td className="px-4 py-3 font-medium text-slate-100">{client.client_name || "—"}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800">{client.client_name || "—"}</td>
                   <td className="px-4 py-3">
                     {client.client_phone ? (
-                      <a href={`tel:${client.client_phone}`} className="font-medium text-emerald-300 underline-offset-4 hover:underline">{client.client_phone}</a>
+                      <a href={`tel:${client.client_phone}`} className="font-medium text-green-600 underline-offset-4 hover:text-green-700 hover:underline">{client.client_phone}</a>
                     ) : (
-                      <span className="text-slate-500">—</span>
+                      <span className="text-gray-500">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-300">{client.meeting_calendar || "—"}</td>
-                  <td className="px-4 py-3 text-slate-300">{client.advisor_name || "—"}</td>
-                  <td className="px-4 py-3 text-slate-400">{client.client_address || "—"}</td>
+                  <td className="px-4 py-3 text-slate-700">{client.meeting_calendar || "—"}</td>
+                  <td className="px-4 py-3 text-slate-700">{client.advisor_name || "—"}</td>
+                  <td className="px-4 py-3 text-gray-500">{client.client_address || "—"}</td>
                 </tr>
               );
             })}
             {clients.length === 0 && (
               <tr>
-                <td colSpan="6" className="px-4 py-6 text-center text-slate-500">Brak klientów w tym zakresie.</td>
+                <td colSpan="6" className="px-4 py-6 text-center text-gray-500">Brak klientów w tym zakresie.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-sm text-slate-400">{clients.length} klientów, {missingCount} bez raportu (do obdzwonienia)</p>
+      <p className="mt-3 text-sm text-gray-500">{clients.length} klientów, {missingCount} bez raportu (do obdzwonienia)</p>
     </section>
   );
 }

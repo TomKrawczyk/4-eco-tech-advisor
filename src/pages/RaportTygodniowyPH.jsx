@@ -10,10 +10,10 @@ import WeeklyTotalsCard from "@/components/weekly-report/WeeklyTotalsCard";
 import WeeklyStructureCard from "@/components/weekly-report/WeeklyStructureCard";
 
 function coverageColor(value) {
-  if (value === null || value === undefined) return "text-slate-100";
-  if (value >= 70) return "text-emerald-300";
-  if (value >= 30) return "text-amber-300";
-  return "text-red-300";
+  if (value === null || value === undefined) return "text-slate-800";
+  if (value >= 70) return "text-green-700";
+  if (value >= 30) return "text-amber-700";
+  return "text-red-700";
 }
 
 export default function RaportTygodniowyPH() {
@@ -44,33 +44,33 @@ export default function RaportTygodniowyPH() {
   };
 
   if (!accessChecked) {
-    return <div className="flex min-h-[50vh] items-center justify-center text-slate-200">Ładowanie...</div>;
+    return <div className="flex min-h-[50vh] items-center justify-center text-slate-600">Ładowanie...</div>;
   }
 
   if (!canView) {
     return (
-      <Card className="border-red-500/20 bg-slate-950 text-white">
+      <Card className="rounded-xl border border-red-200 bg-white text-slate-800 shadow-sm">
         <CardContent className="p-8 text-center text-lg font-medium">Brak dostępu</CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-6 text-slate-100">
-      <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5 shadow-2xl shadow-black/20 md:p-6">
+    <div className="space-y-6 rounded-3xl bg-gradient-to-br from-green-50 via-emerald-50 to-white p-1 text-slate-800">
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm md:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Kontrola raportowania</p>
-            <h1 className="mt-2 text-3xl font-bold text-white">Raport tygodniowy PH</h1>
-            <p className="mt-2 text-sm text-slate-400">Zakres raportu: {data?.from || "—"} — {data?.to || "—"}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-green-700">Kontrola raportowania</p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-800">Raport tygodniowy PH</h1>
+            <p className="mt-2 text-sm text-gray-500">Zakres raportu: {data?.from || "—"} — {data?.to || "—"}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Input type="date" value={fromInput} onChange={(e) => setFromInput(e.target.value)} className="border-slate-700 bg-slate-900 text-slate-100" />
-            <Input type="date" value={toInput} onChange={(e) => setToInput(e.target.value)} className="border-slate-700 bg-slate-900 text-slate-100" />
-            <Button onClick={handleShow} disabled={isFetching} className="bg-emerald-600 text-white hover:bg-emerald-500">{isFetching ? "Ładowanie..." : "Pokaż"}</Button>
+            <Input type="date" value={fromInput} onChange={(e) => setFromInput(e.target.value)} className="border-gray-200 bg-white text-slate-800" />
+            <Input type="date" value={toInput} onChange={(e) => setToInput(e.target.value)} className="border-gray-200 bg-white text-slate-800" />
+            <Button onClick={handleShow} disabled={isFetching} className="bg-green-600 text-white hover:bg-green-700">{isFetching ? "Ładowanie..." : "Pokaż"}</Button>
           </div>
         </div>
-        {formError && <p className="mt-3 text-sm text-red-300">{formError}</p>}
+        {formError && <p className="mt-3 text-sm text-red-600">{formError}</p>}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -81,20 +81,20 @@ export default function RaportTygodniowyPH() {
       </div>
 
       {isLoading ? (
-        <Card className="border-slate-800 bg-slate-950 text-slate-100"><CardContent className="p-8 text-center">Ładowanie raportu...</CardContent></Card>
+        <Card className="rounded-xl border border-gray-200 bg-white text-slate-700 shadow-sm"><CardContent className="p-8 text-center">Ładowanie raportu...</CardContent></Card>
       ) : error ? (
-        <Card className="border-red-500/20 bg-slate-950 text-red-200"><CardContent className="p-8 text-center">Nie udało się pobrać raportu.</CardContent></Card>
+        <Card className="rounded-xl border border-red-200 bg-white text-red-700 shadow-sm"><CardContent className="p-8 text-center">Nie udało się pobrać raportu.</CardContent></Card>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-slate-300">
-            <Users className="h-5 w-5" />
-            <h2 className="text-lg font-semibold text-white">Struktury</h2>
+          <div className="flex items-center gap-2 text-slate-700">
+            <Users className="h-5 w-5 text-green-600" />
+            <h2 className="text-lg font-semibold text-slate-800">Struktury</h2>
           </div>
           {(data?.structures || []).map((structure) => (
             <WeeklyStructureCard key={structure.name} structure={structure} />
           ))}
           {(!data?.structures || data.structures.length === 0) && (
-            <Card className="border-slate-800 bg-slate-950 text-slate-400"><CardContent className="p-8 text-center">Brak danych w wybranym zakresie.</CardContent></Card>
+            <Card className="rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm"><CardContent className="p-8 text-center">Brak danych w wybranym zakresie.</CardContent></Card>
           )}
         </div>
       )}
