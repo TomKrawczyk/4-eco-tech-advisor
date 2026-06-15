@@ -35,9 +35,6 @@ export default function WeeklyStructureCard({ structure }) {
               {(metrics.missing_reports ?? 0) > 0 && (
                 <Badge className="border-red-200 bg-red-100 text-red-700">spotkania bez raportu: {metrics.missing_reports ?? 0}</Badge>
               )}
-              {phoneContactsAssigned > 0 && (
-                <Badge className="border-red-200 bg-red-100 text-red-700">Telefony: {phoneContactsMissing} bez raportu</Badge>
-              )}
               <div className="rounded-xl border border-gray-200 bg-white p-2 text-slate-500">
                 {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </div>
