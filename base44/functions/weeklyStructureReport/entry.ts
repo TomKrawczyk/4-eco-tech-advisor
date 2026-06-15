@@ -13,8 +13,7 @@ function localYMD(d) {
 
 function prevWeek() {
   const now = new Date();
-  const ymd = localYMD(now);
-  const base = new Date(`${ymd}T12:00:00Z`);
+  const base = new Date(`${localYMD(now)}T12:00:00Z`);
   const dow = (base.getUTCDay() + 6) % 7;
   const thisMon = new Date(base);
   thisMon.setUTCDate(base.getUTCDate() - dow);
@@ -45,7 +44,6 @@ async function fetchAll(entity) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-
     if (!(await base44.auth.isAuthenticated())) {
       return new Response(JSON.stringify({ error: 'unauthorized' }), {
         status: 401,
@@ -62,8 +60,8 @@ Deno.serve(async (req) => {
     const from = body?.from || pw.from;
     const to = body?.to || pw.to;
     const inRange = (d) => !!d && d >= from && d <= to;
-
     const svc = base44.asServiceRole.entities;
+
     const [allowedUsers, groups, meetingAssign, meetingReports, phoneContacts, phoneReports] =
       await Promise.all([
         fetchAll(svc.AllowedUser),
@@ -79,50 +77,68 @@ Deno.serve(async (req) => {
 
     const TEST_GROUP = '69f255b4e42c9888fdf5f496';
     const email2name = {};
+    const email2group = {};
     const advisorsList = [];
 
     for (const u of allowedUsers) {
       if ((u.role === 'advisor' || u.role === 'group_leader') && u.group_id !== TEST_GROUP) {
         const grp = u.group_id ? (groupName[u.group_id] || '—') : '—';
         const em = (u.email || '').trim().toLowerCase();
-        if (em) email2name[em] = u.name || em;
+        if (em) {
+          email2name[em] = u.name || em;
+          email2group[em] = grp;
+        }
         advisorsList.push({ name: u.name || '', email: em, group: grp });
       }
     }
 
-    const grpOf = (r) =>
+    const grpOfAssign = (r) =>
       (r.assigned_group_name || (r.assigned_group_id ? groupName[r.assigned_group_id] : '') || '').trim() || 'Bez struktury';
+
+    const grpOfReport = (r) => {
+      const em = (r.author_email || '').trim().toLowerCase();
+      return em && email2group[em] ? email2group[em] : 'Bez struktury';
+    };
 
     const S = {};
     const get = (name) => (S[name] ||= {
       name,
       meetings_assigned: 0,
       meeting_reports: 0,
+      reports_completed: 0,
+      reports_planned: 0,
       phone_assigned: 0,
       phone_reported: 0,
       advisors: 0,
       people: {},
+      reporters: {},
     });
 
     for (const r of meetingAssign) {
       if (!inRange(r.meeting_date)) continue;
-      const a = get(grpOf(r));
+      const a = get(grpOfAssign(r));
       a.meetings_assigned++;
       const em = (r.assigned_user_email || '').trim().toLowerCase();
-      const key = em || '__nieprzypisany__';
-      a.people[key] = (a.people[key] || 0) + 1;
+      a.people[em || '__nieprzypisany__'] = (a.people[em || '__nieprzypisany__'] || 0) + 1;
     }
 
     for (const r of meetingReports) {
-      if (inRange(r.meeting_date)) get(grpOf(r)).meeting_reports++;
+      if (!inRange(r.meeting_date)) continue;
+      const a = get(grpOfReport(r));
+      a.meeting_reports++;
+      const st = (r.status || '').toLowerCase();
+      if (st === 'completed') a.reports_completed++;
+      else if (st === 'planned') a.reports_planned++;
+      const em = (r.author_email || '').trim().toLowerCase();
+      a.reporters[em || '__nieznany__'] = (a.reporters[em || '__nieznany__'] || 0) + 1;
     }
 
     for (const r of phoneContacts) {
-      if (inRange(r.contact_date)) get(grpOf(r)).phone_assigned++;
+      if (inRange(r.contact_date)) get(grpOfAssign(r)).phone_assigned++;
     }
 
     for (const r of phoneReports) {
-      if (inRange(r.contact_date)) get(grpOf(r)).phone_reported++;
+      if (inRange(r.contact_date)) get(grpOfAssign(r)).phone_reported++;
     }
 
     for (const u of advisorsList) {
@@ -130,42 +146,58 @@ Deno.serve(async (req) => {
     }
 
     const structures = Object.values(S)
-      .map((a) => ({
-        name: a.name,
-        metrics: {
-          meetings_assigned: a.meetings_assigned,
-          meeting_reports: a.meeting_reports,
-          phone_assigned: a.phone_assigned,
-          phone_reported: a.phone_reported,
-          advisors: a.advisors,
-        },
-        advisors_assigned: Object.entries(a.people)
-          .map(([em, n]) => ({
-            name: em === '__nieprzypisany__' ? '— nieprzypisany —' : (email2name[em] || em),
-            email: em === '__nieprzypisany__' ? null : em,
-            assigned: n,
-          }))
-          .sort((x, y) => y.assigned - x.assigned),
-      }))
+      .map((a) => {
+        const cov = a.meetings_assigned > 0 ? Math.round((a.meeting_reports / a.meetings_assigned) * 100) : null;
+        return {
+          name: a.name,
+          metrics: {
+            meetings_assigned: a.meetings_assigned,
+            meeting_reports: a.meeting_reports,
+            reports_completed: a.reports_completed,
+            reports_planned: a.reports_planned,
+            report_coverage_pct: cov,
+            missing_reports: a.meetings_assigned > 0 ? Math.max(0, a.meetings_assigned - a.meeting_reports) : 0,
+            phone_assigned: a.phone_assigned,
+            phone_reported: a.phone_reported,
+            advisors: a.advisors,
+          },
+          advisors_assigned: Object.entries(a.people)
+            .map(([em, n]) => ({
+              name: em === '__nieprzypisany__' ? '— nieprzypisany —' : (email2name[em] || em),
+              email: em === '__nieprzypisany__' ? null : em,
+              assigned: n,
+            }))
+            .sort((x, y) => y.assigned - x.assigned),
+          reporters: Object.entries(a.reporters)
+            .map(([em, n]) => ({
+              name: em === '__nieznany__' ? '— nieznany —' : (email2name[em] || em),
+              email: em === '__nieznany__' ? null : em,
+              reports: n,
+            }))
+            .sort((x, y) => y.reports - x.reports),
+        };
+      })
       .sort((x, y) => y.metrics.meetings_assigned - x.metrics.meetings_assigned);
 
     const totals = structures.reduce(
       (t, s) => {
         t.meetings_assigned += s.metrics.meetings_assigned;
         t.meeting_reports += s.metrics.meeting_reports;
+        t.reports_completed += s.metrics.reports_completed;
         t.phone_assigned += s.metrics.phone_assigned;
         t.phone_reported += s.metrics.phone_reported;
         return t;
       },
-      { meetings_assigned: 0, meeting_reports: 0, phone_assigned: 0, phone_reported: 0 }
+      { meetings_assigned: 0, meeting_reports: 0, reports_completed: 0, phone_assigned: 0, phone_reported: 0 }
     );
+
+    totals.report_coverage_pct = totals.meetings_assigned > 0
+      ? Math.round((totals.meeting_reports / totals.meetings_assigned) * 100)
+      : null;
 
     return new Response(
       JSON.stringify({ from, to, generated_at: new Date().toISOString(), totals, structures }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e?.message || e) }), {
