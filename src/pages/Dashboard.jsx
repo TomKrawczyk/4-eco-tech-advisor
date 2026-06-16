@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import useCurrentUser from "@/components/shared/useCurrentUser";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,9 +14,8 @@ import PageHeader from "@/components/shared/PageHeader";
 import { motion } from "framer-motion";
 
 export default function Dashboard() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser, accessChecked } = useCurrentUser();
   
-  // Log page view
   useEffect(() => {
     if (currentUser) {
       base44.functions.invoke('logActivity', {
@@ -25,42 +25,22 @@ export default function Dashboard() {
     }
   }, [currentUser]);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const user = await base44.auth.me();
-      const allowedUsers = await base44.entities.AllowedUser.list();
-      const userAccess = allowedUsers.find(allowed => 
-        (allowed.data?.email || allowed.email) === user.email
-      );
-      
-      if (userAccess) {
-        user.displayName = userAccess.data?.name || userAccess.name;
-        user.role = userAccess.data?.role || userAccess.role;
-        user.allowedUserId = userAccess.id;
-      }
-      
-      setCurrentUser(user);
-    };
-    
-    fetchUserData();
-  }, []);
-
   const { data: allVisitReports = [] } = useQuery({
     queryKey: ["visitReports"],
     queryFn: () => base44.entities.VisitReport.list("-created_date", 20),
-    enabled: !!currentUser,
+    enabled: accessChecked,
   });
 
   const { data: allMeetingReports = [] } = useQuery({
     queryKey: ["meetingReports"],
     queryFn: () => base44.entities.MeetingReport.list("-created_date", 200),
-    enabled: !!currentUser && currentUser?.role === "admin",
+    enabled: accessChecked && currentUser?.role === "admin",
   });
 
   const { data: hierarchyData } = useQuery({
     queryKey: ["userHierarchy", currentUser?.email],
     queryFn: () => base44.functions.invoke('getUsersInHierarchy'),
-    enabled: !!currentUser,
+    enabled: accessChecked,
   });
 
   // Filtruj raporty według hierarchii
@@ -74,7 +54,7 @@ export default function Dashboard() {
   const { data: allowedUsers = [] } = useQuery({
     queryKey: ["allowedUsers"],
     queryFn: () => base44.entities.AllowedUser.list(),
-    enabled: currentUser?.role === "admin",
+    enabled: accessChecked && currentUser?.role === "admin",
   });
 
   const isAdmin = currentUser?.role === "admin";
@@ -125,6 +105,14 @@ export default function Dashboard() {
   ];
 
   const recentReports = visitReports.slice(0, 3);
+
+  if (!accessChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="w-7 h-7 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div>
