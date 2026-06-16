@@ -196,6 +196,12 @@ export default function Calendar() {
   const [groupDaySelected, setGroupDaySelected] = useState(null); // { day, items }
   const queryClient = useQueryClient();
 
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const calDays = eachDayOfInterval({ start: calStart, end: calEnd });
+
   useEffect(() => {
     const fetchUser = async () => {
       const user = await base44.auth.me();
@@ -296,7 +302,7 @@ export default function Calendar() {
   });
 
   const allSheetMeetings = sheetResult?.meetings || [];
-  const allSheetContacts = sheetResult?.contacts || [];
+  const allSheetContacts = sheetResult?.phoneContacts || sheetResult?.contacts || [];
 
   // Ustaw domyślną grupę gdy wchodzi w tryb groups
   useEffect(() => {
@@ -355,6 +361,7 @@ export default function Calendar() {
         if (!m.meeting_calendar) return false;
         const d = parseMeetingDate(m.meeting_calendar);
         if (!d) return false;
+        if (d < calStart || d > calEnd) return false;
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
         if (hiddenMeetingKeys.has(key)) return false;
         const assignment = meetingAssignments.find(a => a.meeting_key === key);
@@ -428,22 +435,29 @@ export default function Calendar() {
       calEvents = events.filter(e => e.owner_email === currentUser.email);
     }
 
-    const enrichedCalEvents = calEvents.map((event) => {
-      if (event.source !== "meeting_assignment" || !event.meeting_assignment_id) return event;
-      const assignment = meetingAssignments.find(a => a.meeting_key === event.meeting_assignment_id);
-      if (!assignment) return event;
-      return {
-        ...event,
-        client_name: assignment.client_name || event.client_name || "",
-        client_phone: assignment.client_phone || event.client_phone || "",
-        location: assignment.client_address || event.location || "",
-        comments: assignment.comments || event.comments || "",
-        agent: assignment.agent || event.agent || "",
-        sheet: assignment.sheet || event.sheet || "",
-        status_label: assignment.status || event.status_label || "Spotkanie",
-        interview_data: assignment.interview_data || event.interview_data || null,
-      };
-    });
+    const enrichedCalEvents = calEvents
+      .filter((event) => {
+        if (!event.event_date) return false;
+        const eventDate = parseISO(event.event_date);
+        if (!isValid(eventDate)) return false;
+        return eventDate >= calStart && eventDate <= calEnd;
+      })
+      .map((event) => {
+        if (event.source !== "meeting_assignment" || !event.meeting_assignment_id) return event;
+        const assignment = meetingAssignments.find(a => a.meeting_key === event.meeting_assignment_id);
+        if (!assignment) return event;
+        return {
+          ...event,
+          client_name: assignment.client_name || event.client_name || "",
+          client_phone: assignment.client_phone || event.client_phone || "",
+          location: assignment.client_address || event.location || "",
+          comments: assignment.comments || event.comments || "",
+          agent: assignment.agent || event.agent || "",
+          sheet: assignment.sheet || event.sheet || "",
+          status_label: assignment.status || event.status_label || "Spotkanie",
+          interview_data: assignment.interview_data || event.interview_data || null,
+        };
+      });
 
     if (viewMode === "team" && isLeaderOrAdmin) {
       const combinedEvents = [...enrichedCalEvents, ...sheetMeetingEvents];
@@ -454,13 +468,6 @@ export default function Calendar() {
     }
     return enrichedCalEvents;
   }, [events, currentUser, viewMode, groupUserEmails, isLeaderOrAdmin, sheetMeetingEvents, teamMemberEmails, selectedUserEmail, meetingAssignments]);
-
-  // Dni miesiąca
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const calDays = eachDayOfInterval({ start: calStart, end: calEnd });
 
   const getEventsForDay = (day) =>
     visibleEvents.filter(e => {
