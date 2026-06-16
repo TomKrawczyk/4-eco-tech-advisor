@@ -1,0 +1,23 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "account_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "blocked"
+      ],
+      "default": "active",
+      "description": "Status konta u\u017cytkownika zwi\u0105zany z raportowaniem"
+    },
+    "blocked_reason": {
+      "type": "string",
+      "description": "Pow\u00f3d blokady konta"
+    },
+    "blocked_at": {
+      "type": "string",
+      "description": "Data i czas zablokowania konta w formacie ISO"
+    }
+  }
+}

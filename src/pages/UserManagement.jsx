@@ -45,6 +45,12 @@ export default function UserManagement() {
     queryFn: () => base44.entities.Group.list(),
   });
 
+  const { data: userAccounts = [] } = useQuery({
+    queryKey: ["userAccounts"],
+    queryFn: () => base44.entities.User.list("-updated_date", 500),
+    enabled: currentUser?.role === "admin",
+  });
+
   const { data: registrationRequests = [] } = useQuery({
     queryKey: ["registrationRequests"],
     queryFn: () => base44.entities.RegistrationRequest.filter({ status: "pending" }),
@@ -207,6 +213,10 @@ export default function UserManagement() {
     });
   }, [allowedUsers, searchTerm, roleFilter]);
 
+  const blockedAccountByEmail = useMemo(() => {
+    return Object.fromEntries(userAccounts.map(user => [user.email, user]));
+  }, [userAccounts]);
+
   const toggleUserSelection = (userId) => {
     setSelectedUsers(prev => 
       prev.includes(userId) 
@@ -230,9 +240,17 @@ export default function UserManagement() {
   };
 
   const unblockUserMutation = useMutation({
-    mutationFn: (userId) => base44.entities.AllowedUser.update(userId, { is_blocked: false }),
+    mutationFn: async (user) => {
+      const email = user.data?.email || user.email;
+      const userAccount = blockedAccountByEmail[email];
+      if (userAccount) {
+        await base44.entities.User.update(userAccount.id, { account_status: "active", blocked_reason: "", blocked_at: "" });
+      }
+      await base44.entities.AllowedUser.update(user.id, { is_blocked: false, blocked_reason: "", missing_reports_count: 0 });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(["allowedUsers"]);
+      queryClient.invalidateQueries(["userAccounts"]);
       toast.success("Użytkownik odblokowany");
     },
     onError: (error) => {
@@ -592,7 +610,7 @@ export default function UserManagement() {
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
                     <RoleBadge user={user} />
-                    {(user.data?.is_blocked || user.is_blocked) && (
+                    {((blockedAccountByEmail[user.data?.email || user.email]?.account_status === "blocked") || (user.data?.is_blocked || user.is_blocked)) && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">
                         <Lock className="w-3 h-3" />
                         Zablokowany
@@ -608,11 +626,11 @@ export default function UserManagement() {
                   )}
                 </div>
                 <div className="flex gap-1">
-                  {(user.data?.is_blocked || user.is_blocked) && (
+                  {((blockedAccountByEmail[user.data?.email || user.email]?.account_status === "blocked") || (user.data?.is_blocked || user.is_blocked)) && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => unblockUserMutation.mutate(user.id)}
+                      onClick={() => unblockUserMutation.mutate(user)}
                       className="shrink-0"
                       title="Odblokuj użytkownika"
                     >

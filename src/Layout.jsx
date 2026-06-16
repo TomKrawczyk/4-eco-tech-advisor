@@ -119,7 +119,7 @@ export default function Layout({ children, currentPageName }) {
         const cached = sessionStorage.getItem(CACHE_KEY);
         if (cached) {
           const { data, ts } = JSON.parse(cached);
-          if (Date.now() - ts < CACHE_TTL) {
+          if (Date.now() - ts < CACHE_TTL && data.user?.account_status !== 'blocked' && data.user?.is_blocked !== true) {
             setCurrentUser(data.user);
             setHasAccess(data.hasAccess);
             if (data.pendingTraining) setPendingRequiredTraining(data.pendingTraining);
@@ -145,9 +145,12 @@ export default function Layout({ children, currentPageName }) {
           user.displayName = userAccess.data?.name || userAccess.name;
           const blockedUntil = userAccess.data?.blocked_until || userAccess.blocked_until;
           const adminBlocked = blockedUntil && new Date(blockedUntil) >= new Date(new Date().toISOString().split("T")[0]);
+          const legacyBlocked = (userAccess.data?.is_blocked || userAccess.is_blocked) === true;
           user.blocked_until = blockedUntil || null;
-          user.blocked_reason = userAccess.data?.blocked_reason || userAccess.blocked_reason || "";
-          user.is_blocked = adminBlocked || (userAccess.data?.is_blocked || userAccess.is_blocked) === true;
+          user.account_status = user.account_status === "blocked" || legacyBlocked ? "blocked" : "active";
+          user.blocked_reason = user.blocked_reason || userAccess.data?.blocked_reason || userAccess.blocked_reason || "";
+          user.blocked_at = user.blocked_at || null;
+          user.is_blocked = adminBlocked || user.account_status === "blocked";
 
           let pendingTraining = null;
           if (user.role !== 'admin' && user.role !== 'hr_admin') {
@@ -165,10 +168,12 @@ export default function Layout({ children, currentPageName }) {
 
           // Zapisz do cache
           try {
-            sessionStorage.setItem(CACHE_KEY, JSON.stringify({
-              ts: Date.now(),
-              data: { user, hasAccess: true, pendingTraining }
-            }));
+            if (!user.is_blocked) {
+              sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+                ts: Date.now(),
+                data: { user, hasAccess: true, pendingTraining }
+              }));
+            }
           } catch (_) {}
 
           base44.functions.invoke('trackUserActivity').catch(() => {});
@@ -210,6 +215,8 @@ export default function Layout({ children, currentPageName }) {
     }
     return true;
   };
+
+  const canAccessWhileBlocked = currentUser?.is_blocked && ["MeetingReports", "PhoneContacts"].includes(currentPageName);
 
   const visibleNavItems = navStructure
     .map(entry => {
@@ -484,14 +491,14 @@ export default function Layout({ children, currentPageName }) {
                 </button>
               </div>
             </div>
-          ) : pendingRequiredTraining ? (
+          ) : currentUser?.is_blocked && !canAccessWhileBlocked ? (
+            <BlockedUserScreen currentUser={currentUser} />
+          ) : pendingRequiredTraining && !canAccessWhileBlocked ? (
             <RequiredTrainingGate
               training={pendingRequiredTraining}
               currentUser={currentUser}
               onCompleted={() => setPendingRequiredTraining(null)}
             />
-          ) : currentUser?.is_blocked ? (
-            <BlockedUserScreen currentUser={currentUser} />
           ) : (
             children
           )}

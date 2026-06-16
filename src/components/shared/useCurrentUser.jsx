@@ -11,7 +11,11 @@ async function fetchCurrentUser() {
   if (ua) {
     user.role = ua.data?.role || ua.role;
     user.displayName = ua.data?.name || ua.name;
-    user.is_blocked = (ua.data?.is_blocked || ua.is_blocked) === true;
+    const legacyBlocked = (ua.data?.is_blocked || ua.is_blocked) === true;
+    user.account_status = user.account_status === "blocked" || legacyBlocked ? "blocked" : "active";
+    user.blocked_reason = user.blocked_reason || ua.data?.blocked_reason || ua.blocked_reason || "";
+    user.blocked_at = user.blocked_at || null;
+    user.is_blocked = user.account_status === "blocked";
     let groupId = ua.data?.group_id || ua.group_id;
     if (!groupId) {
       const uaEmail = ua.data?.email || ua.email;

@@ -11,6 +11,7 @@ import {
   CheckSquare, MessageSquare, BookOpen, ArrowRight, BarChart3, Zap
 } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
+import BlockedUsersCard from "@/components/admin/BlockedUsersCard";
 import { motion } from "framer-motion";
 
 export default function Dashboard() {
@@ -122,7 +123,8 @@ export default function Dashboard() {
       />
 
       {isAdmin && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -189,7 +191,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </motion.div>
-        </div>
+          </div>
+          <BlockedUsersCard />
+        </>
       )}
 
       <div className="mb-8">
