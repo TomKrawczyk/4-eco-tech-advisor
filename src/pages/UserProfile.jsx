@@ -42,7 +42,10 @@ export default function UserProfile() {
     onSuccess: () => {
       toast.success("Profil zaktualizowany");
       setSaving(false);
-      base44.auth.me().then(setCurrentUser);
+      base44.auth.me().then((user) => {
+        setCurrentUser(user);
+        setFullName(user.full_name || "");
+      });
     },
     onError: () => {
       setSaving(false);
@@ -52,7 +55,7 @@ export default function UserProfile() {
   const createPreferencesMutation = useMutation({
     mutationFn: (data) => base44.entities.NotificationPreference.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries(["notificationPreferences"]);
+      queryClient.invalidateQueries({ queryKey: ["notificationPreferences"] });
       toast.success("Preferencje zapisane");
     },
   });
@@ -60,7 +63,7 @@ export default function UserProfile() {
   const updatePreferencesMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.NotificationPreference.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(["notificationPreferences"]);
+      queryClient.invalidateQueries({ queryKey: ["notificationPreferences"] });
       toast.success("Preferencje zapisane");
     },
   });

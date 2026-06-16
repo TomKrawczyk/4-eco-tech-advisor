@@ -772,7 +772,7 @@ export default function PhoneContacts() {
         onClose={() => setManualAddOpen(false)}
         currentUser={currentUser}
         onContactAdded={() => {
-          queryClient.invalidateQueries(["phoneContactsDB"]);
+          queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
           refetchDB();
         }}
       />
