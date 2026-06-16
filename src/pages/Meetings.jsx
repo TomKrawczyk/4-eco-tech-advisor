@@ -319,10 +319,12 @@ export default function Meetings() {
     const myAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
     const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
     const emails = allAllowedUsers
-      .filter(u => managedIds.includes(u.id))
+      .filter(u => {
+        const email = u.data?.email || u.email;
+        return managedIds.includes(u.id) || managedIds.includes(email);
+      })
       .map(u => u.data?.email || u.email);
-    emails.push(currentUser.email);
-    return emails;
+    return [...new Set([...emails, currentUser.email])];
   }, [currentUser, allAllowedUsers]);
 
   // Zwykły user widzi swoje przypisane spotkania

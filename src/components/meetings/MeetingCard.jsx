@@ -227,7 +227,14 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
   const unassignMutation = useMutation({
     mutationFn: async () => {
       if (!assignment) return;
-      await base44.entities.MeetingAssignment.delete(assignment.id);
+      if (assignment.assigned_group_id) {
+        await base44.entities.MeetingAssignment.update(assignment.id, {
+          assigned_user_email: "",
+          assigned_user_name: "",
+        });
+      } else {
+        await base44.entities.MeetingAssignment.delete(assignment.id);
+      }
       Promise.resolve().then(async () => {
         const existingEvents = await base44.entities.CalendarEvent.filter({ meeting_assignment_id: meetingKey });
         await Promise.all(existingEvents.map(ev => base44.entities.CalendarEvent.delete(ev.id)));
@@ -237,12 +244,18 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ["meetingAssignments"] });
       const previousAssignments = queryClient.getQueryData(["meetingAssignments"]) || [];
-      queryClient.setQueryData(["meetingAssignments"], (old = []) => old.filter(item => item.meeting_key !== meetingKey));
+      queryClient.setQueryData(["meetingAssignments"], (old = []) => old.flatMap(item => {
+        if (item.meeting_key !== meetingKey) return [item];
+        if (item.assigned_group_id) {
+          return [{ ...item, assigned_user_email: "", assigned_user_name: "" }];
+        }
+        return [];
+      }));
       return { previousAssignments };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
-      toast.success("Usunięto przypisanie i wydarzenie z kalendarza");
+      toast.success("Usunięto przypisanie osoby bez kasowania grupy");
     },
     onError: (_e, _variables, context) => {
       if (context?.previousAssignments) {

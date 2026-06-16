@@ -199,12 +199,25 @@ export default function Calendar() {
   useEffect(() => {
     const fetchUser = async () => {
       const user = await base44.auth.me();
-      const allowedUsers = await base44.entities.AllowedUser.list();
+      const [allowedUsers, groups] = await Promise.all([
+        base44.entities.AllowedUser.list(),
+        base44.entities.Group.list(),
+      ]);
       const ua = allowedUsers.find(a => (a.data?.email || a.email) === user.email);
       if (ua) {
         user.role = ua.data?.role || ua.role;
         user.displayName = ua.data?.name || ua.name;
-        user.groupId = ua.data?.group_id || ua.group_id;
+        let groupId = ua.data?.group_id || ua.group_id;
+        if (!groupId) {
+          const uaEmail = ua.data?.email || ua.email;
+          const myGroup = groups.find(g => {
+            const ids = g.data?.group_leader_ids || g.group_leader_ids || [];
+            const legacyId = g.data?.group_leader_id || g.group_leader_id;
+            return ids.includes(ua.id) || ids.includes(uaEmail) || legacyId === ua.id || legacyId === uaEmail;
+          });
+          groupId = myGroup?.id || null;
+        }
+        user.groupId = groupId;
         user.allowedUserRecord = ua;
       }
       setCurrentUser(user);
@@ -305,10 +318,12 @@ export default function Calendar() {
     const myAllowedUser = allUsers.find(u => (u.data?.email || u.email) === currentUser.email);
     const managedIds = myAllowedUser?.managed_users || myAllowedUser?.data?.managed_users || [];
     const emails = allUsers
-      .filter(u => managedIds.includes(u.id))
+      .filter(u => {
+        const email = u.data?.email || u.email;
+        return managedIds.includes(u.id) || managedIds.includes(email);
+      })
       .map(u => u.data?.email || u.email);
-    emails.push(currentUser.email);
-    return emails;
+    return [...new Set([...emails, currentUser.email])];
   }, [allUsers, currentUser]);
 
   const availableCalendarUsers = useMemo(() => {
