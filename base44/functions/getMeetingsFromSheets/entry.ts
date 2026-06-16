@@ -54,17 +54,35 @@ async function getAllSheetTabs(accessToken) {
   return tabs;
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function fetchLeadsFromSheet(accessToken, sheetTitle) {
   const range = `'${sheetTitle}'!A1:Z3000`;
-  const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  if (!res.ok) {
-    console.log(`[${sheetTitle}] Google API error ${res.status}: ${await res.text()}`);
+
+  let data = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    if (res.ok) {
+      data = await res.json();
+      break;
+    }
+
+    const errorText = await res.text();
+    console.log(`[${sheetTitle}] Google API error ${res.status} (próba ${attempt}/3): ${errorText}`);
+
+    if (attempt < 3 && (res.status === 429 || res.status >= 500)) {
+      await sleep(400 * attempt);
+      continue;
+    }
+
     return { meetings: [], phoneContacts: [] };
   }
-  const data = await res.json();
   const rows = data.values || [];
   if (rows.length < 2) return { meetings: [], phoneContacts: [] };
 
@@ -256,7 +274,11 @@ Deno.serve(async (req) => {
 
     console.log(`Aktywne zakładki do pobrania: ${activeTabs.length}`);
 
-    const results = await Promise.all(activeTabs.map(tab => fetchLeadsFromSheet(accessToken, tab)));
+    const results = [];
+    for (const tab of activeTabs) {
+      results.push(await fetchLeadsFromSheet(accessToken, tab));
+      await sleep(120);
+    }
 
     let meetings = results.flatMap(r => r.meetings);
     let phoneContacts = results.flatMap(r => r.phoneContacts);
