@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 const TRACKED_ROLES = new Set(['advisor', 'team_leader', 'group_leader']);
 const REPORTING_WINDOW_DAYS = 45;
 const MAX_ALLOWED_BUSINESS_DAYS = 3;
+const GRACE_START_DATE = '2026-06-16';
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
@@ -103,7 +104,8 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
-    const dryRun = body?.dryRun === true;
+    const requestedDryRun = body?.dry_run === true;
+    const dryRun = requestedDryRun || body?.dryRun === true;
     const svc = base44.asServiceRole.entities;
 
     const today = new Date();
@@ -112,6 +114,7 @@ Deno.serve(async (req) => {
     const windowStart = new Date(today);
     windowStart.setDate(windowStart.getDate() - REPORTING_WINDOW_DAYS);
     const windowStartYmd = localYMD(windowStart);
+    const effectiveStartYmd = GRACE_START_DATE > windowStartYmd ? GRACE_START_DATE : windowStartYmd;
 
     const [users, allowedUsers, meetingAssignments, meetingReports, visitReports, phoneContacts, phoneContactReports] = await Promise.all([
       fetchAll(svc.User),
@@ -173,7 +176,7 @@ Deno.serve(async (req) => {
     for (const assignment of meetingAssignments) {
       const email = normalizeEmail(assignment.assigned_user_email);
       const meetingDate = getMeetingDate(assignment);
-      if (!trackedEmails.has(email) || !meetingDate || meetingDate < windowStartYmd) continue;
+      if (!trackedEmails.has(email) || !meetingDate || meetingDate < effectiveStartYmd) continue;
       const clientKey = getClientKey(assignment);
       if (!clientKey) continue;
       const reportKey = `${email}|${meetingDate}|${clientKey}`;
@@ -193,7 +196,7 @@ Deno.serve(async (req) => {
     for (const contact of phoneContacts) {
       const email = normalizeEmail(contact.assigned_user_email);
       const contactDate = getContactDate(contact);
-      if (!trackedEmails.has(email) || !contactDate || contactDate < windowStartYmd) continue;
+      if (!trackedEmails.has(email) || !contactDate || contactDate < effectiveStartYmd) continue;
       const clientKey = getClientKey(contact);
       if (!clientKey) continue;
       const hasDirectReport = contact.contact_key && phoneReportContactKeys.has(`${email}|${contact.contact_key}`);
@@ -272,7 +275,8 @@ Deno.serve(async (req) => {
       newly_blocked: newlyBlocked,
       unblocked,
       still_blocked_count: stillBlockedCount,
-      dry_run: dryRun,
+      dry_run: requestedDryRun,
+      grace_start_date: GRACE_START_DATE,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
