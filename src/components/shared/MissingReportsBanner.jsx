@@ -5,6 +5,20 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { startOfDay } from "date-fns";
 
+const GRACE_START_DATE = "2026-06-16";
+
+function getBusinessDaysElapsed(startDate, endDate) {
+  const cursor = new Date(startDate);
+  cursor.setDate(cursor.getDate() + 1);
+  let count = 0;
+  while (cursor <= endDate) {
+    const day = cursor.getDay();
+    if (day !== 0 && day !== 6) count += 1;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return count;
+}
+
 function parseMeetingDate(str) {
   if (!str) return null;
   const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -77,7 +91,10 @@ export default function MissingReportsBanner({ currentUser }) {
         const meetingDay = parseMeetingDate(a.meeting_calendar || a.meeting_date);
         if (!meetingDay) return false;
         const day = startOfDay(meetingDay);
-        if (day >= today) return false; // tylko przeszłe spotkania (bez limitu wstecznego)
+        if (day >= today) return false;
+        if ((a.meeting_date || "") < GRACE_START_DATE) return false;
+        const businessDays = getBusinessDaysElapsed(day, today);
+        if (businessDays <= 3) return false;
 
         const aPhone = normalizePhone(a.client_phone);
         const aName = normalize(a.client_name);
@@ -135,8 +152,7 @@ export default function MissingReportsBanner({ currentUser }) {
       <div className="flex-1">
         <span className="font-semibold">Brak raportów po spotkaniach! </span>
         <span>
-          Masz {missingMeetings.length} {missingMeetings.length === 1 ? "spotkanie" : "spotkań"} bez raportu.{" "}
-          Brak raportowania przez 3 dni skutkuje blokadą konta.
+          Masz {missingMeetings.length} {missingMeetings.length === 1 ? "spotkanie" : "spotkań"} bez raportu po ponad 3 dniach roboczych.
         </span>
       </div>
       <Link
