@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList } from "lucide-react";
+import { Search, Table2, ChevronDown, ChevronUp, Settings2, MessageSquare, BarChart2, Bell, Calendar, User, MapPin, Phone, Clock, FileText, CheckSquare, ClipboardList } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
 import { motion, AnimatePresence } from "framer-motion";
 import SheetMappingPanel from "@/components/meetings/SheetMappingPanel";
 import MeetingCard from "@/components/meetings/MeetingCard";
 import AssignmentStats from "@/components/meetings/AssignmentStats";
+import MeetingsCacheStatusBar from "@/components/meetings/MeetingsCacheStatusBar";
 import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -57,7 +58,7 @@ function findSheetMapping(sheetMappings, sheetName) {
 }
 
 // Widok spotkań dla zwykłego użytkownika – z pełnymi szczegółami i akcjami
-function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen }) {
+function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen, refreshedAt, cacheStatus, onRefreshNow, isRefreshingCache }) {
   const groupedByDate = useMemo(() => {
     const groups = {};
     myAssignedMeetings.forEach(a => {
@@ -81,6 +82,12 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
       <PageHeader
         title="Moje spotkania"
         subtitle="Spotkania przypisane do Ciebie – najbliższe 14 dni"
+      />
+      <MeetingsCacheStatusBar
+        refreshedAt={refreshedAt}
+        status={cacheStatus}
+        onRefresh={onRefreshNow}
+        isRefreshing={isRefreshingCache}
       />
       {myAssignedMeetings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -232,6 +239,7 @@ export default function Meetings() {
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -266,16 +274,28 @@ export default function Meetings() {
     enabled: accessChecked && isLeaderOrAdmin,
   });
 
-  // Dane z arkusza – doradca pobiera tylko swoje przypisane spotkania z pełnymi szczegółami
-  const { data: result, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ["sheetMeetings"],
-    queryFn: () => base44.functions.invoke("getMeetingsFromSheets").then(r => r.data),
+  const { data: meetingsCacheRecord = null, isLoading, refetch: refetchMeetingsCache, isFetching } = useQuery({
+    queryKey: ["meetingsCache"],
+    queryFn: async () => {
+      const rows = await base44.entities.MeetingsCache.filter({ cache_key: "meetings_main" }, "-updated_date", 1);
+      return rows[0] || null;
+    },
     enabled: accessChecked,
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
   });
 
-  const allMeetings = result?.meetings || [];
+  const handleRefreshNow = async () => {
+    setManualRefreshing(true);
+    try {
+      await base44.functions.invoke("refreshMeetingsCache", {});
+      await refetchMeetingsCache();
+    } finally {
+      setManualRefreshing(false);
+    }
+  };
+
+  const allMeetings = meetingsCacheRecord?.meetings_json?.meetings || [];
   const sheetMeetingsByKey = useMemo(() => {
     const map = {};
     allMeetings.forEach(m => {
@@ -299,7 +319,10 @@ export default function Meetings() {
     });
     return map;
   }, [meetingAssignmentsByKey]);
-  const refreshedAt = result?.refreshed_at ? new Date(result.refreshed_at).toLocaleTimeString("pl-PL") : null;
+  const cacheStatus = meetingsCacheRecord?.status || "idle";
+  const refreshedAt = meetingsCacheRecord?.last_refreshed
+    ? new Date(meetingsCacheRecord.last_refreshed).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })
+    : null;
 
   // Okno dat: dziś + 14 dni dla wszystkich (zwiększone z 3)
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -488,6 +511,10 @@ export default function Meetings() {
         setSelectedDetails={setSelectedDetails}
         detailsModalOpen={detailsModalOpen}
         setDetailsModalOpen={setDetailsModalOpen}
+        refreshedAt={refreshedAt}
+        cacheStatus={cacheStatus}
+        onRefreshNow={handleRefreshNow}
+        isRefreshingCache={manualRefreshing || isFetching}
       />
     );
   }
@@ -596,14 +623,13 @@ export default function Meetings() {
           </Button>
         )}
 
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          <Button onClick={() => refetch()} variant="outline" className="gap-2 h-11" disabled={isFetching}>
-            <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-            Odśwież
-          </Button>
-          {refreshedAt && (
-            <span className="text-[10px] text-gray-400">Aktualizacja: {refreshedAt}</span>
-          )}
+        <div className="shrink-0 min-w-[240px]">
+          <MeetingsCacheStatusBar
+            refreshedAt={refreshedAt}
+            status={cacheStatus}
+            onRefresh={handleRefreshNow}
+            isRefreshing={manualRefreshing || isFetching}
+          />
         </div>
       </div>
 
