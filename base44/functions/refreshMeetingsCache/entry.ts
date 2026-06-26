@@ -133,16 +133,13 @@ async function getAllSheetTabs(accessToken, spreadsheetId, sheetMappings) {
     .map((item) => item?.sheet_name || item?.data?.sheet_name)
     .filter(Boolean);
 
-  if (mappedTabs.length > 0) {
-    return [...new Set(mappedTabs)];
-  }
-
   const data = await fetchJsonWithRetry(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?includeGridData=false`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
     'spreadsheet metadata'
   );
-  return (data.sheets || []).map((sheet) => sheet.properties?.title).filter(Boolean);
+  const metadataTabs = (data.sheets || []).map((sheet) => sheet.properties?.title).filter(Boolean);
+  return [...new Set([...mappedTabs, ...metadataTabs])];
 }
 
 function parseSheetRows(sheetTitle, rows) {
