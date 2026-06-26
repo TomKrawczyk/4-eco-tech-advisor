@@ -13,6 +13,10 @@ function normalizeName(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+function normalizePhone(value) {
+  return pickFirstPhone(value).replace(/\D/g, '');
+}
+
 function pickFirstPhone(value) {
   const text = String(value || '').trim();
   if (!text) return '';
@@ -116,7 +120,7 @@ Deno.serve(async (req) => {
     const windowStartYmd = localYMD(windowStart);
     const effectiveStartYmd = GRACE_START_DATE > windowStartYmd ? GRACE_START_DATE : windowStartYmd;
 
-    const [users, allowedUsers, meetingAssignments, meetingReports, visitReports, phoneContacts, phoneContactReports] = await Promise.all([
+    const [users, allowedUsers, meetingAssignments, meetingReports, visitReports, phoneContacts, phoneContactReports, calendarEvents] = await Promise.all([
       fetchAll(svc.User),
       fetchAll(svc.AllowedUser),
       fetchAll(svc.MeetingAssignment),
@@ -124,8 +128,8 @@ Deno.serve(async (req) => {
       fetchAll(svc.VisitReport),
       fetchAll(svc.PhoneContact),
       fetchAll(svc.PhoneContactReport),
+      fetchAll(svc.CalendarEvent),
     ]);
-
     const allowedByEmail = new Map();
     for (const record of allowedUsers) {
       const email = normalizeEmail(record.email || record.data?.email);
@@ -143,44 +147,90 @@ Deno.serve(async (req) => {
           email,
           fieldRole,
           allowed,
+          isExempt: (allowed?.exempt_from_reports || allowed?.data?.exempt_from_reports) === true,
         };
       })
-      .filter((user) => TRACKED_ROLES.has(user.fieldRole));
+      .filter((user) =>
+        TRACKED_ROLES.has(user.fieldRole) ||
+        user.account_status === 'blocked' ||
+        user.allowed?.is_blocked === true ||
+        user.allowed?.data?.is_blocked === true
+      );
 
-    const trackedEmails = new Set(trackedUsers.map((user) => user.email));
+    const monitoredEmails = new Set(
+      trackedUsers
+        .filter((user) => TRACKED_ROLES.has(user.fieldRole) && !user.isExempt)
+        .map((user) => user.email)
+    );
 
     const meetingReportKeys = new Set();
+    const meetingReportTimeline = new Map();
     for (const report of [...meetingReports, ...visitReports]) {
       const email = getReportAuthorEmail(report);
-      if (!trackedEmails.has(email)) continue;
+      if (!monitoredEmails.has(email)) continue;
       const reportDate = localYMD(report.meeting_date || report.visit_date || report.created_date);
+      const createdDate = localYMD(report.created_date);
       const clientKey = getClientKey(report);
-      if (!reportDate || !clientKey) continue;
-      meetingReportKeys.add(`${email}|${reportDate}|${clientKey}`);
+      if (!clientKey) continue;
+      const timelineKey = `${email}|${clientKey}`;
+      if (!meetingReportTimeline.has(timelineKey)) meetingReportTimeline.set(timelineKey, []);
+      meetingReportTimeline.get(timelineKey).push({ reportDate, createdDate });
+      if (reportDate) meetingReportKeys.add(`${email}|${reportDate}|${clientKey}`);
     }
 
     const phoneReportKeys = new Set();
     const phoneReportContactKeys = new Set();
+    const phoneReportTimeline = new Map();
     for (const report of phoneContactReports) {
       const email = getReportAuthorEmail(report);
-      if (!trackedEmails.has(email)) continue;
+      if (!monitoredEmails.has(email)) continue;
       if (report.contact_key) phoneReportContactKeys.add(`${email}|${report.contact_key}`);
       const reportDate = localYMD(report.contact_date || report.created_date);
+      const createdDate = localYMD(report.created_date);
       const clientKey = getClientKey(report);
-      if (!reportDate || !clientKey) continue;
-      phoneReportKeys.add(`${email}|${reportDate}|${clientKey}`);
+      if (!clientKey) continue;
+      const timelineKey = `${email}|${clientKey}`;
+      if (!phoneReportTimeline.has(timelineKey)) phoneReportTimeline.set(timelineKey, []);
+      phoneReportTimeline.get(timelineKey).push({ reportDate, createdDate });
+      if (reportDate) phoneReportKeys.add(`${email}|${reportDate}|${clientKey}`);
     }
 
     const overdueByEmail = new Map();
 
+    const postponedMeetingKeys = new Set();
+    for (const event of calendarEvents) {
+      if (event.status !== 'postponed' || !event.postponed_to) continue;
+      const postponedTo = parseYMD(event.postponed_to);
+      if (!postponedTo || postponedTo <= today) continue;
+      const email = normalizeEmail(event.owner_email);
+      const clientKey = getClientKey(event);
+      if (!email || !clientKey) continue;
+      postponedMeetingKeys.add(`${email}|${clientKey}`);
+    }
+
+    const latestMeetingByUserClient = new Map();
     for (const assignment of meetingAssignments) {
       const email = normalizeEmail(assignment.assigned_user_email);
       const meetingDate = getMeetingDate(assignment);
-      if (!trackedEmails.has(email) || !meetingDate || meetingDate < effectiveStartYmd) continue;
       const clientKey = getClientKey(assignment);
-      if (!clientKey) continue;
+      if (!email || !meetingDate || !clientKey) continue;
+      const dedupeKey = `${email}|${clientKey}`;
+      const existing = latestMeetingByUserClient.get(dedupeKey);
+      if (!existing || meetingDate > existing.meetingDate) {
+        latestMeetingByUserClient.set(dedupeKey, { assignment, meetingDate, clientKey });
+      }
+    }
+
+    for (const { assignment, meetingDate, clientKey } of latestMeetingByUserClient.values()) {
+      const email = normalizeEmail(assignment.assigned_user_email);
+      if (!monitoredEmails.has(email) || meetingDate < effectiveStartYmd) continue;
+      if (postponedMeetingKeys.has(`${email}|${clientKey}`)) continue;
       const reportKey = `${email}|${meetingDate}|${clientKey}`;
-      if (meetingReportKeys.has(reportKey)) continue;
+      const matchingReports = meetingReportTimeline.get(`${email}|${clientKey}`) || [];
+      const hasMatchingReport = meetingReportKeys.has(reportKey) || matchingReports.some((report) => {
+        return (report.reportDate && report.reportDate >= meetingDate) || (report.createdDate && report.createdDate >= meetingDate);
+      });
+      if (hasMatchingReport) continue;
       const businessDays = getBusinessDaysElapsed(meetingDate, today);
       if (businessDays <= MAX_ALLOWED_BUSINESS_DAYS) continue;
       if (!overdueByEmail.has(email)) overdueByEmail.set(email, []);
@@ -196,11 +246,14 @@ Deno.serve(async (req) => {
     for (const contact of phoneContacts) {
       const email = normalizeEmail(contact.assigned_user_email);
       const contactDate = getContactDate(contact);
-      if (!trackedEmails.has(email) || !contactDate || contactDate < effectiveStartYmd) continue;
+      if (!monitoredEmails.has(email) || !contactDate || contactDate < effectiveStartYmd) continue;
       const clientKey = getClientKey(contact);
       if (!clientKey) continue;
       const hasDirectReport = contact.contact_key && phoneReportContactKeys.has(`${email}|${contact.contact_key}`);
-      const hasFallbackReport = phoneReportKeys.has(`${email}|${contactDate}|${clientKey}`);
+      const matchingReports = phoneReportTimeline.get(`${email}|${clientKey}`) || [];
+      const hasFallbackReport = phoneReportKeys.has(`${email}|${contactDate}|${clientKey}`) || matchingReports.some((report) => {
+        return (report.reportDate && report.reportDate >= contactDate) || (report.createdDate && report.createdDate >= contactDate);
+      });
       if (hasDirectReport || hasFallbackReport) continue;
       const businessDays = getBusinessDaysElapsed(contactDate, today);
       if (businessDays <= MAX_ALLOWED_BUSINESS_DAYS) continue;
@@ -219,7 +272,7 @@ Deno.serve(async (req) => {
     let stillBlockedCount = 0;
 
     for (const user of trackedUsers) {
-      const currentStatus = user.account_status || 'active';
+      const currentStatus = user.account_status === 'blocked' || user.allowed?.is_blocked === true || user.allowed?.data?.is_blocked === true ? 'blocked' : 'active';
       const overdue = (overdueByEmail.get(user.email) || []).sort((a, b) => String(a.date).localeCompare(String(b.date)));
       const oldest = overdue[0] || null;
       const shouldBeBlocked = !!oldest;
