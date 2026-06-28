@@ -17,6 +17,7 @@ import MeetingsCacheStatusBar from "@/components/meetings/MeetingsCacheStatusBar
 import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { buildMeetingReportsIndex } from "@/lib/reportingStatus";
 
 // Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
 function parseMeetingDate(str) {
@@ -273,6 +274,14 @@ export default function Meetings() {
     queryFn: () => base44.entities.MeetingReport.list("-created_date", 200),
     enabled: accessChecked && isLeaderOrAdmin,
   });
+
+  const { data: visitReports = [] } = useQuery({
+    queryKey: ["visitReportsForMeetings"],
+    queryFn: () => base44.entities.VisitReport.list("-created_date", 200),
+    enabled: accessChecked && isLeaderOrAdmin,
+  });
+
+  const meetingReportsIndex = useMemo(() => buildMeetingReportsIndex([...meetingReports, ...visitReports]), [meetingReports, visitReports]);
 
   const { data: meetingsCacheRecord = null, isLoading, refetch: refetchMeetingsCache, isFetching } = useQuery({
     queryKey: ["meetingsCache"],
@@ -764,7 +773,7 @@ export default function Meetings() {
                                        salespeople={salespeople}
                                        assignmentCountsForDate={assignmentCountsByDate[meeting.meeting_date] || {}}
                                        currentUserRole={currentUser?.role}
-                                       meetingReports={meetingReports}
+                                       reportsIndex={meetingReportsIndex}
                                        groups={groups}
                                        allAllowedUsers={allAllowedUsers}
                                        />

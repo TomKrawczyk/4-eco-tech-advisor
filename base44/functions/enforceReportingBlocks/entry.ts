@@ -13,10 +13,6 @@ function normalizeName(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-function normalizePhone(value) {
-  return pickFirstPhone(value).replace(/\D/g, '');
-}
-
 function pickFirstPhone(value) {
   const text = String(value || '').trim();
   if (!text) return '';
@@ -65,12 +61,6 @@ function getMeetingDate(record) {
   return record.meeting_date || localYMD(record.meeting_calendar) || '';
 }
 
-function getClientKey(record) {
-  const phone = last9(record.client_phone || record.phone);
-  if (phone.length >= 7) return phone;
-  return normalizeName(record.client_name);
-}
-
 function getBusinessDaysElapsed(startValue, endDate) {
   const start = parseYMD(startValue);
   if (!start) return 0;
@@ -104,6 +94,99 @@ function getReportAuthorEmail(report) {
   return normalizeEmail(report.author_email || report.created_by || report.email);
 }
 
+function hasMeaningfulValue(value) {
+  if (value == null) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.some(hasMeaningfulValue);
+  if (typeof value === 'object') return Object.values(value).some(hasMeaningfulValue);
+  return true;
+}
+
+function hasMeaningfulInterviewData(interviewData) {
+  return !!interviewData && typeof interviewData === 'object' && Object.values(interviewData).some(hasMeaningfulValue);
+}
+
+function hasMeaningfulComments(comments) {
+  return String(comments || '').trim().length > 2;
+}
+
+function buildMeetingReportsIndex(reports) {
+  return reports.map((report) => ({
+    id: report.id,
+    email: getReportAuthorEmail(report),
+    date: localYMD(report.meeting_date || report.visit_date || report.created_date),
+    client_name: normalizeName(report.client_name),
+    client_phone: last9(report.client_phone || report.phone),
+  }));
+}
+
+function buildPhoneReportsIndex(reports) {
+  return reports.map((report) => ({
+    id: report.id,
+    email: getReportAuthorEmail(report),
+    date: localYMD(report.contact_date || report.created_date),
+    client_name: normalizeName(report.client_name),
+    client_phone: last9(report.client_phone || report.phone),
+    contact_key: String(report.contact_key || '').trim(),
+  }));
+}
+
+function clientMatches(record, indexedReport) {
+  const recordPhone = last9(record.client_phone || record.phone);
+  const reportPhone = indexedReport.client_phone;
+  if (recordPhone && reportPhone) return recordPhone === reportPhone;
+
+  const recordName = normalizeName(record.client_name);
+  const reportName = indexedReport.client_name;
+  if (!recordName || !reportName) return false;
+  return recordName === reportName || recordName.startsWith(reportName) || reportName.startsWith(recordName);
+}
+
+function dateMatches(recordDate, reportDate) {
+  if (!recordDate || !reportDate) return true;
+  return reportDate === recordDate || reportDate >= recordDate;
+}
+
+function emailMatches(record, indexedReport) {
+  const recordEmail = normalizeEmail(record.assigned_user_email || record.author_email || record.owner_email);
+  return !recordEmail || !indexedReport.email || indexedReport.email === recordEmail;
+}
+
+function hasInlineMeetingReportEvidence(record) {
+  return hasMeaningfulInterviewData(record.interview_data) || hasMeaningfulComments(record.comments) || String(record.meeting_calendar || '').trim().length > 0;
+}
+
+function hasInlinePhoneReportEvidence(record) {
+  return hasMeaningfulInterviewData(record.interview_data) || hasMeaningfulComments(record.comments);
+}
+
+function hasSeparateMeetingReport(record, reportsIndex) {
+  const meetingDate = getMeetingDate(record);
+  return reportsIndex.some((report) => emailMatches(record, report) && clientMatches(record, report) && dateMatches(meetingDate, report.date));
+}
+
+function hasSeparatePhoneReport(record, reportsIndex) {
+  const contactKey = String(record.contact_key || '').trim();
+  const contactDate = getContactDate(record);
+  return reportsIndex.some((report) => {
+    const contactKeyMatch = contactKey && report.contact_key && contactKey === report.contact_key;
+    const clientMatch = clientMatches(record, report);
+    return emailMatches(record, report) && (contactKeyMatch || clientMatch) && dateMatches(contactDate, report.date);
+  });
+}
+
+function hasReportForMeeting(record, reportsIndex) {
+  return hasInlineMeetingReportEvidence(record) || hasSeparateMeetingReport(record, reportsIndex);
+}
+
+function hasReportForPhoneContact(record, reportsIndex) {
+  return hasInlinePhoneReportEvidence(record) || hasSeparatePhoneReport(record, reportsIndex);
+}
+
+function createMeetingKey(record) {
+  return `${record.sheet}__${record.client_name}__${record.meeting_calendar}`;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -120,7 +203,7 @@ Deno.serve(async (req) => {
     const windowStartYmd = localYMD(windowStart);
     const effectiveStartYmd = GRACE_START_DATE > windowStartYmd ? GRACE_START_DATE : windowStartYmd;
 
-    const [users, allowedUsers, meetingAssignments, meetingReports, visitReports, phoneContacts, phoneContactReports, calendarEvents] = await Promise.all([
+    const [users, allowedUsers, meetingAssignments, meetingReports, visitReports, phoneContacts, phoneContactReports, calendarEvents, meetingsCacheRows] = await Promise.all([
       fetchAll(svc.User),
       fetchAll(svc.AllowedUser),
       fetchAll(svc.MeetingAssignment),
@@ -129,7 +212,9 @@ Deno.serve(async (req) => {
       fetchAll(svc.PhoneContact),
       fetchAll(svc.PhoneContactReport),
       fetchAll(svc.CalendarEvent),
+      svc.MeetingsCache.filter({ cache_key: 'meetings_main' }, '-updated_date', 1),
     ]);
+
     const allowedByEmail = new Map();
     for (const record of allowedUsers) {
       const email = normalizeEmail(record.email || record.data?.email);
@@ -163,37 +248,18 @@ Deno.serve(async (req) => {
         .map((user) => user.email)
     );
 
-    const meetingReportKeys = new Set();
-    const meetingReportTimeline = new Map();
-    for (const report of [...meetingReports, ...visitReports]) {
-      const email = getReportAuthorEmail(report);
-      if (!monitoredEmails.has(email)) continue;
-      const reportDate = localYMD(report.meeting_date || report.visit_date || report.created_date);
-      const createdDate = localYMD(report.created_date);
-      const clientKey = getClientKey(report);
-      if (!clientKey) continue;
-      const timelineKey = `${email}|${clientKey}`;
-      if (!meetingReportTimeline.has(timelineKey)) meetingReportTimeline.set(timelineKey, []);
-      meetingReportTimeline.get(timelineKey).push({ reportDate, createdDate });
-      if (reportDate) meetingReportKeys.add(`${email}|${reportDate}|${clientKey}`);
-    }
+    const meetingReportsIndex = buildMeetingReportsIndex(
+      [...meetingReports, ...visitReports].filter((report) => monitoredEmails.has(getReportAuthorEmail(report)))
+    );
+    const phoneReportsIndex = buildPhoneReportsIndex(
+      phoneContactReports.filter((report) => monitoredEmails.has(getReportAuthorEmail(report)))
+    );
 
-    const phoneReportKeys = new Set();
-    const phoneReportContactKeys = new Set();
-    const phoneReportTimeline = new Map();
-    for (const report of phoneContactReports) {
-      const email = getReportAuthorEmail(report);
-      if (!monitoredEmails.has(email)) continue;
-      if (report.contact_key) phoneReportContactKeys.add(`${email}|${report.contact_key}`);
-      const reportDate = localYMD(report.contact_date || report.created_date);
-      const createdDate = localYMD(report.created_date);
-      const clientKey = getClientKey(report);
-      if (!clientKey) continue;
-      const timelineKey = `${email}|${clientKey}`;
-      if (!phoneReportTimeline.has(timelineKey)) phoneReportTimeline.set(timelineKey, []);
-      phoneReportTimeline.get(timelineKey).push({ reportDate, createdDate });
-      if (reportDate) phoneReportKeys.add(`${email}|${reportDate}|${clientKey}`);
-    }
+    const cacheRecord = meetingsCacheRows[0]?.data || meetingsCacheRows[0] || null;
+    const cachedMeetings = cacheRecord?.meetings_json?.meetings || [];
+    const cachedMeetingsByKey = new Map(
+      cachedMeetings.map((meeting) => [createMeetingKey(meeting), meeting])
+    );
 
     const overdueByEmail = new Map();
 
@@ -203,7 +269,9 @@ Deno.serve(async (req) => {
       const postponedTo = parseYMD(event.postponed_to);
       if (!postponedTo || postponedTo <= today) continue;
       const email = normalizeEmail(event.owner_email);
-      const clientKey = getClientKey(event);
+      const phoneKey = last9(event.client_phone || event.phone);
+      const nameKey = normalizeName(event.client_name);
+      const clientKey = phoneKey || nameKey;
       if (!email || !clientKey) continue;
       postponedMeetingKeys.add(`${email}|${clientKey}`);
     }
@@ -212,7 +280,9 @@ Deno.serve(async (req) => {
     for (const assignment of meetingAssignments) {
       const email = normalizeEmail(assignment.assigned_user_email);
       const meetingDate = getMeetingDate(assignment);
-      const clientKey = getClientKey(assignment);
+      const phoneKey = last9(assignment.client_phone || assignment.phone);
+      const nameKey = normalizeName(assignment.client_name);
+      const clientKey = phoneKey || nameKey;
       if (!email || !meetingDate || !clientKey) continue;
       const dedupeKey = `${email}|${clientKey}`;
       const existing = latestMeetingByUserClient.get(dedupeKey);
@@ -225,12 +295,24 @@ Deno.serve(async (req) => {
       const email = normalizeEmail(assignment.assigned_user_email);
       if (!monitoredEmails.has(email) || meetingDate < effectiveStartYmd) continue;
       if (postponedMeetingKeys.has(`${email}|${clientKey}`)) continue;
-      const reportKey = `${email}|${meetingDate}|${clientKey}`;
-      const matchingReports = meetingReportTimeline.get(`${email}|${clientKey}`) || [];
-      const hasMatchingReport = meetingReportKeys.has(reportKey) || matchingReports.some((report) => {
-        return (report.reportDate && report.reportDate >= meetingDate) || (report.createdDate && report.createdDate >= meetingDate);
-      });
-      if (hasMatchingReport) continue;
+
+      const cachedMeeting = cachedMeetingsByKey.get(assignment.meeting_key) || {};
+      const mergedMeeting = {
+        ...cachedMeeting,
+        ...assignment,
+        client_name: assignment.client_name || cachedMeeting.client_name || '',
+        client_phone: assignment.client_phone || cachedMeeting.phone || cachedMeeting.client_phone || '',
+        comments: cachedMeeting.comments || assignment.comments || '',
+        interview_data: cachedMeeting.interview_data || assignment.interview_data || {},
+        meeting_calendar: assignment.meeting_calendar || cachedMeeting.meeting_calendar || '',
+        meeting_date: assignment.meeting_date || getMeetingDate(cachedMeeting) || '',
+        meeting_note: cachedMeeting.meeting_note || assignment.meeting_note || '',
+        status: cachedMeeting.status || assignment.status || '',
+        assigned_user_email: assignment.assigned_user_email,
+      };
+
+      if (hasReportForMeeting(mergedMeeting, meetingReportsIndex)) continue;
+
       const businessDays = getBusinessDaysElapsed(meetingDate, today);
       if (businessDays <= MAX_ALLOWED_BUSINESS_DAYS) continue;
       if (!overdueByEmail.has(email)) overdueByEmail.set(email, []);
@@ -247,14 +329,13 @@ Deno.serve(async (req) => {
       const email = normalizeEmail(contact.assigned_user_email);
       const contactDate = getContactDate(contact);
       if (!monitoredEmails.has(email) || !contactDate || contactDate < effectiveStartYmd) continue;
-      const clientKey = getClientKey(contact);
+      const phoneKey = last9(contact.client_phone || contact.phone);
+      const nameKey = normalizeName(contact.client_name);
+      const clientKey = phoneKey || nameKey;
       if (!clientKey) continue;
-      const hasDirectReport = contact.contact_key && phoneReportContactKeys.has(`${email}|${contact.contact_key}`);
-      const matchingReports = phoneReportTimeline.get(`${email}|${clientKey}`) || [];
-      const hasFallbackReport = phoneReportKeys.has(`${email}|${contactDate}|${clientKey}`) || matchingReports.some((report) => {
-        return (report.reportDate && report.reportDate >= contactDate) || (report.createdDate && report.createdDate >= contactDate);
-      });
-      if (hasDirectReport || hasFallbackReport) continue;
+
+      if (hasReportForPhoneContact(contact, phoneReportsIndex)) continue;
+
       const businessDays = getBusinessDaysElapsed(contactDate, today);
       if (businessDays <= MAX_ALLOWED_BUSINESS_DAYS) continue;
       if (!overdueByEmail.has(email)) overdueByEmail.set(email, []);
@@ -277,9 +358,7 @@ Deno.serve(async (req) => {
       const oldest = overdue[0] || null;
       const shouldBeBlocked = !!oldest;
 
-      if (shouldBeBlocked) {
-        stillBlockedCount += 1;
-      }
+      if (shouldBeBlocked) stillBlockedCount += 1;
 
       const allowedUpdates = user.allowed ? {
         is_blocked: shouldBeBlocked,

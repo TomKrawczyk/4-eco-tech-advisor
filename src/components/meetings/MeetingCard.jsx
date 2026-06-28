@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import MeetingDetailModal from "./MeetingDetailModal";
 import DetailsModal from "@/components/shared/DetailsModal";
+import { hasReportForMeeting } from "@/lib/reportingStatus";
 
 // Parsuje "DD.MM.YYYY HH:MM" lub "YYYY-MM-DD HH:MM" -> { date: "YYYY-MM-DD", time: "HH:MM" }
 function parseMeetingCalendar(str) {
@@ -25,7 +26,7 @@ function parseMeetingCalendar(str) {
   return null;
 }
 
-export default function MeetingCard({ meeting, assignment, salespeople, assignmentCountsForDate = {}, currentUserRole, meetingReports = [], groups = [], allAllowedUsers = [] }) {
+export default function MeetingCard({ meeting, assignment, salespeople, assignmentCountsForDate = {}, currentUserRole, reportsIndex = [], groups = [], allAllowedUsers = [] }) {
   const [showDetail, setShowDetail] = useState(false);
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -55,11 +56,19 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
     assigned_group_name: assignment?.assigned_group_name || null,
   });
 
-  const existingReport = meetingReports.find(r => {
-    const nameMatch = (r.client_name || '').toLowerCase().trim() === (meeting.client_name || '').toLowerCase().trim();
-    const authorMatch = !assignment || r.author_email === assignment.assigned_user_email || r.created_by === assignment.assigned_user_email;
-    return nameMatch && authorMatch;
-  });
+  const existingReport = hasReportForMeeting({
+    ...meeting,
+    ...assignment,
+    client_name: meeting.client_name || assignment?.client_name || "",
+    client_phone: meeting.phone || meeting.client_phone || assignment?.client_phone || "",
+    comments: meeting.comments || assignment?.comments || "",
+    interview_data: meeting.interview_data || assignment?.interview_data || {},
+    meeting_calendar: meeting.meeting_calendar || assignment?.meeting_calendar || "",
+    meeting_date: meeting.meeting_date || assignment?.meeting_date || "",
+    meeting_note: meeting.meeting_note || assignment?.meeting_note || "",
+    status: meeting.status || assignment?.status || "",
+    assigned_user_email: assignment?.assigned_user_email || "",
+  }, reportsIndex);
 
   const canAssign = currentUserRole === "admin" || currentUserRole === "group_leader" || currentUserRole === "team_leader";
   const canManageGroups = currentUserRole === "admin" || currentUserRole === "group_leader";

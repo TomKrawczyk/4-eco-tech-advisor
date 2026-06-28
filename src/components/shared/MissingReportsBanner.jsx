@@ -4,6 +4,7 @@ import { AlertTriangle, X, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { startOfDay } from "date-fns";
+import { buildMeetingReportsIndex, hasReportForMeeting, normalizeName, normalizePhoneLast9 } from "@/lib/reportingStatus";
 
 const GRACE_START_DATE = "2026-06-16";
 
@@ -39,84 +40,75 @@ export default function MissingReportsBanner({ currentUser }) {
     const check = async () => {
       const today = startOfDay(new Date());
 
-      const [assignments, reports, visitReports, allowedUsers, calendarEvents] = await Promise.all([
+      const [assignments, reports, visitReports, allowedUsers, calendarEvents, cacheRows] = await Promise.all([
         base44.entities.MeetingAssignment.filter({ assigned_user_email: currentUser.email }),
         base44.entities.MeetingReport.filter({ author_email: currentUser.email }),
         base44.entities.VisitReport.filter({ author_email: currentUser.email }),
         base44.entities.AllowedUser.list(),
         base44.entities.CalendarEvent.filter({ owner_email: currentUser.email }),
+        base44.entities.MeetingsCache.filter({ cache_key: "meetings_main" }, "-updated_date", 1),
       ]);
 
-      const ua = allowedUsers.find(u => (u.data?.email || u.email) === currentUser.email);
+      const ua = allowedUsers.find((u) => (u.data?.email || u.email) === currentUser.email);
       const isExempt = ua?.data?.exempt_from_reports || ua?.exempt_from_reports || false;
-      if (isExempt) return; // zwolniony z raportowania
+      if (isExempt) return;
       setIsBlocked(ua?.data?.is_blocked || ua?.is_blocked || false);
 
-      const normalize = s => (s || "").toLowerCase().trim().replace(/\s+/g, " ").replace(/\s*-\s*/g, "-");
-      const normalizePhone = p => (p || "").replace(/\s+/g, "").replace(/[^\d]/g, "");
+      const cacheRecord = cacheRows[0]?.data || cacheRows[0] || null;
+      const cachedMeetings = cacheRecord?.meetings_json?.meetings || [];
+      const cachedByKey = new Map(
+        cachedMeetings.map((meeting) => [`${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`, meeting])
+      );
+      const reportsIndex = buildMeetingReportsIndex([...reports, ...visitReports]);
 
-      // Zbiór kluczy klientów których spotkania są przełożone na przyszłość
       const postponedClientKeys = new Set();
       for (const ev of calendarEvents) {
-        if (ev.status !== 'postponed' || !ev.postponed_to) continue;
+        if (ev.status !== "postponed" || !ev.postponed_to) continue;
         const newDay = parseMeetingDate(ev.postponed_to);
         if (!newDay || startOfDay(newDay) <= today) continue;
-        const ph = normalizePhone(ev.client_phone);
-        const nm = normalize(ev.client_name);
-        const key = ph.length >= 7 ? ph : nm;
+        const key = normalizePhoneLast9(ev.client_phone) || normalizeName(ev.client_name);
         if (key) postponedClientKeys.add(key);
       }
 
-      // Łączymy MeetingReports i VisitReports jako dowód spotkania
-      const allReports = [
-        ...reports.map(r => ({ ...r, _source: "meeting" })),
-        ...visitReports.map(r => ({ ...r, client_phone: r.client_phone, _source: "visit" })),
-      ];
-
-      // Deduplikacja: jeśli klient ma kilka spotkań (przeniesione), bierz tylko najnowsze
       const deduped = new Map();
-      for (const a of assignments) {
-        const meetingDay = parseMeetingDate(a.meeting_calendar || a.meeting_date);
+      for (const assignment of assignments) {
+        const cachedMeeting = cachedByKey.get(assignment.meeting_key) || {};
+        const mergedMeeting = {
+          ...cachedMeeting,
+          ...assignment,
+          client_name: assignment.client_name || cachedMeeting.client_name || "",
+          client_phone: assignment.client_phone || cachedMeeting.phone || cachedMeeting.client_phone || "",
+          comments: cachedMeeting.comments || assignment.comments || "",
+          interview_data: cachedMeeting.interview_data || assignment.interview_data || {},
+          meeting_calendar: assignment.meeting_calendar || cachedMeeting.meeting_calendar || "",
+          meeting_date: assignment.meeting_date || cachedMeeting.meeting_date || "",
+          meeting_note: cachedMeeting.meeting_note || assignment.meeting_note || "",
+          status: cachedMeeting.status || assignment.status || "",
+          assigned_user_email: currentUser.email,
+        };
+
+        const meetingDay = parseMeetingDate(mergedMeeting.meeting_calendar || mergedMeeting.meeting_date);
         if (!meetingDay) continue;
-        const keyId = normalizePhone(a.client_phone) || normalize(a.client_name);
+        const keyId = normalizePhoneLast9(mergedMeeting.client_phone) || normalizeName(mergedMeeting.client_name);
         if (!keyId) continue;
         const existing = deduped.get(keyId);
-        if (!existing || meetingDay > parseMeetingDate(existing.meeting_calendar || existing.meeting_date)) {
-          deduped.set(keyId, a);
+        const existingDay = existing ? parseMeetingDate(existing.meeting_calendar || existing.meeting_date) : null;
+        if (!existing || (meetingDay && existingDay && meetingDay > existingDay)) {
+          deduped.set(keyId, mergedMeeting);
         }
       }
-      const dedupedAssignments = Array.from(deduped.values());
 
-      const missing = dedupedAssignments.filter(a => {
-        const meetingDay = parseMeetingDate(a.meeting_calendar || a.meeting_date);
+      const missing = Array.from(deduped.values()).filter((meeting) => {
+        const meetingDay = parseMeetingDate(meeting.meeting_calendar || meeting.meeting_date);
         if (!meetingDay) return false;
         const day = startOfDay(meetingDay);
         if (day >= today) return false;
-        if ((a.meeting_date || "") < GRACE_START_DATE) return false;
+        if ((meeting.meeting_date || "") < GRACE_START_DATE) return false;
         const businessDays = getBusinessDaysElapsed(day, today);
         if (businessDays <= 3) return false;
-
-        const aPhone = normalizePhone(a.client_phone);
-        const aName = normalize(a.client_name);
-
-        // Pomiń jeśli spotkanie przełożone na przyszłość
-        const clientKey = aPhone.length >= 7 ? aPhone : aName;
+        const clientKey = normalizePhoneLast9(meeting.client_phone) || normalizeName(meeting.client_name);
         if (clientKey && postponedClientKeys.has(clientKey)) return false;
-
-        const reportExists = allReports.some(r => {
-          const authorMatch = !r.author_email || r.author_email === currentUser.email;
-          if (!authorMatch) return false;
-
-          const rName = normalize(r.client_name);
-          const rPhone = normalizePhone(r.client_phone);
-
-          // Dopasowanie po telefonie (jeśli oba nie są puste) LUB po nazwie
-          const phoneMatch = aPhone.length >= 7 && rPhone.length >= 7 && aPhone === rPhone;
-          const nameMatch = rName === aName || (rName.length > 2 && aName.startsWith(rName)) || (aName.length > 2 && rName.startsWith(aName));
-
-          return phoneMatch || nameMatch;
-        });
-        return !reportExists;
+        return !hasReportForMeeting(meeting, reportsIndex);
       });
 
       setMissingMeetings(missing);
@@ -125,7 +117,6 @@ export default function MissingReportsBanner({ currentUser }) {
     check();
   }, [currentUser?.email]);
 
-  // Blokada — zawsze widoczna, nie można zamknąć
   if (isBlocked) {
     return (
       <div className="bg-red-600 text-white px-4 py-3 text-sm flex items-center gap-3">
