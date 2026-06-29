@@ -64,12 +64,14 @@ export default function Education() {
   const [editingTraining, setEditingTraining] = useState(null);
   const [formData, setFormData] = useState({
     title: "", description: "", category: "sprzedaz",
-    video_url: "", duration_minutes: "", is_required: false
+    video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false
   });
   const [uploadMode, setUploadMode] = useState("url"); // "url" | "file"
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState("");
+  const [uploadedDocumentUrl, setUploadedDocumentUrl] = useState("");
+  const [uploadedDocumentName, setUploadedDocumentName] = useState("");
 
   const queryClient = useQueryClient();
 
@@ -132,7 +134,6 @@ export default function Education() {
     setUploading(true);
     setUploadProgress(0);
 
-    // Symulacja progresu podczas uploadu
     const progressInterval = setInterval(() => {
       setUploadProgress(prev => Math.min(prev + 5, 90));
     }, 300);
@@ -148,18 +149,43 @@ export default function Education() {
     }
   };
 
+  const handleDocumentUpload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    setUploadProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => Math.min(prev + 5, 90));
+    }, 300);
+
+    try {
+      const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+      setUploadedDocumentUrl(file_uri);
+      setUploadedDocumentName(file.name);
+      setFormData(prev => ({ ...prev, document_url: file_uri, document_name: file.name }));
+      setUploadProgress(100);
+    } finally {
+      clearInterval(progressInterval);
+      setUploading(false);
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Training.create({
       ...data,
       video_url: uploadMode === "file" ? uploadedVideoUrl : data.video_url,
+      document_url: uploadedDocumentUrl || data.document_url,
+      document_name: uploadedDocumentName || data.document_name,
       duration_minutes: data.duration_minutes ? Number(data.duration_minutes) : undefined,
       order: trainings.length + 1
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setShowAddDialog(false);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false });
       setUploadedVideoUrl("");
+      setUploadedDocumentUrl("");
+      setUploadedDocumentName("");
       setUploadProgress(0);
       setUploadMode("url");
     }
@@ -169,13 +195,17 @@ export default function Education() {
     mutationFn: ({ id, data }) => base44.entities.Training.update(id, {
       ...data,
       video_url: uploadMode === "file" ? uploadedVideoUrl || data.video_url : data.video_url,
+      document_url: uploadedDocumentUrl || data.document_url,
+      document_name: uploadedDocumentName || data.document_name,
       duration_minutes: data.duration_minutes ? Number(data.duration_minutes) : undefined,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setEditingTraining(null);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", duration_minutes: "", is_required: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false });
       setUploadedVideoUrl("");
+      setUploadedDocumentUrl("");
+      setUploadedDocumentName("");
       setUploadProgress(0);
       setUploadMode("url");
     }
@@ -193,29 +223,48 @@ export default function Education() {
       description: training.description || "",
       category: training.category || "sprzedaz",
       video_url: training.video_url || "",
+      document_url: training.document_url || "",
+      document_name: training.document_name || "",
       duration_minutes: training.duration_minutes || "",
       is_required: training.is_required || false
     });
     setUploadMode("url");
     setUploadedVideoUrl("");
+    setUploadedDocumentUrl("");
+    setUploadedDocumentName("");
   };
 
   const [signedVideoUrl, setSignedVideoUrl] = useState(null);
+  const [signedDocumentUrl, setSignedDocumentUrl] = useState(null);
   const [loadingVideo, setLoadingVideo] = useState(false);
 
   const handleOpenTraining = async (training) => {
     setSelectedTraining(training);
     setSignedVideoUrl(null);
+    setSignedDocumentUrl(null);
     markViewedMutation.mutate(training);
 
-    if (training.video_url && isPrivateFileUri(training.video_url)) {
+    const needsVideoSignature = training.video_url && isPrivateFileUri(training.video_url);
+    const needsDocumentSignature = training.document_url && isPrivateFileUri(training.document_url);
+
+    if (needsVideoSignature || needsDocumentSignature) {
       setLoadingVideo(true);
       try {
-        const res = await base44.integrations.Core.CreateFileSignedUrl({
-          file_uri: training.video_url,
-          expires_in: 3600
-        });
-        setSignedVideoUrl(res.signed_url);
+        if (needsVideoSignature) {
+          const res = await base44.integrations.Core.CreateFileSignedUrl({
+            file_uri: training.video_url,
+            expires_in: 3600
+          });
+          setSignedVideoUrl(res.signed_url);
+        }
+
+        if (needsDocumentSignature) {
+          const res = await base44.integrations.Core.CreateFileSignedUrl({
+            file_uri: training.document_url,
+            expires_in: 3600
+          });
+          setSignedDocumentUrl(res.signed_url);
+        }
       } finally {
         setLoadingVideo(false);
       }
@@ -372,6 +421,37 @@ export default function Education() {
                         </div>
                       )}
                     </div>
+                    <div>
+                      <Label className="mb-2 block">Załącznik szkoleniowy</Label>
+                      <label className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploading ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400 hover:bg-green-50'}`}>
+                        <input
+                          type="file"
+                          accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                          className="hidden"
+                          onChange={(e) => e.target.files?.[0] && handleDocumentUpload(e.target.files[0])}
+                          disabled={uploading}
+                        />
+                        {uploading ? (
+                          <div className="text-center w-full px-4">
+                            <Loader2 className="w-5 h-5 text-green-600 animate-spin mx-auto mb-1" />
+                            <p className="text-sm text-green-700 mb-1">Przesyłanie... {uploadProgress}%</p>
+                            <Progress value={uploadProgress} className="h-1.5" />
+                          </div>
+                        ) : (uploadedDocumentName || formData.document_name) ? (
+                          <div className="text-center px-4">
+                            <CheckCircle2 className="w-5 h-5 text-green-600 mx-auto mb-1" />
+                            <p className="text-xs text-green-700 font-medium truncate">{uploadedDocumentName || formData.document_name}</p>
+                            <p className="text-xs text-gray-500">PDF lub PowerPoint gotowy</p>
+                          </div>
+                        ) : (
+                          <div className="text-center px-4">
+                            <FileText className="w-5 h-5 text-gray-400 mx-auto mb-1" />
+                            <p className="text-sm text-gray-600">Wgraj PDF lub prezentację PowerPoint</p>
+                            <p className="text-xs text-gray-400 mt-1">Obsługiwane: PDF, PPT, PPTX</p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
                     <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
                       <input
                         type="checkbox"
@@ -460,6 +540,36 @@ export default function Education() {
                     </label>
                   )}
                 </div>
+                <div>
+                  <Label className="mb-2 block">Załącznik szkoleniowy</Label>
+                  <label className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${uploading ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400 hover:bg-green-50'}`}>
+                    <input
+                      type="file"
+                      accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleDocumentUpload(e.target.files[0])}
+                      disabled={uploading}
+                    />
+                    {uploading ? (
+                      <div className="text-center w-full px-4">
+                        <Loader2 className="w-5 h-5 text-green-600 animate-spin mx-auto mb-1" />
+                        <p className="text-sm text-green-700 mb-1">Przesyłanie... {uploadProgress}%</p>
+                        <Progress value={uploadProgress} className="h-1.5" />
+                      </div>
+                    ) : (uploadedDocumentName || formData.document_name) ? (
+                      <div className="text-center px-4">
+                        <CheckCircle2 className="w-5 h-5 text-green-600 mx-auto mb-1" />
+                        <p className="text-xs text-green-700 truncate">{uploadedDocumentName || formData.document_name}</p>
+                        <p className="text-xs text-gray-500">PDF lub PowerPoint gotowy</p>
+                      </div>
+                    ) : (
+                      <div className="text-center px-4">
+                        <FileText className="w-5 h-5 text-gray-400 mx-auto mb-1" />
+                        <p className="text-xs text-gray-500">Dodaj PDF, PPT lub PPTX</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
                 <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
                   <input
                     type="checkbox"
@@ -525,9 +635,12 @@ export default function Education() {
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">{training.description}</p>
                     )}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
                         {training.duration_minutes && (
                           <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{training.duration_minutes} min</span>
+                        )}
+                        {training.document_url && (
+                          <span className="flex items-center gap-1"><FileText className="w-3 h-3" />PDF / PPT</span>
                         )}
                         {currentUser?.role === 'admin' && (
                           <span className="flex items-center gap-1"><Users className="w-3 h-3" />{getViewCount(training.id)} osób</span>
@@ -635,14 +748,14 @@ export default function Education() {
 
       {/* Modal z wideo */}
       {selectedTraining && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); }}>
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); setSignedDocumentUrl(null); }}>
           <div className="bg-white rounded-2xl w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b">
               <div>
                 <h2 className="font-bold text-lg text-gray-900">{selectedTraining.title}</h2>
                 <Badge className={categoryColors[selectedTraining.category]}>{categoryLabels[selectedTraining.category]}</Badge>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); }}>✕</Button>
+              <Button variant="ghost" size="icon" onClick={() => { setSelectedTraining(null); setSignedVideoUrl(null); setSignedDocumentUrl(null); }}>✕</Button>
             </div>
             {selectedTraining.video_url ? (
               isExternalEmbed(selectedTraining.video_url) ? (
@@ -690,19 +803,23 @@ export default function Education() {
               </div>
             )}
             {selectedTraining.document_url && (
-              <div className="border-t px-4 py-3 bg-gray-50 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">{selectedTraining.document_name || "Dokument"}</span>
+              <div className="border-t px-4 py-3 bg-gray-50 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="w-4 h-4 text-gray-500 shrink-0" />
+                  <span className="text-sm font-medium text-gray-700 truncate">{selectedTraining.document_name || "Załącznik szkoleniowy"}</span>
                 </div>
-                <a
-                  href={selectedTraining.document_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Otwórz PDF ↗
-                </a>
+                {isPrivateFileUri(selectedTraining.document_url) && !signedDocumentUrl ? (
+                  <div className="text-sm px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg shrink-0">Ładowanie pliku...</div>
+                ) : (
+                  <a
+                    href={signedDocumentUrl || selectedTraining.document_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shrink-0"
+                  >
+                    Otwórz plik ↗
+                  </a>
+                )}
               </div>
             )}
             {selectedTraining.description && (
