@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { smartList, smartCreate } from "@/components/offline/offlineSync";
+import { smartCreate } from "@/components/offline/offlineSync";
+import { fetchAllEntityRecords } from "@/lib/fetchAllEntityRecords";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +32,7 @@ export default function ReportSelector({ onSelectReport, currentReport }) {
 
   const { data: allReports = [] } = useQuery({
     queryKey: ['visitReports'],
-    queryFn: () => smartList(base44.entities.VisitReport, "VisitReport", "-updated_date", 50),
+    queryFn: () => fetchAllEntityRecords(base44.entities.VisitReport, "-updated_date", 500),
     staleTime: 30000,
     enabled: !!currentUser,
   });

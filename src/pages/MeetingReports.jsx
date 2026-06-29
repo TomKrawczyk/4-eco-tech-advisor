@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Plus, Search, Calendar, Phone, MapPin, User, Clock, CheckCircle2, XCircle, ChevronRight, ArrowLeft, Trash2, Upload, X, Image, Loader2, FileText } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
+import { fetchAllEntityRecords } from "@/lib/fetchAllEntityRecords";
 
 const statusConfig = {
   planned: { label: "Zaplanowane", color: "bg-blue-100 text-blue-700 border-blue-300", icon: Clock },
@@ -297,7 +298,7 @@ export default function MeetingReports() {
 
   const { data: allReports = [], isLoading } = useQuery({
     queryKey: ["meetingReports"],
-    queryFn: () => base44.entities.MeetingReport.list("-created_date", 2000),
+    queryFn: () => fetchAllEntityRecords(base44.entities.MeetingReport, "-created_date", 500),
     enabled: !!currentUser,
   });
 

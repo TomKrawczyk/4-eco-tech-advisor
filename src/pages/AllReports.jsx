@@ -6,6 +6,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import AllReportsFilters from "@/components/reports/AllReportsFilters";
 import AllReportCard from "@/components/reports/AllReportCard";
 import { Button } from "@/components/ui/button";
+import { fetchAllEntityRecords } from "@/lib/fetchAllEntityRecords";
 import { Download, FileText, Loader2, ShieldAlert } from "lucide-react";
 
 const phoneResultLabels = {
@@ -28,31 +29,31 @@ export default function AllReports() {
 
   const { data: phoneReports = [], isLoading: loadingPhone } = useQuery({
     queryKey: ["all-phone-contact-reports"],
-    queryFn: () => base44.entities.PhoneContactReport.list("-created_date"),
+    queryFn: () => fetchAllEntityRecords(base44.entities.PhoneContactReport, "-created_date", 500),
     enabled: accessChecked && isAdmin,
   });
 
   const { data: phoneContacts = [] } = useQuery({
     queryKey: ["all-phone-contacts-for-reports"],
-    queryFn: () => base44.entities.PhoneContact.list(),
+    queryFn: () => fetchAllEntityRecords(base44.entities.PhoneContact, "-created_date", 500),
     enabled: accessChecked && isAdmin,
   });
 
   const { data: meetingReports = [], isLoading: loadingMeeting } = useQuery({
     queryKey: ["all-meeting-reports"],
-    queryFn: () => base44.entities.MeetingReport.list("-created_date"),
+    queryFn: () => fetchAllEntityRecords(base44.entities.MeetingReport, "-created_date", 500),
     enabled: accessChecked && isAdmin,
   });
 
   const { data: visitReports = [], isLoading: loadingVisit } = useQuery({
     queryKey: ["all-visit-reports"],
-    queryFn: () => base44.entities.VisitReport.list("-created_date"),
+    queryFn: () => fetchAllEntityRecords(base44.entities.VisitReport, "-created_date", 500),
     enabled: accessChecked && isAdmin,
   });
 
   const { data: serviceReports = [], isLoading: loadingService } = useQuery({
     queryKey: ["all-service-reports"],
-    queryFn: () => base44.entities.ServiceReport.list("-created_date"),
+    queryFn: () => fetchAllEntityRecords(base44.entities.ServiceReport, "-created_date", 500),
     enabled: accessChecked && isAdmin,
   });
 

@@ -7,7 +7,8 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import PageHeader from "../components/shared/PageHeader";
 import ReportDetail from "../components/reports/ReportDetail";
-import { smartList, smartDelete } from "@/components/offline/offlineSync";
+import { smartDelete } from "@/components/offline/offlineSync";
+import { fetchAllEntityRecords } from "@/lib/fetchAllEntityRecords";
 
 const statusConfig = {
   draft: { label: "Szkic", icon: Clock, color: "bg-gray-100 text-gray-700 border-gray-300" },
@@ -41,7 +42,7 @@ export default function VisitReports() {
 
   const { data: allReports = [], isLoading } = useQuery({
     queryKey: ["visitReports"],
-    queryFn: () => smartList(base44.entities.VisitReport, "VisitReport", "-created_date", 100),
+    queryFn: () => fetchAllEntityRecords(base44.entities.VisitReport, "-created_date", 500),
     enabled: !!currentUser,
     staleTime: 30000,
   });
