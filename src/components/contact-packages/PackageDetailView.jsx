@@ -438,7 +438,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                 <option value="">Wybierz osobę…</option>
                 {advisors.map(u => (
                   <option key={u.id} value={u.email}>
-                    {u.name} ({u.role === "group_leader" ? "lider grupy" : u.role === "team_leader" ? "team leader" : "handlowiec"})
+                    {u.name} — {u.email} ({u.role === "group_leader" ? "lider grupy" : u.role === "team_leader" ? "team leader" : "handlowiec"})
                   </option>
                 ))}
               </select>
