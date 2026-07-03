@@ -105,7 +105,7 @@ export function buildPhoneReportsIndex(reports = []) {
 }
 
 export function hasInlineMeetingReportEvidence(record) {
-  return hasMeaningfulInterviewData(record?.interview_data) || hasMeaningfulComments(record?.comments) || String(record?.meeting_calendar || '').trim().length > 0;
+  return hasMeaningfulInterviewData(record?.interview_data) || hasMeaningfulComments(record?.comments);
 }
 
 export function hasInlinePhoneReportEvidence(record) {

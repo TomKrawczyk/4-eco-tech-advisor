@@ -37,9 +37,72 @@ function getContactDate(record) {
   return record.contact_date || localYMD(record.contact_calendar) || localYMD(record.date) || '';
 }
 
-function makePhoneDateKey(phone, date) {
-  const normalizedPhone = last9(phone);
-  return normalizedPhone && date ? `${normalizedPhone}__${date}` : '';
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeName(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function normalizeKey(value) {
+  return String(value || '').trim();
+}
+
+function dateMatches(recordDate, reportDate) {
+  if (!recordDate || !reportDate) return true;
+  return reportDate === recordDate || reportDate >= recordDate;
+}
+
+function clientMatches(record, indexedReport) {
+  const recordPhone = last9(record.client_phone || record.phone);
+  const reportPhone = indexedReport.client_phone;
+  if (recordPhone && reportPhone) return recordPhone === reportPhone;
+
+  const recordName = normalizeName(record.client_name);
+  const reportName = indexedReport.client_name;
+  if (!recordName || !reportName) return false;
+  return recordName === reportName || recordName.startsWith(reportName) || reportName.startsWith(recordName);
+}
+
+function emailMatches(record, indexedReport) {
+  const recordEmail = normalizeEmail(record.assigned_user_email || record.author_email || record.owner_email);
+  return !recordEmail || !indexedReport.email || indexedReport.email === recordEmail;
+}
+
+function buildMeetingReportsIndex(reports) {
+  return reports.map((report) => ({
+    email: normalizeEmail(report.author_email || report.created_by || report.email),
+    date: localYMD(report.meeting_date || report.visit_date || report.created_date),
+    client_name: normalizeName(report.client_name),
+    client_phone: last9(report.client_phone || report.phone),
+    status: normalizeKey(report.status).toLowerCase() || 'reported',
+  }));
+}
+
+function buildPhoneReportsIndex(reports) {
+  return reports.map((report) => ({
+    email: normalizeEmail(report.author_email || report.created_by || report.email),
+    date: localYMD(report.contact_date || report.created_date),
+    client_name: normalizeName(report.client_name),
+    client_phone: last9(report.client_phone || report.phone),
+    contact_key: normalizeKey(report.contact_key),
+    status: normalizeKey(report.result).toLowerCase() || 'reported',
+  }));
+}
+
+function findMeetingReport(record, reportsIndex) {
+  const recordDate = record.meeting_date || localYMD(record.meeting_calendar) || '';
+  return reportsIndex.find((report) => emailMatches(record, report) && clientMatches(record, report) && dateMatches(recordDate, report.date));
+}
+
+function findPhoneReport(record, reportsIndex) {
+  const contactKey = normalizeKey(record.contact_key);
+  const recordDate = getContactDate(record);
+  return reportsIndex.find((report) => {
+    const contactKeyMatch = contactKey && report.contact_key && contactKey === report.contact_key;
+    return emailMatches(record, report) && (contactKeyMatch || clientMatches(record, report)) && dateMatches(recordDate, report.date);
+  });
 }
 
 function prevWeek() {
@@ -104,10 +167,11 @@ Deno.serve(async (req) => {
     const inRange = (date) => !!date && date >= from && date <= to;
 
     const svc = base44.asServiceRole.entities;
-    const [groups, meetingAssignments, meetingReports, phoneContacts, phoneReports] = await Promise.all([
+    const [groups, meetingAssignments, meetingReports, visitReports, phoneContacts, phoneReports] = await Promise.all([
       fetchAll(svc.Group),
       fetchAll(svc.MeetingAssignment),
       fetchAll(svc.MeetingReport),
+      fetchAll(svc.VisitReport),
       fetchAll(svc.PhoneContact),
       fetchAll(svc.PhoneContactReport),
     ]);
@@ -117,28 +181,17 @@ Deno.serve(async (req) => {
       groupNameById[group.id] = group.name || 'Bez struktury';
     }
 
-    const meetingReportByPhone = {};
-    for (const report of meetingReports) {
-      if (!inRange(report.meeting_date)) continue;
-      const phone = last9(report.client_phone);
-      if (phone) meetingReportByPhone[phone] = report.status || '';
-    }
-
-    const phoneReportByKey = {};
-    for (const report of phoneReports) {
-      const contactDate = localYMD(report.contact_date);
-      if (!inRange(contactDate)) continue;
-      const key = makePhoneDateKey(report.client_phone, contactDate);
-      if (key) phoneReportByKey[key] = report.result || '';
-    }
+    const meetingReportsIndex = buildMeetingReportsIndex([...meetingReports, ...visitReports]);
+    const phoneReportsIndex = buildPhoneReportsIndex(phoneReports);
 
     const rows = [];
 
     for (const assignment of meetingAssignments) {
       if (!inRange(assignment.meeting_date)) continue;
       const phoneLast9 = last9(assignment.client_phone);
-      const reportStatus = phoneLast9 ? (meetingReportByPhone[phoneLast9] || '') : '';
-      const reported = !!reportStatus;
+      const matchedReport = findMeetingReport(assignment, meetingReportsIndex);
+      const reportStatus = matchedReport?.status || '';
+      const reported = !!matchedReport;
       const dateTime = assignment.meeting_calendar || assignment.meeting_date || '';
 
       rows.push({
@@ -163,8 +216,9 @@ Deno.serve(async (req) => {
       const contactDate = getContactDate(contact);
       if (!inRange(contactDate) || contact.is_archived === true) continue;
       const phoneLast9 = last9(contact.phone);
-      const reportStatus = phoneReportByKey[makePhoneDateKey(contact.phone, contactDate)] || '';
-      const reported = !!reportStatus;
+      const matchedReport = findPhoneReport(contact, phoneReportsIndex);
+      const reportStatus = matchedReport?.status || '';
+      const reported = !!matchedReport;
       const dateTime = contact.contact_calendar || contactDate || '';
 
       rows.push({

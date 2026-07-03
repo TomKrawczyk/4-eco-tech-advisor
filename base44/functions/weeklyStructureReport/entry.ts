@@ -37,8 +37,74 @@ function getContactDate(record) {
   return record.contact_date || localYMD(record.contact_calendar) || localYMD(record.date) || '';
 }
 
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeName(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function normalizeKey(value) {
   return String(value || '').trim();
+}
+
+function dateMatches(recordDate, reportDate) {
+  if (!recordDate || !reportDate) return true;
+  return reportDate === recordDate || reportDate >= recordDate;
+}
+
+function clientMatches(record, indexedReport) {
+  const recordPhone = last9(record.client_phone || record.phone);
+  const reportPhone = indexedReport.client_phone;
+  if (recordPhone && reportPhone) return recordPhone === reportPhone;
+
+  const recordName = normalizeName(record.client_name);
+  const reportName = indexedReport.client_name;
+  if (!recordName || !reportName) return false;
+  return recordName === reportName || recordName.startsWith(reportName) || reportName.startsWith(recordName);
+}
+
+function emailMatches(record, indexedReport) {
+  const recordEmail = normalizeEmail(record.assigned_user_email || record.author_email || record.owner_email);
+  return !recordEmail || !indexedReport.email || indexedReport.email === recordEmail;
+}
+
+function buildMeetingReportsIndex(reports) {
+  return reports.map((report) => ({
+    id: report.id,
+    email: normalizeEmail(report.author_email || report.created_by || report.email),
+    date: localYMD(report.meeting_date || report.visit_date || report.created_date),
+    client_name: normalizeName(report.client_name),
+    client_phone: last9(report.client_phone || report.phone),
+    status: normalizeKey(report.status).toLowerCase() || 'reported',
+  }));
+}
+
+function buildPhoneReportsIndex(reports) {
+  return reports.map((report) => ({
+    id: report.id,
+    email: normalizeEmail(report.author_email || report.created_by || report.email),
+    date: localYMD(report.contact_date || report.created_date),
+    client_name: normalizeName(report.client_name),
+    client_phone: last9(report.client_phone || report.phone),
+    contact_key: normalizeKey(report.contact_key),
+    status: normalizeKey(report.result).toLowerCase() || 'reported',
+  }));
+}
+
+function findMeetingReport(record, reportsIndex) {
+  const recordDate = record.meeting_date || localYMD(record.meeting_calendar) || '';
+  return reportsIndex.find((report) => emailMatches(record, report) && clientMatches(record, report) && dateMatches(recordDate, report.date));
+}
+
+function findPhoneReport(record, reportsIndex) {
+  const contactKey = normalizeKey(record.contact_key);
+  const recordDate = getContactDate(record);
+  return reportsIndex.find((report) => {
+    const contactKeyMatch = contactKey && report.contact_key && contactKey === report.contact_key;
+    return emailMatches(record, report) && (contactKeyMatch || clientMatches(record, report)) && dateMatches(recordDate, report.date);
+  });
 }
 
 function prevWeek() {
@@ -89,11 +155,12 @@ Deno.serve(async (req) => {
     const inRange = (date) => !!date && date >= from && date <= to;
 
     const svc = base44.asServiceRole.entities;
-    const [allowedUsers, groups, meetingAssignments, meetingReports, phoneContacts, phoneReports] = await Promise.all([
+    const [allowedUsers, groups, meetingAssignments, meetingReports, visitReports, phoneContacts, phoneReports] = await Promise.all([
       fetchAll(svc.AllowedUser),
       fetchAll(svc.Group),
       fetchAll(svc.MeetingAssignment),
       fetchAll(svc.MeetingReport),
+      fetchAll(svc.VisitReport),
       fetchAll(svc.PhoneContact),
       fetchAll(svc.PhoneContactReport),
     ]);
@@ -131,30 +198,8 @@ Deno.serve(async (req) => {
       return email && emailToGroup[email] ? emailToGroup[email] : 'Bez struktury';
     };
 
-    const meetingReportByPhone = {};
-    for (const report of meetingReports) {
-      const phone = last9(report.client_phone);
-      if (phone && !meetingReportByPhone[phone]) {
-        meetingReportByPhone[phone] = (report.status || 'reported').toLowerCase();
-      }
-    }
-
-    const phoneReportedKeys = new Set();
-    const phoneReportStatusByKey = {};
-    const phoneReportByPhone = {};
-    for (const report of phoneReports) {
-      const contactKey = normalizeKey(report.contact_key);
-      if (contactKey) {
-        phoneReportedKeys.add(contactKey);
-        if (!phoneReportStatusByKey[contactKey]) {
-          phoneReportStatusByKey[contactKey] = normalizeKey(report.result).toLowerCase() || null;
-        }
-      }
-      const phone = last9(report.client_phone);
-      if (phone && !phoneReportByPhone[phone]) {
-        phoneReportByPhone[phone] = normalizeKey(report.result).toLowerCase() || null;
-      }
-    }
+    const meetingReportsIndex = buildMeetingReportsIndex([...meetingReports, ...visitReports]);
+    const phoneReportsIndex = buildPhoneReportsIndex(phoneReports);
 
     const structuresMap = {};
     const getStructure = (name) => {
@@ -181,7 +226,8 @@ Deno.serve(async (req) => {
       const advisorEmail = (assignment.assigned_user_email || '').trim().toLowerCase();
       const peopleKey = advisorEmail || '__nieprzypisany__';
       structure.people[peopleKey] = (structure.people[peopleKey] || 0) + 1;
-      const reportStatus = assignment.client_phone ? meetingReportByPhone[last9(assignment.client_phone)] : '';
+      const matchedReport = findMeetingReport(assignment, meetingReportsIndex);
+      const reportStatus = matchedReport?.status || null;
       structure.clients.push({
         client_name: assignment.client_name || '—',
         client_phone: assignment.client_phone || '',
@@ -190,21 +236,10 @@ Deno.serve(async (req) => {
         meeting_calendar: assignment.meeting_calendar || assignment.meeting_date || '',
         advisor_name: assignment.assigned_user_name || (advisorEmail ? (emailToName[advisorEmail] || advisorEmail) : '— nieprzypisany —'),
         advisor_email: advisorEmail || null,
-        reported: !!reportStatus,
-        report_status: reportStatus || null,
+        report_author_email: matchedReport?.email || null,
+        reported: !!matchedReport,
+        report_status: reportStatus,
       });
-    }
-
-    for (const report of meetingReports) {
-      if (!inRange(report.meeting_date)) continue;
-      const structure = getStructure(grpOfReport(report));
-      structure.meeting_reports++;
-      const status = (report.status || '').toLowerCase();
-      if (status === 'completed') structure.reports_completed++;
-      if (status === 'planned') structure.reports_planned++;
-      const reporterEmail = (report.author_email || '').trim().toLowerCase();
-      const reporterKey = reporterEmail || '__nieznany__';
-      structure.reporters[reporterKey] = (structure.reporters[reporterKey] || 0) + 1;
     }
 
     for (const contact of phoneContacts) {
@@ -213,12 +248,9 @@ Deno.serve(async (req) => {
       const structureName = grpOfAssign(contact);
       const structure = getStructure(structureName);
       const advisorEmail = (contact.assigned_user_email || '').trim().toLowerCase();
-      const contactKey = normalizeKey(contact.contact_key);
-      const phone = last9(contact.phone);
-      const exactReportStatus = contactKey ? phoneReportStatusByKey[contactKey] : null;
-      const fallbackReportStatus = !contactKey && phone ? phoneReportByPhone[phone] : null;
-      const reported = (contactKey && phoneReportedKeys.has(contactKey)) || (!contactKey && !!fallbackReportStatus);
-      const reportStatus = exactReportStatus || fallbackReportStatus || null;
+      const matchedReport = findPhoneReport(contact, phoneReportsIndex);
+      const reported = !!matchedReport;
+      const reportStatus = matchedReport?.status || null;
 
       structure.phone_contacts.push({
         client_name: contact.client_name || '—',
@@ -239,7 +271,10 @@ Deno.serve(async (req) => {
 
     const structures = Object.values(structuresMap).map((structure) => {
       const meetingsAssigned = structure.clients.length;
-      const meetingReportsCount = structure.meeting_reports;
+      const reportedClients = structure.clients.filter((client) => client.reported);
+      const meetingReportsCount = reportedClients.length;
+      const reportsCompleted = reportedClients.filter((client) => client.report_status === 'completed' || client.report_status === 'sent').length;
+      const reportsPlanned = reportedClients.filter((client) => client.report_status === 'planned').length;
       const phoneContactsAssigned = structure.phone_contacts.length;
       const phoneContactsReported = structure.phone_contacts.filter((contact) => contact.reported).length;
       const phoneContactsMissing = Math.max(0, phoneContactsAssigned - phoneContactsReported);
@@ -249,14 +284,19 @@ Deno.serve(async (req) => {
       const phoneCoverage = phoneContactsAssigned > 0
         ? Math.round((phoneContactsReported / phoneContactsAssigned) * 100)
         : null;
+      const meetingReporters = reportedClients.reduce((acc, client) => {
+        const email = client.report_author_email || client.advisor_email || '__nieznany__';
+        acc[email] = (acc[email] || 0) + 1;
+        return acc;
+      }, {});
 
       return {
         name: structure.name,
         metrics: {
           meetings_assigned: meetingsAssigned,
           meeting_reports: meetingReportsCount,
-          reports_completed: structure.reports_completed,
-          reports_planned: structure.reports_planned,
+          reports_completed: reportsCompleted,
+          reports_planned: reportsPlanned,
           report_coverage_pct: meetingCoverage,
           missing_reports: meetingsAssigned > 0 ? Math.max(0, meetingsAssigned - meetingReportsCount) : 0,
           phone_contacts_assigned: phoneContactsAssigned,
@@ -275,7 +315,7 @@ Deno.serve(async (req) => {
             assigned,
           }))
           .sort((a, b) => b.assigned - a.assigned),
-        reporters: Object.entries(structure.reporters)
+        reporters: Object.entries(meetingReporters)
           .map(([email, reports]) => ({
             name: email === '__nieznany__' ? '— nieznany —' : (emailToName[email] || email),
             email: email === '__nieznany__' ? null : email,
