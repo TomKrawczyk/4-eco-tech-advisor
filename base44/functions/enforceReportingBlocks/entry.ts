@@ -144,7 +144,7 @@ function clientMatches(record, indexedReport) {
 
 function dateMatches(recordDate, reportDate) {
   if (!recordDate || !reportDate) return true;
-  return reportDate === recordDate || reportDate >= recordDate;
+  return reportDate === recordDate;
 }
 
 function emailMatches(record, indexedReport) {
@@ -176,7 +176,7 @@ function hasSeparatePhoneReport(record, reportsIndex) {
 }
 
 function hasReportForMeeting(record, reportsIndex) {
-  return hasInlineMeetingReportEvidence(record) || hasSeparateMeetingReport(record, reportsIndex);
+  return hasSeparateMeetingReport(record, reportsIndex);
 }
 
 function hasReportForPhoneContact(record, reportsIndex) {

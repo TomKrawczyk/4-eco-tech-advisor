@@ -51,7 +51,7 @@ function normalizeKey(value) {
 
 function dateMatches(recordDate, reportDate) {
   if (!recordDate || !reportDate) return true;
-  return reportDate === recordDate || reportDate >= recordDate;
+  return reportDate === recordDate;
 }
 
 function clientMatches(record, indexedReport) {
