@@ -310,9 +310,7 @@ export default function MeetingReports() {
   const syncBlockingStatus = async () => {
     await base44.functions.invoke("enforceReportingBlocks", {});
     sessionStorage.removeItem("layout_user_cache");
-    if (currentUser?.is_blocked) {
-      window.location.reload();
-    }
+    window.dispatchEvent(new Event("user-access-updated"));
   };
 
   const createMutation = useMutation({

@@ -191,11 +191,21 @@ export default function Layout({ children, currentPageName }) {
 
     checkAccess();
 
+    const handleAccessRefresh = () => {
+      setCheckingAccess(true);
+      checkAccess();
+    };
+
+    window.addEventListener('user-access-updated', handleAccessRefresh);
+
     const activityInterval = setInterval(() => {
       base44.functions.invoke('trackUserActivity').catch(() => {});
     }, 15 * 60 * 1000);
 
-    return () => clearInterval(activityInterval);
+    return () => {
+      window.removeEventListener('user-access-updated', handleAccessRefresh);
+      clearInterval(activityInterval);
+    };
   }, []);
 
   const isItemVisible = (item) => {

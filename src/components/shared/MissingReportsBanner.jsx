@@ -114,8 +114,17 @@ export default function MissingReportsBanner({ currentUser }) {
       setMissingMeetings(missing);
     };
 
+    const handleAccessRefresh = () => {
+      check();
+    };
+
     check();
-  }, [currentUser?.email]);
+    window.addEventListener('user-access-updated', handleAccessRefresh);
+
+    return () => {
+      window.removeEventListener('user-access-updated', handleAccessRefresh);
+    };
+  }, [currentUser?.email, currentUser?.is_blocked]);
 
   if (isBlocked) {
     return (

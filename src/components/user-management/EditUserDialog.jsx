@@ -100,6 +100,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
 
       await base44.functions.invoke("enforceReportingBlocks", {});
       sessionStorage.removeItem("layout_user_cache");
+      window.dispatchEvent(new Event("user-access-updated"));
       onRefresh?.();
       toast.success(`Zerowano raporty. Uzupełniono ${missing.length} brakujących wpisów.`);
     } catch (error) {
@@ -124,6 +125,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
         missing_reports_count: 0,
       });
       sessionStorage.removeItem('layout_user_cache');
+      window.dispatchEvent(new Event('user-access-updated'));
       toast.success("Użytkownik odblokowany");
       onRefresh();
     } catch (error) {
@@ -143,6 +145,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
         blocked_reason: blockReason || "Blokada administracyjna",
       });
       sessionStorage.removeItem('layout_user_cache');
+      window.dispatchEvent(new Event('user-access-updated'));
       toast.success(`Użytkownik zablokowany do ${blockUntilDate}`);
       setShowBlockDialog(false);
       setBlockUntilDate("");
@@ -164,6 +167,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
         blocked_reason: "",
       });
       sessionStorage.removeItem('layout_user_cache');
+      window.dispatchEvent(new Event('user-access-updated'));
       toast.success("Blokada administracyjna zdjęta");
       onRefresh();
     } catch (error) {
