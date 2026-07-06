@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
+import { buildMeetingReportsIndex, hasReportForMeeting, normalizeDate } from "@/lib/reportingStatus";
 import { Key, Loader2, RotateCcw, Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 
@@ -62,42 +63,34 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
       const userEmail = user?.email || user?.data?.email;
       const userName = formData.name || user?.data?.name || user?.name || "";
 
-      // Pobierz wszystkie przypisania spotkań tego użytkownika
-      const [assignments, existingReports] = await Promise.all([
+      const [assignments, meetingReports, visitReports] = await Promise.all([
         base44.entities.MeetingAssignment.filter({ assigned_user_email: userEmail }),
         base44.entities.MeetingReport.filter({ author_email: userEmail }),
+        base44.entities.VisitReport.filter({ author_email: userEmail }),
       ]);
 
-      const today = new Date();
-      const normalizePhone = p => (p || '').replace(/\s+/g, '').replace(/[^\d]/g, '');
-      const normalizeName = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+      const todayYmd = normalizeDate(new Date());
+      const reportsIndex = buildMeetingReportsIndex([...(meetingReports || []), ...(visitReports || [])]);
 
-      // Znajdź przypisania bez raportu (przeszłe)
-      const missing = assignments.filter(a => {
-        const dateStr = a.meeting_date || a.meeting_calendar;
-        if (!dateStr) return false;
-        const d = new Date(dateStr);
-        if (isNaN(d) || d >= today) return false;
-
-        const aPhone = normalizePhone(a.client_phone);
-        const aName = normalizeName(a.client_name);
-
-        return !existingReports.some(r => {
-          const rPhone = normalizePhone(r.client_phone);
-          const rName = normalizeName(r.client_name);
-          const phoneMatch = aPhone.length >= 7 && rPhone.length >= 7 && aPhone === rPhone;
-          const nameMatch = rName === aName || (rName.length > 2 && aName.startsWith(rName)) || (aName.length > 2 && rName.startsWith(aName));
-          return phoneMatch || nameMatch;
-        });
+      const missing = assignments.filter((assignment) => {
+        const meetingDate = normalizeDate(assignment.meeting_date || assignment.meeting_calendar);
+        if (!meetingDate || meetingDate >= todayYmd) return false;
+        return !hasReportForMeeting({
+          ...assignment,
+          assigned_user_email: userEmail,
+          client_name: assignment.client_name || "",
+          client_phone: assignment.client_phone || "",
+          meeting_date: assignment.meeting_date || meetingDate,
+          meeting_calendar: assignment.meeting_calendar || "",
+        }, reportsIndex);
       });
 
-      // Utwórz raporty completed dla każdego brakującego spotkania
-      await Promise.all(missing.map(a =>
+      await Promise.all(missing.map((assignment) =>
         base44.entities.MeetingReport.create({
-          client_name: a.client_name,
-          client_phone: a.client_phone || "",
-          client_address: a.client_address || "",
-          meeting_date: a.meeting_date || a.meeting_calendar?.split(' ')[0] || new Date().toISOString().split('T')[0],
+          client_name: assignment.client_name,
+          client_phone: assignment.client_phone || "",
+          client_address: assignment.client_address || "",
+          meeting_date: normalizeDate(assignment.meeting_date || assignment.meeting_calendar) || new Date().toISOString().split('T')[0],
           status: "completed",
           description: "Raport wyzerowany przez administratora",
           author_name: userName,
@@ -105,14 +98,10 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
         })
       ));
 
-      // Zeruj licznik i odblokuj
-      await base44.entities.AllowedUser.update(user.id, {
-        missing_reports_count: 0,
-        is_blocked: false,
-        blocked_reason: ""
-      });
-
-      toast.success(`Licznik wyzerowany. Uzupełniono ${missing.length} brakujących raportów.`);
+      await base44.functions.invoke("enforceReportingBlocks", {});
+      sessionStorage.removeItem("layout_user_cache");
+      onRefresh?.();
+      toast.success(`Zerowano raporty. Uzupełniono ${missing.length} brakujących wpisów.`);
     } catch (error) {
       toast.error('Błąd: ' + error.message);
     } finally {
