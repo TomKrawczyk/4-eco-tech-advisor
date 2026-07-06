@@ -289,6 +289,7 @@ export default function MeetingReports() {
       if (ua) {
         user.role = ua.data?.role || ua.role;
         user.displayName = ua.data?.name || ua.name;
+        user.is_blocked = ua.data?.is_blocked || ua.is_blocked || user.account_status === "blocked";
       }
       setCurrentUser(user);
     };
@@ -306,14 +307,23 @@ export default function MeetingReports() {
 
   const isAdmin = currentUser?.role === "admin";
 
+  const syncBlockingStatus = async () => {
+    await base44.functions.invoke("enforceReportingBlocks", {});
+    sessionStorage.removeItem("layout_user_cache");
+    if (currentUser?.is_blocked) {
+      window.location.reload();
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MeetingReport.create({
       ...data,
       author_name: currentUser?.displayName || currentUser?.full_name || "",
       author_email: currentUser?.email || "",
     }),
-    onSuccess: (created) => {
+    onSuccess: async (created) => {
       queryClient.invalidateQueries({ queryKey: ["meetingReports"] });
+      await syncBlockingStatus();
       if (created && typeof created === "object" && created.id) {
         setSelectedReport(created);
         setView("detail");
@@ -328,8 +338,9 @@ export default function MeetingReports() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.MeetingReport.update(id, data),
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
       queryClient.invalidateQueries({ queryKey: ["meetingReports"] });
+      await syncBlockingStatus();
       if (updated && typeof updated === "object" && updated.id) {
         setSelectedReport(updated);
         setView("detail");
@@ -344,8 +355,9 @@ export default function MeetingReports() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.MeetingReport.delete(id),
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["meetingReports"] });
+      await syncBlockingStatus();
       setView("list");
       setSelectedReport(null);
     },
