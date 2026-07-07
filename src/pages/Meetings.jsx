@@ -59,7 +59,7 @@ function findSheetMapping(sheetMappings, sheetName) {
 }
 
 // Widok spotkań dla zwykłego użytkownika – z pełnymi szczegółami i akcjami
-function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen, refreshedAt, cacheStatus, onRefreshNow, isRefreshingCache }) {
+function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDetails, detailsModalOpen, setDetailsModalOpen, refreshedAt, cacheStatus, onRefreshNow, isRefreshingCache, onOpenDetails, detailsLoading }) {
   const groupedByDate = useMemo(() => {
     const groups = {};
     myAssignedMeetings.forEach(a => {
@@ -124,7 +124,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
                     from_meeting: "1",
                   }).toString();
 
-                  const hasDetails = a.agent || a.comments || a.notes || a.interview_data;
+                  const hasDetails = a.agent || a.comments || a.notes || a.interview_data || a.has_details;
 
                   return (
                     <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-200 hover:shadow-sm transition-all">
@@ -174,16 +174,9 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
 
                         {hasDetails && (
                           <button
-                            onClick={() => {
-                              setSelectedDetails({
-                                phone: a.client_phone || a.phone,
-                                agent: a.agent,
-                                comments: a.comments || a.notes,
-                                interview_data: a.interview_data || {}
-                              });
-                              setDetailsModalOpen(true);
-                            }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                            disabled={detailsLoading}
+                            onClick={() => onOpenDetails(a, a)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center gap-1 disabled:opacity-50"
                           >
                             <MessageSquare className="w-3 h-3" />
                             Szczegóły kontaktu
@@ -241,6 +234,37 @@ export default function Meetings() {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [visiblePerSheet, setVisiblePerSheet] = useState({});
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  const openMeetingDetails = async (meeting, assignment) => {
+    // Jeśli mamy już pełne dane (stary cache / assignment), pokaż od razu
+    if (meeting.interview_data || (meeting.comments || "").trim().length > 2) {
+      setSelectedDetails({
+        phone: meeting.client_phone || meeting.phone,
+        agent: meeting.agent || assignment?.agent,
+        comments: assignment?.comments || meeting.comments,
+        interview_data: meeting.interview_data || {},
+      });
+      setDetailsModalOpen(true);
+      return;
+    }
+    setDetailsLoading(true);
+    try {
+      const key = `${meeting.sheet}__${meeting.client_name}__${meeting.meeting_calendar}`;
+      const res = await base44.functions.invoke("getMeetingDetails", { meeting_key: key });
+      const full = res.data?.meeting || {};
+      setSelectedDetails({
+        phone: meeting.client_phone || meeting.phone,
+        agent: meeting.agent || assignment?.agent || full.agent,
+        comments: full.comments || assignment?.comments || meeting.comments || "",
+        interview_data: full.interview_data || {},
+      });
+      setDetailsModalOpen(true);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
@@ -286,6 +310,9 @@ export default function Meetings() {
   const { data: meetingsCacheRecord = null, isLoading, refetch: refetchMeetingsCache, isFetching } = useQuery({
     queryKey: ["meetingsCache"],
     queryFn: async () => {
+      // Lekki indeks — bez interview_data i pełnych komentarzy (szczegóły dociągane na żądanie)
+      const liteRows = await base44.entities.MeetingsCache.filter({ cache_key: "meetings_lite" }, "-updated_date", 1);
+      if (liteRows[0]?.meetings_json?.meetings?.length) return liteRows[0];
       const rows = await base44.entities.MeetingsCache.filter({ cache_key: "meetings_main" }, "-updated_date", 1);
       return rows[0] || null;
     },
@@ -524,6 +551,8 @@ export default function Meetings() {
         cacheStatus={cacheStatus}
         onRefreshNow={handleRefreshNow}
         isRefreshingCache={manualRefreshing || isFetching}
+        onOpenDetails={openMeetingDetails}
+        detailsLoading={detailsLoading}
       />
     );
   }
@@ -733,7 +762,18 @@ export default function Meetings() {
                       transition={{ duration: 0.2 }}
                     >
                       <div className="p-3 space-y-4">
-                        {dates.map(({ date, meetings }) => (
+                        {(() => {
+                          // Renderuj tylko pierwsze N kart (paginacja per arkusz)
+                          const limit = visiblePerSheet[sheet] || 30;
+                          const limitedDates = [];
+                          let remaining = limit;
+                          for (const entry of dates) {
+                            if (remaining <= 0) break;
+                            limitedDates.push({ date: entry.date, meetings: entry.meetings.slice(0, remaining) });
+                            remaining -= entry.meetings.length;
+                          }
+                          return limitedDates;
+                        })().map(({ date, meetings }) => (
                           <div key={date}>
                             <div className="flex items-center gap-2 mb-2 px-1">
                               <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -750,17 +790,11 @@ export default function Meetings() {
                                 const assignment = meetingAssignmentsByKey[key];
                                 return (
                                   <div key={i} className="flex gap-2 items-start">
-                                    {(assignment?.comments || assignment?.agent || meeting.agent || meeting.interview_data) && (
+                                    {(assignment?.comments || assignment?.agent || meeting.agent || meeting.has_details || meeting.interview_data) && (
                                       <button
-                                        onClick={() => {
-                                           setSelectedDetails({
-                                             agent: meeting.agent || assignment?.agent,
-                                             comments: assignment?.comments || meeting.comments,
-                                             interview_data: meeting.interview_data || {}
-                                           });
-                                           setDetailsModalOpen(true);
-                                         }}
-                                        className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors shrink-0 mt-0.5"
+                                        disabled={detailsLoading}
+                                        onClick={() => openMeetingDetails(meeting, assignment)}
+                                        className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors shrink-0 mt-0.5 disabled:opacity-50"
                                         title="Pokaż szczegóły"
                                       >
                                         <MessageSquare className="w-4 h-4" />
@@ -784,6 +818,17 @@ export default function Meetings() {
                             </div>
                           </div>
                         ))}
+                        {total > (visiblePerSheet[sheet] || 30) && (
+                          <div className="text-center pt-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setVisiblePerSheet(prev => ({ ...prev, [sheet]: (prev[sheet] || 30) + 30 }))}
+                            >
+                              Pokaż więcej ({total - (visiblePerSheet[sheet] || 30)} pozostało)
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}

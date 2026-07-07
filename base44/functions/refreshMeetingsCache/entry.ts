@@ -1,6 +1,31 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const CACHE_KEY = 'meetings_main';
+const LITE_CACHE_KEY = 'meetings_lite';
+
+function toLiteMeeting(meeting) {
+  const hasInterview = !!meeting.interview_data && Object.values(meeting.interview_data).some((value) => String(value || '').trim());
+  const hasComments = String(meeting.comments || '').trim().length > 2;
+  return {
+    sheet: meeting.sheet,
+    client_name: meeting.client_name,
+    phone: meeting.phone || '',
+    address: meeting.address || '',
+    date: meeting.date || '',
+    agent: meeting.agent || '',
+    meeting_calendar: meeting.meeting_calendar || '',
+    status: meeting.status || '',
+    meeting_note: meeting.meeting_note || '',
+    has_details: !!(meeting.agent || hasComments || hasInterview),
+    has_inline_report: hasComments || hasInterview,
+  };
+}
+
+async function upsertCacheRecord(svc, cacheKey, payload) {
+  const rows = await svc.MeetingsCache.filter({ cache_key: cacheKey }, '-updated_date', 1);
+  if (rows[0]) await svc.MeetingsCache.update(rows[0].id, payload);
+  else await svc.MeetingsCache.create({ cache_key: cacheKey, ...payload });
+}
 const RANGE_SUFFIX = 'A1:Z3000';
 const MAX_BATCH_RANGES = 20;
 
@@ -453,6 +478,15 @@ Deno.serve(async (req) => {
     await svc.MeetingsCache.update(cacheRecord.id, {
       cache_key: CACHE_KEY,
       meetings_json: { meetings },
+      last_refreshed: nowIso,
+      status: 'success',
+      error_message: '',
+      meetings_count: meetings.length,
+    });
+
+    // Lekki indeks dla frontendu — bez interview_data i pełnych komentarzy
+    await upsertCacheRecord(svc, LITE_CACHE_KEY, {
+      meetings_json: { meetings: meetings.map(toLiteMeeting) },
       last_refreshed: nowIso,
       status: 'success',
       error_message: '',

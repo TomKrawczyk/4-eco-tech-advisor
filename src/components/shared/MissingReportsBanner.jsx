@@ -46,7 +46,7 @@ export default function MissingReportsBanner({ currentUser }) {
         base44.entities.VisitReport.filter({ author_email: currentUser.email }),
         base44.entities.AllowedUser.list(),
         base44.entities.CalendarEvent.filter({ owner_email: currentUser.email }),
-        base44.entities.MeetingsCache.filter({ cache_key: "meetings_main" }, "-updated_date", 1),
+        base44.entities.MeetingsCache.filter({ cache_key: "meetings_lite" }, "-updated_date", 1),
       ]);
 
       const ua = allowedUsers.find((u) => (u.data?.email || u.email) === currentUser.email);
