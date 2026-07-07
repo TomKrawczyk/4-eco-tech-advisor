@@ -19,7 +19,7 @@ function resolveGroupId(currentUserData, groups) {
   return group?.id || null;
 }
 
-async function listAll(entity, sort = '-created_date', pageSize = 200) {
+async function listAll(entity, sort = '-created_date', pageSize = 1000) {
   const results = [];
   let skip = 0;
 
@@ -44,10 +44,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const [allowedUsers, groups, reports] = await Promise.all([
+    const [allowedUsers, groups] = await Promise.all([
       listAll(base44.asServiceRole.entities.AllowedUser),
       listAll(base44.asServiceRole.entities.Group),
-      listAll(base44.asServiceRole.entities.MeetingReport),
     ]);
 
     const currentUserData = allowedUsers.find((u) => (u.data?.email || u.email) === user.email);
@@ -59,6 +58,7 @@ Deno.serve(async (req) => {
     const role = currentUserData.data?.role || currentUserData.role || 'user';
 
     if (role === 'admin') {
+      const reports = await listAll(base44.asServiceRole.entities.MeetingReport);
       if (payload.count_only) {
         return Response.json({ total: reports.length, role });
       }
@@ -102,8 +102,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    const allowedSet = new Set(userEmails);
-    const visibleReports = reports.filter((report) => allowedSet.has(report.created_by) || allowedSet.has(report.author_email));
+    const emails = [...new Set(userEmails)];
+    const [byAuthor, byCreator] = await Promise.all([
+      base44.asServiceRole.entities.MeetingReport.filter({ author_email: { $in: emails } }, '-created_date', 1000),
+      base44.asServiceRole.entities.MeetingReport.filter({ created_by: { $in: emails } }, '-created_date', 1000),
+    ]);
+    const seen = new Set();
+    const visibleReports = [...byAuthor, ...byCreator].filter((report) => {
+      if (seen.has(report.id)) return false;
+      seen.add(report.id);
+      return true;
+    });
 
     if (payload.count_only) {
       return Response.json({ total: visibleReports.length, role });
