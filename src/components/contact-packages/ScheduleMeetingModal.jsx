@@ -7,6 +7,7 @@ import { base44 } from "@/api/base44Client";
 export default function ScheduleMeetingModal({ lead, currentUser, onClose, onSuccess }) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [timeEnd, setTimeEnd] = useState("");
   const [notes, setNotes] = useState(lead.contact_notes || "");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
@@ -20,6 +21,7 @@ export default function ScheduleMeetingModal({ lead, currentUser, onClose, onSuc
       title: `Spotkanie: ${lead.client_name}`,
       event_date: date,
       event_time: time || null,
+      end_time: timeEnd || null,
       event_type: "meeting",
       status: "planned",
       client_name: lead.client_name,
@@ -37,7 +39,8 @@ export default function ScheduleMeetingModal({ lead, currentUser, onClose, onSuc
       month: "long",
       year: "numeric",
     });
-    const meetingNote = `Spotkanie umówione na: ${meetingDateLabel}${time ? ` o ${time}` : ""}. Handlowiec: ${currentUser.displayName || currentUser.full_name || currentUser.email}`;
+    const timeLabel = time ? (timeEnd ? `${time} - ${timeEnd}` : time) : "";
+    const meetingNote = `Spotkanie umówione na: ${meetingDateLabel}${timeLabel ? ` w godz. ${timeLabel}` : ""}. Handlowiec: ${currentUser.displayName || currentUser.full_name || currentUser.email}`;
     const combinedNotes = notes?.trim() ? `${notes.trim()}\n\n${meetingNote}` : meetingNote;
 
     await base44.entities.ContactLead.update(lead.id, {
@@ -45,7 +48,7 @@ export default function ScheduleMeetingModal({ lead, currentUser, onClose, onSuc
       contact_notes: combinedNotes,
       contacted_at: new Date().toISOString(),
       scheduled_meeting_date: date,
-      scheduled_meeting_time: time || "",
+      scheduled_meeting_time: timeLabel,
     });
 
     setSaving(false);
@@ -100,16 +103,25 @@ export default function ScheduleMeetingModal({ lead, currentUser, onClose, onSuc
                 />
               </div>
 
-              {/* Godzina */}
+              {/* Godzina od-do */}
               <div>
                 <label className="text-xs font-medium text-gray-700 block mb-1.5">
                   <span className="flex items-center gap-1"><Clock className="w-3 h-3" />Godzina (opcjonalnie)</span>
                 </label>
-                <Input
-                  type="time"
-                  value={time}
-                  onChange={e => setTime(e.target.value)}
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="time"
+                    value={time}
+                    onChange={e => setTime(e.target.value)}
+                  />
+                  <span className="text-xs text-gray-400 shrink-0">do</span>
+                  <Input
+                    type="time"
+                    value={timeEnd}
+                    onChange={e => setTimeEnd(e.target.value)}
+                    disabled={!time}
+                  />
+                </div>
               </div>
 
               {/* Notatki */}
@@ -143,7 +155,7 @@ export default function ScheduleMeetingModal({ lead, currentUser, onClose, onSuc
                 <p className="font-semibold text-gray-900">Spotkanie zaplanowane!</p>
                 <p className="text-sm text-gray-500 mt-1">
                   {new Date(date).toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}
-                  {time && ` o ${time}`}
+                  {time && ` w godz. ${time}${timeEnd ? ` - ${timeEnd}` : ""}`}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">Wydarzenie dodano do kalendarza</p>
               </div>

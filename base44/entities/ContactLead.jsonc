@@ -47,6 +47,7 @@
         "interested",
         "not_interested",
         "no_answer",
+        "callback",
         "meeting_scheduled",
         "contract_signed"
       ],
@@ -69,7 +70,7 @@
     },
     "scheduled_meeting_time": {
       "type": "string",
-      "description": "Godzina um\u00f3wionego spotkania (HH:MM)"
+      "description": "Godzina um\u00f3wionego spotkania (HH:MM lub zakres HH:MM - HH:MM)"
     },
     "is_archived": {
       "type": "boolean",

@@ -18,6 +18,7 @@ const STATUS_LABELS = {
   interested: "Zainteresowany",
   not_interested: "Niezainteresowany",
   no_answer: "Brak odpowiedzi",
+  callback: "Do ponownego kontaktu",
   meeting_scheduled: "Spotkanie umówione",
   contract_signed: "Umowa podpisana",
 };
@@ -29,6 +30,7 @@ const STATUS_COLORS = {
   interested: "bg-green-50 text-green-700",
   not_interested: "bg-red-50 text-red-700",
   no_answer: "bg-orange-50 text-orange-700",
+  callback: "bg-cyan-50 text-cyan-700",
   meeting_scheduled: "bg-purple-50 text-purple-700",
   contract_signed: "bg-emerald-100 text-emerald-800",
 };
@@ -541,8 +543,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
 
                 const canEditOwnAssignedLead =
                   archiveTab === "active" &&
-                  ["group_leader", "team_leader"].includes(currentUser?.role) &&
-                  lead.assigned_user_email === currentUser?.email;
+                  ["group_leader", "team_leader", "admin"].includes(currentUser?.role);
                 const leadDraft = getLeadDraft(lead);
 
                 return (
