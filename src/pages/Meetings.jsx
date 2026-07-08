@@ -238,8 +238,9 @@ export default function Meetings() {
   const [detailsLoading, setDetailsLoading] = useState(false);
 
   const openMeetingDetails = async (meeting, assignment) => {
-    // Jeśli mamy już pełne dane (stary cache / assignment), pokaż od razu
-    if (meeting.interview_data || (meeting.comments || "").trim().length > 2) {
+    // Jeśli mamy już pełny wywiad (stary cache / assignment), pokaż od razu
+    const hasFullInterview = meeting.interview_data && Object.keys(meeting.interview_data).length > 0;
+    if (hasFullInterview) {
       setSelectedDetails({
         phone: meeting.client_phone || meeting.phone,
         agent: meeting.agent || assignment?.agent,
