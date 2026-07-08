@@ -20,19 +20,21 @@ const STATUS_LABELS = {
   no_answer: "Brak odpowiedzi",
   callback: "Do ponownego kontaktu",
   meeting_scheduled: "Spotkanie umówione",
+  offer_submitted: "Złożona oferta",
   contract_signed: "Umowa podpisana",
 };
 
 const STATUS_COLORS = {
   unassigned: "bg-gray-100 text-gray-600",
   assigned: "bg-blue-50 text-blue-700",
-  contacted: "bg-yellow-50 text-yellow-700",
+  contacted: "bg-green-50 text-green-700",
   interested: "bg-green-50 text-green-700",
   not_interested: "bg-red-50 text-red-700",
-  no_answer: "bg-orange-50 text-orange-700",
-  callback: "bg-cyan-50 text-cyan-700",
-  meeting_scheduled: "bg-purple-50 text-purple-700",
-  contract_signed: "bg-emerald-100 text-emerald-800",
+  no_answer: "bg-yellow-50 text-yellow-700",
+  callback: "bg-purple-50 text-purple-700",
+  meeting_scheduled: "bg-blue-50 text-blue-700",
+  offer_submitted: "bg-orange-50 text-orange-700",
+  contract_signed: "bg-emerald-200 text-emerald-900",
 };
 
 export default function PackageDetailView({ pkg, currentUser, onBack, onPackageUpdated }) {

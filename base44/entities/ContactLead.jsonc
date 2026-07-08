@@ -49,6 +49,7 @@
         "no_answer",
         "callback",
         "meeting_scheduled",
+        "offer_submitted",
         "contract_signed"
       ],
       "default": "unassigned",
