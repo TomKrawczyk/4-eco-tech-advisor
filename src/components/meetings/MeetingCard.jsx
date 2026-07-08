@@ -31,7 +31,29 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [overloadConfirm, setOverloadConfirm] = useState(null); // { userEmail, userName, count }
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const queryClient = useQueryClient();
+
+  const openDetails = async () => {
+    let comments = meeting.comments || assignment?.comments || "";
+    let interview = meeting.interview_data || assignment?.interview_data;
+    let agent = meeting.agent || assignment?.agent || "";
+    if (!interview || Object.keys(interview).length === 0) {
+      // Lekki indeks nie zawiera wywiadu — dociągnij pełne dane z arkusza
+      setDetailsLoading(true);
+      try {
+        const res = await base44.functions.invoke("getMeetingDetails", { meeting_key: meetingKey });
+        const full = res.data?.meeting || {};
+        comments = full.comments || comments;
+        interview = full.interview_data || interview || {};
+        agent = agent || full.agent || "";
+      } finally {
+        setDetailsLoading(false);
+      }
+    }
+    setSelectedDetails({ phone: meeting.phone, agent, comments, interview_data: interview || {} });
+    setDetailsModalOpen(true);
+  };
 
   const getAssignmentsCountForUserOnDate = (userEmail) => {
     return assignmentCountsForDate[userEmail] || 0;
@@ -351,21 +373,14 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
             </div>
           )}
 
-          {(meeting.agent || meeting.comments || meeting.interview_data || meeting.phone) && (
+          {(meeting.agent || meeting.comments || meeting.has_details || meeting.interview_data || meeting.phone) && (
             <button
-              onClick={() => {
-                setSelectedDetails({
-                  phone: meeting.phone,
-                  agent: meeting.agent,
-                  comments: meeting.comments,
-                  interview_data: meeting.interview_data || {}
-                });
-                setDetailsModalOpen(true);
-              }}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center gap-1 mt-2"
+              onClick={openDetails}
+              disabled={detailsLoading}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center gap-1 mt-2 disabled:opacity-50"
             >
               <MessageSquare className="w-3 h-3" />
-              Szczegóły
+              {detailsLoading ? "Wczytywanie..." : "Szczegóły"}
             </button>
           )}
 
