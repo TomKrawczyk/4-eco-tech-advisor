@@ -407,6 +407,8 @@ export default function Calendar() {
           location: m.address || "",
           owner_email: assignment?.assigned_user_email || "",
           owner_name: assignment?.assigned_user_name || `(${m.sheet})`,
+          meeting_assignment_id: key,
+          meeting_calendar: m.meeting_calendar || "",
           source: "sheet",
           is_sheet_meeting: true,
           comments: m.comments || "",

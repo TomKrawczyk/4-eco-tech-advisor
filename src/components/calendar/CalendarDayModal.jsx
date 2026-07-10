@@ -90,6 +90,55 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
 
   const reassignMutation = useMutation({
     mutationFn: async ({ event, userEmail, userName }) => {
+      if (event.is_sheet_meeting) {
+        // Spotkanie z arkusza (np. zaległe, nieprzypisane) — utwórz/zaktualizuj przypisanie i wydarzenie w kalendarzu
+        const key = event.meeting_assignment_id;
+        const assignments = await base44.entities.MeetingAssignment.filter({ meeting_key: key });
+        const assignment = assignments?.[0];
+        const payload = {
+          meeting_key: key,
+          sheet: event.sheet || "",
+          client_name: event.client_name || "",
+          client_phone: event.client_phone || "",
+          client_address: event.location || "",
+          meeting_calendar: event.meeting_calendar || "",
+          meeting_date: event.event_date || "",
+          agent: event.agent || "",
+          comments: event.comments || "",
+          interview_data: event.interview_data || {},
+          assigned_user_email: userEmail,
+          assigned_user_name: userName,
+        };
+        if (assignment) {
+          await base44.entities.MeetingAssignment.update(assignment.id, payload);
+        } else {
+          await base44.entities.MeetingAssignment.create(payload);
+        }
+        await base44.entities.CalendarEvent.create({
+          title: `Spotkanie: ${event.client_name}`,
+          description: event.description || "",
+          event_date: event.event_date,
+          event_time: event.event_time || null,
+          event_type: "meeting",
+          status: "planned",
+          client_name: event.client_name || "",
+          client_phone: event.client_phone || "",
+          location: event.location || "",
+          owner_email: userEmail,
+          owner_name: userName,
+          source: "meeting_assignment",
+          meeting_assignment_id: key,
+        });
+        await base44.entities.Notification.create({
+          user_email: userEmail,
+          type: "new_report",
+          title: "📅 Nowe spotkanie przypisane",
+          message: `Masz nowe spotkanie z klientem ${event.client_name}${event.sheet ? ` (${event.sheet})` : ""} zaplanowane na ${event.meeting_calendar || event.event_date}.`,
+          is_read: false,
+        }).catch(() => {});
+        return;
+      }
+
       await base44.entities.CalendarEvent.update(event.id, {
         owner_email: userEmail,
         owner_name: userName,
@@ -132,7 +181,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
               .map(ev => {
                 const isGroupLeaderEditingOwnGroupMeeting = currentUser?.role === "group_leader" && ev.event_type === "meeting" && reassignableUsers.some(user => user.email === ev.owner_email);
                 const canEdit = currentUser?.email === ev.owner_email || currentUser?.role === "admin" || isGroupLeaderEditingOwnGroupMeeting;
-                const canReassign = ["admin", "group_leader"].includes(currentUser?.role) && ev.event_type === "meeting" && !ev.is_sheet_meeting && ev.status !== "completed" && ev.status !== "cancelled";
+                const canReassign = ["admin", "group_leader"].includes(currentUser?.role) && ev.event_type === "meeting" && ev.status !== "completed" && ev.status !== "cancelled";
                 return (
                   <div key={ev.id} className="border border-gray-200 rounded-lg p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
