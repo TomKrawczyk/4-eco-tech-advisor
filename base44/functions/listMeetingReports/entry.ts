@@ -118,8 +118,10 @@ Deno.serve(async (req) => {
       return Response.json({ total: visibleReports.length, role });
     }
 
+    console.log(`listMeetingReports OK: ${user.email} (${role}) -> ${visibleReports.length} reports`);
     return Response.json({ reports: visibleReports, total: visibleReports.length, role });
   } catch (error) {
+    console.error('listMeetingReports FAILED:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });

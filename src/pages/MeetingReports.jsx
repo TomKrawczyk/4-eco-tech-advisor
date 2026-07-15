@@ -296,13 +296,14 @@ export default function MeetingReports() {
     fetchUser();
   }, []);
 
-  const { data: reports = [], isLoading } = useQuery({
+  const { data: reports = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["meetingReports", currentUser?.email],
     queryFn: async () => {
       const response = await base44.functions.invoke('listMeetingReports');
       return response.data?.reports || [];
     },
     enabled: !!currentUser,
+    retry: 3,
   });
 
   const isAdmin = currentUser?.role === "admin";
@@ -469,7 +470,16 @@ export default function MeetingReports() {
         ))}
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <div className="text-center py-16 bg-red-50 border border-red-200 rounded-xl">
+          <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+          <p className="text-red-700 text-sm font-medium mb-1">Nie udało się pobrać raportów</p>
+          <p className="text-gray-500 text-xs mb-4">Wystąpił błąd połączenia — Twoje raporty są bezpieczne, spróbuj ponownie.</p>
+          <Button onClick={() => refetch()} variant="outline" className="border-red-300 text-red-700 hover:bg-red-100">
+            Spróbuj ponownie
+          </Button>
+        </div>
+      ) : isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
             <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
