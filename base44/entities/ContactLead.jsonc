@@ -90,6 +90,20 @@
     "archived_by_name": {
       "type": "string",
       "description": "Imi\u0119 osoby kt\u00f3ra zarchiwizowa\u0142a kontakt"
+    },
+    "is_duplicate": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy kontakt jest duplikatem innego kontaktu w paczce"
+    },
+    "duplicate_of": {
+      "type": "string",
+      "description": "Nazwa klienta oryginalnego kontaktu (dla duplikatu)"
+    },
+    "duplicate_ignored": {
+      "type": "boolean",
+      "default": false,
+      "description": "R\u0119cznie oznaczony jako nie-duplikat \u2014 system pomija go przy wykrywaniu"
     }
   },
   "required": [

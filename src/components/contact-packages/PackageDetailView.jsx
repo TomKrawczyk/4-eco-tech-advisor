@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Search, UserCheck, CheckSquare, Square,
-  RotateCcw, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload, Archive, ArchiveRestore
+  RotateCcw, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload, Archive, ArchiveRestore, Copy
 } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
@@ -50,6 +50,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [showAppendImport, setShowAppendImport] = useState(false);
   const [archiveTab, setArchiveTab] = useState("active");
   const [sortMode, setSortMode] = useState("created");
+  const [assignedFilter, setAssignedFilter] = useState("all");
   const [leadDrafts, setLeadDrafts] = useState({});
   const [meetingLead, setMeetingLead] = useState(null);
 
@@ -223,6 +224,68 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     },
   });
 
+  // --- Automatyczne wykrywanie duplikatów (po numerze telefonu lub nazwisku) ---
+  const dupCheckedRef = useRef(false);
+  useEffect(() => {
+    if (isLoading || leads.length === 0 || dupCheckedRef.current) return;
+    dupCheckedRef.current = true;
+
+    const normPhone = (p) => (p || "").replace(/\D/g, "").slice(-9);
+    const dupKey = (l) => {
+      const ph = normPhone(l.client_phone);
+      if (ph.length >= 6) return "p:" + ph;
+      const name = (l.client_name || "").trim().toLowerCase();
+      return name ? "n:" + name : null;
+    };
+
+    const candidates = leads.filter(l => l.is_archived !== true && l.is_duplicate !== true && l.duplicate_ignored !== true);
+    const groups = {};
+    for (const l of candidates) {
+      const k = dupKey(l);
+      if (!k) continue;
+      if (!groups[k]) groups[k] = [];
+      groups[k].push(l);
+    }
+
+    const toMark = [];
+    Object.values(groups).forEach(g => {
+      if (g.length < 2) return;
+      const sorted = [...g].sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+      // Zachowaj przypisany kontakt jako oryginał (lub najstarszy)
+      const original = sorted.find(l => l.assigned_user_email) || sorted[0];
+      sorted.filter(l => l.id !== original.id).forEach(l => {
+        toMark.push({ id: l.id, is_duplicate: true, duplicate_of: original.client_name || "" });
+      });
+    });
+
+    if (toMark.length > 0) {
+      base44.entities.ContactLead.bulkUpdate(toMark).then(() => {
+        qc.refetchQueries({ queryKey: ["leads", pkg.id] });
+      });
+    }
+  }, [leads, isLoading, pkg.id, qc]);
+
+  const restoreDuplicateMutation = useMutation({
+    mutationFn: (leadIds) =>
+      base44.entities.ContactLead.bulkUpdate(leadIds.map(id => ({ id, is_duplicate: false, duplicate_ignored: true }))),
+    onSuccess: async () => {
+      setSelected(new Set());
+      await qc.refetchQueries({ queryKey: ["leads", pkg.id] });
+    },
+  });
+
+  // Liczba kontaktów przypisanych do każdego handlowca (aktywne, bez duplikatów)
+  const advisorCounts = useMemo(() => {
+    const map = {};
+    leads.forEach(l => {
+      if (l.is_archived === true || l.is_duplicate === true) return;
+      if (!l.assigned_user_email) return;
+      if (!map[l.assigned_user_email]) map[l.assigned_user_email] = { name: l.assigned_user_name || l.assigned_user_email, count: 0 };
+      map[l.assigned_user_email].count += 1;
+    });
+    return map;
+  }, [leads]);
+
   const filtered = useMemo(() => {
     return leads.filter(l => {
       const matchSearch =
@@ -232,14 +295,20 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         l.postal_code?.includes(search) ||
         l.assigned_user_name?.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === "all" || l.status === statusFilter;
-      const matchArchive = archiveTab === "archived" ? l.is_archived === true : l.is_archived !== true;
-      return matchSearch && matchStatus && matchArchive;
+      const matchArchive =
+        archiveTab === "archived" ? l.is_archived === true :
+        archiveTab === "duplicates" ? l.is_duplicate === true && l.is_archived !== true :
+        l.is_archived !== true && l.is_duplicate !== true;
+      const matchAssigned =
+        assignedFilter === "all" ||
+        (assignedFilter === "__none__" ? !l.assigned_user_email : l.assigned_user_email === assignedFilter);
+      return matchSearch && matchStatus && matchArchive && matchAssigned;
     }).sort((a, b) => {
       if (sortMode === "postal_code") return (a.postal_code || "999999").localeCompare(b.postal_code || "999999", "pl");
       if (sortMode === "name") return (a.client_name || "").localeCompare(b.client_name || "", "pl");
       return 0;
     });
-  }, [leads, search, statusFilter, archiveTab, sortMode]);
+  }, [leads, search, statusFilter, archiveTab, sortMode, assignedFilter]);
 
   const toggleSelect = (id) => {
     setSelected(prev => {
@@ -258,13 +327,14 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   };
 
   const stats = useMemo(() => {
-    const activeLeads = leads.filter(l => l.is_archived !== true);
+    const activeLeads = leads.filter(l => l.is_archived !== true && l.is_duplicate !== true);
     const archived = leads.filter(l => l.is_archived === true).length;
+    const duplicates = leads.filter(l => l.is_duplicate === true && l.is_archived !== true).length;
     const total = activeLeads.length;
     const assigned = activeLeads.filter(l => l.assigned_user_email).length;
     const unassigned = total - assigned;
     const interested = activeLeads.filter(l => l.status === "interested" || l.status === "meeting_scheduled").length;
-    return { total, assigned, unassigned, interested, archived };
+    return { total, assigned, unassigned, interested, archived, duplicates };
   }, [leads]);
 
   const getLeadDraft = (lead) => leadDrafts[lead.id] || {
@@ -397,7 +467,39 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         >
           Zarchiwizowane ({stats.archived})
         </Button>
+        <Button
+          size="sm"
+          variant={archiveTab === "duplicates" ? "default" : "outline"}
+          onClick={() => { setArchiveTab("duplicates"); setSelected(new Set()); }}
+          className={archiveTab === "duplicates" ? "bg-orange-500 hover:bg-orange-600 text-white gap-1" : "gap-1 text-orange-600 border-orange-200 hover:bg-orange-50"}
+        >
+          <Copy className="w-3.5 h-3.5" />
+          Duplikaty ({stats.duplicates})
+        </Button>
       </div>
+
+      {/* Liczniki przypisań handlowców */}
+      {Object.keys(advisorCounts).length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs font-semibold text-gray-500 uppercase">Przypisania:</span>
+          {Object.entries(advisorCounts).sort((a, b) => b[1].count - a[1].count).map(([email, c]) => (
+            <button
+              key={email}
+              onClick={() => setAssignedFilter(assignedFilter === email ? "all" : email)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+                assignedFilter === email
+                  ? "bg-green-600 border-green-600 text-white"
+                  : "bg-green-50 border-green-100 text-green-800 hover:bg-green-100"
+              }`}
+            >
+              {c.name}
+              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${assignedFilter === email ? "bg-white text-green-700" : "bg-green-600 text-white"}`}>
+                {c.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filters + bulk actions */}
       <div className="flex flex-wrap gap-2 items-center">
@@ -413,6 +515,17 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
           <option value="all">Wszystkie statusy</option>
           {Object.entries(STATUS_LABELS).map(([v, l]) => (
             <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+        <select
+          value={assignedFilter}
+          onChange={e => setAssignedFilter(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="all">Wszyscy handlowcy</option>
+          <option value="__none__">Nieprzypisane</option>
+          {Object.entries(advisorCounts).map(([email, c]) => (
+            <option key={email} value={email}>{c.name} ({c.count})</option>
           ))}
         </select>
         <select
@@ -456,7 +569,29 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                 Przypisz
               </Button>
             </div>
-            {archiveTab === "active" ? (
+            {archiveTab === "duplicates" ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => restoreDuplicateMutation.mutate(Array.from(selected))}
+                  disabled={restoreDuplicateMutation.isPending}
+                  className="gap-1 text-green-700 border-green-200 hover:bg-green-50"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  To nie duplikat — przywróć
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => archiveMutation.mutate({ leadIds: Array.from(selected), archived: true })}
+                  className="gap-1 text-gray-700 border-gray-300 hover:bg-gray-50"
+                >
+                  <Archive className="w-4 h-4" />
+                  Archiwizuj
+                </Button>
+              </>
+            ) : archiveTab === "active" ? (
               <>
                 <Button
                   size="sm"
@@ -563,7 +698,15 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                           : <Square className="w-4 h-4 text-gray-300" />
                         }
                       </button>
-                      <span className="font-medium text-gray-900 text-sm truncate">{lead.client_name}</span>
+                      <div className="min-w-0">
+                        <span className="font-medium text-gray-900 text-sm truncate block">{lead.client_name}</span>
+                        {lead.is_duplicate && (
+                          <span className="text-[11px] text-orange-600 flex items-center gap-1">
+                            <Copy className="w-3 h-3" />
+                            Duplikat{lead.duplicate_of ? `: ${lead.duplicate_of}` : ""}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-gray-500 truncate">
                         {lead.client_phone && <div>{lead.client_phone}</div>}
                         {lead.postal_code && <div className="text-gray-600">Kod: {lead.postal_code}</div>}

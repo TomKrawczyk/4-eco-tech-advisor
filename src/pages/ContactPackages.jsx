@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ShieldAlert, Package, Plus, Users, Upload, ChevronRight, Search, X, Pencil, Trash2 } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 import PackageDetailView from "@/components/contact-packages/PackageDetailView";
+import AdvisorSummary from "@/components/contact-packages/AdvisorSummary";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
 
 export default function ContactPackages() {
@@ -105,6 +106,7 @@ export default function ContactPackages() {
     });
     packageLeads.forEach(lead => {
       if (!stats[lead.package_id]) return;
+      if (lead.is_duplicate === true || lead.is_archived === true) return;
       stats[lead.package_id].total += 1;
       if (lead.assigned_user_email) stats[lead.package_id].assigned += 1;
     });
@@ -184,6 +186,9 @@ export default function ContactPackages() {
           </Button>
         )}
       </div>
+
+      {/* Podsumowanie przypisań handlowców */}
+      <AdvisorSummary leads={packageLeads} />
 
       {/* Search */}
       <div className="relative">
