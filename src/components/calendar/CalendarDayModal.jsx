@@ -179,8 +179,8 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
             events
               .sort((a, b) => (a.event_time || "").localeCompare(b.event_time || ""))
               .map(ev => {
-                const isGroupLeaderEditingOwnGroupMeeting = currentUser?.role === "group_leader" && ev.event_type === "meeting" && reassignableUsers.some(user => user.email === ev.owner_email);
-                const canEdit = currentUser?.email === ev.owner_email || currentUser?.role === "admin" || isGroupLeaderEditingOwnGroupMeeting;
+                const isGroupLeaderEditingOwnGroupEvent = currentUser?.role === "group_leader" && reassignableUsers.some(user => user.email === ev.owner_email);
+                const canEdit = currentUser?.email === ev.owner_email || currentUser?.role === "admin" || isGroupLeaderEditingOwnGroupEvent;
                 const canReassign = ["admin", "group_leader"].includes(currentUser?.role) && ev.event_type === "meeting" && ev.status !== "completed" && ev.status !== "cancelled";
                 return (
                   <div key={ev.id} className="border border-gray-200 rounded-lg p-3 space-y-2">
