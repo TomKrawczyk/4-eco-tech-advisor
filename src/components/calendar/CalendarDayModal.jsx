@@ -158,7 +158,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
     onSuccess: () => {
       queryClient.invalidateQueries(["calendarEvents"]);
       queryClient.invalidateQueries(["meetingAssignments"]);
-      toast.success("Spotkanie zostało przepisane");
+      toast.success("Wydarzenie zostało przepisane");
     },
     onError: () => toast.error("Nie udało się przepisać spotkania"),
   });
@@ -181,7 +181,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
               .map(ev => {
                 const isGroupLeaderEditingOwnGroupEvent = currentUser?.role === "group_leader" && reassignableUsers.some(user => user.email === ev.owner_email);
                 const canEdit = currentUser?.email === ev.owner_email || currentUser?.role === "admin" || isGroupLeaderEditingOwnGroupEvent;
-                const canReassign = ["admin", "group_leader"].includes(currentUser?.role) && ev.event_type === "meeting" && ev.status !== "completed" && ev.status !== "cancelled";
+                const canReassign = ["admin", "group_leader"].includes(currentUser?.role) && ev.status !== "completed" && ev.status !== "cancelled";
                 return (
                   <div key={ev.id} className="border border-gray-200 rounded-lg p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -286,7 +286,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
                         <div className="space-y-2">
                           {canReassign && reassignableUsers.length > 0 && (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                              <div className="text-xs font-medium text-blue-800">Przepisz spotkanie do innego handlowca</div>
+                              <div className="text-xs font-medium text-blue-800">Przepisz wydarzenie do innego handlowca</div>
                               <Select
                                 disabled={reassignMutation.isPending}
                                 onValueChange={(value) => {

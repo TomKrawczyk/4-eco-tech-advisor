@@ -42,7 +42,7 @@ export default function CalendarEventModal({ initialData, currentUser, reassigna
     ...initialData,
   });
 
-  const canReassignInEdit = isEdit && ["admin", "group_leader"].includes(currentUser?.role) && form.event_type === "meeting";
+  const canReassignInEdit = isEdit && ["admin", "group_leader"].includes(currentUser?.role);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
