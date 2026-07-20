@@ -635,6 +635,8 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
           onClose={() => setShowAppendImport(false)}
           onSuccess={async () => {
             setShowAppendImport(false);
+            // Uruchom ponownie wykrywanie duplikatów po doimportowaniu
+            dupCheckedRef.current = false;
             await Promise.all([
               qc.refetchQueries({ queryKey: ["leads", pkg.id] }),
               qc.refetchQueries({ queryKey: ["contact-packages"] }),
