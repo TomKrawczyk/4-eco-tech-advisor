@@ -416,6 +416,7 @@ function AdvisorView({ leads, currentUser, qc }) {
     interested: "Zainteresowany",
     not_interested: "Niezainteresowany",
     no_answer: "Brak odpowiedzi",
+    callback: "Do ponownego kontaktu",
     meeting_scheduled: "Spotkanie umówione",
     contract_signed: "Umowa podpisana",
   };
@@ -426,6 +427,7 @@ function AdvisorView({ leads, currentUser, qc }) {
     interested: "bg-green-50 text-green-700",
     not_interested: "bg-red-50 text-red-700",
     no_answer: "bg-gray-50 text-gray-600",
+    callback: "bg-purple-50 text-purple-700",
     meeting_scheduled: "bg-purple-50 text-purple-700",
     contract_signed: "bg-emerald-100 text-emerald-800",
   };
