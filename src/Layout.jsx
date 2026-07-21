@@ -159,7 +159,11 @@ export default function Layout({ children, currentPageName }) {
               base44.entities.TrainingView.filter({ user_email: user.email })
             ]);
             const completedIds = new Set(views.map(v => v.training_id));
-            pendingTraining = trainings.find(t => t.is_required && t.is_published !== false && !completedIds.has(t.id)) || null;
+            const userGroupId = userAccess.data?.group_id || userAccess.group_id || null;
+            pendingTraining = trainings.find(t =>
+              t.is_required && t.is_published !== false && !completedIds.has(t.id) &&
+              (!t.allowed_group_ids || t.allowed_group_ids.length === 0 || (userGroupId && t.allowed_group_ids.includes(userGroupId)))
+            ) || null;
           }
 
           setCurrentUser(user);

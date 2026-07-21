@@ -57,6 +57,13 @@
       "default": false,
       "description": "Czy widoczne dla u\u017cytkownik\u00f3w testowych"
     },
+    "allowed_group_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista ID grup z dost\u0119pem do szkolenia (pusta = widoczne dla wszystkich)"
+    },
     "order": {
       "type": "number",
       "description": "Kolejno\u015b\u0107 wy\u015bwietlania"

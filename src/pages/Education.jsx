@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil, FileText } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
+import TrainingGroupSelect from "@/components/training/TrainingGroupSelect";
 import { Progress } from "@/components/ui/progress";
 
 const categoryLabels = {
@@ -64,7 +65,8 @@ export default function Education() {
   const [editingTraining, setEditingTraining] = useState(null);
   const [formData, setFormData] = useState({
     title: "", description: "", category: "sprzedaz",
-    video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false
+    video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false,
+    allowed_group_ids: []
   });
   const [uploadMode, setUploadMode] = useState("url"); // "url" | "file"
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -83,6 +85,7 @@ export default function Education() {
       if (userAccess) {
         user.role = userAccess.data?.role || userAccess.role;
         user.displayName = userAccess.data?.name || userAccess.name;
+        user.groupId = userAccess.data?.group_id || userAccess.group_id || null;
       }
       setCurrentUser(user);
     };
@@ -106,6 +109,21 @@ export default function Education() {
     queryFn: () => base44.entities.TrainingView.list(),
     enabled: currentUser?.role === 'admin'
   });
+
+  const { data: allGroups = [] } = useQuery({
+    queryKey: ['groups'],
+    queryFn: () => base44.entities.Group.list(),
+    enabled: !!currentUser
+  });
+
+  const toggleFormGroup = (groupId) => {
+    setFormData(prev => ({
+      ...prev,
+      allowed_group_ids: prev.allowed_group_ids.includes(groupId)
+        ? prev.allowed_group_ids.filter(id => id !== groupId)
+        : [...prev.allowed_group_ids, groupId]
+    }));
+  };
 
   const { data: allowedUsers = [] } = useQuery({
     queryKey: ['allowedUsers'],
@@ -182,7 +200,7 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setShowAddDialog(false);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false, allowed_group_ids: [] });
       setUploadedVideoUrl("");
       setUploadedDocumentUrl("");
       setUploadedDocumentName("");
@@ -202,7 +220,7 @@ export default function Education() {
     onSuccess: () => {
       queryClient.invalidateQueries(['trainings']);
       setEditingTraining(null);
-      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false });
+      setFormData({ title: "", description: "", category: "sprzedaz", video_url: "", document_url: "", document_name: "", duration_minutes: "", is_required: false, allowed_group_ids: [] });
       setUploadedVideoUrl("");
       setUploadedDocumentUrl("");
       setUploadedDocumentName("");
@@ -226,7 +244,8 @@ export default function Education() {
       document_url: training.document_url || "",
       document_name: training.document_name || "",
       duration_minutes: training.duration_minutes || "",
-      is_required: training.is_required || false
+      is_required: training.is_required || false,
+      allowed_group_ids: training.allowed_group_ids || []
     });
     setUploadMode("url");
     setUploadedVideoUrl("");
@@ -288,12 +307,20 @@ export default function Education() {
 
   const isCompleted = (trainingId) => myViews.some(v => v.training_id === trainingId);
 
-  const filteredTrainings = trainings.filter(t =>
-    t.is_published !== false &&
-    (categoryFilter === "all" || t.category === categoryFilter)
+  // Widoczność wg grup: brak przypisanych grup = widoczne dla wszystkich
+  const canSeeTraining = (t) => {
+    if (currentUser?.role === 'admin') return true;
+    if (!t.allowed_group_ids || t.allowed_group_ids.length === 0) return true;
+    return !!currentUser?.groupId && t.allowed_group_ids.includes(currentUser.groupId);
+  };
+
+  const visibleTrainings = trainings.filter(t => t.is_published !== false && canSeeTraining(t));
+
+  const filteredTrainings = visibleTrainings.filter(t =>
+    categoryFilter === "all" || t.category === categoryFilter
   );
 
-  const completedCount = trainings.filter(t => isCompleted(t.id)).length;
+  const completedCount = visibleTrainings.filter(t => isCompleted(t.id)).length;
 
   // Stats per training for admin
   const getViewCount = (trainingId) => allViews.filter(v => v.training_id === trainingId).length;
@@ -307,12 +334,12 @@ export default function Education() {
         <Card className="p-4 mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Twój postęp</span>
-            <span className="text-sm font-bold text-green-700">{completedCount}/{trainings.filter(t => t.is_published !== false).length} szkoleń</span>
+            <span className="text-sm font-bold text-green-700">{completedCount}/{visibleTrainings.length} szkoleń</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-green-500 h-2 rounded-full transition-all"
-              style={{ width: `${trainings.filter(t => t.is_published !== false).length > 0 ? (completedCount / trainings.filter(t => t.is_published !== false).length) * 100 : 0}%` }}
+              style={{ width: `${visibleTrainings.length > 0 ? (completedCount / visibleTrainings.length) * 100 : 0}%` }}
             />
           </div>
         </Card>
@@ -464,6 +491,7 @@ export default function Education() {
                         🔒 Szkolenie obowiązkowe — blokuje dostęp do czasu ukończenia
                       </label>
                     </div>
+                    <TrainingGroupSelect groups={allGroups} selectedGroupIds={formData.allowed_group_ids} onToggle={toggleFormGroup} />
                     <Button type="submit" disabled={createMutation.isPending || uploading} className="w-full bg-green-600 hover:bg-green-700">
                       Dodaj szkolenie
                     </Button>
@@ -582,6 +610,7 @@ export default function Education() {
                     🔒 Szkolenie obowiązkowe — blokuje dostęp do czasu ukończenia
                   </label>
                 </div>
+                <TrainingGroupSelect groups={allGroups} selectedGroupIds={formData.allowed_group_ids} onToggle={toggleFormGroup} />
                 <Button type="submit" disabled={updateMutation.isPending || uploading} className="w-full bg-green-600 hover:bg-green-700">
                   {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Zapisz zmiany
@@ -611,6 +640,13 @@ export default function Education() {
                           </Badge>
                           {training.is_required && (
                             <Badge className="bg-red-100 text-red-700">Obowiązkowe</Badge>
+                          )}
+                          {currentUser?.role === 'admin' && training.allowed_group_ids?.length > 0 && (
+                            <Badge className="bg-purple-100 text-purple-700">
+                              {training.allowed_group_ids
+                                .map(id => { const g = allGroups.find(gr => gr.id === id); return g ? (g.data?.name || g.name) : null; })
+                                .filter(Boolean).join(", ")}
+                            </Badge>
                           )}
                           {completed && (
                             <Badge className="bg-green-100 text-green-700">
