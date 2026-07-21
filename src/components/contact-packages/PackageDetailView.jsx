@@ -167,6 +167,10 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         qc.refetchQueries({ queryKey: ["contact-packages"] }),
       ]);
     },
+    onError: (err) => {
+      const msg = err?.response?.data?.error || err?.message || "Nieznany błąd";
+      alert("Nie udało się przypisać kontaktów: " + msg);
+    },
   });
 
   const unassignMutation = useMutation({
