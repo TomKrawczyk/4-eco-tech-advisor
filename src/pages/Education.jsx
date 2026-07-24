@@ -80,12 +80,25 @@ export default function Education() {
   useEffect(() => {
     const fetchUser = async () => {
       const user = await base44.auth.me();
-      const allowedUsers = await base44.entities.AllowedUser.list();
+      const [allowedUsers, groups] = await Promise.all([
+        base44.entities.AllowedUser.list(),
+        base44.entities.Group.list()
+      ]);
       const userAccess = allowedUsers.find(a => (a.data?.email || a.email) === user.email);
       if (userAccess) {
         user.role = userAccess.data?.role || userAccess.role;
         user.displayName = userAccess.data?.name || userAccess.name;
-        user.groupId = userAccess.data?.group_id || userAccess.group_id || null;
+        // Grupa: bezpośrednio przypisana lub grupa, której użytkownik jest liderem
+        let groupId = userAccess.data?.group_id || userAccess.group_id || null;
+        if (!groupId) {
+          const ledGroup = groups.find(g => {
+            const leaderIds = g.data?.group_leader_ids || g.group_leader_ids || [];
+            const legacyLeader = g.data?.group_leader_id || g.group_leader_id;
+            return leaderIds.includes(userAccess.id) || legacyLeader === userAccess.id;
+          });
+          groupId = ledGroup?.id || null;
+        }
+        user.groupId = groupId;
       }
       setCurrentUser(user);
     };
