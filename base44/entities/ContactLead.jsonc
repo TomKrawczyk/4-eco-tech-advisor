@@ -30,6 +30,10 @@
       "type": "string",
       "description": "Notatki / dodatkowe info z Excela"
     },
+    "extra_data": {
+      "type": "object",
+      "description": "Dodatkowe kolumny z importu Excela (nazwa kolumny \u2192 warto\u015b\u0107)"
+    },
     "assigned_user_email": {
       "type": "string",
       "description": "Email handlowca kt\u00f3remu przypisano kontakt"

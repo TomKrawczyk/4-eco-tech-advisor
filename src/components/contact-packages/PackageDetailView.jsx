@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
+import LeadExtraData from "@/components/contact-packages/LeadExtraData";
 
 const STATUS_LABELS = {
   unassigned: "Nieprzypisany",
@@ -807,6 +808,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                             <p className="text-gray-700 whitespace-pre-wrap">{importedNote}</p>
                           </div>
                         )}
+                        <LeadExtraData lead={lead} className="sm:col-span-2" />
                       </div>
                     )}
                   </div>

@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
       client_address: c.client_address || "",
       postal_code: c.postal_code || "",
       notes: c.notes || "",
+      extra_data: c.extra_data || {},
       status: pkg.is_private && pkg.assigned_user_email ? "assigned" : "unassigned",
       assigned_user_email: pkg.is_private ? (pkg.assigned_user_email || "") : "",
       assigned_user_name: pkg.is_private ? (pkg.assigned_user_name || "") : "",

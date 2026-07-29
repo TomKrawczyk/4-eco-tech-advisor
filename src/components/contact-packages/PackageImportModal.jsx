@@ -79,8 +79,9 @@ function detectColumns(headers, sampleRows) {
   return { nameIdx, phoneIdx, addressIdx, postalCodeIdx, notesIdx, statusIdx };
 }
 
-function buildContacts(dataRows, mapping) {
+function buildContacts(dataRows, mapping, headers = []) {
   const contacts = [];
+  const mappedIdxs = new Set([mapping.nameIdx, mapping.phoneIdx, mapping.addressIdx, mapping.postalCodeIdx, mapping.notesIdx, mapping.statusIdx]);
   for (const row of dataRows) {
     if (row.every(c => c === "" || c === null || c === undefined)) continue;
 
@@ -101,6 +102,17 @@ function buildContacts(dataRows, mapping) {
       const fallback = row.find(c => LOOKS_LIKE_NAME(c));
       if (fallback) contact.client_name = fallback.toString().trim();
     }
+
+    // Wszystkie pozostałe (niezmapowane) kolumny → dodatkowe dane kontaktu
+    const extra = {};
+    row.forEach((cell, i) => {
+      if (mappedIdxs.has(i)) return;
+      const v = cell?.toString().trim();
+      if (!v) return;
+      const key = headers[i]?.toString().trim() || `Kolumna ${i + 1}`;
+      extra[key] = v;
+    });
+    if (Object.keys(extra).length > 0) contact.extra_data = extra;
 
     if (contact.client_name || contact.client_phone) contacts.push(contact);
   }
@@ -126,7 +138,7 @@ function parseExcel(file) {
 
         const sampleRows = dataRows.slice(0, 15);
         const mapping = detectColumns(headers, sampleRows);
-        const contacts = buildContacts(dataRows, mapping);
+        const contacts = buildContacts(dataRows, mapping, headers);
 
         resolve({
           contacts,
@@ -240,7 +252,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   const updateMapping = (field, value) => {
     const next = { ...mapping, [field]: Number(value) };
     setMapping(next);
-    const nextContacts = buildContacts(dataRows, next);
+    const nextContacts = buildContacts(dataRows, next, headers);
     setContacts(nextContacts);
     setParseError(nextContacts.length === 0 ? "Nie znaleziono żadnych kontaktów. Sprawdź wybrane kolumny." : "");
   };
@@ -417,6 +429,16 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                       </>
                     )}
                   </div>
+                  {(() => {
+                    const mapped = new Set([mapping.nameIdx, mapping.phoneIdx, mapping.addressIdx, mapping.postalCodeIdx, mapping.notesIdx, mapping.statusIdx]);
+                    const extraCols = headers.map((h, i) => ({ h, i })).filter(({ i }) => !mapped.has(i));
+                    if (extraCols.length === 0) return null;
+                    return (
+                      <p className="text-[11px] text-blue-700 pt-1 border-t border-green-100">
+                        + {extraCols.length} dodatkowych kolumn ({extraCols.slice(0, 4).map(({ h, i }) => h || `Kolumna ${i + 1}`).join(", ")}{extraCols.length > 4 ? "…" : ""}) zostanie zapisanych w szczegółach kontaktu.
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
 

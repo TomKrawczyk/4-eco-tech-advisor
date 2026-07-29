@@ -10,6 +10,7 @@ import PackageImportModal from "@/components/contact-packages/PackageImportModal
 import PackageDetailView from "@/components/contact-packages/PackageDetailView";
 import AdvisorSummary from "@/components/contact-packages/AdvisorSummary";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
+import LeadExtraData from "@/components/contact-packages/LeadExtraData";
 
 export default function ContactPackages() {
   const { currentUser, accessChecked } = useCurrentUser();
@@ -582,6 +583,7 @@ function LeadRow({ lead, statusLabels, statusColors, currentUser, onUpdateStatus
         {expanded && (
           <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
             {lead.notes && <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-2">{lead.notes}</p>}
+            <LeadExtraData lead={lead} />
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">Status kontaktu</label>
               <select
