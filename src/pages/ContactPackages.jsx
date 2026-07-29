@@ -383,6 +383,9 @@ function PackageCard({ pkg, stats, onClick, isAdmin, onEdit, onDelete }) {
         <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-green-700 transition-colors pr-12">{pkg.name}</h3>
         {pkg.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{pkg.description}</p>}
         {pkg.group_name && <p className="text-xs text-green-600 mb-2 font-medium">{pkg.group_name}</p>}
+        {pkg.is_private && (
+          <p className="text-xs text-purple-600 mb-2 font-medium">🔒 Prywatna — {pkg.assigned_user_name || pkg.assigned_user_email}</p>
+        )}
         <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
           <span className="flex items-center gap-1"><Users className="w-3 h-3" />{total} kontaktów</span>
           <span>{pct}% przypisanych</span>

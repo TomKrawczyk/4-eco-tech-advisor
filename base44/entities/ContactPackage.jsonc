@@ -12,11 +12,24 @@
     },
     "group_id": {
       "type": "string",
-      "description": "ID grupy w\u0142a\u015bciciela paczki"
+      "description": "ID grupy w\u0142a\u015bciciela paczki (puste dla paczek prywatnych)"
     },
     "group_name": {
       "type": "string",
       "description": "Nazwa grupy (cache)"
+    },
+    "is_private": {
+      "type": "boolean",
+      "default": false,
+      "description": "Paczka prywatna \u2014 przypisana bezpo\u015brednio do handlowca, niewidoczna dla lider\u00f3w grup"
+    },
+    "assigned_user_email": {
+      "type": "string",
+      "description": "Email handlowca do kt\u00f3rego przypisana jest paczka prywatna"
+    },
+    "assigned_user_name": {
+      "type": "string",
+      "description": "Imi\u0119 handlowca (cache)"
     },
     "created_by_email": {
       "type": "string",
@@ -47,7 +60,6 @@
     }
   },
   "required": [
-    "name",
-    "group_id"
+    "name"
   ]
 }

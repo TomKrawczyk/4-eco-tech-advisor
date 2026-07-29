@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,6 +150,18 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   const [description, setDescription] = useState(existingPackage?.description || "");
   const [selectedGroupId, setSelectedGroupId] = useState(existingPackage?.group_id || currentUser?.groupId || "");
   const [selectedGroupName, setSelectedGroupName] = useState(existingPackage?.group_name || currentUser?.groupName || "");
+  const [assignMode, setAssignMode] = useState("group"); // "group" | "user" (paczka prywatna)
+  const [selectedUserEmail, setSelectedUserEmail] = useState("");
+
+  const { data: allowedUsers = [] } = useQuery({
+    queryKey: ["allowed-users-for-import"],
+    queryFn: () => base44.entities.AllowedUser.list(),
+    enabled: isAdmin && !isAppendMode,
+  });
+  const advisors = allowedUsers
+    .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name, role: u.data?.role || u.role }))
+    .filter(u => u.email && (u.role === "advisor" || u.role === "team_leader" || u.role === "group_leader"))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pl"));
   const [file, setFile] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [mapping, setMapping] = useState(null);
@@ -184,10 +197,16 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   const handleImport = async () => {
     if ((!isAppendMode && !name.trim()) || contacts.length === 0) return;
     setImporting(true);
+    const isPrivate = isAdmin && !isAppendMode && assignMode === "user";
     const effectiveGroupId = isAppendMode ? existingPackage.group_id : (isAdmin ? selectedGroupId : (currentUser.groupId || ""));
     const effectiveGroupName = isAppendMode ? existingPackage.group_name : (isAdmin ? selectedGroupName : (currentUser.groupName || ""));
 
-    if (!effectiveGroupId) {
+    if (isPrivate && !selectedUserEmail) {
+      setParseError("Wybierz handlowca przed importem.");
+      setImporting(false);
+      return;
+    }
+    if (!isPrivate && !effectiveGroupId) {
       setParseError(isAdmin ? "Wybierz grupę przed importem." : "Twoje konto nie ma przypisanej grupy. Skontaktuj się z administratorem.");
       setImporting(false);
       return;
@@ -198,8 +217,10 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
         packageMeta: {
           name: name.trim(),
           description: description.trim(),
-          group_id: effectiveGroupId,
-          group_name: effectiveGroupName,
+          group_id: isPrivate ? "" : effectiveGroupId,
+          group_name: isPrivate ? "" : effectiveGroupName,
+          assigned_user_email: isPrivate ? selectedUserEmail : "",
+          assigned_user_name: isPrivate ? (advisors.find(a => a.email === selectedUserEmail)?.name || "") : "",
           created_by_name: currentUser.displayName || currentUser.full_name || "",
         },
         contacts,
@@ -256,24 +277,66 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
               )}
 
               {isAdmin && !isAppendMode && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Przypisz do grupy *</label>
-                  <select
-                    value={selectedGroupId}
-                    onChange={e => {
-                      const g = allGroups.find(g => g.id === e.target.value);
-                      setSelectedGroupId(e.target.value);
-                      setSelectedGroupName(g?.name || "");
-                    }}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
-                  >
-                    <option value="">— wybierz grupę —</option>
-                    {allGroups.map(g => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
-                  {allGroups.length === 0 && (
-                    <p className="text-xs text-gray-400 mt-1">Ładowanie grup…</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1.5">Przypisanie paczki *</label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={assignMode === "group" ? "default" : "outline"}
+                        onClick={() => setAssignMode("group")}
+                        className={assignMode === "group" ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                      >
+                        Do grupy
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={assignMode === "user" ? "default" : "outline"}
+                        onClick={() => setAssignMode("user")}
+                        className={assignMode === "user" ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}
+                      >
+                        Do konkretnego handlowca (prywatna)
+                      </Button>
+                    </div>
+                  </div>
+                  {assignMode === "group" ? (
+                    <div>
+                      <select
+                        value={selectedGroupId}
+                        onChange={e => {
+                          const g = allGroups.find(g => g.id === e.target.value);
+                          setSelectedGroupId(e.target.value);
+                          setSelectedGroupName(g?.name || "");
+                        }}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
+                      >
+                        <option value="">— wybierz grupę —</option>
+                        {allGroups.map(g => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                      {allGroups.length === 0 && (
+                        <p className="text-xs text-gray-400 mt-1">Ładowanie grup…</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <select
+                        value={selectedUserEmail}
+                        onChange={e => setSelectedUserEmail(e.target.value)}
+                        className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-200"
+                      >
+                        <option value="">— wybierz handlowca —</option>
+                        {advisors.map(a => (
+                          <option key={a.email} value={a.email}>{a.name} ({a.email})</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-purple-600 mt-1.5">
+                        🔒 Kontakty trafią bezpośrednio do wybranego handlowca. Paczki nie zobaczy jego lider grupy — tylko handlowiec i administratorzy.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}

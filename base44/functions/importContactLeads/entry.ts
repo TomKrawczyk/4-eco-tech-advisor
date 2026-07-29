@@ -16,7 +16,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Nie znaleziono paczki do doimportowania kontaktów.' }, { status: 404 });
     }
   } else {
-    if (!packageMeta.group_id) {
+    const isPrivate = !!packageMeta.assigned_user_email;
+    if (!packageMeta.group_id && !isPrivate) {
       return Response.json({ error: 'Brak przypisanej grupy. Skontaktuj się z administratorem.' }, { status: 400 });
     }
 
@@ -24,8 +25,11 @@ Deno.serve(async (req) => {
     pkg = await base44.asServiceRole.entities.ContactPackage.create({
       name: packageMeta.name,
       description: packageMeta.description || "",
-      group_id: packageMeta.group_id,
-      group_name: packageMeta.group_name || "",
+      group_id: isPrivate ? "" : packageMeta.group_id,
+      group_name: isPrivate ? "" : (packageMeta.group_name || ""),
+      is_private: isPrivate,
+      assigned_user_email: packageMeta.assigned_user_email || "",
+      assigned_user_name: packageMeta.assigned_user_name || "",
       created_by_email: user.email,
       created_by_name: packageMeta.created_by_name || "",
       total_count: 0,
@@ -40,13 +44,15 @@ Deno.serve(async (req) => {
   for (let i = 0; i < contacts.length; i += BATCH) {
     const batch = contacts.slice(i, i + BATCH).map(c => ({
       package_id: pkg.id,
-      group_id: pkg.group_id || packageMeta.group_id,
+      group_id: pkg.group_id || packageMeta?.group_id || "",
       client_name: c.client_name || "",
       client_phone: c.client_phone || "",
       client_address: c.client_address || "",
       postal_code: c.postal_code || "",
       notes: c.notes || "",
-      status: "unassigned",
+      status: pkg.is_private && pkg.assigned_user_email ? "assigned" : "unassigned",
+      assigned_user_email: pkg.is_private ? (pkg.assigned_user_email || "") : "",
+      assigned_user_name: pkg.is_private ? (pkg.assigned_user_name || "") : "",
       is_archived: false,
     }));
     await base44.asServiceRole.entities.ContactLead.bulkCreate(batch);
