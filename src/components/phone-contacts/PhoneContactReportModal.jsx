@@ -122,6 +122,9 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
       setReportSaved(true);
       setView("list");
     },
+    onError: (err) => {
+      toast.error("Nie udało się zapisać raportu: " + (err?.message || "nieznany błąd"));
+    },
   });
 
   const updateMutation = useMutation({
@@ -132,6 +135,9 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
       setReportSaved(true);
       setView("list");
       setEditingReport(null);
+    },
+    onError: (err) => {
+      toast.error("Nie udało się zaktualizować raportu: " + (err?.message || "nieznany błąd"));
     },
   });
 
