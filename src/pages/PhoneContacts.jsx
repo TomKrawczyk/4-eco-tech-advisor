@@ -79,9 +79,12 @@ export default function PhoneContacts() {
   });
 
   const { data: phoneContactsFromDB = [], refetch: refetchDB } = useQuery({
-    queryKey: ["phoneContactsDB"],
-    queryFn: () => base44.entities.PhoneContact.list(),
-    enabled: accessChecked,
+    queryKey: ["phoneContactsDB", isLeaderOrAdmin, currentUser?.email],
+    // Doradca pobiera tylko swoje kontakty — pełna lista tylko dla liderów/adminów
+    queryFn: () => isLeaderOrAdmin
+      ? base44.entities.PhoneContact.list()
+      : base44.entities.PhoneContact.filter({ assigned_user_email: currentUser.email }),
+    enabled: accessChecked && !!currentUser,
   });
 
   const { data: rawContacts = [], isLoading, isFetching, refetch } = useQuery({

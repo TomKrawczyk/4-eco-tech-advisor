@@ -7,6 +7,7 @@ import { HashRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import AppErrorBoundary from '@/components/shared/AppErrorBoundary';
 import RejectedMeetings from '@/pages/RejectedMeetings';
 import ContactPackages from '@/pages/ContactPackages';
 import CleanupMeetings from '@/pages/CleanupMeetings';
@@ -51,6 +52,7 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
+    <AppErrorBoundary>
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
@@ -150,6 +152,7 @@ const AuthenticatedApp = () => {
       />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </AppErrorBoundary>
   );
 };
 

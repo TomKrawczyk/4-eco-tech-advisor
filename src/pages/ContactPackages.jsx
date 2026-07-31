@@ -94,8 +94,10 @@ export default function ContactPackages() {
   const { data: packageLeads = [] } = useQuery({
     queryKey: ["contact-package-leads", packageIdsKey],
     queryFn: async () => {
-      const allLeads = await base44.entities.ContactLead.list();
-      return allLeads.filter(l => packageIds.has(l.package_id));
+      // Pobierz tylko leady z widocznych paczek — zamiast całej bazy (limit pamięci na telefonach)
+      const ids = [...packageIds];
+      if (ids.length === 0) return [];
+      return base44.entities.ContactLead.filter({ package_id: { $in: ids } });
     },
     enabled: !!currentUser && !isAdvisor && packages.length > 0,
   });
