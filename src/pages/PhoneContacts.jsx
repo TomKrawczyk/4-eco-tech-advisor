@@ -483,7 +483,7 @@ export default function PhoneContacts() {
           <div className="space-y-2">
             {myContacts.map((c, i) => (
               <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold text-gray-900 text-sm">{c.client_name}</div>
                     {(c.phone || c.client_phone) && (
@@ -507,7 +507,7 @@ export default function PhoneContacts() {
                       </button>
                     )}
                   </div>
-                  <div className="shrink-0 flex flex-col gap-1.5">
+                  <div className="flex flex-row sm:flex-col flex-wrap gap-1.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 sm:shrink-0">
                     {archiveTab === "active" && (
                       <Button
                         variant="outline"
@@ -795,9 +795,9 @@ export default function PhoneContacts() {
 function ContactRow({ contact, canAssign, canManageGroups, salespeople, groups, currentUser, assignMutation, assignGroupMutation, onShowDetails, onShowReport, onArchive, archiveTab }) {
   return (
     <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="font-medium text-gray-800 text-sm truncate">{contact.client_name}</div>
+          <div className="font-medium text-gray-800 text-sm break-words">{contact.client_name}</div>
           {contact.phone && (
             <a href={`tel:${contact.phone}`} className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-0.5">
               <Phone className="w-3 h-3" /> {contact.phone}
@@ -812,7 +812,7 @@ function ContactRow({ contact, canAssign, canManageGroups, salespeople, groups, 
           )}
         </div>
 
-        <div className="shrink-0 flex gap-1.5 flex-wrap items-start">
+        <div className="flex gap-1.5 flex-wrap items-center pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-200 sm:shrink-0 sm:justify-end sm:max-w-[55%]">
           {archiveTab === "active" && (
             <button
               onClick={() => onArchive(contact, true)}
