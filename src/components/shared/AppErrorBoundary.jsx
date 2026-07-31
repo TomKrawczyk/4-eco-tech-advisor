@@ -1,4 +1,5 @@
 import React from "react";
+import { base44 } from "@/api/base44Client";
 
 export default class AppErrorBoundary extends React.Component {
   constructor(props) {
@@ -8,6 +9,20 @@ export default class AppErrorBoundary extends React.Component {
 
   static getDerivedStateFromError(error) {
     return { error };
+  }
+
+  async componentDidCatch(error, info) {
+    try {
+      let email = "";
+      try { email = (await base44.auth.me())?.email || ""; } catch (_) {}
+      await base44.entities.AppErrorLog.create({
+        user_email: email,
+        message: String(error?.message || error).slice(0, 2000),
+        stack: String(error?.stack || "").slice(0, 2000) + "\n---\n" + String(info?.componentStack || "").slice(0, 2000),
+        page_url: window.location.href,
+        user_agent: navigator.userAgent,
+      });
+    } catch (_) {}
   }
 
   render() {

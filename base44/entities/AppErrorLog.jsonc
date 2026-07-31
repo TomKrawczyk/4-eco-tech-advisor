@@ -1,0 +1,29 @@
+{
+  "name": "AppErrorLog",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email u\u017cytkownika u kt\u00f3rego wyst\u0105pi\u0142 b\u0142\u0105d"
+    },
+    "message": {
+      "type": "string",
+      "description": "Tre\u015b\u0107 b\u0142\u0119du"
+    },
+    "stack": {
+      "type": "string",
+      "description": "Stos wywo\u0142a\u0144 / component stack"
+    },
+    "page_url": {
+      "type": "string",
+      "description": "Adres strony w momencie b\u0142\u0119du"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "Przegl\u0105darka / urz\u0105dzenie"
+    }
+  },
+  "required": [
+    "message"
+  ]
+}
