@@ -146,7 +146,7 @@ export default function Layout({ children, currentPageName }) {
           user.displayName = userAccess.data?.name || userAccess.name;
           const blockedUntil = userAccess.data?.blocked_until || userAccess.blocked_until;
           const adminBlocked = blockedUntil && new Date(blockedUntil) >= new Date(new Date().toISOString().split("T")[0]);
-          const legacyBlocked = (userAccess.data?.is_blocked || userAccess.is_blocked) === true;
+          const legacyBlocked = (userAccess.data?.is_blocked || userAccess.is_blocked) === true && (!blockedUntil || adminBlocked);
           user.blocked_until = blockedUntil || null;
           user.account_status = user.account_status === "blocked" || legacyBlocked ? "blocked" : "active";
           user.blocked_reason = user.blocked_reason || userAccess.data?.blocked_reason || userAccess.blocked_reason || "";

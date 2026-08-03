@@ -11,8 +11,11 @@ async function fetchCurrentUser() {
   if (ua) {
     user.role = ua.data?.role || ua.role;
     user.displayName = ua.data?.name || ua.name;
-    const legacyBlocked = (ua.data?.is_blocked || ua.is_blocked) === true;
-    user.account_status = user.account_status === "blocked" || legacyBlocked ? "blocked" : "active";
+    const blockedUntil = ua.data?.blocked_until || ua.blocked_until || "";
+    const adminBlocked = blockedUntil && new Date(blockedUntil) >= new Date(new Date().toISOString().split("T")[0]);
+    const legacyBlocked = (ua.data?.is_blocked || ua.is_blocked) === true && (!blockedUntil || adminBlocked);
+    user.account_status = user.account_status === "blocked" || legacyBlocked || adminBlocked ? "blocked" : "active";
+    user.blocked_until = blockedUntil || null;
     user.blocked_reason = user.blocked_reason || ua.data?.blocked_reason || ua.blocked_reason || "";
     user.blocked_at = user.blocked_at || null;
     user.is_blocked = user.account_status === "blocked";

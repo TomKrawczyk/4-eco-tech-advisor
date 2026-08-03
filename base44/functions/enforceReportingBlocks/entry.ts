@@ -356,13 +356,20 @@ Deno.serve(async (req) => {
       const currentStatus = user.account_status === 'blocked' || user.allowed?.is_blocked === true || user.allowed?.data?.is_blocked === true ? 'blocked' : 'active';
       const overdue = (overdueByEmail.get(user.email) || []).sort((a, b) => String(a.date).localeCompare(String(b.date)));
       const oldest = overdue[0] || null;
-      const shouldBeBlocked = !!oldest;
+
+      // Ręczna blokada administracyjna (blocked_until) ma pierwszeństwo — nie zdejmuj jej przed datą
+      const blockedUntil = user.allowed?.blocked_until || user.allowed?.data?.blocked_until || '';
+      const adminBlocked = !!blockedUntil && blockedUntil >= localYMD(today);
+      const adminReason = user.allowed?.blocked_reason || user.allowed?.data?.blocked_reason || 'Blokada administracyjna';
+
+      const shouldBeBlocked = adminBlocked || !!oldest;
+      const blockReason = adminBlocked ? adminReason : (oldest ? oldest.reason : '');
 
       if (shouldBeBlocked) stillBlockedCount += 1;
 
       const allowedUpdates = user.allowed ? {
         is_blocked: shouldBeBlocked,
-        blocked_reason: shouldBeBlocked ? oldest.reason : '',
+        blocked_reason: blockReason,
         missing_reports_count: overdue.length,
       } : null;
 
@@ -370,12 +377,12 @@ Deno.serve(async (req) => {
         newlyBlocked.push({
           name: user.full_name || user.allowed?.name || user.allowed?.data?.name || user.email,
           email: user.email,
-          reason: oldest.reason,
+          reason: blockReason,
         });
         if (!dryRun) {
           await svc.User.update(user.id, {
             account_status: 'blocked',
-            blocked_reason: oldest.reason,
+            blocked_reason: blockReason,
             blocked_at: nowIso,
           });
           if (user.allowed && allowedUpdates) {
