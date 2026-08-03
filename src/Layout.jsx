@@ -82,6 +82,7 @@ const navStructure = [
       { name: "ServiceReports", label: "Raporty serwisowe" },
       { name: "RaportTygodniowyPH", label: "Raport tygodniowy PH", path: "/raport-tygodniowy", roles: ["admin", "owner"] },
       { name: "KontaktyTelefoniczne", label: "Kontakty telefoniczne", path: "/kontakty-telefoniczne", roles: ["admin", "owner"] },
+      { name: "PackageAssignmentReport", label: "Raport paczek kontaktów", roles: ["admin", "hr_admin", "group_leader"] },
       { name: "AllReports", label: "Wszystkie raporty", adminOnly: true },
       { name: "RejectedMeetings", label: "Odrzucone spotkania", adminOnly: true },
       { name: "CleanupMeetings", label: "Usuń niepodjęte", adminOnly: true },

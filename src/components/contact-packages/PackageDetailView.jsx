@@ -180,6 +180,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         await base44.entities.ContactLead.update(id, {
           assigned_user_email: "",
           assigned_user_name: "",
+          assigned_at: "",
           status: "unassigned",
         });
       }

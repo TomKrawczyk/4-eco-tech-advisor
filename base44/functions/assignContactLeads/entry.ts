@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
       await base44.asServiceRole.entities.ContactLead.update(id, {
         assigned_user_email: userEmail,
         assigned_user_name: userName || userEmail,
+        assigned_at: new Date().toISOString(),
         status: 'assigned',
       });
     }

@@ -19,6 +19,7 @@ import MagazynyPrezentacja from '@/pages/MagazynyPrezentacja';
 import Finansowanie from '@/pages/Finansowanie';
 import RaportTygodniowyPH from '@/pages/RaportTygodniowyPH';
 import KontaktyTelefoniczne from '@/pages/KontaktyTelefoniczne';
+import PackageAssignmentReport from '@/pages/PackageAssignmentReport';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -140,6 +141,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="RaportTygodniowyPH">
             <RaportTygodniowyPH />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/PackageAssignmentReport"
+        element={
+          <LayoutWrapper currentPageName="PackageAssignmentReport">
+            <PackageAssignmentReport />
           </LayoutWrapper>
         }
       />
