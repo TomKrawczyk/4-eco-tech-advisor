@@ -15,6 +15,22 @@ function toDay(iso) {
   return d.toISOString().split("T")[0];
 }
 
+// Poniedziałek tygodnia dla danego dnia (YYYY-MM-DD)
+function weekStart(day) {
+  const d = new Date(day + "T00:00:00");
+  const dow = (d.getDay() + 6) % 7; // 0 = poniedziałek
+  d.setDate(d.getDate() - dow);
+  return d.toISOString().split("T")[0];
+}
+
+function weekLabel(start) {
+  const s = new Date(start + "T00:00:00");
+  const e = new Date(s);
+  e.setDate(e.getDate() + 6);
+  const fmt = (d) => d.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
+  return `${fmt(s)} – ${fmt(e)}.${e.getFullYear()}`;
+}
+
 export default function PackageAssignmentReport() {
   const { currentUser, accessChecked } = useCurrentUser();
   const [mode, setMode] = useState("user"); // user | group
@@ -50,12 +66,13 @@ export default function PackageAssignmentReport() {
     assigned.forEach(l => {
       const day = toDay(l.assigned_at || l.updated_date);
       if (!day || day < from || day > to) return;
+      const week = weekStart(day);
       const key = mode === "user"
-        ? `${day}__${l.assigned_user_email}`
-        : `${day}__${l.group_id || ""}`;
+        ? `${week}__${l.assigned_user_email}`
+        : `${week}__${l.group_id || ""}`;
       if (!map[key]) {
         map[key] = {
-          day,
+          day: week,
           label: mode === "user"
             ? (l.assigned_user_name || l.assigned_user_email)
             : groupName(l.group_id),
@@ -158,8 +175,8 @@ export default function PackageAssignmentReport() {
 
           {/* Tabela dzień po dniu */}
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="grid grid-cols-[110px_1fr_80px] gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <span>Data</span>
+            <div className="grid grid-cols-[140px_1fr_80px] gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <span>Tydzień</span>
               <span>{mode === "user" ? "Handlowiec" : "Grupa"}</span>
               <span className="text-right">Kontakty</span>
             </div>
@@ -168,8 +185,8 @@ export default function PackageAssignmentReport() {
             ) : (
               <div className="divide-y divide-gray-50">
                 {rows.map((r, i) => (
-                  <div key={i} className="grid grid-cols-[110px_1fr_80px] gap-3 px-4 py-2.5 items-center text-sm">
-                    <span className="text-gray-600">{new Date(r.day).toLocaleDateString("pl-PL")}</span>
+                  <div key={i} className="grid grid-cols-[140px_1fr_80px] gap-3 px-4 py-2.5 items-center text-sm">
+                    <span className="text-gray-600">{weekLabel(r.day)}</span>
                     <div className="min-w-0">
                       <div className="text-gray-900 font-medium truncate">{r.label}</div>
                       {r.sub && <div className="text-xs text-gray-400 truncate">{r.sub}</div>}
