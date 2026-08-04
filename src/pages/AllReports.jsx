@@ -183,6 +183,30 @@ export default function AllReports() {
     setExporting(false);
   };
 
+  const typeLabels = { phone: "Kontakt telefoniczny", meeting: "Spotkanie", visit: "Wizyta", service: "Serwis" };
+
+  const handleFilteredExport = async () => {
+    const XLSX = await import("xlsx");
+    const rows = filteredReports.map(r => ({
+      "Typ": typeLabels[r.type] || r.type,
+      "Klient": r.client_name || "",
+      "Telefon": r.client_phone || "",
+      "Adres": r.client_address || "",
+      "Data": String(r.date || "").split("T")[0],
+      "Wynik": r.resultLabel || "",
+      "Opis": r.description || "",
+      "Kolejne kroki": r.next_steps || "",
+      "Autor": r.author_name || "",
+      "Email autora": r.author_email || "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{ wch: 20 }, { wch: 24 }, { wch: 14 }, { wch: 30 }, { wch: 12 }, { wch: 18 }, { wch: 50 }, { wch: 30 }, { wch: 20 }, { wch: 28 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Raporty");
+    const personName = personFilter !== "all" ? (people.find(p => p.email === personFilter)?.name || personFilter).replace(/[^\p{L}\d]+/gu, "_") : "wszyscy";
+    XLSX.writeFile(wb, `raporty_${personName}_${new Date().toISOString().split("T")[0]}.xlsx`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -194,6 +218,15 @@ export default function AllReports() {
         >
           {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
           {exporting ? "Generowanie..." : "Eksport Excel"}
+        </Button>
+        <Button
+          onClick={handleFilteredExport}
+          disabled={filteredReports.length === 0}
+          variant="outline"
+          className="border-green-300 text-green-700 hover:bg-green-50 gap-2"
+        >
+          <Download className="w-4 h-4" />
+          Eksport filtrowanych ({filteredReports.length})
         </Button>
       </div>
 
