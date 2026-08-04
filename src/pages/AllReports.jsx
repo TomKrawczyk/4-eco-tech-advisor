@@ -133,19 +133,30 @@ export default function AllReports() {
     return [...phone, ...meeting, ...visit, ...service].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
   }, [phoneReports, phoneContactsByKey, meetingReports, visitReports, serviceReports]);
 
+  const { data: allowedUsers = [] } = useQuery({
+    queryKey: ["all-allowed-users-for-reports"],
+    queryFn: () => base44.entities.AllowedUser.list(),
+    enabled: accessChecked && isAdmin,
+  });
+
   const people = useMemo(() => {
     const map = new Map();
+    allowedUsers.forEach(u => {
+      const email = (u.data?.email || u.email || "").toLowerCase();
+      if (email) map.set(email, u.data?.name || u.name || email);
+    });
     reports.forEach(report => {
-      if (report.assigned_user_email) map.set(report.assigned_user_email, report.assigned_user_name || report.assigned_user_email);
+      const email = (report.assigned_user_email || "").toLowerCase();
+      if (email && !map.has(email)) map.set(email, report.assigned_user_name || email);
     });
     return Array.from(map.entries()).map(([email, name]) => ({ email, name })).sort((a, b) => a.name.localeCompare(b.name));
-  }, [reports]);
+  }, [allowedUsers, reports]);
 
   const filteredReports = useMemo(() => {
     const term = search.toLowerCase();
     return reports.filter(report => {
       const matchesType = typeFilter === "all" || report.type === typeFilter;
-      const matchesPerson = personFilter === "all" || report.assigned_user_email === personFilter;
+      const matchesPerson = personFilter === "all" || (report.assigned_user_email || "").toLowerCase() === personFilter;
       const matchesSearch = !term || report.searchable.toLowerCase().includes(term);
       return matchesType && matchesPerson && matchesSearch;
     });

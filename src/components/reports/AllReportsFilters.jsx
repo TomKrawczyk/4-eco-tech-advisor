@@ -36,7 +36,12 @@ export default function AllReportsFilters({ search, setSearch, typeFilter, setTy
         <SelectContent>
           <SelectItem value="all">Wszyscy handlowcy</SelectItem>
           {people.map(person => (
-            <SelectItem key={person.email} value={person.email}>{person.name}</SelectItem>
+            <SelectItem key={person.email} value={person.email}>
+              <div className="flex flex-col items-start">
+                <span>{person.name}</span>
+                <span className="text-[11px] text-gray-400">{person.email}</span>
+              </div>
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
