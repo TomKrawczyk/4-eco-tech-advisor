@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Search, UserCheck, CheckSquare, Square,
-  RotateCcw, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload, Archive, ArchiveRestore, Copy
+  RotateCcw, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload, Archive, ArchiveRestore, Copy, Download
 } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
+import exportPackageToExcel from "@/components/contact-packages/exportPackageToExcel";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
 import LeadExtraData from "@/components/contact-packages/LeadExtraData";
 
@@ -428,6 +429,18 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
             </div>
           )}
         </div>
+        {isAdmin && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={leads.length === 0}
+            onClick={() => exportPackageToExcel(pkg, leads)}
+            className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
+          >
+            <Download className="w-4 h-4" />
+            Eksport do Excela
+          </Button>
+        )}
         <Button
           size="sm"
           onClick={() => setShowAppendImport(true)}
