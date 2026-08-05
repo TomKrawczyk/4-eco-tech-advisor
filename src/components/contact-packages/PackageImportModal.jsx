@@ -164,6 +164,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   const [selectedGroupName, setSelectedGroupName] = useState(existingPackage?.group_name || currentUser?.groupName || "");
   const [assignMode, setAssignMode] = useState("group"); // "group" | "user" (paczka prywatna)
   const [selectedUserEmail, setSelectedUserEmail] = useState("");
+  const [selectedUserEmail2, setSelectedUserEmail2] = useState("");
 
   const { data: allowedUsers = [] } = useQuery({
     queryKey: ["allowed-users-for-import"],
@@ -231,8 +232,11 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
           description: description.trim(),
           group_id: isPrivate ? "" : effectiveGroupId,
           group_name: isPrivate ? "" : effectiveGroupName,
-          assigned_user_email: isPrivate ? selectedUserEmail : "",
-          assigned_user_name: isPrivate ? (advisors.find(a => a.email === selectedUserEmail)?.name || "") : "",
+          assigned_users: isPrivate
+            ? [selectedUserEmail, selectedUserEmail2]
+                .filter(Boolean)
+                .map(email => ({ email, name: advisors.find(a => a.email === email)?.name || "" }))
+            : [],
           created_by_name: currentUser.displayName || currentUser.full_name || "",
         },
         contacts,
@@ -334,19 +338,35 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                       )}
                     </div>
                   ) : (
-                    <div>
-                      <select
-                        value={selectedUserEmail}
-                        onChange={e => setSelectedUserEmail(e.target.value)}
-                        className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-200"
-                      >
-                        <option value="">— wybierz handlowca —</option>
-                        {advisors.map(a => (
-                          <option key={a.email} value={a.email}>{a.name} ({a.email})</option>
-                        ))}
-                      </select>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">Handlowiec 1 *</label>
+                        <select
+                          value={selectedUserEmail}
+                          onChange={e => setSelectedUserEmail(e.target.value)}
+                          className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-200"
+                        >
+                          <option value="">— wybierz handlowca —</option>
+                          {advisors.map(a => (
+                            <option key={a.email} value={a.email}>{a.name} ({a.email})</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">Handlowiec 2 (opcjonalnie)</label>
+                        <select
+                          value={selectedUserEmail2}
+                          onChange={e => setSelectedUserEmail2(e.target.value)}
+                          className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-200"
+                        >
+                          <option value="">— brak —</option>
+                          {advisors.filter(a => a.email !== selectedUserEmail).map(a => (
+                            <option key={a.email} value={a.email}>{a.name} ({a.email})</option>
+                          ))}
+                        </select>
+                      </div>
                       <p className="text-xs text-purple-600 mt-1.5">
-                        🔒 Kontakty trafią bezpośrednio do wybranego handlowca. Paczki nie zobaczy jego lider grupy — tylko handlowiec i administratorzy.
+                        🔒 Kontakty trafią bezpośrednio do wybranych handlowców. Przy dwóch handlowcach baza zostanie podzielona po równo (naprzemiennie). Paczki nie zobaczy lider grupy — tylko handlowcy i administratorzy.
                       </p>
                     </div>
                   )}

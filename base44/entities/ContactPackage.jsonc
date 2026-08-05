@@ -25,11 +25,18 @@
     },
     "assigned_user_email": {
       "type": "string",
-      "description": "Email handlowca do kt\u00f3rego przypisana jest paczka prywatna"
+      "description": "Email pierwszego handlowca do kt\u00f3rego przypisana jest paczka prywatna"
     },
     "assigned_user_name": {
       "type": "string",
-      "description": "Imi\u0119 handlowca (cache)"
+      "description": "Imiona handlowc\u00f3w (cache, np. 'Jan Kowalski, Adam Nowak')"
+    },
+    "assigned_user_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista emaili handlowc\u00f3w przypisanych do paczki prywatnej (max 2)"
     },
     "created_by_email": {
       "type": "string",
