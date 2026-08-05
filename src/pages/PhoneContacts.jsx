@@ -12,6 +12,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import DetailsModal from "@/components/shared/DetailsModal";
 import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
 import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
+import ReportStatusBadge from "@/components/phone-contacts/ReportStatusBadge";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 
@@ -86,6 +87,24 @@ export default function PhoneContacts() {
       : base44.entities.PhoneContact.filter({ assigned_user_email: currentUser.email }),
     enabled: accessChecked && !!currentUser,
   });
+
+  // Raporty z kontaktów telefonicznych — status per kontakt
+  const { data: phoneReports = [] } = useQuery({
+    queryKey: ["phoneContactReports", isLeaderOrAdmin, currentUser?.email],
+    queryFn: () => isLeaderOrAdmin
+      ? base44.entities.PhoneContactReport.list("-created_date")
+      : base44.entities.PhoneContactReport.filter({ author_email: currentUser.email }, "-created_date"),
+    enabled: accessChecked && !!currentUser,
+  });
+
+  // Mapa contact_key → najnowszy raport
+  const reportByKey = useMemo(() => {
+    const map = {};
+    phoneReports.forEach(r => {
+      if (r.contact_key && !map[r.contact_key]) map[r.contact_key] = r;
+    });
+    return map;
+  }, [phoneReports]);
 
   const { data: rawContacts = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ["phoneContacts"],
@@ -497,6 +516,7 @@ export default function PhoneContacts() {
                       {c.assigned_group_name && (
                         <Badge className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">Grupa: {c.assigned_group_name}</Badge>
                       )}
+                      <ReportStatusBadge report={reportByKey[c.contact_key]} />
                     </div>
                     {(c.comments || c.agent) && (
                       <button
@@ -551,7 +571,7 @@ export default function PhoneContacts() {
             contact={reportContact}
             currentUser={currentUser}
             open={!!reportContact}
-            onClose={() => setReportContact(null)}
+            onClose={() => { setReportContact(null); queryClient.invalidateQueries({ queryKey: ["phoneContactReports"] }); }}
           />
         )}
       </div>
@@ -742,6 +762,7 @@ export default function PhoneContacts() {
                                 <ContactRow
                                   key={contact.contact_key || i}
                                   contact={contact}
+                                  report={reportByKey[contact.contact_key]}
                                   canAssign={canAssign}
                                   canManageGroups={canManageGroups}
                                   salespeople={salespeople}
@@ -785,14 +806,14 @@ export default function PhoneContacts() {
           contact={reportContact}
           currentUser={currentUser}
           open={!!reportContact}
-          onClose={() => setReportContact(null)}
+          onClose={() => { setReportContact(null); queryClient.invalidateQueries({ queryKey: ["phoneContactReports"] }); }}
         />
       )}
     </div>
   );
 }
 
-function ContactRow({ contact, canAssign, canManageGroups, salespeople, groups, currentUser, assignMutation, assignGroupMutation, onShowDetails, onShowReport, onArchive, archiveTab }) {
+function ContactRow({ contact, report, canAssign, canManageGroups, salespeople, groups, currentUser, assignMutation, assignGroupMutation, onShowDetails, onShowReport, onArchive, archiveTab }) {
   return (
     <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -809,6 +830,11 @@ function ContactRow({ contact, canAssign, canManageGroups, salespeople, groups, 
           )}
           {contact.contact_key?.startsWith("manual_") && (
             <Badge className="mt-1 bg-green-50 text-green-700 border-green-200 text-[10px]">Ręcznie dodany</Badge>
+          )}
+          {report && (
+            <div className="mt-1">
+              <ReportStatusBadge report={report} />
+            </div>
           )}
         </div>
 
