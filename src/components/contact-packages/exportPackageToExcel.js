@@ -7,6 +7,7 @@ const STATUS_LABELS = {
   interested: "Zainteresowany",
   not_interested: "Niezainteresowany",
   no_answer: "Brak odpowiedzi",
+  wrong_number: "Błędny numer",
   callback: "Do ponownego kontaktu",
   meeting_scheduled: "Spotkanie umówione",
   offer_submitted: "Złożona oferta",
