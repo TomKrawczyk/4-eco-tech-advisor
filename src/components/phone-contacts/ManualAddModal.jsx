@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, Calendar, Facebook, PhoneCall, Loader2 } from "lucide-react";
+import { Phone, Calendar, Facebook, PhoneCall, Store, Loader2 } from "lucide-react";
 
 const SOURCE_TYPES = [
   { value: "infolinia", label: "Infolinia", icon: PhoneCall },
   { value: "facebook", label: "Facebook", icon: Facebook },
+  { value: "obi", label: "OBI", icon: Store },
 ];
 
 export default function ManualAddModal({ open, onClose, currentUser, onContactAdded }) {
@@ -39,7 +40,7 @@ export default function ManualAddModal({ open, onClose, currentUser, onContactAd
       const contactKey = `manual_${source}_${form.client_name}_${form.contact_date}_${Date.now()}`;
       await base44.entities.PhoneContact.create({
         contact_key: contactKey,
-        sheet: source === "facebook" ? "Facebook" : "Infolinia",
+        sheet: source === "facebook" ? "Facebook" : source === "obi" ? "OBI" : "Infolinia",
         client_name: form.client_name,
         phone: form.client_phone,
         address: form.client_address,
