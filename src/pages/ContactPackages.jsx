@@ -414,6 +414,7 @@ function AdvisorView({ leads, currentUser, qc }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [archiveTab, setArchiveTab] = useState("active");
+  const [sortBy, setSortBy] = useState("default");
 
   const statusLabels = {
     unassigned: "Nieprzypisany",
@@ -446,6 +447,10 @@ function AdvisorView({ leads, currentUser, qc }) {
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
     const matchArchive = archiveTab === "archived" ? l.is_archived === true : l.is_archived !== true;
     return matchSearch && matchStatus && matchArchive;
+  }).sort((a, b) => {
+    if (sortBy === "postal_asc") return (a.postal_code || "").localeCompare(b.postal_code || "", "pl");
+    if (sortBy === "postal_desc") return (b.postal_code || "").localeCompare(a.postal_code || "", "pl");
+    return 0;
   });
 
   const archiveCounts = useMemo(() => ({
@@ -519,6 +524,15 @@ function AdvisorView({ leads, currentUser, qc }) {
             <option key={v} value={v}>{l}</option>
           ))}
         </select>
+        <select
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="default">Sortowanie domyślne</option>
+          <option value="postal_asc">Kod pocztowy rosnąco</option>
+          <option value="postal_desc">Kod pocztowy malejąco</option>
+        </select>
       </div>
 
       {filtered.length === 0 ? (
@@ -577,7 +591,7 @@ function LeadRow({ lead, statusLabels, statusColors, currentUser, onUpdateStatus
         >
           <div className="flex-1 min-w-0">
             <div className="font-medium text-gray-900">{lead.client_name}</div>
-            <div className="text-sm text-gray-500">{lead.client_phone} {lead.client_address && `· ${lead.client_address}`}</div>
+            <div className="text-sm text-gray-500">{lead.client_phone} {lead.postal_code && `· ${lead.postal_code}`} {lead.client_address && `· ${lead.client_address}`}</div>
           </div>
           <span className={`text-xs px-2 py-1 rounded-full font-medium shrink-0 ${statusColors[lead.status] || "bg-gray-50 text-gray-600"}`}>
             {statusLabels[lead.status] || lead.status}
