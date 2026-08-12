@@ -12,6 +12,7 @@ import PackageImportModal from "@/components/contact-packages/PackageImportModal
 import exportPackageToExcel from "@/components/contact-packages/exportPackageToExcel";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
 import LeadExtraData from "@/components/contact-packages/LeadExtraData";
+import PrivateAssigneesEditor from "@/components/contact-packages/PrivateAssigneesEditor";
 
 const STATUS_LABELS = {
   unassigned: "Nieprzypisany",
@@ -100,7 +101,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const groupLeaderId = currentGroup?.group_leader_id || currentGroup?.data?.group_leader_id;
   const allowedGroupLeaderIds = new Set([groupLeaderId, ...groupLeaderIds].filter(Boolean));
 
-  const assignableUsers = allUsers
+  const salesUsers = allUsers
     .map(u => ({
       id: u.id,
       email: u.email || u.data?.email,
@@ -108,12 +109,22 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       role: u.role || u.data?.role,
       group_id: u.group_id || u.data?.group_id,
     }))
-    .filter(u => {
-      if (!u.email) return false;
-      if (u.role === "advisor" || u.role === "team_leader") return u.group_id === pkg.group_id;
-      if (u.role === "group_leader") return u.group_id === pkg.group_id || allowedGroupLeaderIds.has(u.id);
-      return false;
-    });
+    .filter(u => u.email && ["advisor", "team_leader", "group_leader"].includes(u.role));
+
+  const pkgAssignedEmails = pkg.assigned_user_emails?.length
+    ? pkg.assigned_user_emails
+    : (pkg.assigned_user_email ? [pkg.assigned_user_email] : []);
+
+  const assignableUsers = salesUsers.filter(u => {
+    if (pkg.is_private) {
+      // Paczka prywatna: admin może przypisać do dowolnego handlowca,
+      // pozostali — do handlowców przypisanych do paczki
+      return isAdmin || pkgAssignedEmails.includes(u.email);
+    }
+    if (u.role === "advisor" || u.role === "team_leader") return u.group_id === pkg.group_id;
+    if (u.role === "group_leader") return u.group_id === pkg.group_id || allowedGroupLeaderIds.has(u.id);
+    return false;
+  });
 
   const canAssignToSelf = currentUser?.role === "team_leader" || currentUser?.role === "group_leader";
   const advisors = canAssignToSelf && currentUser?.email && !assignableUsers.some(u => u.email === currentUser.email)
@@ -389,8 +400,18 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900">{pkg.name}</h1>
           {pkg.description && <p className="text-sm text-gray-500">{pkg.description}</p>}
+          {/* Edycja handlowców paczki prywatnej — tylko admin */}
+          {isAdmin && pkg.is_private && (
+            <div className="mt-1">
+              <PrivateAssigneesEditor
+                pkg={pkg}
+                salesUsers={salesUsers}
+                onSaved={onPackageUpdated}
+              />
+            </div>
+          )}
           {/* Edycja grupy — tylko admin */}
-          {isAdmin && (
+          {isAdmin && !pkg.is_private && (
             <div className="flex items-center gap-2 mt-1">
               {editingGroup ? (
                 <>
