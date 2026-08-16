@@ -1,10 +1,11 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import PageHeader from "@/components/shared/PageHeader";
 import TaskSection from "@/components/today/TaskSection";
 import TaskCard from "@/components/today/TaskCard";
+import AdvisorFilter from "@/components/today/AdvisorFilter";
 import { PhoneCall, CalendarClock, AlarmClock } from "lucide-react";
 
 const STALE_DAYS = 3;
@@ -22,48 +23,87 @@ function daysSince(dateStr) {
 export default function TodayTasks() {
   const { currentUser, accessChecked } = useCurrentUser();
   const email = currentUser?.email;
+  const isAdmin = currentUser?.role === "admin";
   const today = todayStr();
+  const [advisor, setAdvisor] = useState("all");
 
-  const { data: myLeads = [], isLoading: loadingLeads } = useQuery({
-    queryKey: ["today-leads", email],
-    queryFn: () => base44.entities.ContactLead.filter({ assigned_user_email: email }, "-assigned_at", 1000),
+  const { data: allLeads = [], isLoading: loadingLeads } = useQuery({
+    queryKey: ["today-leads", email, isAdmin],
+    queryFn: () => isAdmin
+      ? base44.entities.ContactLead.list("-assigned_at", 5000)
+      : base44.entities.ContactLead.filter({ assigned_user_email: email }, "-assigned_at", 1000),
     enabled: !!email,
   });
 
-  const { data: myPhoneReports = [], isLoading: loadingReports } = useQuery({
-    queryKey: ["today-phoneReports", email],
-    queryFn: () => base44.entities.PhoneContactReport.filter({ author_email: email }, "-created_date", 500),
+  const { data: allPhoneReports = [], isLoading: loadingReports } = useQuery({
+    queryKey: ["today-phoneReports", email, isAdmin],
+    queryFn: () => isAdmin
+      ? base44.entities.PhoneContactReport.list("-created_date", 5000)
+      : base44.entities.PhoneContactReport.filter({ author_email: email }, "-created_date", 500),
     enabled: !!email,
   });
 
-  const { data: myEvents = [], isLoading: loadingEvents } = useQuery({
-    queryKey: ["today-events", email],
-    queryFn: () => base44.entities.CalendarEvent.filter({ owner_email: email }, "-event_date", 500),
+  const { data: allEvents = [], isLoading: loadingEvents } = useQuery({
+    queryKey: ["today-events", email, isAdmin],
+    queryFn: () => isAdmin
+      ? base44.entities.CalendarEvent.list("-event_date", 5000)
+      : base44.entities.CalendarEvent.filter({ owner_email: email }, "-event_date", 500),
     enabled: !!email,
   });
 
-  // Do oddzwonienia: leady ze statusem "callback" + raporty telefoniczne z datą oddzwonienia na dziś lub zaległą
+  // Lista handlowców do filtra (tylko admin)
+  const people = useMemo(() => {
+    if (!isAdmin) return [];
+    const map = {};
+    allLeads.forEach(l => { if (l.assigned_user_email) map[l.assigned_user_email] = l.assigned_user_name; });
+    allPhoneReports.forEach(r => { if (r.author_email) map[r.author_email] = map[r.author_email] || r.author_name; });
+    allEvents.forEach(e => { if (e.owner_email) map[e.owner_email] = map[e.owner_email] || e.owner_name; });
+    return Object.entries(map)
+      .map(([email, name]) => ({ email, name }))
+      .sort((a, b) => String(a.name || a.email).localeCompare(String(b.name || b.email)));
+  }, [isAdmin, allLeads, allPhoneReports, allEvents]);
+
+  const leads = useMemo(
+    () => (advisor === "all" ? allLeads : allLeads.filter(l => l.assigned_user_email === advisor)),
+    [allLeads, advisor]
+  );
+  const phoneReports = useMemo(
+    () => (advisor === "all" ? allPhoneReports : allPhoneReports.filter(r => r.author_email === advisor)),
+    [allPhoneReports, advisor]
+  );
+  const events = useMemo(
+    () => (advisor === "all" ? allEvents : allEvents.filter(e => e.owner_email === advisor)),
+    [allEvents, advisor]
+  );
+
+  const ownerLabel = (name, email) => (isAdmin ? name || email || "" : "");
+
+  // Do oddzwonienia: leady z paczek ze statusem "callback" + raporty telefoniczne z datą oddzwonienia na dziś lub zaległą
   const callbacks = useMemo(() => {
-    const leadItems = myLeads
+    const leadItems = leads
       .filter(l => l.status === "callback" && !l.is_archived)
-      .map(l => ({
-        id: `lead-${l.id}`,
-        title: l.client_name,
-        meta: [l.client_phone, l.client_address].filter(Boolean).join(" • "),
-        note: l.contact_notes || "",
-        phone: l.client_phone,
-        address: l.client_address,
-        badge: "Oddzwonić",
-        badgeClass: "bg-amber-100 text-amber-700",
-        sortKey: l.contacted_at || "",
-      }));
+      .map(l => {
+        const days = daysSince(l.contacted_at || l.assigned_at);
+        const overdue = days !== null && days >= 1;
+        return {
+          id: `lead-${l.id}`,
+          title: l.client_name,
+          meta: [l.client_phone, l.client_address, ownerLabel(l.assigned_user_name, l.assigned_user_email)].filter(Boolean).join(" • "),
+          note: l.contact_notes || "",
+          phone: l.client_phone,
+          address: l.client_address,
+          badge: overdue ? `Zaległe: ${days} dni` : "Oddzwonić",
+          badgeClass: overdue ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700",
+          sortKey: l.contacted_at || "",
+        };
+      });
 
-    const reportItems = myPhoneReports
+    const reportItems = phoneReports
       .filter(r => r.callback_date && r.callback_date <= today)
       .map(r => ({
         id: `report-${r.id}`,
         title: r.client_name,
-        meta: [r.client_phone, r.client_address].filter(Boolean).join(" • "),
+        meta: [r.client_phone, r.client_address, ownerLabel(r.author_name, r.author_email)].filter(Boolean).join(" • "),
         note: [r.description, r.next_steps].filter(Boolean).join("\n"),
         phone: r.client_phone,
         address: r.client_address,
@@ -73,16 +113,16 @@ export default function TodayTasks() {
       }));
 
     return [...reportItems, ...leadItems].sort((a, b) => String(a.sortKey).localeCompare(String(b.sortKey)));
-  }, [myLeads, myPhoneReports, today]);
+  }, [leads, phoneReports, today, isAdmin]);
 
   // Spotkania na dziś z kalendarza + umówione spotkania z leadów
   const meetings = useMemo(() => {
-    const events = myEvents
+    const eventItems = events
       .filter(e => e.event_date === today && e.status !== "cancelled")
       .map(e => ({
         id: `event-${e.id}`,
         title: e.title || e.client_name || "Wydarzenie",
-        meta: [e.event_time, e.client_name, e.location].filter(Boolean).join(" • "),
+        meta: [e.event_time, e.client_name, e.location, ownerLabel(e.owner_name, e.owner_email)].filter(Boolean).join(" • "),
         note: e.description || "",
         phone: e.client_phone,
         address: e.location,
@@ -91,12 +131,12 @@ export default function TodayTasks() {
         sortKey: e.event_time || "99:99",
       }));
 
-    const leadMeetings = myLeads
+    const leadMeetings = leads
       .filter(l => l.scheduled_meeting_date === today && !l.is_archived)
       .map(l => ({
         id: `leadmeet-${l.id}`,
         title: l.client_name,
-        meta: [l.scheduled_meeting_time, l.client_phone, l.client_address].filter(Boolean).join(" • "),
+        meta: [l.scheduled_meeting_time, l.client_phone, l.client_address, ownerLabel(l.assigned_user_name, l.assigned_user_email)].filter(Boolean).join(" • "),
         note: l.contact_notes || "",
         phone: l.client_phone,
         address: l.client_address,
@@ -105,12 +145,12 @@ export default function TodayTasks() {
         sortKey: l.scheduled_meeting_time || "99:99",
       }));
 
-    return [...events, ...leadMeetings].sort((a, b) => String(a.sortKey).localeCompare(String(b.sortKey)));
-  }, [myEvents, myLeads, today]);
+    return [...eventItems, ...leadMeetings].sort((a, b) => String(a.sortKey).localeCompare(String(b.sortKey)));
+  }, [events, leads, today, isAdmin]);
 
-  // Leady bez ruchu: przypisane lub po pierwszym kontakcie, bez aktywności od kilku dni
+  // Leady bez ruchu z paczek kontaktów
   const staleLeads = useMemo(() => {
-    return myLeads
+    return leads
       .filter(l => !l.is_archived && ["assigned", "contacted", "interested"].includes(l.status))
       .map(l => ({ lead: l, days: daysSince(l.contacted_at || l.assigned_at) }))
       .filter(x => x.days !== null && x.days >= STALE_DAYS)
@@ -118,14 +158,14 @@ export default function TodayTasks() {
       .map(({ lead: l, days }) => ({
         id: `stale-${l.id}`,
         title: l.client_name,
-        meta: [l.client_phone, l.client_address].filter(Boolean).join(" • "),
+        meta: [l.client_phone, l.client_address, ownerLabel(l.assigned_user_name, l.assigned_user_email)].filter(Boolean).join(" • "),
         note: l.contact_notes || "",
         phone: l.client_phone,
         address: l.client_address,
         badge: `${days} dni bez ruchu`,
         badgeClass: "bg-orange-100 text-orange-700",
       }));
-  }, [myLeads]);
+  }, [leads, isAdmin]);
 
   if (!accessChecked || loadingLeads || loadingReports || loadingEvents) {
     return (
@@ -141,8 +181,18 @@ export default function TodayTasks() {
     <div className="space-y-5">
       <PageHeader
         title="Dziś do zrobienia"
-        subtitle={total === 0 ? "Brak zaległości — wszystko na bieżąco" : `${total} rzeczy do ogarnięcia dzisiaj`}
+        subtitle={
+          isAdmin
+            ? "Zadania wszystkich handlowców — oddzwonienia, spotkania i leady bez ruchu"
+            : total === 0
+              ? "Brak zaległości — wszystko na bieżąco"
+              : `${total} rzeczy do ogarnięcia dzisiaj`
+        }
       />
+
+      {isAdmin && (
+        <AdvisorFilter people={people} value={advisor} onChange={setAdvisor} />
+      )}
 
       <TaskSection
         title="Do oddzwonienia"
@@ -166,7 +216,7 @@ export default function TodayTasks() {
         title={`Leady bez ruchu (${STALE_DAYS}+ dni)`}
         icon={AlarmClock}
         count={staleLeads.length}
-        emptyText="Wszystkie Twoje leady są aktualne."
+        emptyText="Wszystkie leady są aktualne."
       >
         {staleLeads.map(item => <TaskCard key={item.id} {...item} />)}
       </TaskSection>
