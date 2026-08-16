@@ -21,7 +21,8 @@
         "report_send_email",
         "checklist_save",
         "interview_save",
-        "calculator_use"
+        "calculator_use",
+        "screenshot_attempt"
       ],
       "description": "Typ akcji"
     },

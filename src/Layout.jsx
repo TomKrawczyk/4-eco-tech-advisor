@@ -10,6 +10,7 @@ import OfflineBanner from "@/components/offline/OfflineBanner";
 import MissingReportsBanner from "@/components/shared/MissingReportsBanner";
 import BlockedUserScreen from "@/components/shared/BlockedUserScreen";
 import ScreenProtection from "@/components/shared/ScreenProtection";
+import ScreenWatermark from "@/components/shared/ScreenWatermark";
 
 // Dropdown dla desktop
 function DesktopDropdown({ label, items, isGroupActive, currentPageName }) {
@@ -249,7 +250,8 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-500/10 via-emerald-50 to-green-500/10 text-gray-900">
-      <ScreenProtection />
+      <ScreenProtection currentUser={currentUser} />
+      <ScreenWatermark user={currentUser} />
       <style>{`
         * { -webkit-tap-highlight-color: transparent; }
         body { background: linear-gradient(135deg, #22c55e15 0%, #10b98120 25%, #ecfdf5 50%, #10b98120 75%, #22c55e15 100%); }

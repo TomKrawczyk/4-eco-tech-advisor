@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ShieldAlert } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 function isBlockedShortcut(event) {
   const key = (event.key || "").toLowerCase();
@@ -8,7 +9,7 @@ function isBlockedShortcut(event) {
   return hasModifier && (key === "p" || (event.shiftKey && ["3", "4", "5", "s"].includes(key)));
 }
 
-export default function ScreenProtection() {
+export default function ScreenProtection({ currentUser }) {
   const [shieldVisible, setShieldVisible] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -38,6 +39,15 @@ export default function ScreenProtection() {
       event.preventDefault();
       event.stopPropagation();
       showShield("Wykryto próbę przechwycenia ekranu");
+      if (currentUser?.email) {
+        base44.entities.ActivityLog.create({
+          user_email: currentUser.email,
+          user_name: currentUser.displayName || currentUser.full_name || "",
+          action_type: "screenshot_attempt",
+          page_name: window.location.hash || window.location.pathname,
+          details: { key: event.key, user_agent: navigator.userAgent }
+        }).catch(() => {});
+      }
       if ((event.key || "").toLowerCase() === "printscreen" && navigator.clipboard?.writeText) {
         navigator.clipboard.writeText("").catch(() => {});
       }
@@ -57,7 +67,7 @@ export default function ScreenProtection() {
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, []);
+  }, [currentUser]);
 
   return (
     <>
