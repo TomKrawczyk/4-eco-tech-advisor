@@ -9,6 +9,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOf
 import { pl } from "date-fns/locale";
 import CalendarEventModal from "@/components/calendar/CalendarEventModal.jsx";
 import CalendarDayModal from "@/components/calendar/CalendarDayModal.jsx";
+import { isOlderThanDays } from "@/lib/oldRecordVisibility";
 
 // Parsuje daty w formacie "DD.MM.YYYY HH:MM" lub "DD.MM.YYYY"
 function parseMeetingDate(str) {
@@ -437,11 +438,15 @@ export default function Calendar() {
       calEvents = events.filter(e => e.owner_email === currentUser.email);
     }
 
+    const isAdminUser = currentUser.role === "admin";
+
     const enrichedCalEvents = calEvents
       .filter((event) => {
         if (!event.event_date) return false;
         const eventDate = parseISO(event.event_date);
         if (!isValid(eventDate)) return false;
+        // Wydarzenia starsze niż 30 dni widzi tylko administrator
+        if (!isAdminUser && isOlderThanDays(event.event_date)) return false;
         return eventDate >= calStart && eventDate <= calEnd;
       })
       .map((event) => {

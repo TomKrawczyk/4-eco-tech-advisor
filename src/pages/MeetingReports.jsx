@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Plus, Search, Calendar, Phone, MapPin, User, Clock, CheckCircle2, XCircle, ChevronRight, ArrowLeft, Trash2, Upload, X, Image, Loader2, FileText } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
+import { isOlderThanDays } from "@/lib/oldRecordVisibility";
 
 const statusConfig = {
   planned: { label: "Zaplanowane", color: "bg-blue-100 text-blue-700 border-blue-300", icon: Clock },
@@ -296,7 +297,7 @@ export default function MeetingReports() {
     fetchUser();
   }, []);
 
-  const { data: reports = [], isLoading, isError, refetch } = useQuery({
+  const { data: allReports = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["meetingReports", currentUser?.email],
     queryFn: async () => {
       const response = await base44.functions.invoke('listMeetingReports');
@@ -307,6 +308,11 @@ export default function MeetingReports() {
   });
 
   const isAdmin = currentUser?.role === "admin";
+
+  // Raporty starsze niż 30 dni znikają handlowcom — administrator widzi wszystkie
+  const reports = isAdmin
+    ? allReports
+    : allReports.filter(r => !isOlderThanDays(r.meeting_date || r.created_date));
 
   const syncBlockingStatus = () => {
     // Nie blokuj zapisu — przeliczenie blokad dzieje się w tle (automatyzacja też je wykona)
