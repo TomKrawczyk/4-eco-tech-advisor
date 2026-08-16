@@ -15,6 +15,7 @@ import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactRep
 import ReportStatusBadge from "@/components/phone-contacts/ReportStatusBadge";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
+import { isOlderThanDays } from "@/lib/oldRecordVisibility";
 
 function parseDateStr(str) {
   if (!str) return null;
@@ -461,9 +462,12 @@ export default function PhoneContacts() {
     );
   }
 
-  // Zwykły doradca widzi swoje przypisane kontakty
+  // Zwykły doradca widzi swoje przypisane kontakty (bez pozycji starszych niż 30 dni)
   if (!isLeaderOrAdmin) {
-    const myAllContacts = phoneContactsFromDB.filter(c => c.assigned_user_email === currentUser?.email);
+    const myAllContacts = phoneContactsFromDB.filter(c =>
+      c.assigned_user_email === currentUser?.email &&
+      !isOlderThanDays(parseDateStr(c.contact_date || c.date) || c.created_date)
+    );
     const myArchiveCounts = {
       active: myAllContacts.filter(c => c.is_archived !== true).length,
       archived: myAllContacts.filter(c => c.is_archived === true).length,
