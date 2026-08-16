@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BarChart3, CalendarRange, Download, FileText, Users } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
+import useIsMainAdmin from "@/components/shared/useIsMainAdmin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,7 @@ function coverageColor(value) {
 
 export default function RaportTygodniowyPH() {
   const { currentUser, accessChecked } = useCurrentUser();
+  const { isMainAdmin } = useIsMainAdmin();
   const { toast } = useToast();
   const [fromInput, setFromInput] = useState("");
   const [toInput, setToInput] = useState("");
@@ -111,10 +113,12 @@ export default function RaportTygodniowyPH() {
             <Button onClick={handleShow} disabled={isFetching || isExporting} className="bg-green-600 text-white hover:bg-green-700">
               {isFetching ? "Ładowanie..." : "Pokaż"}
             </Button>
-            <Button onClick={handleExport} disabled={isExporting || isFetching || isLoading} className="bg-green-600 text-white hover:bg-green-700">
-              <Download className="mr-2 h-4 w-4" />
-              {isExporting ? "Eksportuję..." : "Eksportuj do Excela"}
-            </Button>
+            {isMainAdmin && (
+              <Button onClick={handleExport} disabled={isExporting || isFetching || isLoading} className="bg-green-600 text-white hover:bg-green-700">
+                <Download className="mr-2 h-4 w-4" />
+                {isExporting ? "Eksportuję..." : "Eksportuj do Excela"}
+              </Button>
+            )}
           </div>
         </div>
         {formError && <p className="mt-3 text-sm text-red-600">{formError}</p>}

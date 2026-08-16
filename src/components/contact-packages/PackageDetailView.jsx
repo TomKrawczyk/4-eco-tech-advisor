@@ -13,6 +13,7 @@ import exportPackageToExcel from "@/components/contact-packages/exportPackageToE
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
 import LeadExtraData from "@/components/contact-packages/LeadExtraData";
 import PrivateAssigneesEditor from "@/components/contact-packages/PrivateAssigneesEditor";
+import useIsMainAdmin from "@/components/shared/useIsMainAdmin";
 
 const STATUS_LABELS = {
   unassigned: "Nieprzypisany",
@@ -60,6 +61,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [meetingLead, setMeetingLead] = useState(null);
 
   const isAdmin = currentUser?.role === "admin";
+  const { isMainAdmin } = useIsMainAdmin();
 
   // Synchronizuj newGroupId gdy pkg się zmieni (po zapisie przez rodzica)
   useEffect(() => {
@@ -456,7 +458,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
             </div>
           )}
         </div>
-        {isAdmin && (
+        {isMainAdmin && (
           <Button
             size="sm"
             variant="outline"

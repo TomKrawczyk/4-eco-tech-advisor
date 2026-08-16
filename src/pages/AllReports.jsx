@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
+import useIsMainAdmin from "@/components/shared/useIsMainAdmin";
 import PageHeader from "@/components/shared/PageHeader";
 import AllReportsFilters from "@/components/reports/AllReportsFilters";
 import AllReportCard from "@/components/reports/AllReportCard";
@@ -20,6 +21,7 @@ const phoneResultLabels = {
 
 export default function AllReports() {
   const { currentUser, accessChecked } = useCurrentUser();
+  const { isMainAdmin } = useIsMainAdmin();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [personFilter, setPersonFilter] = useState("all");
@@ -222,23 +224,27 @@ export default function AllReports() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader title="Wszystkie raporty" subtitle="Raporty po spotkaniach, wizytach, serwisie oraz kontaktach telefonicznych z filtrowaniem po przypisanej osobie" />
-        <Button
-          onClick={handleExcelExport}
-          disabled={exporting}
-          className="bg-green-600 hover:bg-green-700 text-white gap-2"
-        >
-          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-          {exporting ? "Generowanie..." : "Eksport Excel"}
-        </Button>
-        <Button
-          onClick={handleFilteredExport}
-          disabled={filteredReports.length === 0}
-          variant="outline"
-          className="border-green-300 text-green-700 hover:bg-green-50 gap-2"
-        >
-          <Download className="w-4 h-4" />
-          Eksport filtrowanych ({filteredReports.length})
-        </Button>
+        {isMainAdmin && (
+          <>
+            <Button
+              onClick={handleExcelExport}
+              disabled={exporting}
+              className="bg-green-600 hover:bg-green-700 text-white gap-2"
+            >
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {exporting ? "Generowanie..." : "Eksport Excel"}
+            </Button>
+            <Button
+              onClick={handleFilteredExport}
+              disabled={filteredReports.length === 0}
+              variant="outline"
+              className="border-green-300 text-green-700 hover:bg-green-50 gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Eksport filtrowanych ({filteredReports.length})
+            </Button>
+          </>
+        )}
       </div>
 
       <AllReportsFilters

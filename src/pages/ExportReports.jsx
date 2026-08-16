@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileSpreadsheet, ImageDown, Download, Loader2, CheckCircle2, AlertCircle, Database } from "lucide-react";
 import JSZip from "jszip";
+import useIsMainAdmin from "@/components/shared/useIsMainAdmin";
 
 export default function ExportReports() {
+  const { isMainAdmin, checkingMainAdmin } = useIsMainAdmin();
   const [excelLoading, setExcelLoading] = useState(false);
   const [photosLoading, setPhotosLoading] = useState(false);
   const [backendLoading, setBackendLoading] = useState(false);
@@ -156,6 +158,19 @@ export default function ExportReports() {
       setPhotosProgress(null);
     }
   };
+
+  if (checkingMainAdmin) {
+    return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-green-600" /></div>;
+  }
+
+  if (!isMainAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <AlertCircle className="w-12 h-12 text-red-400 mb-3" />
+        <p className="text-gray-700 font-medium">Eksport danych jest dostępny tylko dla głównego administratora.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">

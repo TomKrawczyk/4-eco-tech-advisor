@@ -21,6 +21,11 @@ Deno.serve(async (req) => {
       return Response.json({ allowed: isMainAdmin });
     }
 
+    // Eksport danych (Excel, zdjęcia) — tylko główny administrator
+    if (!isMainAdmin) {
+      return Response.json({ error: 'Eksport danych jest dostępny tylko dla głównego administratora.' }, { status: 403 });
+    }
+
     if (exportType === 'full_backend') {
       if (!isMainAdmin) {
         return Response.json({ error: 'Brak dostępu. Eksport backendu jest dostępny tylko dla głównego administratora.' }, { status: 403 });

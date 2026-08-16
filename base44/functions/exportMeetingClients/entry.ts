@@ -153,6 +153,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 });
     }
 
+    // Eksport danych klientów — dostępny tylko dla głównego administratora
+    // (wywołania systemowe / automatyczne nie mają kontekstu użytkownika i przechodzą dalej)
+    const requestUser = await base44.auth.me().catch(() => null);
+    if (requestUser?.email) {
+      const mainAdminEmail = (Deno.env.get('MAIN_ADMIN_EMAIL') || '').trim().toLowerCase();
+      if (!mainAdminEmail || requestUser.email.trim().toLowerCase() !== mainAdminEmail) {
+        return Response.json({ error: 'Eksport danych jest dostępny tylko dla głównego administratora.' }, { status: 403 });
+      }
+    }
+
     let body = {};
     try {
       body = await req.json();
