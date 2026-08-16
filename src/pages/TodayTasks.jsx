@@ -7,6 +7,7 @@ import TaskSection from "@/components/today/TaskSection";
 import TaskCard from "@/components/today/TaskCard";
 import AdvisorFilter from "@/components/today/AdvisorFilter";
 import { PhoneCall, CalendarClock, AlarmClock } from "lucide-react";
+import { buildClosedClientKeys, isClientClosed, looksClosed } from "@/lib/closedClients";
 
 const STALE_DAYS = 3;
 
@@ -51,6 +52,14 @@ export default function TodayTasks() {
     enabled: !!email,
   });
 
+  const { data: allMeetingReports = [], isLoading: loadingMeetingReports } = useQuery({
+    queryKey: ["today-meetingReports", email, isAdmin],
+    queryFn: () => isAdmin
+      ? base44.entities.MeetingReport.list("-meeting_date", 5000)
+      : base44.entities.MeetingReport.filter({ author_email: email }, "-meeting_date", 500),
+    enabled: !!email,
+  });
+
   // Lista handlowców do filtra (tylko admin)
   const people = useMemo(() => {
     if (!isAdmin) return [];
@@ -78,10 +87,17 @@ export default function TodayTasks() {
 
   const ownerLabel = (name, email) => (isAdmin ? name || email || "" : "");
 
+  // Klienci z podpisaną umową / sprzedażą wg treści raportów — nie są zaległi
+  const closedKeys = useMemo(
+    () => buildClosedClientKeys([allPhoneReports, allMeetingReports]),
+    [allPhoneReports, allMeetingReports]
+  );
+  const isClosed = (lead) => isClientClosed(closedKeys, lead);
+
   // Do oddzwonienia: leady z paczek ze statusem "callback" + raporty telefoniczne z datą oddzwonienia na dziś lub zaległą
   const callbacks = useMemo(() => {
     const leadItems = leads
-      .filter(l => l.status === "callback" && !l.is_archived)
+      .filter(l => l.status === "callback" && !l.is_archived && !isClosed(l))
       .map(l => {
         const days = daysSince(l.contacted_at || l.assigned_at);
         const overdue = days !== null && days >= 1;
@@ -99,7 +115,7 @@ export default function TodayTasks() {
       });
 
     const reportItems = phoneReports
-      .filter(r => r.callback_date && r.callback_date <= today)
+      .filter(r => r.callback_date && r.callback_date <= today && !looksClosed(r.description, r.next_steps))
       .map(r => ({
         id: `report-${r.id}`,
         title: r.client_name,
@@ -113,7 +129,7 @@ export default function TodayTasks() {
       }));
 
     return [...reportItems, ...leadItems].sort((a, b) => String(a.sortKey).localeCompare(String(b.sortKey)));
-  }, [leads, phoneReports, today, isAdmin]);
+  }, [leads, phoneReports, today, isAdmin, closedKeys]);
 
   // Spotkania na dziś z kalendarza + umówione spotkania z leadów
   const meetings = useMemo(() => {
@@ -151,7 +167,7 @@ export default function TodayTasks() {
   // Leady bez ruchu z paczek kontaktów
   const staleLeads = useMemo(() => {
     return leads
-      .filter(l => !l.is_archived && ["assigned", "contacted", "interested"].includes(l.status))
+      .filter(l => !l.is_archived && ["assigned", "contacted", "interested"].includes(l.status) && !isClosed(l))
       .map(l => ({ lead: l, days: daysSince(l.contacted_at || l.assigned_at) }))
       .filter(x => x.days !== null && x.days >= STALE_DAYS)
       .sort((a, b) => b.days - a.days)
@@ -165,9 +181,9 @@ export default function TodayTasks() {
         badge: `${days} dni bez ruchu`,
         badgeClass: "bg-orange-100 text-orange-700",
       }));
-  }, [leads, isAdmin]);
+  }, [leads, isAdmin, closedKeys]);
 
-  if (!accessChecked || loadingLeads || loadingReports || loadingEvents) {
+  if (!accessChecked || loadingLeads || loadingReports || loadingEvents || loadingMeetingReports) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
