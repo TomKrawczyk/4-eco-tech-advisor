@@ -85,6 +85,7 @@ const navStructure = [
       { name: "KontaktyTelefoniczne", label: "Kontakty telefoniczne", path: "/kontakty-telefoniczne", roles: ["admin", "owner"] },
       { name: "PackageAssignmentReport", label: "Raport paczek kontaktów", roles: ["admin", "hr_admin", "group_leader"] },
       { name: "AllReports", label: "Wszystkie raporty", adminOnly: true },
+      { name: "HiddenDataArchive", label: "Ukryte dane (eksport)", roles: ["admin"] },
       { name: "ScreenshotAttempts", label: "Próby zrzutów ekranu", roles: ["admin"] },
       { name: "RejectedMeetings", label: "Odrzucone spotkania", adminOnly: true },
       { name: "CleanupMeetings", label: "Usuń niepodjęte", adminOnly: true },

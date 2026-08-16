@@ -22,6 +22,7 @@ import KontaktyTelefoniczne from '@/pages/KontaktyTelefoniczne';
 import PackageAssignmentReport from '@/pages/PackageAssignmentReport';
 import ScreenshotAttempts from '@/pages/ScreenshotAttempts';
 import HiddenLeads from '@/pages/HiddenLeads';
+import HiddenDataArchive from '@/pages/HiddenDataArchive';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -167,6 +168,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="HiddenLeads">
             <HiddenLeads />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/HiddenDataArchive"
+        element={
+          <LayoutWrapper currentPageName="HiddenDataArchive">
+            <HiddenDataArchive />
           </LayoutWrapper>
         }
       />
