@@ -62,6 +62,7 @@ function DesktopDropdown({ label, items, isGroupActive, currentPageName }) {
 // Struktura nawigacji: pojedyncze linki lub grupy z dropdown
 const navStructure = [
   { name: "Dashboard", label: "Start" },
+  { name: "TodayTasks", label: "Dziś do zrobienia" },
   { name: "Checklist", label: "Checklista" },
   { name: "Interview", label: "Wywiad" },
   { name: "AutoconsumptionCalc", label: "Autokonsumpcja" },
