@@ -258,7 +258,8 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       return name ? "n:" + name : null;
     };
 
-    const candidates = leads.filter(l => l.is_archived !== true && l.is_duplicate !== true && l.duplicate_ignored !== true);
+    // Porównujemy też z zarchiwizowanymi (jako punkt odniesienia), ale duplikatem oznaczamy tylko aktywne
+    const candidates = leads.filter(l => l.is_duplicate !== true && l.duplicate_ignored !== true);
     const groups = {};
     for (const l of candidates) {
       const k = dupKey(l);
@@ -271,9 +272,11 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     Object.values(groups).forEach(g => {
       if (g.length < 2) return;
       const sorted = [...g].sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
-      // Zachowaj przypisany kontakt jako oryginał (lub najstarszy)
-      const original = sorted.find(l => l.assigned_user_email) || sorted[0];
-      sorted.filter(l => l.id !== original.id).forEach(l => {
+      // Oryginał: aktywny przypisany > przypisany > najstarszy
+      const original = sorted.find(l => l.assigned_user_email && l.is_archived !== true)
+        || sorted.find(l => l.assigned_user_email)
+        || sorted[0];
+      sorted.filter(l => l.id !== original.id && l.is_archived !== true).forEach(l => {
         toMark.push({ id: l.id, is_duplicate: true, duplicate_of: original.client_name || "" });
       });
     });
