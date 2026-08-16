@@ -272,8 +272,9 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     Object.values(groups).forEach(g => {
       if (g.length < 2) return;
       const sorted = [...g].sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
-      // Oryginał: aktywny przypisany > przypisany > najstarszy
-      const original = sorted.find(l => l.assigned_user_email && l.is_archived !== true)
+      // Jeśli w grupie jest kontakt zarchiwizowany — on jest oryginałem, a wszystkie aktywne kopie to duplikaty.
+      // W przeciwnym razie: przypisany > najstarszy.
+      const original = sorted.find(l => l.is_archived === true)
         || sorted.find(l => l.assigned_user_email)
         || sorted[0];
       sorted.filter(l => l.id !== original.id && l.is_archived !== true).forEach(l => {
