@@ -20,6 +20,7 @@ import Finansowanie from '@/pages/Finansowanie';
 import RaportTygodniowyPH from '@/pages/RaportTygodniowyPH';
 import KontaktyTelefoniczne from '@/pages/KontaktyTelefoniczne';
 import PackageAssignmentReport from '@/pages/PackageAssignmentReport';
+import ScreenshotAttempts from '@/pages/ScreenshotAttempts';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -157,6 +158,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="KontaktyTelefoniczne">
             <KontaktyTelefoniczne />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/ScreenshotAttempts"
+        element={
+          <LayoutWrapper currentPageName="ScreenshotAttempts">
+            <ScreenshotAttempts />
           </LayoutWrapper>
         }
       />
