@@ -21,6 +21,7 @@ import RaportTygodniowyPH from '@/pages/RaportTygodniowyPH';
 import KontaktyTelefoniczne from '@/pages/KontaktyTelefoniczne';
 import PackageAssignmentReport from '@/pages/PackageAssignmentReport';
 import ScreenshotAttempts from '@/pages/ScreenshotAttempts';
+import HiddenLeads from '@/pages/HiddenLeads';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -158,6 +159,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="KontaktyTelefoniczne">
             <KontaktyTelefoniczne />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/HiddenLeads"
+        element={
+          <LayoutWrapper currentPageName="HiddenLeads">
+            <HiddenLeads />
           </LayoutWrapper>
         }
       />

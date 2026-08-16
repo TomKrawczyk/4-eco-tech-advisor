@@ -11,6 +11,7 @@ import PackageDetailView from "@/components/contact-packages/PackageDetailView";
 import AdvisorSummary from "@/components/contact-packages/AdvisorSummary";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
 import LeadExtraData from "@/components/contact-packages/LeadExtraData";
+import { isHiddenFromAdvisor } from "@/components/contact-packages/leadExpiry";
 
 export default function ContactPackages() {
   const { currentUser, accessChecked } = useCurrentUser();
@@ -410,7 +411,13 @@ function PackageCard({ pkg, stats, onClick, isAdmin, onEdit, onDelete }) {
   );
 }
 
-function AdvisorView({ leads, currentUser, qc }) {
+function AdvisorView({ leads: allLeads, currentUser, qc }) {
+  // Kontakty wygasłe (niezainteresowany/błędny numer po 48h, brak odpowiedzi po 5 dniach)
+  // są ukrywane handlowcowi — widzi je tylko administrator.
+  const leads = useMemo(() => {
+    const now = Date.now();
+    return allLeads.filter(l => !isHiddenFromAdvisor(l, now));
+  }, [allLeads]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [archiveTab, setArchiveTab] = useState("active");

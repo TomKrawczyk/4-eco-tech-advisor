@@ -100,6 +100,7 @@ const navStructure = [
   },
   { name: "Education", label: "Szkolenia" },
   { name: "ContactPackages", label: "Paczki kontaktów", roles: ["admin", "group_leader", "team_leader", "advisor"] },
+  { name: "HiddenLeads", label: "Ukryte kontakty", roles: ["admin"] },
   { name: "Documentation", label: "Dokumentacja", adminOnly: true },
   { name: "MagazynyPrezentacja", label: "Prezentacja magazynów" },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: false, roles: ["admin", "hr_admin"] },
