@@ -6,7 +6,16 @@ function addSheet(wb, name, rows) {
   XLSX.utils.book_append_sheet(wb, ws, name);
 }
 
-export function exportHiddenRecordsToExcel({ leads = [], phoneContacts = [], meetingReports = [], calendarEvents = [], packageNames = {} }) {
+const RESULT_LABELS = {
+  interested: "Zainteresowany",
+  not_interested: "Niezainteresowany",
+  no_answer: "Brak odpowiedzi",
+  callback: "Ponowny kontakt",
+  meeting_scheduled: "Umówione spotkanie",
+  other: "Inne",
+};
+
+export function exportHiddenRecordsToExcel({ leads = [], phoneContacts = [], meetingReports = [], calendarEvents = [], packageNames = {}, reportByKey = {} }) {
   const wb = XLSX.utils.book_new();
 
   addSheet(wb, "Kontakty z paczek", leads.map(l => ({
@@ -19,10 +28,14 @@ export function exportHiddenRecordsToExcel({ leads = [], phoneContacts = [], mee
     "Handlowiec": l.assigned_user_name || "",
     "Email handlowca": l.assigned_user_email || "",
     "Data kontaktu": l.contacted_at || "",
-    "Notatki handlowca": l.contact_notes || "",
+    "Notatki handlowca (powód)": l.contact_notes || "",
+    "Notatka z importu": l.notes || "",
+    "Umówione spotkanie": [l.scheduled_meeting_date, l.scheduled_meeting_time].filter(Boolean).join(" "),
   })));
 
-  addSheet(wb, "Kontakty telefoniczne", phoneContacts.map(c => ({
+  addSheet(wb, "Kontakty telefoniczne", phoneContacts.map(c => {
+    const report = reportByKey[c.contact_key];
+    return {
     "Klient": c.client_name || "",
     "Telefon": c.phone || c.client_phone || "",
     "Adres": c.address || c.client_address || "",
@@ -32,8 +45,13 @@ export function exportHiddenRecordsToExcel({ leads = [], phoneContacts = [], mee
     "Doradca": c.assigned_user_name || "",
     "Email doradcy": c.assigned_user_email || "",
     "Grupa": c.assigned_group_name || "",
-    "Uwagi": c.comments || "",
-  })));
+    "Uwagi z arkusza": c.comments || "",
+    "Wynik raportu": report ? (RESULT_LABELS[report.result] || report.result || "") : "Brak raportu",
+    "Opis rozmowy": report?.description || "",
+    "Kolejne kroki": report?.next_steps || "",
+    "Data ponownego kontaktu": report?.callback_date || "",
+    };
+  }));
 
   addSheet(wb, "Raporty po spotkaniach", meetingReports.map(r => ({
     "Klient": r.client_name || "",

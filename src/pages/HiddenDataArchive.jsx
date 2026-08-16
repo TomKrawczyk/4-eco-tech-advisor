@@ -12,6 +12,30 @@ import { isHiddenFromAdvisor } from "@/components/contact-packages/leadExpiry";
 import { isOlderThanDays } from "@/lib/oldRecordVisibility";
 import { exportHiddenRecordsToExcel } from "@/lib/hiddenRecordsExcel";
 
+const RESULT_LABELS = {
+  interested: "Zainteresowany",
+  not_interested: "Niezainteresowany",
+  no_answer: "Brak odpowiedzi",
+  callback: "Ponowny kontakt",
+  meeting_scheduled: "Umówione spotkanie",
+  other: "Inne",
+};
+
+// Buduje opis powodu/notatki dla ukrytego kontaktu telefonicznego wraz z raportem handlowca
+function buildPhoneNote(contact, report) {
+  const parts = [];
+  if (contact.comments) parts.push(`Uwagi z arkusza: ${contact.comments}`);
+  if (report) {
+    parts.push(`Raport: ${RESULT_LABELS[report.result] || report.result || "—"}`);
+    if (report.description) parts.push(`Opis rozmowy: ${report.description}`);
+    if (report.next_steps) parts.push(`Kolejne kroki: ${report.next_steps}`);
+    if (report.callback_date) parts.push(`Ponowny kontakt: ${report.callback_date}`);
+  } else {
+    parts.push("Brak raportu z rozmowy");
+  }
+  return parts.join("\n");
+}
+
 const TABS = [
   { key: "leads", label: "Kontakty z paczek" },
   { key: "phone", label: "Kontakty telefoniczne" },
@@ -55,6 +79,18 @@ export default function HiddenDataArchive() {
     queryFn: () => base44.entities.CalendarEvent.list("-event_date", 5000),
     enabled: isAdmin,
   });
+
+  const { data: phoneReports = [] } = useQuery({
+    queryKey: ["hiddenData-phoneReports"],
+    queryFn: () => base44.entities.PhoneContactReport.list("-created_date", 5000),
+    enabled: isAdmin,
+  });
+
+  const reportByKey = useMemo(() => {
+    const map = {};
+    phoneReports.forEach(r => { if (r.contact_key && !map[r.contact_key]) map[r.contact_key] = r; });
+    return map;
+  }, [phoneReports]);
 
   const packageNames = useMemo(() => {
     const map = {};
@@ -142,6 +178,7 @@ export default function HiddenDataArchive() {
               meetingReports: filtered.meetings,
               calendarEvents: filtered.calendar,
               packageNames,
+              reportByKey,
             })}
           >
             <Download className="w-4 h-4" />
@@ -161,6 +198,11 @@ export default function HiddenDataArchive() {
           getMeta={l => [l.client_phone, l.assigned_user_name, packageNames[l.package_id]].filter(Boolean).join(" • ")}
           getDate={l => (l.contacted_at || l.updated_date || "").split("T")[0]}
           getBadge={l => l.status}
+          getNote={l => [
+            l.contact_notes ? `Notatka handlowca: ${l.contact_notes}` : "Brak notatki handlowca",
+            l.notes ? `Notatka z importu: ${l.notes}` : "",
+            l.scheduled_meeting_date ? `Umówione spotkanie: ${l.scheduled_meeting_date} ${l.scheduled_meeting_time || ""}` : "",
+          ].filter(Boolean).join("\n")}
         />
       ) : tab === "phone" ? (
         <HiddenDataList
@@ -169,6 +211,7 @@ export default function HiddenDataArchive() {
           getMeta={c => [c.phone || c.client_phone, c.assigned_user_name, c.sheet].filter(Boolean).join(" • ")}
           getDate={c => c.contact_date || c.date || ""}
           getBadge={c => c.status}
+          getNote={c => buildPhoneNote(c, reportByKey[c.contact_key])}
         />
       ) : tab === "meetings" ? (
         <HiddenDataList
@@ -177,6 +220,10 @@ export default function HiddenDataArchive() {
           getMeta={r => [r.client_phone, r.author_name].filter(Boolean).join(" • ")}
           getDate={r => r.meeting_date || ""}
           getBadge={r => r.status}
+          getNote={r => [
+            r.description ? `Notatki ze spotkania: ${r.description}` : "Brak notatek ze spotkania",
+            r.next_steps ? `Kolejne kroki: ${r.next_steps}` : "",
+          ].filter(Boolean).join("\n")}
         />
       ) : (
         <HiddenDataList
@@ -185,6 +232,10 @@ export default function HiddenDataArchive() {
           getMeta={e => [e.client_name, e.owner_name, e.location].filter(Boolean).join(" • ")}
           getDate={e => e.event_date || ""}
           getBadge={e => e.event_type}
+          getNote={e => [
+            e.description || "Brak opisu wydarzenia",
+            e.postponed_to ? `Przełożone na: ${e.postponed_to}` : "",
+          ].filter(Boolean).join("\n")}
         />
       )}
     </div>

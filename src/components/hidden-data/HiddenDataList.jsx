@@ -2,7 +2,7 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 
 // Uniwersalna lista ukrytych rekordów — każdy wiersz opisany tytułem, datą i metadanymi.
-export default function HiddenDataList({ items, getTitle, getDate, getMeta, getBadge }) {
+export default function HiddenDataList({ items, getTitle, getDate, getMeta, getBadge, getNote }) {
   if (items.length === 0) {
     return <p className="text-center py-12 text-sm text-gray-400">Brak ukrytych danych w tej kategorii</p>;
   }
@@ -23,6 +23,11 @@ export default function HiddenDataList({ items, getTitle, getDate, getMeta, getB
               )}
             </div>
           </div>
+          {getNote?.(item) && (
+            <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600 whitespace-pre-wrap break-words">
+              {getNote(item)}
+            </div>
+          )}
         </div>
       ))}
     </div>
