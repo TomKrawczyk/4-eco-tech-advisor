@@ -7,6 +7,7 @@ import {
   Shield, Zap, Bell, Download, Phone, Star, Wrench, BarChart3
 } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
+import AdminSubTabs from "@/components/documentation/AdminSubTabs";
 
 
 const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
@@ -156,16 +157,28 @@ export default function Documentation() {
           >
             ⚙️ Techniczna
           </button>
+          <button
+            onClick={() => setActiveTab("admin")}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "admin"
+                ? "bg-green-600 text-white shadow"
+                : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            🛡️ Administracja
+          </button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleDownload(activeTab)}
-          className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50"
-        >
-          <Download className="w-4 h-4" />
-          Pobierz HTML
-        </Button>
+        {activeTab !== "admin" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleDownload(activeTab)}
+            className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50"
+          >
+            <Download className="w-4 h-4" />
+            Pobierz HTML
+          </Button>
+        )}
       </div>
 
       <div id="doc-content">
@@ -591,6 +604,13 @@ export default function Documentation() {
               <li className="flex gap-2"><span className="font-bold text-green-600">5.</span> Jeśli strona wymaga nowej encji — utwórz <Code>entities/NazwaEncji.json</Code> z JSON Schema.</li>
             </ol>
           </Section>
+        </div>
+      )}
+
+      {/* ===================== ADMINISTRACJA ===================== */}
+      {activeTab === "admin" && (
+        <div>
+          <AdminSubTabs />
         </div>
       )}
       </div>{/* end doc-content */}
