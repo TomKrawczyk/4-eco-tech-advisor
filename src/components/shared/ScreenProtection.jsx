@@ -4,9 +4,21 @@ import { base44 } from "@/api/base44Client";
 
 function isBlockedShortcut(event) {
   const key = (event.key || "").toLowerCase();
+  const code = event.code || "";
   if (key === "printscreen") return true;
   const hasModifier = event.ctrlKey || event.metaKey;
-  return hasModifier && (key === "p" || (event.shiftKey && ["3", "4", "5", "s"].includes(key)));
+  if (!hasModifier) return false;
+  if (key === "p") return true;
+  if (!event.shiftKey) return false;
+  // macOS: Cmd+Shift+3/4/5/6 (event.key to # $ % ^, więc sprawdzamy event.code)
+  const macCodes = ["Digit3", "Digit4", "Digit5", "Digit6"];
+  const macSymbols = ["#", "$", "%", "^"];
+  return (
+    key === "s" ||
+    macCodes.includes(code) ||
+    macSymbols.includes(key) ||
+    ["3", "4", "5", "6"].includes(key)
+  );
 }
 
 export default function ScreenProtection({ currentUser }) {
