@@ -164,6 +164,28 @@ export default function TodayTasks() {
     return [...eventItems, ...leadMeetings].sort((a, b) => String(a.sortKey).localeCompare(String(b.sortKey)));
   }, [events, leads, today, isAdmin]);
 
+  // Po naciśnięciu "Zadzwoń" lead trafia na listę kontaktów telefonicznych
+  const moveLeadToPhoneContacts = async (lead) => {
+    const date = todayStr();
+    const existing = await base44.entities.PhoneContact.filter({ contact_key: `lead_${lead.id}` });
+    if (existing.length === 0) {
+      await base44.entities.PhoneContact.create({
+        contact_key: `lead_${lead.id}`,
+        sheet: "Paczki kontaktów",
+        client_name: lead.client_name,
+        phone: lead.client_phone || "",
+        address: lead.client_address || "",
+        contact_date: date,
+        date,
+        status: "Kontakt do doradcy",
+        comments: lead.contact_notes || lead.notes || "",
+        assigned_user_email: lead.assigned_user_email || email,
+        assigned_user_name: lead.assigned_user_name || currentUser?.displayName || "",
+        assigned_group_id: lead.group_id || "",
+      });
+    }
+  };
+
   // Leady bez ruchu z paczek kontaktów
   const staleLeads = useMemo(() => {
     return leads
@@ -171,16 +193,23 @@ export default function TodayTasks() {
       .map(l => ({ lead: l, days: daysSince(l.contacted_at || l.assigned_at) }))
       .filter(x => x.days !== null && x.days >= STALE_DAYS)
       .sort((a, b) => b.days - a.days)
-      .map(({ lead: l, days }) => ({
-        id: `stale-${l.id}`,
-        title: l.client_name,
-        meta: [l.client_phone, l.client_address, ownerLabel(l.assigned_user_name, l.assigned_user_email)].filter(Boolean).join(" • "),
-        note: l.contact_notes || "",
-        phone: l.client_phone,
-        address: l.client_address,
-        badge: `${days} dni bez ruchu`,
-        badgeClass: "bg-orange-100 text-orange-700",
-      }));
+      .map(({ lead: l }) => {
+        const last = (l.contacted_at || l.assigned_at || "").split("T")[0];
+        return {
+          id: `stale-${l.id}`,
+          title: l.client_name,
+          meta: [
+            l.client_phone,
+            l.client_address,
+            ownerLabel(l.assigned_user_name, l.assigned_user_email),
+            last ? `Data ostatniego kontaktu: ${last}` : null,
+          ].filter(Boolean).join(" • "),
+          note: l.contact_notes || "",
+          phone: l.client_phone,
+          address: l.client_address,
+          onCall: () => moveLeadToPhoneContacts(l),
+        };
+      });
   }, [leads, isAdmin, closedKeys]);
 
   if (!accessChecked || loadingLeads || loadingReports || loadingEvents || loadingMeetingReports) {

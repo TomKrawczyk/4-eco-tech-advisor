@@ -2,7 +2,7 @@ import React from "react";
 import { Phone, MapPin } from "lucide-react";
 
 // Pojedynczy wiersz zadania z szybkimi akcjami: zadzwoń / nawiguj
-export default function TaskCard({ title, meta, note, badge, badgeClass = "bg-gray-100 text-gray-700", phone, address }) {
+export default function TaskCard({ title, meta, note, badge, badgeClass = "bg-gray-100 text-gray-700", phone, address, onCall }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
@@ -24,6 +24,7 @@ export default function TaskCard({ title, meta, note, badge, badgeClass = "bg-gr
           {phone && (
             <a
               href={`tel:${String(phone).replace(/\s/g, "")}`}
+              onClick={() => onCall?.()}
               className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition-colors"
             >
               <Phone className="w-4 h-4" />
