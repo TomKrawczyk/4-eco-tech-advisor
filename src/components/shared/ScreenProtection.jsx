@@ -15,6 +15,29 @@ export default function ScreenProtection({ currentUser }) {
 
   useEffect(() => {
     let timeoutId;
+    let lastLogged = 0;
+
+    const logAttempt = async (key) => {
+      if (Date.now() - lastLogged < 1500) return;
+      lastLogged = Date.now();
+      let email = currentUser?.email;
+      let name = currentUser?.displayName || currentUser?.full_name || "";
+      if (!email) {
+        try {
+          const me = await base44.auth.me();
+          email = me?.email;
+          name = name || me?.full_name || "";
+        } catch (_) {}
+      }
+      if (!email) return;
+      base44.entities.ActivityLog.create({
+        user_email: email,
+        user_name: name,
+        action_type: "screenshot_attempt",
+        page_name: window.location.hash || window.location.pathname,
+        details: { key, user_agent: navigator.userAgent }
+      }).catch(() => {});
+    };
 
     const showShield = (nextMessage) => {
       setMessage(nextMessage || "");
@@ -39,18 +62,17 @@ export default function ScreenProtection({ currentUser }) {
       event.preventDefault();
       event.stopPropagation();
       showShield("Wykryto próbę przechwycenia ekranu");
-      if (currentUser?.email) {
-        base44.entities.ActivityLog.create({
-          user_email: currentUser.email,
-          user_name: currentUser.displayName || currentUser.full_name || "",
-          action_type: "screenshot_attempt",
-          page_name: window.location.hash || window.location.pathname,
-          details: { key: event.key, user_agent: navigator.userAgent }
-        }).catch(() => {});
-      }
+      logAttempt(event.key);
       if ((event.key || "").toLowerCase() === "printscreen" && navigator.clipboard?.writeText) {
         navigator.clipboard.writeText("").catch(() => {});
       }
+    };
+    // PrintScreen w Windows często trafia tylko do keyup
+    const handleKeyUp = (event) => {
+      if ((event.key || "").toLowerCase() !== "printscreen") return;
+      showShield("Wykryto próbę przechwycenia ekranu");
+      logAttempt(event.key);
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText("").catch(() => {});
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -58,6 +80,7 @@ export default function ScreenProtection({ currentUser }) {
     window.addEventListener("blur", handleBlur);
     window.addEventListener("focus", handleFocus);
     window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("keyup", handleKeyUp, true);
 
     return () => {
       window.clearTimeout(timeoutId);
@@ -66,6 +89,7 @@ export default function ScreenProtection({ currentUser }) {
       window.removeEventListener("blur", handleBlur);
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("keyup", handleKeyUp, true);
     };
   }, [currentUser]);
 
