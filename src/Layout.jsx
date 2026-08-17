@@ -62,7 +62,6 @@ function DesktopDropdown({ label, items, isGroupActive, currentPageName }) {
 // Struktura nawigacji: pojedyncze linki lub grupy z dropdown
 const navStructure = [
   { name: "Dashboard", label: "Start" },
-  { name: "TodayTasks", label: "Dziś do zrobienia" },
   { name: "Checklist", label: "Checklista" },
   { name: "Interview", label: "Wywiad" },
   { name: "AutoconsumptionCalc", label: "Autokonsumpcja" },
@@ -102,6 +101,7 @@ const navStructure = [
   },
   { name: "Education", label: "Szkolenia" },
   { name: "ContactPackages", label: "Paczki kontaktów", roles: ["admin", "group_leader", "team_leader", "advisor"] },
+  { name: "TodayTasks", label: "Dziś do zrobienia" },
   { name: "Documentation", label: "Dokumentacja", adminOnly: true },
   { name: "MagazynyPrezentacja", label: "Prezentacja magazynów" },
   { name: "UserManagement", label: "Użytkownicy", adminOnly: false, roles: ["admin", "hr_admin"] },
