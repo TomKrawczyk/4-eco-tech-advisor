@@ -90,9 +90,9 @@ function ReportForm({ contact, initialData, currentUser, onSave, onCancel, savin
   );
 }
 
-export default function PhoneContactReportModal({ contact, currentUser, open, onClose }) {
+export default function PhoneContactReportModal({ contact, currentUser, open, onClose, startInCreate = false }) {
   const queryClient = useQueryClient();
-  const [view, setView] = useState("list"); // list | create | edit
+  const [view, setView] = useState(startInCreate ? "create" : "list"); // list | create | edit
   const [editingReport, setEditingReport] = useState(null);
   const [reportSaved, setReportSaved] = useState(false);
 
@@ -143,7 +143,7 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
 
   const handleClose = () => {
     const saved = reportSaved;
-    setView("list");
+    setView(startInCreate ? "create" : "list");
     setEditingReport(null);
     setReportSaved(false);
     onClose?.(saved);

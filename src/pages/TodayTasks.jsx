@@ -7,6 +7,7 @@ import TaskSection from "@/components/today/TaskSection";
 import TaskCard from "@/components/today/TaskCard";
 import AdvisorFilter from "@/components/today/AdvisorFilter";
 import useHiddenTasks from "@/components/today/useHiddenTasks";
+import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
 import { PhoneCall, CalendarClock, AlarmClock } from "lucide-react";
 import { buildClosedClientKeys, isClientClosed, looksClosed } from "@/lib/closedClients";
 
@@ -32,6 +33,7 @@ export default function TodayTasks() {
   const [advisor, setAdvisor] = useState("all");
   const queryClient = useQueryClient();
   const { isHidden, hide } = useHiddenTasks();
+  const [reportContact, setReportContact] = useState(null);
 
   // Ukrycie kontaktu — lead trafia do archiwum i znika z listy zadań
   const hideLead = async (lead) => {
@@ -167,6 +169,18 @@ export default function TodayTasks() {
     }
   };
 
+  // Zadzwoń → przenieś na listę kontaktów telefonicznych i otwórz okno raportu
+  const handleCall = async (lead) => {
+    setReportContact({
+      contact_key: `lead_${lead.id}`,
+      client_name: lead.client_name,
+      phone: lead.client_phone || "",
+      address: lead.client_address || "",
+      contact_date: todayStr(),
+    });
+    await moveLeadToPhoneContacts(lead);
+  };
+
   // Do oddzwonienia: leady z paczek ze statusem "callback" + raporty telefoniczne z datą oddzwonienia na dziś lub zaległą
   const callbacks = useMemo(() => {
     const leadItems = leads
@@ -186,7 +200,7 @@ export default function TodayTasks() {
           address: l.client_address,
           badge: last ? `Ostatni kontakt: ${last}` : null,
           badgeClass: "bg-gray-100 text-gray-700",
-          onCall: () => moveLeadToPhoneContacts(l),
+          onCall: () => handleCall(l),
           onHide: () => hideLead(l),
           sortKey: l.contacted_at || "",
         };
@@ -275,7 +289,7 @@ export default function TodayTasks() {
           address: l.client_address,
           badge: last ? `Ostatni kontakt: ${last}` : null,
           badgeClass: "bg-gray-100 text-gray-700",
-          onCall: () => moveLeadToPhoneContacts(l),
+          onCall: () => handleCall(l),
           onHide: () => hideLead(l),
         };
       })
@@ -335,6 +349,19 @@ export default function TodayTasks() {
       >
         {staleLeads.map(item => <TaskCard key={item.id} {...item} />)}
       </TaskSection>
+
+      {reportContact && (
+        <PhoneContactReportModal
+          contact={reportContact}
+          currentUser={currentUser}
+          open={true}
+          startInCreate
+          onClose={() => {
+            setReportContact(null);
+            queryClient.invalidateQueries({ queryKey: ["today-phoneReports"] });
+          }}
+        />
+      )}
     </div>
   );
 }
