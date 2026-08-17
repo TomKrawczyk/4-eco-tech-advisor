@@ -23,7 +23,7 @@ export default function ScreenWatermark({ user }) {
         {rows.map((_, i) => (
           <div
             key={i}
-            className="whitespace-nowrap text-[13px] md:text-base font-bold tracking-wide text-gray-900/[0.16]"
+            className="whitespace-nowrap text-[11px] md:text-sm font-semibold tracking-wide text-gray-900/[0.07]"
           >
             {`${label}     ${label}     ${label}     ${label}`}
           </div>
