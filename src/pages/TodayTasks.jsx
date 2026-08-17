@@ -11,7 +11,7 @@ import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactRep
 import { PhoneCall, CalendarClock, AlarmClock } from "lucide-react";
 import { buildClosedClientKeys, isClientClosed, looksClosed } from "@/lib/closedClients";
 
-const STALE_DAYS = 7;
+const STALE_DAYS = 3;
 
 function todayStr() {
   return new Date().toISOString().split("T")[0];
