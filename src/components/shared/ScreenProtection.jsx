@@ -24,8 +24,10 @@ function isBlockedShortcut(event) {
 export default function ScreenProtection({ currentUser }) {
   const [shieldVisible, setShieldVisible] = useState(false);
   const [message, setMessage] = useState("");
+  const isAdmin = currentUser?.role === "admin";
 
   useEffect(() => {
+    if (isAdmin) return;
     let timeoutId;
     let lastLogged = 0;
 
@@ -103,7 +105,9 @@ export default function ScreenProtection({ currentUser }) {
       window.removeEventListener("keydown", handleKeyDown, true);
       window.removeEventListener("keyup", handleKeyUp, true);
     };
-  }, [currentUser]);
+  }, [currentUser, isAdmin]);
+
+  if (isAdmin) return null;
 
   return (
     <>
