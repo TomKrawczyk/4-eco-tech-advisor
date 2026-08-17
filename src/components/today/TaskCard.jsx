@@ -1,8 +1,8 @@
 import React from "react";
-import { Phone, MapPin } from "lucide-react";
+import { Phone, MapPin, EyeOff } from "lucide-react";
 
 // Pojedynczy wiersz zadania z szybkimi akcjami: zadzwoń / nawiguj
-export default function TaskCard({ title, meta, note, badge, badgeClass = "bg-gray-100 text-gray-700", phone, address, onCall }) {
+export default function TaskCard({ title, meta, note, badge, badgeClass = "bg-gray-100 text-gray-700", phone, address, onCall, onHide }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
@@ -43,6 +43,17 @@ export default function TaskCard({ title, meta, note, badge, badgeClass = "bg-gr
             </a>
           )}
         </div>
+      )}
+
+      {onHide && (
+        <button
+          type="button"
+          onClick={onHide}
+          className="mt-2 w-full flex items-center justify-center gap-1.5 h-9 rounded-lg border border-gray-200 text-gray-500 text-xs font-medium hover:bg-gray-50 hover:text-red-600 transition-colors"
+        >
+          <EyeOff className="w-4 h-4" />
+          Ukryj kontakt
+        </button>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import PageHeader from "@/components/shared/PageHeader";
@@ -27,6 +27,18 @@ export default function TodayTasks() {
   const isAdmin = currentUser?.role === "admin";
   const today = todayStr();
   const [advisor, setAdvisor] = useState("all");
+  const queryClient = useQueryClient();
+
+  // Ukrycie kontaktu — lead trafia do archiwum i znika z listy zadań
+  const hideLead = async (lead) => {
+    await base44.entities.ContactLead.update(lead.id, {
+      is_archived: true,
+      archived_at: new Date().toISOString(),
+      archived_by_email: email,
+      archived_by_name: currentUser?.displayName || currentUser?.full_name || "",
+    });
+    queryClient.invalidateQueries({ queryKey: ["today-leads"] });
+  };
 
   const { data: allLeads = [], isLoading: loadingLeads } = useQuery({
     queryKey: ["today-leads", email, isAdmin],
@@ -110,6 +122,7 @@ export default function TodayTasks() {
           address: l.client_address,
           badge: overdue ? `Zaległe: ${days} dni` : "Oddzwonić",
           badgeClass: overdue ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700",
+          onHide: () => hideLead(l),
           sortKey: l.contacted_at || "",
         };
       });
@@ -158,6 +171,7 @@ export default function TodayTasks() {
         address: l.client_address,
         badge: l.scheduled_meeting_time || "Dziś",
         badgeClass: "bg-green-100 text-green-700",
+        onHide: () => hideLead(l),
         sortKey: l.scheduled_meeting_time || "99:99",
       }));
 
@@ -208,6 +222,7 @@ export default function TodayTasks() {
           phone: l.client_phone,
           address: l.client_address,
           onCall: () => moveLeadToPhoneContacts(l),
+          onHide: () => hideLead(l),
         };
       });
   }, [leads, isAdmin, closedKeys]);
