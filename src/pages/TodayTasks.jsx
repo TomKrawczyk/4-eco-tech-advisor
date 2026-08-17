@@ -6,6 +6,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import TaskSection from "@/components/today/TaskSection";
 import TaskCard from "@/components/today/TaskCard";
 import AdvisorFilter from "@/components/today/AdvisorFilter";
+import useHiddenTasks from "@/components/today/useHiddenTasks";
 import { PhoneCall, CalendarClock, AlarmClock } from "lucide-react";
 import { buildClosedClientKeys, isClientClosed, looksClosed } from "@/lib/closedClients";
 
@@ -28,6 +29,7 @@ export default function TodayTasks() {
   const today = todayStr();
   const [advisor, setAdvisor] = useState("all");
   const queryClient = useQueryClient();
+  const { isHidden, hide } = useHiddenTasks();
 
   // Ukrycie kontaktu — lead trafia do archiwum i znika z listy zadań
   const hideLead = async (lead) => {
@@ -106,78 +108,6 @@ export default function TodayTasks() {
   );
   const isClosed = (lead) => isClientClosed(closedKeys, lead);
 
-  // Do oddzwonienia: leady z paczek ze statusem "callback" + raporty telefoniczne z datą oddzwonienia na dziś lub zaległą
-  const callbacks = useMemo(() => {
-    const leadItems = leads
-      .filter(l => l.status === "callback" && !l.is_archived && !isClosed(l))
-      .map(l => {
-        const days = daysSince(l.contacted_at || l.assigned_at);
-        const overdue = days !== null && days >= 1;
-        return {
-          id: `lead-${l.id}`,
-          title: l.client_name,
-          meta: [l.client_phone, l.client_address, ownerLabel(l.assigned_user_name, l.assigned_user_email)].filter(Boolean).join(" • "),
-          note: l.contact_notes || "",
-          phone: l.client_phone,
-          address: l.client_address,
-          badge: overdue ? `Zaległe: ${days} dni` : "Oddzwonić",
-          badgeClass: overdue ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700",
-          onHide: () => hideLead(l),
-          sortKey: l.contacted_at || "",
-        };
-      });
-
-    const reportItems = phoneReports
-      .filter(r => r.callback_date && r.callback_date <= today && !looksClosed(r.description, r.next_steps))
-      .map(r => ({
-        id: `report-${r.id}`,
-        title: r.client_name,
-        meta: [r.client_phone, r.client_address, ownerLabel(r.author_name, r.author_email)].filter(Boolean).join(" • "),
-        note: [r.description, r.next_steps].filter(Boolean).join("\n"),
-        phone: r.client_phone,
-        address: r.client_address,
-        badge: r.callback_date === today ? "Dziś" : `Zaległe: ${r.callback_date}`,
-        badgeClass: r.callback_date === today ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700",
-        sortKey: r.callback_date,
-      }));
-
-    return [...reportItems, ...leadItems].sort((a, b) => String(a.sortKey).localeCompare(String(b.sortKey)));
-  }, [leads, phoneReports, today, isAdmin, closedKeys]);
-
-  // Spotkania na dziś z kalendarza + umówione spotkania z leadów
-  const meetings = useMemo(() => {
-    const eventItems = events
-      .filter(e => e.event_date === today && e.status !== "cancelled")
-      .map(e => ({
-        id: `event-${e.id}`,
-        title: e.title || e.client_name || "Wydarzenie",
-        meta: [e.event_time, e.client_name, e.location, ownerLabel(e.owner_name, e.owner_email)].filter(Boolean).join(" • "),
-        note: e.description || "",
-        phone: e.client_phone,
-        address: e.location,
-        badge: e.event_time || "Dziś",
-        badgeClass: "bg-green-100 text-green-700",
-        sortKey: e.event_time || "99:99",
-      }));
-
-    const leadMeetings = leads
-      .filter(l => l.scheduled_meeting_date === today && !l.is_archived)
-      .map(l => ({
-        id: `leadmeet-${l.id}`,
-        title: l.client_name,
-        meta: [l.scheduled_meeting_time, l.client_phone, l.client_address, ownerLabel(l.assigned_user_name, l.assigned_user_email)].filter(Boolean).join(" • "),
-        note: l.contact_notes || "",
-        phone: l.client_phone,
-        address: l.client_address,
-        badge: l.scheduled_meeting_time || "Dziś",
-        badgeClass: "bg-green-100 text-green-700",
-        onHide: () => hideLead(l),
-        sortKey: l.scheduled_meeting_time || "99:99",
-      }));
-
-    return [...eventItems, ...leadMeetings].sort((a, b) => String(a.sortKey).localeCompare(String(b.sortKey)));
-  }, [events, leads, today, isAdmin]);
-
   // Po naciśnięciu "Zadzwoń" lead trafia na listę kontaktów telefonicznych
   const moveLeadToPhoneContacts = async (lead) => {
     const date = todayStr();
@@ -199,6 +129,90 @@ export default function TodayTasks() {
       });
     }
   };
+
+  // Do oddzwonienia: leady z paczek ze statusem "callback" + raporty telefoniczne z datą oddzwonienia na dziś lub zaległą
+  const callbacks = useMemo(() => {
+    const leadItems = leads
+      .filter(l => l.status === "callback" && !l.is_archived && !isClosed(l))
+      .map(l => {
+        const last = (l.contacted_at || l.assigned_at || "").split("T")[0];
+        return {
+          id: `lead-${l.id}`,
+          title: l.client_name,
+          meta: [
+            l.client_phone,
+            l.client_address,
+            ownerLabel(l.assigned_user_name, l.assigned_user_email),
+            last ? `Data ostatniego kontaktu: ${last}` : null,
+          ].filter(Boolean).join(" • "),
+          note: l.contact_notes || "",
+          phone: l.client_phone,
+          address: l.client_address,
+          onCall: () => moveLeadToPhoneContacts(l),
+          onHide: () => hideLead(l),
+          sortKey: l.contacted_at || "",
+        };
+      });
+
+    const reportItems = phoneReports
+      .filter(r => r.callback_date && r.callback_date <= today && !looksClosed(r.description, r.next_steps))
+      .map(r => ({
+        id: `report-${r.id}`,
+        title: r.client_name,
+        meta: [
+          r.client_phone,
+          r.client_address,
+          ownerLabel(r.author_name, r.author_email),
+          r.contact_date ? `Data ostatniego kontaktu: ${r.contact_date}` : null,
+        ].filter(Boolean).join(" • "),
+        note: [r.description, r.next_steps].filter(Boolean).join("\n"),
+        phone: r.client_phone,
+        address: r.client_address,
+        onHide: () => hide(`report-${r.id}`),
+        sortKey: r.callback_date,
+      }));
+
+    return [...reportItems, ...leadItems]
+      .filter(i => !isHidden(i.id))
+      .sort((a, b) => String(a.sortKey).localeCompare(String(b.sortKey)));
+  }, [leads, phoneReports, today, isAdmin, closedKeys, isHidden]);
+
+  // Spotkania na dziś z kalendarza + umówione spotkania z leadów
+  const meetings = useMemo(() => {
+    const eventItems = events
+      .filter(e => e.event_date === today && e.status !== "cancelled")
+      .map(e => ({
+        id: `event-${e.id}`,
+        title: e.title || e.client_name || "Wydarzenie",
+        meta: [e.event_time, e.client_name, e.location, ownerLabel(e.owner_name, e.owner_email)].filter(Boolean).join(" • "),
+        note: e.description || "",
+        phone: e.client_phone,
+        address: e.location,
+        badge: e.event_time || "Dziś",
+        badgeClass: "bg-green-100 text-green-700",
+        onHide: () => hide(`event-${e.id}`),
+        sortKey: e.event_time || "99:99",
+      }));
+
+    const leadMeetings = leads
+      .filter(l => l.scheduled_meeting_date === today && !l.is_archived)
+      .map(l => ({
+        id: `leadmeet-${l.id}`,
+        title: l.client_name,
+        meta: [l.scheduled_meeting_time, l.client_phone, l.client_address, ownerLabel(l.assigned_user_name, l.assigned_user_email)].filter(Boolean).join(" • "),
+        note: l.contact_notes || "",
+        phone: l.client_phone,
+        address: l.client_address,
+        badge: l.scheduled_meeting_time || "Dziś",
+        badgeClass: "bg-green-100 text-green-700",
+        onHide: () => hideLead(l),
+        sortKey: l.scheduled_meeting_time || "99:99",
+      }));
+
+    return [...eventItems, ...leadMeetings]
+      .filter(i => !isHidden(i.id))
+      .sort((a, b) => String(a.sortKey).localeCompare(String(b.sortKey)));
+  }, [events, leads, today, isAdmin, isHidden]);
 
   // Leady bez ruchu z paczek kontaktów
   const staleLeads = useMemo(() => {
@@ -224,8 +238,9 @@ export default function TodayTasks() {
           onCall: () => moveLeadToPhoneContacts(l),
           onHide: () => hideLead(l),
         };
-      });
-  }, [leads, isAdmin, closedKeys]);
+      })
+      .filter(i => !isHidden(i.id));
+  }, [leads, isAdmin, closedKeys, isHidden]);
 
   if (!accessChecked || loadingLeads || loadingReports || loadingEvents || loadingMeetingReports) {
     return (
