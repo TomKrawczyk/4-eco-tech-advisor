@@ -276,7 +276,7 @@ export default function Layout({ children, currentPageName }) {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-0.5 overflow-visible flex-1 mx-3 pr-2">
+          <nav className="hidden xl:flex items-center gap-0.5 flex-1 min-w-0 mx-3 pr-2 overflow-x-auto overflow-y-visible scrollbar-thin">
             {visibleNavItems.map((entry) => {
               if (entry.group) {
                 const isGroupActive = entry.items.some(i => i.name === currentPageName);
@@ -313,7 +313,7 @@ export default function Layout({ children, currentPageName }) {
               <>
                 <NotificationPanel currentUser={currentUser} />
                 {/* User info on desktop */}
-                <div className="hidden md:flex items-center gap-2 ml-1">
+                <div className="hidden xl:flex items-center gap-2 ml-1">
                   <Link to={createPageUrl("UserProfile")} className="text-right hover:opacity-75 transition-opacity">
                     <div className="text-xs font-semibold text-gray-800 leading-tight">{currentUser.displayName}</div>
                     <div className="text-[10px] text-gray-400 leading-tight">
@@ -341,7 +341,7 @@ export default function Layout({ children, currentPageName }) {
             {/* Hamburger */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden w-12 h-12 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+              className="xl:hidden w-12 h-12 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
               aria-label="Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5 text-gray-700" /> : <Menu className="w-5 h-5 text-gray-700" />}
@@ -359,7 +359,7 @@ export default function Layout({ children, currentPageName }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/30 z-40 md:hidden"
+              className="fixed inset-0 bg-black/30 z-40 xl:hidden"
               onClick={() => setMobileMenuOpen(false)}
             />
             {/* Drawer from right */}
@@ -368,7 +368,7 @@ export default function Layout({ children, currentPageName }) {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "tween", duration: 0.25 }}
-              className="fixed top-0 right-0 bottom-0 w-72 bg-white z-50 md:hidden flex flex-col shadow-2xl"
+              className="fixed top-0 right-0 bottom-0 w-72 bg-white z-50 xl:hidden flex flex-col shadow-2xl"
             >
               {/* Drawer Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
