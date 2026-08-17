@@ -26,6 +26,8 @@ export default function TodayTasks() {
   const { currentUser, accessChecked } = useCurrentUser();
   const email = currentUser?.email;
   const isAdmin = currentUser?.role === "admin";
+  const isLeader = currentUser?.role === "group_leader";
+  const groupId = currentUser?.groupId || null;
   const today = todayStr();
   const [advisor, setAdvisor] = useState("all");
   const queryClient = useQueryClient();
@@ -42,41 +44,76 @@ export default function TodayTasks() {
     queryClient.invalidateQueries({ queryKey: ["today-leads"] });
   };
 
-  const { data: allLeads = [], isLoading: loadingLeads } = useQuery({
-    queryKey: ["today-leads", email, isAdmin],
-    queryFn: () => isAdmin
+  // Lider grupy: emaile członków jego grupy
+  const { data: groupEmails = [] } = useQuery({
+    queryKey: ["today-groupEmails", groupId],
+    queryFn: async () => {
+      const members = await base44.entities.AllowedUser.filter({ group_id: groupId });
+      const emails = members.map(m => m.email).filter(Boolean);
+      return emails.includes(email) ? emails : [...emails, email];
+    },
+    enabled: isLeader && !!groupId,
+  });
+
+  const scoped = (records, emailField, extra) => {
+    if (isAdmin) return records;
+    if (isLeader) return records.filter(r => groupEmails.includes(r[emailField]) || (extra && extra(r)));
+    return records.filter(r => r[emailField] === email);
+  };
+
+  const { data: rawLeads = [], isLoading: loadingLeads } = useQuery({
+    queryKey: ["today-leads", email, isAdmin, isLeader],
+    queryFn: () => (isAdmin || isLeader)
       ? base44.entities.ContactLead.list("-assigned_at", 5000)
       : base44.entities.ContactLead.filter({ assigned_user_email: email }, "-assigned_at", 1000),
     enabled: !!email,
   });
 
-  const { data: allPhoneReports = [], isLoading: loadingReports } = useQuery({
-    queryKey: ["today-phoneReports", email, isAdmin],
-    queryFn: () => isAdmin
+  const { data: rawPhoneReports = [], isLoading: loadingReports } = useQuery({
+    queryKey: ["today-phoneReports", email, isAdmin, isLeader],
+    queryFn: () => (isAdmin || isLeader)
       ? base44.entities.PhoneContactReport.list("-created_date", 5000)
       : base44.entities.PhoneContactReport.filter({ author_email: email }, "-created_date", 500),
     enabled: !!email,
   });
 
-  const { data: allEvents = [], isLoading: loadingEvents } = useQuery({
-    queryKey: ["today-events", email, isAdmin],
-    queryFn: () => isAdmin
+  const { data: rawEvents = [], isLoading: loadingEvents } = useQuery({
+    queryKey: ["today-events", email, isAdmin, isLeader],
+    queryFn: () => (isAdmin || isLeader)
       ? base44.entities.CalendarEvent.list("-event_date", 5000)
       : base44.entities.CalendarEvent.filter({ owner_email: email }, "-event_date", 500),
     enabled: !!email,
   });
 
-  const { data: allMeetingReports = [], isLoading: loadingMeetingReports } = useQuery({
-    queryKey: ["today-meetingReports", email, isAdmin],
-    queryFn: () => isAdmin
+  const { data: rawMeetingReports = [], isLoading: loadingMeetingReports } = useQuery({
+    queryKey: ["today-meetingReports", email, isAdmin, isLeader],
+    queryFn: () => (isAdmin || isLeader)
       ? base44.entities.MeetingReport.list("-meeting_date", 5000)
       : base44.entities.MeetingReport.filter({ author_email: email }, "-meeting_date", 500),
     enabled: !!email,
   });
 
-  // Lista handlowców do filtra (tylko admin)
+  // Zakres widoczności: admin = wszystko, lider grupy = jego grupa, doradca = tylko swoje
+  const allLeads = useMemo(
+    () => scoped(rawLeads, "assigned_user_email", l => groupId && l.group_id === groupId),
+    [rawLeads, isAdmin, isLeader, groupEmails, groupId, email]
+  );
+  const allPhoneReports = useMemo(
+    () => scoped(rawPhoneReports, "author_email"),
+    [rawPhoneReports, isAdmin, isLeader, groupEmails, email]
+  );
+  const allEvents = useMemo(
+    () => scoped(rawEvents, "owner_email"),
+    [rawEvents, isAdmin, isLeader, groupEmails, email]
+  );
+  const allMeetingReports = useMemo(
+    () => scoped(rawMeetingReports, "author_email"),
+    [rawMeetingReports, isAdmin, isLeader, groupEmails, email]
+  );
+
+  // Lista handlowców do filtra (admin i lider grupy)
   const people = useMemo(() => {
-    if (!isAdmin) return [];
+    if (!isAdmin && !isLeader) return [];
     const map = {};
     allLeads.forEach(l => { if (l.assigned_user_email) map[l.assigned_user_email] = l.assigned_user_name; });
     allPhoneReports.forEach(r => { if (r.author_email) map[r.author_email] = map[r.author_email] || r.author_name; });
@@ -84,7 +121,7 @@ export default function TodayTasks() {
     return Object.entries(map)
       .map(([email, name]) => ({ email, name }))
       .sort((a, b) => String(a.name || a.email).localeCompare(String(b.name || b.email)));
-  }, [isAdmin, allLeads, allPhoneReports, allEvents]);
+  }, [isAdmin, isLeader, allLeads, allPhoneReports, allEvents]);
 
   const leads = useMemo(
     () => (advisor === "all" ? allLeads : allLeads.filter(l => l.assigned_user_email === advisor)),
@@ -99,7 +136,7 @@ export default function TodayTasks() {
     [allEvents, advisor]
   );
 
-  const ownerLabel = (name, email) => (isAdmin ? name || email || "" : "");
+  const ownerLabel = (name, email) => ((isAdmin || isLeader) ? name || email || "" : "");
 
   // Klienci z podpisaną umową / sprzedażą wg treści raportów — nie są zaległi
   const closedKeys = useMemo(
@@ -260,15 +297,15 @@ export default function TodayTasks() {
       <PageHeader
         title="Dziś do zrobienia"
         subtitle={
-          isAdmin
-            ? "Zadania wszystkich handlowców — oddzwonienia, spotkania i leady bez ruchu"
+          (isAdmin || isLeader)
+            ? "Zadania handlowców — oddzwonienia, spotkania i leady bez ruchu"
             : total === 0
               ? "Brak zaległości — wszystko na bieżąco"
               : `${total} rzeczy do ogarnięcia dzisiaj`
         }
       />
 
-      {isAdmin && (
+      {(isAdmin || isLeader) && (
         <AdvisorFilter people={people} value={advisor} onChange={setAdvisor} />
       )}
 
