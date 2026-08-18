@@ -31,6 +31,7 @@
         "no_answer",
         "callback",
         "meeting_scheduled",
+        "contract_signed",
         "other"
       ],
       "default": "other",

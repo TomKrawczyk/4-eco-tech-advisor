@@ -207,7 +207,7 @@ export default function TodayTasks() {
       });
 
     const reportItems = phoneReports
-      .filter(r => r.callback_date && r.callback_date <= today && !looksClosed(r.description, r.next_steps))
+      .filter(r => r.callback_date && r.callback_date <= today && r.result !== "contract_signed" && !looksClosed(r.description, r.next_steps))
       .map(r => ({
         id: `report-${r.id}`,
         title: r.client_name,

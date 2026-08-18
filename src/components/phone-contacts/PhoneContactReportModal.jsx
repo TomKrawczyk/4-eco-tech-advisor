@@ -16,6 +16,7 @@ const resultConfig = {
   no_answer:         { label: "Brak odpowiedzi",     color: "bg-gray-100 text-gray-600 border-gray-300" },
   callback:          { label: "Oddzwonić",           color: "bg-orange-100 text-orange-700 border-orange-300" },
   meeting_scheduled: { label: "Spotkanie umówione",  color: "bg-blue-100 text-blue-700 border-blue-300" },
+  contract_signed:   { label: "Umowa podpisana",     color: "bg-emerald-100 text-emerald-800 border-emerald-400" },
   other:             { label: "Inne",                color: "bg-purple-100 text-purple-700 border-purple-300" },
 };
 

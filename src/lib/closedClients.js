@@ -24,7 +24,7 @@ export function buildClosedClientKeys(reportSets) {
   const keys = new Set();
   reportSets.forEach(reports => {
     (reports || []).forEach(r => {
-      if (looksClosed(r.description, r.next_steps, r.result, r.status, r.comments)) {
+      if (r.result === "contract_signed" || looksClosed(r.description, r.next_steps, r.result, r.status, r.comments)) {
         if (r.client_name) keys.add(`n:${nameKey(r.client_name)}`);
         const p = phoneKey(r.client_phone || r.phone);
         if (p) keys.add(`p:${p}`);
