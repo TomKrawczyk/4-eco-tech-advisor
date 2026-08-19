@@ -1,6 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
-Deno.serve(async (req) => {
+export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -15,8 +15,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Brak wymaganych danych' }, { status: 400 });
     }
 
-    const allowedUsers = await base44.asServiceRole.entities.AllowedUser.list();
-    const currentAccess = allowedUsers.find((u) => (u.email || u.data?.email) === user.email);
+    const svc = base44.asServiceRole.entities;
+
+    const [allowedMatches, packages] = await Promise.all([
+      svc.AllowedUser.filter({ email: user.email }),
+      svc.ContactPackage.filter({ id: packageId }),
+    ]);
+
+    const currentAccess = allowedMatches[0];
     const currentRole = currentAccess?.role || currentAccess?.data?.role || user.role;
     const currentGroupId = currentAccess?.group_id || currentAccess?.data?.group_id || '';
 
@@ -25,15 +31,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Brak uprawnień do przypisywania kontaktów' }, { status: 403 });
     }
 
-    const packages = await base44.asServiceRole.entities.ContactPackage.list();
-    const pkg = packages.find((item) => item.id === packageId);
+    const pkg = packages[0];
     if (!pkg) {
       return Response.json({ error: 'Nie znaleziono paczki' }, { status: 404 });
     }
 
     const packageGroupId = pkg.group_id || pkg.data?.group_id || '';
     if (currentRole !== 'admin') {
-      const groups = await base44.asServiceRole.entities.Group.list();
+      const groups = await svc.Group.list();
       const managedGroupIds = groups
         .filter((group) => {
           const leaderIds = group.group_leader_ids || group.data?.group_leader_ids || [];
@@ -48,17 +53,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    for (const id of leadIds) {
-      await base44.asServiceRole.entities.ContactLead.update(id, {
-        assigned_user_email: userEmail,
-        assigned_user_name: userName || userEmail,
-        assigned_at: new Date().toISOString(),
-        status: 'assigned',
-      });
+    const nowIso = new Date().toISOString();
+    const updates = leadIds.map((id) => ({
+      id,
+      assigned_user_email: userEmail,
+      assigned_user_name: userName || userEmail,
+      assigned_at: nowIso,
+      status: 'assigned',
+    }));
+
+    for (let i = 0; i < updates.length; i += 500) {
+      await svc.ContactLead.bulkUpdate(updates.slice(i, i + 500));
     }
 
-    const fresh = await base44.asServiceRole.entities.ContactLead.filter({ package_id: packageId });
-    await base44.asServiceRole.entities.ContactPackage.update(packageId, {
+    const fresh = await svc.ContactLead.filter({ package_id: packageId });
+    await svc.ContactPackage.update(packageId, {
       total_count: fresh.length,
       assigned_count: fresh.filter((lead) => lead.assigned_user_email).length,
     });
@@ -67,4 +76,4 @@ Deno.serve(async (req) => {
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-});
+}

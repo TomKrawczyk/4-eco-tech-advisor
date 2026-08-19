@@ -34,6 +34,10 @@
       "type": "string",
       "description": "Komentarze/uwagi z arkusza"
     },
+    "interview_data": {
+      "type": "object",
+      "description": "Pytania i odpowiedzi z wywiadu (z arkusza)"
+    },
     "assigned_user_email": {
       "type": "string",
       "description": "Email handlowca przypisanego do spotkania"

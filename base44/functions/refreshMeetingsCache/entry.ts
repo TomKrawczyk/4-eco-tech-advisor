@@ -299,16 +299,20 @@ async function fetchParsedSheets(accessToken, spreadsheetId, activeTabs) {
   const meetings = [];
   const phoneContacts = [];
 
-  for (const chunk of chunkArray(activeTabs, MAX_BATCH_RANGES)) {
-    const params = new URLSearchParams({ majorDimension: 'ROWS' });
-    chunk.forEach((tab) => params.append('ranges', `'${tab.replace(/'/g, "''")}'!${RANGE_SUFFIX}`));
+  // Pobieraj wszystkie partie arkuszy równolegle zamiast sekwencyjnie
+  const results = await Promise.all(
+    chunkArray(activeTabs, MAX_BATCH_RANGES).map((chunk) => {
+      const params = new URLSearchParams({ majorDimension: 'ROWS' });
+      chunk.forEach((tab) => params.append('ranges', `'${tab.replace(/'/g, "''")}'!${RANGE_SUFFIX}`));
+      return fetchJsonWithRetry(
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${params.toString()}`,
+        { headers },
+        `values:batchGet (${chunk.length} tabs)`
+      );
+    })
+  );
 
-    const data = await fetchJsonWithRetry(
-      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${params.toString()}`,
-      { headers },
-      `values:batchGet (${chunk.length} tabs)`
-    );
-
+  for (const data of results) {
     for (const valueRange of data.valueRanges || []) {
       const sheetTitle = extractSheetTitle(valueRange.range);
       const parsed = parseSheetRows(sheetTitle, valueRange.values || []);
@@ -429,10 +433,12 @@ async function syncAssignmentsAndContacts(svc, meetings, phoneContacts) {
     }
   }
 
-  await bulkCreateInBatches(svc.MeetingAssignment, assignmentsToCreate);
-  await bulkUpdateInBatches(svc.MeetingAssignment, assignmentsToUpdate);
-  await bulkCreateInBatches(svc.PhoneContact, contactsToCreate);
-  await bulkUpdateInBatches(svc.CalendarEvent, calendarUpdates);
+  await Promise.all([
+    bulkCreateInBatches(svc.MeetingAssignment, assignmentsToCreate),
+    bulkUpdateInBatches(svc.MeetingAssignment, assignmentsToUpdate),
+    bulkCreateInBatches(svc.PhoneContact, contactsToCreate),
+    bulkUpdateInBatches(svc.CalendarEvent, calendarUpdates),
+  ]);
 
   return {
     new_meetings: assignmentsToCreate.length,
@@ -462,8 +468,10 @@ Deno.serve(async (req) => {
     if (cacheRecord) await svc.MeetingsCache.update(cacheRecord.id, refreshingPayload);
     else cacheRecord = await svc.MeetingsCache.create(refreshingPayload);
 
-    const accessToken = await getGoogleSheetsAccessToken(base44);
-    const sheetMappings = await fetchAll(svc.SheetGroupMapping);
+    const [accessToken, sheetMappings] = await Promise.all([
+      getGoogleSheetsAccessToken(base44),
+      fetchAll(svc.SheetGroupMapping),
+    ]);
     const allTabs = await getAllSheetTabs(accessToken, spreadsheetId, sheetMappings);
 
     const activeTabs = allTabs.filter((tab) => {
@@ -475,23 +483,24 @@ Deno.serve(async (req) => {
     const { meetings, phoneContacts } = await fetchParsedSheets(accessToken, spreadsheetId, activeTabs);
     const syncStats = await syncAssignmentsAndContacts(svc, meetings, phoneContacts);
 
-    await svc.MeetingsCache.update(cacheRecord.id, {
-      cache_key: CACHE_KEY,
-      meetings_json: { meetings },
-      last_refreshed: nowIso,
-      status: 'success',
-      error_message: '',
-      meetings_count: meetings.length,
-    });
-
-    // Lekki indeks dla frontendu — bez interview_data i pełnych komentarzy
-    await upsertCacheRecord(svc, LITE_CACHE_KEY, {
-      meetings_json: { meetings: meetings.map(toLiteMeeting) },
-      last_refreshed: nowIso,
-      status: 'success',
-      error_message: '',
-      meetings_count: meetings.length,
-    });
+    await Promise.all([
+      svc.MeetingsCache.update(cacheRecord.id, {
+        cache_key: CACHE_KEY,
+        meetings_json: { meetings },
+        last_refreshed: nowIso,
+        status: 'success',
+        error_message: '',
+        meetings_count: meetings.length,
+      }),
+      // Lekki indeks dla frontendu — bez interview_data i pełnych komentarzy
+      upsertCacheRecord(svc, LITE_CACHE_KEY, {
+        meetings_json: { meetings: meetings.map(toLiteMeeting) },
+        last_refreshed: nowIso,
+        status: 'success',
+        error_message: '',
+        meetings_count: meetings.length,
+      }),
+    ]);
 
     return Response.json({
       success: true,
