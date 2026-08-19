@@ -201,7 +201,9 @@ export default function PhoneContacts() {
       interview_data: contact.interview_data,
     };
 
-    const existing = phoneContactsFromDB.find(db => db.contact_key === contact.contact_key);
+    // Zawsze sprawdzaj bazę po contact_key — cache może być nieaktualny i tworzyłby duplikaty
+    const existing = phoneContactsFromDB.find(db => db.contact_key === contact.contact_key)
+      || (await base44.entities.PhoneContact.filter({ contact_key: contact.contact_key }))[0];
     if (existing) {
       return base44.entities.PhoneContact.update(existing.id, { ...contactDetails, ...patch });
     } else {
