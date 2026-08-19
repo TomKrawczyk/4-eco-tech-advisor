@@ -573,7 +573,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
           <option value="all">Wszyscy handlowcy</option>
           <option value="__none__">Nieprzypisane</option>
           {Object.entries(advisorCounts).map(([email, c]) => (
-            <option key={email} value={email}>{c.name} ({c.count})</option>
+            <option key={email} value={email}>{c.name} — {email} ({c.count})</option>
           ))}
         </select>
         <select
