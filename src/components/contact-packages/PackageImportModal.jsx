@@ -210,11 +210,11 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   const handleImport = async () => {
     if ((!isAppendMode && !name.trim()) || contacts.length === 0) return;
     setImporting(true);
-    const isPrivate = isAdmin && !isAppendMode && assignMode === "user";
+    const isPrivate = isAppendMode ? existingPackage.is_private === true : (isAdmin && assignMode === "user");
     const effectiveGroupId = isAppendMode ? existingPackage.group_id : (isAdmin ? selectedGroupId : (currentUser.groupId || ""));
     const effectiveGroupName = isAppendMode ? existingPackage.group_name : (isAdmin ? selectedGroupName : (currentUser.groupName || ""));
 
-    if (isPrivate && !selectedUserEmail) {
+    if (isPrivate && !isAppendMode && !selectedUserEmail) {
       setParseError("Wybierz handlowca przed importem.");
       setImporting(false);
       return;
