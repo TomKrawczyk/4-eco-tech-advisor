@@ -407,7 +407,7 @@ export default function PhoneContacts() {
       const matchUser = selectedUserEmail === "all" || (selectedUserEmail === "unassigned" ? !c.assigned_user_email : c.assigned_user_email === selectedUserEmail);
       const isManual = c.contact_key?.startsWith("manual_");
       const isSavedAssigned = !!c.assigned_user_email;
-      const matchStatus = isManual || isSavedAssigned || c.status === "Kontakt do doradcy" || c.status === "DWS";
+      const matchStatus = isManual || isSavedAssigned || c.status === "Kontakt do doradcy" || c.status === "DWS" || c.status === "Do ponownego kontaktu";
       const matchArchive = archiveTab === "archived" ? c.is_archived === true : c.is_archived !== true;
       return matchSearch && matchSheet && matchUser && matchStatus && matchArchive;
     });
