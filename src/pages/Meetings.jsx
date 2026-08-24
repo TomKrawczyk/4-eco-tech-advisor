@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -224,6 +224,16 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
 
 export default function Meetings() {
   const { currentUser, accessChecked } = useCurrentUser();
+  const queryClient = useQueryClient();
+
+  // Realtime: zmiany przypisań spotkań widoczne natychmiast u wszystkich, bez odświeżania
+  React.useEffect(() => {
+    if (!accessChecked) return;
+    const unsubscribe = base44.entities.MeetingAssignment.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
+    });
+    return unsubscribe;
+  }, [accessChecked, queryClient]);
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
   const [sheetFilter, setSheetFilter] = useState("all");

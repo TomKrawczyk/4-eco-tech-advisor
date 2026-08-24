@@ -62,6 +62,18 @@ export default function PhoneContacts() {
   const canAssign = isLeaderOrAdmin;
   const canManageGroups = isAdminOrGroupLeader;
 
+  // Dokładny klucz cache listy kontaktów z bazy — musi być identyczny w query i mutacjach
+  const phoneContactsDBKey = ["phoneContactsDB", isLeaderOrAdmin, currentUser?.email];
+
+  // Realtime: natychmiastowa reakcja na zmiany przypisań (także od innych liderów)
+  useEffect(() => {
+    if (!accessChecked || !currentUser) return;
+    const unsubscribe = base44.entities.PhoneContact.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
+    });
+    return unsubscribe;
+  }, [accessChecked, currentUser, queryClient]);
+
   const { data: allAllowedUsers = [] } = useQuery({
     queryKey: ["allowedUsers"],
     queryFn: () => base44.entities.AllowedUser.list(),
@@ -218,8 +230,8 @@ export default function PhoneContacts() {
     mutationFn: ({ contact, email, name }) => upsertContact(contact, { assigned_user_email: email, assigned_user_name: name }),
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: ["phoneContactsDB"] });
-      const previousContacts = queryClient.getQueryData(["phoneContactsDB"]) || [];
-      queryClient.setQueryData(["phoneContactsDB"], (old = []) => {
+      const previousContacts = queryClient.getQueryData(phoneContactsDBKey) || [];
+      queryClient.setQueryData(phoneContactsDBKey, (old = []) => {
         const exists = old.find(db => db.contact_key === variables.contact.contact_key);
         if (exists) {
           return old.map(db => db.contact_key === variables.contact.contact_key
@@ -237,7 +249,7 @@ export default function PhoneContacts() {
       return { previousContacts };
     },
     onSuccess: (savedRecord, variables) => {
-      queryClient.setQueryData(["phoneContactsDB"], (old = []) => {
+      queryClient.setQueryData(phoneContactsDBKey, (old = []) => {
         const exists = old.find(db => db.contact_key === variables.contact.contact_key);
         if (exists) {
           return old.map(db => db.contact_key === variables.contact.contact_key
@@ -291,15 +303,40 @@ export default function PhoneContacts() {
     },
     onError: (_error, _variables, context) => {
       if (context?.previousContacts) {
-        queryClient.setQueryData(["phoneContactsDB"], context.previousContacts);
+        queryClient.setQueryData(phoneContactsDBKey, context.previousContacts);
       }
     },
   });
 
   const assignGroupMutation = useMutation({
     mutationFn: ({ contact, groupId, groupName }) => upsertContact(contact, { assigned_group_id: groupId, assigned_group_name: groupName }),
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ["phoneContactsDB"] });
+      const previousContacts = queryClient.getQueryData(phoneContactsDBKey) || [];
+      queryClient.setQueryData(phoneContactsDBKey, (old = []) => {
+        const exists = old.find(db => db.contact_key === variables.contact.contact_key);
+        if (exists) {
+          return old.map(db => db.contact_key === variables.contact.contact_key
+            ? { ...db, assigned_group_id: variables.groupId, assigned_group_name: variables.groupName }
+            : db
+          );
+        }
+        return [...old, {
+          ...variables.contact,
+          contact_key: variables.contact.contact_key,
+          assigned_group_id: variables.groupId,
+          assigned_group_name: variables.groupName,
+        }];
+      });
+      return { previousContacts };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousContacts) {
+        queryClient.setQueryData(phoneContactsDBKey, context.previousContacts);
+      }
+    },
     onSuccess: (savedRecord, variables) => {
-      queryClient.setQueryData(["phoneContactsDB"], (old = []) => {
+      queryClient.setQueryData(phoneContactsDBKey, (old = []) => {
         const exists = old.find(db => db.contact_key === variables.contact.contact_key);
         if (exists) {
           return old.map(db => db.contact_key === variables.contact.contact_key
