@@ -34,11 +34,20 @@ export default function BlockedUserScreen({ currentUser }) {
             )}
           </div>
 
+          {blockedUntil ? (
+            <p className="text-sm text-gray-600 leading-6">
+              Blokada została nałożona przez administratora i obowiązuje do
+              <span className="font-medium text-gray-900"> {new Date(blockedUntil).toLocaleDateString("pl-PL")}</span>.
+              Uzupełnienie raportów nie zdejmie jej wcześniej — skontaktuj się z przełożonym.
+            </p>
+          ) : (
           <p className="text-sm text-gray-600 leading-6">
             Uzupełnij zaległe raporty — konto zostanie odblokowane automatycznie po ich uzupełnieniu
             <span className="font-medium text-gray-900"> w ciągu doby</span> lub skontaktuj się z przełożonym.
           </p>
+          )}
 
+          {!blockedUntil && (
           <div className="flex flex-col sm:flex-row gap-3">
             <Button asChild className="bg-green-600 hover:bg-green-700">
               <Link to={createPageUrl("MeetingReports")}>
@@ -53,6 +62,7 @@ export default function BlockedUserScreen({ currentUser }) {
               </Link>
             </Button>
           </div>
+          )}
         </div>
       </div>
     </div>
