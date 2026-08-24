@@ -1,5 +1,5 @@
-const STATIC_CACHE = "4eco-static-v2";
-const RUNTIME_CACHE = "4eco-runtime-v2";
+const STATIC_CACHE = "4eco-static-v3";
+const RUNTIME_CACHE = "4eco-runtime-v3";
 const CORE_ASSETS = ["/", "/index.html"];
 
 self.addEventListener("install", (event) => {
@@ -21,17 +21,38 @@ self.addEventListener("activate", (event) => {
   })());
 });
 
-async function networkFirst(request) {
+function isCacheableResponse(response) {
+  return response && response.ok && (response.type === "basic" || response.type === "default" || response.type === "cors");
+}
+
+function isHtmlResponse(response) {
+  const contentType = response.headers.get("content-type") || "";
+  return contentType.includes("text/html");
+}
+
+async function serveAppShell() {
+  const fallback = await caches.match("/index.html");
+  if (fallback) return fallback;
+  return caches.match("/");
+}
+
+async function networkFirstNavigation(request) {
   const cache = await caches.open(RUNTIME_CACHE);
   try {
     const response = await fetch(request);
+    // Nigdy nie serwuj ani nie cachuj odpowiedzi błędu / nie-HTML (np. JSON 401) jako strony
+    if (!response.ok || !isHtmlResponse(response)) {
+      const shell = await serveAppShell();
+      if (shell) return shell;
+      return response;
+    }
     cache.put(request, response.clone());
     return response;
   } catch (error) {
     const cached = await cache.match(request);
     if (cached) return cached;
-    const fallback = await caches.match("/index.html");
-    if (fallback) return fallback;
+    const shell = await serveAppShell();
+    if (shell) return shell;
     throw error;
   }
 }
@@ -41,7 +62,9 @@ async function staleWhileRevalidate(request) {
   const cached = await cache.match(request);
   const networkPromise = fetch(request)
     .then((response) => {
-      cache.put(request, response.clone());
+      if (isCacheableResponse(response)) {
+        cache.put(request, response.clone());
+      }
       return response;
     })
     .catch(() => cached);
@@ -55,7 +78,9 @@ async function cacheFirst(request) {
   if (cached) return cached;
 
   const response = await fetch(request);
-  cache.put(request, response.clone());
+  if (isCacheableResponse(response)) {
+    cache.put(request, response.clone());
+  }
   return response;
 }
 
@@ -64,7 +89,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request));
+    event.respondWith(networkFirstNavigation(request));
     return;
   }
 
