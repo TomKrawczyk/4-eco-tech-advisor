@@ -235,7 +235,9 @@ export default function Layout({ children, currentPageName }) {
     return true;
   };
 
-  const canAccessWhileBlocked = currentUser?.is_blocked && ["MeetingReports", "PhoneContacts"].includes(currentPageName);
+  // Blokada administracyjna (blocked_until) jest bezwzględna — bez wyjątków na strony raportowe
+  const isAdminTimedBlock = !!currentUser?.blocked_until;
+  const canAccessWhileBlocked = currentUser?.is_blocked && !isAdminTimedBlock && ["MeetingReports", "PhoneContacts"].includes(currentPageName);
 
   const visibleNavItems = navStructure
     .map(entry => {

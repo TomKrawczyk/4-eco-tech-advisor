@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { createPageUrl } from "@/utils";
 
 export default function BlockedUserScreen({ currentUser }) {
+  const blockedUntil = currentUser?.blocked_until || "";
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4">
       <div className="w-full max-w-2xl rounded-3xl border border-red-200 bg-white shadow-xl overflow-hidden">
@@ -14,8 +15,12 @@ export default function BlockedUserScreen({ currentUser }) {
               <AlertTriangle className="w-6 h-6 text-red-100" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Konto zablokowane</h1>
-              <p className="text-sm text-green-50">Dostęp do głównych funkcji został tymczasowo ograniczony.</p>
+              <h1 className="text-2xl font-bold">{blockedUntil ? "Blokada czasowa konta" : "Konto zablokowane"}</h1>
+              <p className="text-sm text-green-50">
+                {blockedUntil
+                  ? `Dostęp zablokowany do ${new Date(blockedUntil).toLocaleDateString("pl-PL")} włącznie.`
+                  : "Dostęp do głównych funkcji został tymczasowo ograniczony."}
+              </p>
             </div>
           </div>
         </div>
