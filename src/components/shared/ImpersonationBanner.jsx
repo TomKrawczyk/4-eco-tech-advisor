@@ -11,7 +11,7 @@ export default function ImpersonationBanner() {
   const navigate = useNavigate();
   const [expanded, setExpanded] = React.useState(true);
 
-  if (!imp) return null;
+  if (!imp || !imp.targetEmail) return null;
 
   const handleStop = () => {
     clearImpersonation();

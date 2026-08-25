@@ -1,5 +1,5 @@
-const STATIC_CACHE = "4eco-static-v3";
-const RUNTIME_CACHE = "4eco-runtime-v3";
+const STATIC_CACHE = "4eco-static-v4";
+const RUNTIME_CACHE = "4eco-runtime-v4";
 const CORE_ASSETS = ["/", "/index.html"];
 
 self.addEventListener("install", (event) => {
