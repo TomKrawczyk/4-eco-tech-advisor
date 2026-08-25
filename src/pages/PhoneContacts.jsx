@@ -65,13 +65,18 @@ export default function PhoneContacts() {
   // Dokładny klucz cache listy kontaktów z bazy — musi być identyczny w query i mutacjach
   const phoneContactsDBKey = ["phoneContactsDB", isLeaderOrAdmin, currentUser?.email];
 
-  // Realtime: natychmiastowa reakcja na zmiany przypisań (także od innych liderów)
+  // Realtime (zdławiony): natychmiastowa reakcja na zmiany przypisań (także od innych liderów),
+  // ale seria zdarzeń łączy się w jedno odświeżenie — nie blokuje UI.
   useEffect(() => {
     if (!accessChecked || !currentUser) return;
+    let timer;
     const unsubscribe = base44.entities.PhoneContact.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["phoneContactsDB"] });
+      }, 600);
     });
-    return unsubscribe;
+    return () => { unsubscribe(); clearTimeout(timer); };
   }, [accessChecked, currentUser, queryClient]);
 
   const { data: allAllowedUsers = [] } = useQuery({

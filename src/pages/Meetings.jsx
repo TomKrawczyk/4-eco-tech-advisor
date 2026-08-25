@@ -226,13 +226,18 @@ export default function Meetings() {
   const { currentUser, accessChecked } = useCurrentUser();
   const queryClient = useQueryClient();
 
-  // Realtime: zmiany przypisań spotkań widoczne natychmiast u wszystkich, bez odświeżania
+  // Realtime (zdławiony): zmiany przypisań spotkań widoczne natychmiast u wszystkich,
+  // ale seria zdarzeń (np. z automatyzacji) łączy się w jedno odświeżenie — nie blokuje UI.
   React.useEffect(() => {
     if (!accessChecked) return;
+    let timer;
     const unsubscribe = base44.entities.MeetingAssignment.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["meetingAssignments"] });
+      }, 600);
     });
-    return unsubscribe;
+    return () => { unsubscribe(); clearTimeout(timer); };
   }, [accessChecked, queryClient]);
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
