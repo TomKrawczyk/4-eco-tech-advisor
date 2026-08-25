@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import useCurrentUser from "@/components/shared/useCurrentUser";
+import logActivity from "@/lib/logActivity";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,10 +20,7 @@ export default function Dashboard() {
   
   useEffect(() => {
     if (currentUser) {
-      base44.functions.invoke('logActivity', {
-        action_type: 'page_view',
-        page_name: 'Dashboard'
-      }).catch(err => console.error('Log error:', err));
+      logActivity({ action_type: 'page_view', page_name: 'Dashboard' });
     }
   }, [currentUser]);
 

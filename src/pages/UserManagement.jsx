@@ -10,9 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "@/components/user-management/RoleBadge";
-import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, Unlock, Lock } from "lucide-react";
+import { Trash2, Plus, Shield, Search, Filter, Mail, Edit, UserCheck, X, Check, Clock, Activity, Unlock, Lock, UserRound } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { startImpersonation } from "@/lib/impersonation";
+import { useImpersonation } from "@/lib/useImpersonation";
 import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
@@ -32,8 +35,30 @@ export default function UserManagement() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [impersonateTarget, setImpersonateTarget] = useState(null);
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const imp = useImpersonation();
+
+  const handleStartImpersonation = () => {
+    const t = impersonateTarget;
+    setImpersonateTarget(null);
+    if (!t) return;
+    startImpersonation(
+      currentUser?.email,
+      currentUser?.displayName || currentUser?.full_name,
+      {
+        email: t.data?.email || t.email,
+        name: t.data?.name || t.name,
+        role: t.data?.role || t.role,
+        group_id: t.data?.group_id || t.group_id,
+        allowedUserId: t.id,
+      }
+    );
+    toast.success(`Tryb podglądu jako ${t.data?.name || t.name}`);
+    navigate("/Dashboard");
+  };
 
   const { data: allowedUsers = [], isLoading } = useQuery({
     queryKey: ["allowedUsers"],
@@ -449,6 +474,13 @@ export default function UserManagement() {
 
         <TabsContent value="users" className="space-y-6">
 
+      {imp && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-800 flex items-center gap-2">
+          <UserRound className="w-4 h-4 shrink-0" />
+          Tryb podglądu aktywny ({imp.targetName}). Akcje zarządzania użytkownikami są zablokowane. Wróć do konta admin, aby edytować.
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 mb-6">
         <h3 className="text-base md:text-lg font-semibold mb-4">Dodaj użytkownika</h3>
         <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
@@ -521,7 +553,7 @@ export default function UserManagement() {
               className="h-11"
             />
           </div>
-          <Button type="submit" disabled={addUserMutation.isPending} className="w-full sm:w-auto h-11">
+          <Button type="submit" disabled={addUserMutation.isPending || !!imp} className="w-full sm:w-auto h-11">
             {addUserMutation.isPending ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
@@ -626,7 +658,18 @@ export default function UserManagement() {
                   )}
                 </div>
                 <div className="flex gap-1">
-                  {((blockedAccountByEmail[user.data?.email || user.email]?.account_status === "blocked") || (user.data?.is_blocked || user.is_blocked)) && (
+                  {currentUser?.role === "admin" && (user.data?.role || user.role) !== "admin" && !imp && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setImpersonateTarget(user)}
+                      className="shrink-0"
+                      title={`Zaloguj się jako ${user.data?.name || user.name}`}
+                    >
+                      <UserRound className="w-4 h-4 text-orange-500" />
+                    </Button>
+                  )}
+                  {!imp && ((blockedAccountByEmail[user.data?.email || user.email]?.account_status === "blocked") || (user.data?.is_blocked || user.is_blocked)) && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -637,32 +680,39 @@ export default function UserManagement() {
                       <Unlock className="w-4 h-4 text-green-500" />
                     </Button>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => resendInviteMutation.mutate(user)}
-                    className="shrink-0"
-                    title="Wyślij zaproszenie ponownie"
-                  >
-                    <Mail className="w-4 h-4 text-blue-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setUserToDelete(user)}
-                    className="shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setEditingUser(user)}
-                    className="shrink-0"
-                    title="Edytuj użytkownika"
-                  >
-                    <Edit className="w-4 h-4 text-blue-500" />
-                  </Button>
+                  {!imp && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => resendInviteMutation.mutate(user)}
+                      className="shrink-0"
+                      title="Wyślij zaproszenie ponownie"
+                    >
+                      <Mail className="w-4 h-4 text-blue-500" />
+                    </Button>
+                  )}
+                  {!imp && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setUserToDelete(user)}
+                      className="shrink-0"
+                      title="Usuń dostęp"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  )}
+                  {!imp && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditingUser(user)}
+                      className="shrink-0"
+                      title="Edytuj użytkownika"
+                    >
+                      <Edit className="w-4 h-4 text-blue-500" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -739,6 +789,27 @@ export default function UserManagement() {
               className="bg-red-600 hover:bg-red-700"
             >
               Usuń wszystkich
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!impersonateTarget} onOpenChange={() => setImpersonateTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tryb podglądu</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogDescription>
+            Czy na pewno chcesz zalogować się jako <strong>{impersonateTarget?.data?.name || impersonateTarget?.name}</strong> ({impersonateTarget?.data?.email || impersonateTarget?.email})? Przełączysz się w tryb podglądu tego użytkownika. Akcje destruktywne będą zablokowane.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleStartImpersonation}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <UserRound className="w-4 h-4 mr-2" />
+              Zaloguj jako
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -11,6 +11,9 @@ import MissingReportsBanner from "@/components/shared/MissingReportsBanner";
 import BlockedUserScreen from "@/components/shared/BlockedUserScreen";
 import ScreenProtection from "@/components/shared/ScreenProtection";
 import ScreenWatermark from "@/components/shared/ScreenWatermark";
+import ImpersonationBanner from "@/components/shared/ImpersonationBanner";
+import { useImpersonation } from "@/lib/useImpersonation";
+import { getImpersonation, clearImpersonation } from "@/lib/impersonation";
 
 // Dropdown dla desktop
 function DesktopDropdown({ label, items, isGroupActive, currentPageName }) {
@@ -113,6 +116,13 @@ export default function Layout({ children, currentPageName }) {
   const [hasAccess, setHasAccess] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [pendingRequiredTraining, setPendingRequiredTraining] = useState(null);
+  const imp = useImpersonation();
+
+  // Aktualizacja last_activity — w trybie podglądu na koncie podglądanego użytkownika.
+  const trackActivity = () => {
+    const ctx = getImpersonation();
+    base44.functions.invoke('trackUserActivity', ctx ? { impersonated_email: ctx.targetEmail } : {}).catch(() => {});
+  };
 
   React.useEffect(() => {
     const CACHE_KEY = 'layout_user_cache';
@@ -185,7 +195,7 @@ export default function Layout({ children, currentPageName }) {
             }
           } catch (_) {}
 
-          base44.functions.invoke('trackUserActivity').catch(() => {});
+          trackActivity();
         } else {
           setCurrentUser(user);
           setHasAccess(false);
@@ -208,7 +218,7 @@ export default function Layout({ children, currentPageName }) {
     window.addEventListener('user-access-updated', handleAccessRefresh);
 
     const activityInterval = setInterval(() => {
-      base44.functions.invoke('trackUserActivity').catch(() => {});
+      trackActivity();
     }, 15 * 60 * 1000);
 
     return () => {
@@ -330,7 +340,7 @@ export default function Layout({ children, currentPageName }) {
                     </div>
                   </Link>
                   <button
-                    onClick={() => { sessionStorage.removeItem('layout_user_cache'); base44.auth.logout(); }}
+                    onClick={() => { clearImpersonation(); sessionStorage.removeItem('layout_user_cache'); base44.auth.logout(); }}
                     className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
                     title="Wyloguj"
                   >
@@ -351,6 +361,8 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
       </header>
+
+      <ImpersonationBanner />
 
       {/* Mobile Menu — full screen overlay */}
       <AnimatePresence>
@@ -469,7 +481,7 @@ export default function Layout({ children, currentPageName }) {
                   </button>
                 </Link>
                 <button
-                  onClick={() => { sessionStorage.removeItem('layout_user_cache'); base44.auth.logout(); }}
+                  onClick={() => { clearImpersonation(); sessionStorage.removeItem('layout_user_cache'); base44.auth.logout(); }}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
@@ -489,7 +501,7 @@ export default function Layout({ children, currentPageName }) {
       )}
 
       {/* Main Content */}
-      <main className="pt-14">
+      <main className={imp ? "pt-24" : "pt-14"}>
         <div className="max-w-5xl mx-auto px-3 md:px-4 py-6 md:py-8">
           {checkingAccess ? (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -506,7 +518,7 @@ export default function Layout({ children, currentPageName }) {
                 <p className="text-gray-600 mb-2">Twoje konto ({currentUser?.email}) nie ma uprawnień do tej aplikacji.</p>
                 <p className="text-sm text-gray-500 mb-6">Skontaktuj się z administratorem, aby uzyskać dostęp.</p>
                 <button
-                  onClick={() => base44.auth.logout()}
+                  onClick={() => { clearImpersonation(); base44.auth.logout(); }}
                   className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   Wyloguj się

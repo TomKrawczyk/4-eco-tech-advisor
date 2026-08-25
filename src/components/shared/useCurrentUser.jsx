@@ -1,5 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { getImpersonation } from "@/lib/impersonation";
 
 async function fetchCurrentUser() {
   const user = await base44.auth.me();
@@ -37,6 +39,30 @@ async function fetchCurrentUser() {
     user.groupId = groupId;
     user.allowedUserId = ua.id;
   }
+
+  // --- Impersonacja (admin "Zaloguj jako") ---
+  // Nadpisujemy email/rolę/grupę tylko gdy prawdziwy użytkownik to admin.
+  // Dzięki temu wszystkie strony filtrujące po currentUser.email widzą dane
+  // podglądanego doradcy/lidera, a created_by/RLS pozostają na koncie admina.
+  const imp = getImpersonation();
+  if (imp && user.role === "admin") {
+    user.impersonated_by = imp.adminEmail;
+    user.impersonated_by_name = imp.adminName;
+    user.is_impersonating = true;
+    user.real_email = user.email;
+    user.real_name = user.displayName || user.full_name;
+    user.real_role = "admin";
+    user.email = imp.targetEmail;
+    user.full_name = imp.targetName;
+    user.displayName = imp.targetName;
+    user.role = imp.targetRole;
+    user.groupId = imp.targetGroupId || null;
+    user.allowedUserId = imp.targetAllowedUserId || null;
+    // W trybie podglądu nieblokujemy ekranem blokady/braków doradcy
+    user.account_status = "active";
+    user.is_blocked = false;
+    user.blocked_until = null;
+  }
   return user;
 }
 
@@ -46,6 +72,7 @@ async function fetchCurrentUser() {
  * Odświeżenie następuje co 5 minut (staleTime), nie przy każdym mount.
  */
 export default function useCurrentUser() {
+  const queryClient = useQueryClient();
   const { data: currentUser = null, isFetching, isSuccess } = useQuery({
     queryKey: ["currentUser"],
     queryFn: fetchCurrentUser,
@@ -53,6 +80,17 @@ export default function useCurrentUser() {
     gcTime: 15 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
   });
+
+  // Reaguj na start/stop impersonacji — przeładuj tożsamość natychmiast.
+  useEffect(() => {
+    const handler = () => queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+    window.addEventListener("impersonation-changed", handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener("impersonation-changed", handler);
+      window.removeEventListener("storage", handler);
+    };
+  }, [queryClient]);
 
   return { currentUser, accessChecked: isSuccess || (!isFetching && currentUser !== null) };
 }
