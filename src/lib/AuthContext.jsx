@@ -121,8 +121,14 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
       
-      // If user auth fails, it might be an expired token
+      // If user auth fails, it might be an expired/invalid token.
+      // Wipe the stale token from storage so the next login starts fresh
+      // (otherwise app-params re-reads the invalid token and we loop back to login).
       if (error.status === 401 || error.status === 403) {
+        try {
+          localStorage.removeItem('base44_access_token');
+          localStorage.removeItem('token');
+        } catch (_) {}
         setAuthError({
           type: 'auth_required',
           message: 'Authentication required'
@@ -145,8 +151,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
+    // Never feed a stale access_token back as the nextUrl — that would
+    // re-trigger the same invalid token on return and loop back to login.
+    let nextUrl = window.location.href;
+    try {
+      const url = new URL(nextUrl);
+      url.searchParams.delete('access_token');
+      url.searchParams.delete('clear_access_token');
+      nextUrl = url.toString();
+    } catch (_) {}
+    base44.auth.redirectToLogin(nextUrl);
   };
 
   return (
