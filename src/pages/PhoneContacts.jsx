@@ -13,6 +13,7 @@ import DetailsModal from "@/components/shared/DetailsModal";
 import ManualAddModal from "@/components/phone-contacts/ManualAddModal";
 import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
 import ReportStatusBadge from "@/components/phone-contacts/ReportStatusBadge";
+import SoftErrorBoundary from "@/components/shared/SoftErrorBoundary";
 import { motion, AnimatePresence } from "framer-motion";
 import { isValid, startOfDay } from "date-fns";
 import { isOlderThanDays } from "@/lib/oldRecordVisibility";
@@ -42,7 +43,7 @@ function formatDateLabel(str) {
   return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} (${dateFormatted})`;
 }
 
-export default function PhoneContacts() {
+function PhoneContacts() {
   const { currentUser, accessChecked } = useCurrentUser();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -860,6 +861,16 @@ export default function PhoneContacts() {
     </div>
   );
 }
+
+function PhoneContactsPage() {
+  return (
+    <SoftErrorBoundary>
+      <PhoneContacts />
+    </SoftErrorBoundary>
+  );
+}
+
+export default PhoneContactsPage;
 
 function ContactRow({ contact, report, canAssign, canManageGroups, salespeople, groups, currentUser, assignMutation, assignGroupMutation, onShowDetails, onShowReport, onArchive, archiveTab }) {
   return (

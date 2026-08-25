@@ -17,6 +17,7 @@ import MeetingsCacheStatusBar from "@/components/meetings/MeetingsCacheStatusBar
 import { format, addDays, isValid, startOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import SoftErrorBoundary from "@/components/shared/SoftErrorBoundary";
 import { buildMeetingReportsIndex } from "@/lib/reportingStatus";
 
 // Parsuje daty w różnych formatach polskich: "DD.MM.YYYY HH:MM", "DD.MM.YYYY", itp.
@@ -222,7 +223,7 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
   );
 }
 
-export default function Meetings() {
+function Meetings() {
   const { currentUser, accessChecked } = useCurrentUser();
   const queryClient = useQueryClient();
 
@@ -863,3 +864,13 @@ export default function Meetings() {
     </div>
   );
 }
+
+function MeetingsPage() {
+  return (
+    <SoftErrorBoundary>
+      <Meetings />
+    </SoftErrorBoundary>
+  );
+}
+
+export default MeetingsPage;

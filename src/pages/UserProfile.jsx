@@ -9,10 +9,11 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeader from "@/components/shared/PageHeader";
+import SoftErrorBoundary from "@/components/shared/SoftErrorBoundary";
 import { User, Mail, Shield, Bell, Save, Check } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-export default function UserProfile() {
+function UserProfile() {
   const [currentUser, setCurrentUser] = useState(null);
   const [fullName, setFullName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -265,3 +266,13 @@ export default function UserProfile() {
     </div>
   );
 }
+
+function UserProfilePage() {
+  return (
+    <SoftErrorBoundary>
+      <UserProfile />
+    </SoftErrorBoundary>
+  );
+}
+
+export default UserProfilePage;

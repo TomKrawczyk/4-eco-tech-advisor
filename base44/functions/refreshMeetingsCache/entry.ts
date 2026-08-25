@@ -1,4 +1,16 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import {
+  RANGE_SUFFIX,
+  MAX_BATCH_RANGES,
+  extractSpreadsheetId,
+  normalizeAccessToken,
+  sleep,
+  normalizeHeader,
+  extractSheetTitle,
+  chunkArray,
+  fetchJsonWithRetry,
+  getGoogleSheetsAccessToken,
+} from "../../shared/googleSheets.ts";
 
 const CACHE_KEY = 'meetings_main';
 const LITE_CACHE_KEY = 'meetings_lite';
@@ -26,34 +38,6 @@ async function upsertCacheRecord(svc, cacheKey, payload) {
   if (rows[0]) await svc.MeetingsCache.update(rows[0].id, payload);
   else await svc.MeetingsCache.create({ cache_key: cacheKey, ...payload });
 }
-const RANGE_SUFFIX = 'A1:Z3000';
-const MAX_BATCH_RANGES = 20;
-
-function extractSpreadsheetId(value) {
-  if (!value) return '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
-  const match = String(value).match(/\/spreadsheets\/d\/([^/]+)/);
-  return match ? match[1] : String(value).trim();
-}
-
-function normalizeAccessToken(tokenData) {
-  if (typeof tokenData === 'string') return tokenData;
-  if (tokenData?.accessToken && typeof tokenData.accessToken === 'string') return tokenData.accessToken;
-  if (tokenData?.access_token) return tokenData.access_token;
-  if (typeof tokenData === 'object' && tokenData) {
-    const firstValue = Object.values(tokenData).find((value) => typeof value === 'string' && value.startsWith('ya29'));
-    if (firstValue) return firstValue;
-  }
-  return '';
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function normalizeHeader(value) {
-  return String(value || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
 function parseMeetingDate(value) {
   if (!value) return null;
   const isoMatch = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -66,23 +50,6 @@ function parseMeetingDate(value) {
 
 function formatDate(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function extractSheetTitle(range) {
-  if (!range) return '';
-  if (range.startsWith("'")) {
-    const end = range.indexOf("'!");
-    if (end > 0) return range.slice(1, end).replace(/''/g, "'");
-  }
-  return range.split('!')[0];
-}
-
-function chunkArray(items, size) {
-  const chunks = [];
-  for (let index = 0; index < items.length; index += size) {
-    chunks.push(items.slice(index, index + size));
-  }
-  return chunks;
 }
 
 function createMeetingKey(meeting) {
@@ -106,47 +73,6 @@ async function fetchAll(entity) {
     if (skip > 50000) break;
   }
   return rows;
-}
-
-async function fetchJsonWithRetry(url, options, label) {
-  let lastError = `${label}: unknown error`;
-  for (let attempt = 1; attempt <= 5; attempt++) {
-    const response = await fetch(url, options);
-    const contentType = response.headers.get('content-type') || '';
-    const rawBody = await response.text();
-    const bodyPreview = rawBody.slice(0, 500);
-    const isHtml = rawBody.toLowerCase().includes('<html') || rawBody.toLowerCase().includes('<!doctype html');
-
-    if (response.ok && !isHtml) {
-      try {
-        return rawBody ? JSON.parse(rawBody) : {};
-      } catch (_) {
-        lastError = `${label}: invalid JSON response from Google API`;
-      }
-    } else {
-      lastError = isHtml
-        ? `${label}: Google zwrócił stronę HTML zamiast danych API (status ${response.status})`
-        : `${label}: Google API ${response.status} – ${bodyPreview}`;
-    }
-
-    const retryable = response.status === 429 || response.status >= 500 || isHtml;
-    if (attempt < 5 && retryable) {
-      await sleep(500 * (2 ** (attempt - 1)));
-      continue;
-    }
-
-    throw new Error(lastError);
-  }
-  throw new Error(lastError);
-}
-
-async function getGoogleSheetsAccessToken(base44) {
-  const connection = await base44.asServiceRole.connectors.getConnection('googlesheets');
-  const token = normalizeAccessToken(connection);
-  if (!token || token === 'ya29...' || token.length < 20) {
-    throw new Error('Google Sheets connector zwrócił nieprawidłowy token dostępu.');
-  }
-  return token;
 }
 
 async function getAllSheetTabs(accessToken, spreadsheetId, sheetMappings) {
