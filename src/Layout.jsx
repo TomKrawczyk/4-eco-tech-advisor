@@ -12,7 +12,6 @@ import BlockedUserScreen from "@/components/shared/BlockedUserScreen";
 import ScreenProtection from "@/components/shared/ScreenProtection";
 import ScreenWatermark from "@/components/shared/ScreenWatermark";
 import ImpersonationBanner from "@/components/shared/ImpersonationBanner";
-import { useImpersonation } from "@/lib/useImpersonation";
 import { getImpersonation, clearImpersonation } from "@/lib/impersonation";
 
 // Dropdown dla desktop
@@ -116,7 +115,6 @@ export default function Layout({ children, currentPageName }) {
   const [hasAccess, setHasAccess] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [pendingRequiredTraining, setPendingRequiredTraining] = useState(null);
-  const imp = useImpersonation();
 
   // Aktualizacja last_activity — w trybie podglądu na koncie podglądanego użytkownika.
   const trackActivity = () => {
@@ -501,7 +499,7 @@ export default function Layout({ children, currentPageName }) {
       )}
 
       {/* Main Content */}
-      <main className={imp ? "pt-24" : "pt-14"}>
+      <main className="pt-14">
         <div className="max-w-5xl mx-auto px-3 md:px-4 py-6 md:py-8">
           {checkingAccess ? (
             <div className="flex items-center justify-center min-h-[60vh]">

@@ -21,6 +21,7 @@ import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
 import { format } from "date-fns";
+import { fetchAllEntityRecords } from "@/lib/fetchAllEntityRecords";
 
 export default function UserManagement() {
   const [email, setEmail] = useState("");
@@ -62,7 +63,7 @@ export default function UserManagement() {
 
   const { data: allowedUsers = [], isLoading } = useQuery({
     queryKey: ["allowedUsers"],
-    queryFn: () => base44.entities.AllowedUser.list(),
+    queryFn: () => fetchAllEntityRecords(base44.entities.AllowedUser, "-created_date", 500),
   });
 
   const { data: groups = [] } = useQuery({
@@ -229,14 +230,20 @@ export default function UserManagement() {
   });
 
   const filteredUsers = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
     return allowedUsers.filter(user => {
-      const email = user.data?.email || user.email;
+      const email = (user.data?.email || user.email || "").toLowerCase();
+      const name = (user.data?.name || user.name || "").toLowerCase();
       const role = user.data?.role || user.role;
-      const matchesSearch = email?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesRole = roleFilter === "all" || role === roleFilter;
+      const groupId = user.data?.group_id || user.group_id;
+      const groupName = groupId ? (groups.find(g => g.id === groupId)?.data?.name || groups.find(g => g.id === groupId)?.name || "").toLowerCase() : "";
+      const matchesSearch = !term || email.includes(term) || name.includes(term) || groupName.includes(term);
+      const matchesRole = roleFilter === "all"
+        || (roleFilter === "impersonatable" && (role === "advisor" || role === "group_leader"))
+        || role === roleFilter;
       return matchesSearch && matchesRole;
     });
-  }, [allowedUsers, searchTerm, roleFilter]);
+  }, [allowedUsers, searchTerm, roleFilter, groups]);
 
   const blockedAccountByEmail = useMemo(() => {
     return Object.fromEntries(userAccounts.map(user => [user.email, user]));
@@ -589,7 +596,7 @@ export default function UserManagement() {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Szukaj po emailu..."
+              placeholder="Szukaj po nazwie, emailu lub grupie..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 h-11"
@@ -602,6 +609,7 @@ export default function UserManagement() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie role</SelectItem>
+              <SelectItem value="impersonatable">Tylko do podglądu</SelectItem>
               <SelectItem value="advisor">Doradca</SelectItem>
               <SelectItem value="team_leader">Team Leader</SelectItem>
               <SelectItem value="group_leader">Group Leader</SelectItem>
@@ -642,6 +650,13 @@ export default function UserManagement() {
                     <span className="font-semibold text-sm">{user.data?.name || user.name}</span>
                     <span className="text-xs text-gray-500 break-all">({user.data?.email || user.email})</span>
                     <RoleBadge user={user} />
+                    {(() => {
+                      const groupId = user.data?.group_id || user.group_id;
+                      const groupName = groupId ? (groups.find(g => g.id === groupId)?.data?.name || groups.find(g => g.id === groupId)?.name) : null;
+                      return groupName ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 text-xs font-medium">{groupName}</span>
+                      ) : null;
+                    })()}
                     {((blockedAccountByEmail[user.data?.email || user.email]?.account_status === "blocked") || (user.data?.is_blocked || user.is_blocked)) && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">
                         <Lock className="w-3 h-3" />
