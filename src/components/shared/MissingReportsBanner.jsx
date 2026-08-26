@@ -134,12 +134,12 @@ export default function MissingReportsBanner({ currentUser }) {
           <span className="font-bold">KONTO ZABLOKOWANE – </span>
           <span>Masz niezłożone raporty po spotkaniach. Złóż raporty aby odblokować dostęp do funkcji aplikacji.</span>
         </div>
-        <button
-          onClick={() => window.scrollTo({ top: 200, behavior: "smooth" })}
+        <Link
+          to={createPageUrl("MeetingReports")}
           className="shrink-0 bg-white text-red-600 font-semibold px-3 py-1 rounded-lg text-xs hover:bg-red-50 transition-colors"
         >
           Złóż raport
-        </button>
+        </Link>
       </div>
     );
   }

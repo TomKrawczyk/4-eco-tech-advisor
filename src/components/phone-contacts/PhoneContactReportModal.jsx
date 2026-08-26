@@ -9,6 +9,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, FileText, Plus, Pencil, CheckCircle2, Phone, Clock, Calendar, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { refreshReportingBlock } from "@/lib/refreshReportingBlock";
 
 const resultConfig = {
   interested:        { label: "Zainteresowany",      color: "bg-green-100 text-green-700 border-green-300" },
@@ -122,6 +123,7 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
       toast.success("Raport zapisany");
       setReportSaved(true);
       setView("list");
+      refreshReportingBlock();
     },
     onError: (err) => {
       toast.error("Nie udało się zapisać raportu: " + (err?.message || "nieznany błąd"));
@@ -136,6 +138,7 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
       setReportSaved(true);
       setView("list");
       setEditingReport(null);
+      refreshReportingBlock();
     },
     onError: (err) => {
       toast.error("Nie udało się zaktualizować raportu: " + (err?.message || "nieznany błąd"));
