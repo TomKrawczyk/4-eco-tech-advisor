@@ -366,7 +366,11 @@ export default function Calendar() {
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
         if (hiddenMeetingKeys.has(key)) return false;
         const assignment = meetingAssignments.find(a => a.meeting_key === key);
-        const hasCalendarEvent = events.some(e => e.meeting_assignment_id === key);
+        // Ukrywaj spotkanie z arkusza tylko, gdy istnieje wydarzenie kalendarza
+        // dla TEGO SAMEGO dnia — inaczej spotkanie znikałoby z dnia, gdy raport
+        // /przeniesienie utworzyło wydarzenie na innej dacie.
+        const eventDateStr = d ? format(d, "yyyy-MM-dd") : "";
+        const hasCalendarEvent = events.some(e => e.meeting_assignment_id === key && e.event_date === eventDateStr);
         if (hasCalendarEvent) return false;
         if (currentUser.role === "admin") return true;
         if (currentUser.role === "group_leader") {

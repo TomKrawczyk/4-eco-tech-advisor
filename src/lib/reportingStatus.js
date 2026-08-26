@@ -113,8 +113,10 @@ export function hasInlinePhoneReportEvidence(record) {
 }
 
 export function hasSeparateMeetingReport(record, reportsIndex = []) {
-  const recordDate = normalizeDate(record.meeting_date || record.meeting_calendar);
-  return reportsIndex.some((report) => emailMatches(record, report) && clientMatches(record, report) && dateMatches(recordDate, report.date));
+  // Raport rozpoznajemy po kliencie (telefon lub nazwa) — bez wymogu dopasowania email
+  // ani daty. Raport może być wpisany przez inną osobę (np. admina) albo z inną datą
+  // niż spotkanie z arkusza; na karcie spotkania i tak ma się pokazać "✓ Raport".
+  return reportsIndex.some((report) => clientMatches(record, report));
 }
 
 export function hasSeparatePhoneReport(record, reportsIndex = []) {
