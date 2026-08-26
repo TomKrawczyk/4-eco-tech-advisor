@@ -314,6 +314,13 @@ function Meetings() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: hiddenMeetingsForAdvisor = [] } = useQuery({
+    queryKey: ["hiddenMeetings"],
+    queryFn: () => base44.entities.HiddenMeeting.list(),
+    enabled: accessChecked,
+  });
+  const hiddenMeetingKeys = useMemo(() => new Set(hiddenMeetingsForAdvisor.map(h => h.meeting_key)), [hiddenMeetingsForAdvisor]);
+
   const { data: meetingReports = [] } = useQuery({
     queryKey: ["meetingReportsForMeetings"],
     queryFn: () => base44.entities.MeetingReport.list("-created_date", 200),
@@ -413,6 +420,7 @@ function Meetings() {
     return meetingAssignments
       .filter(a => a.assigned_user_email === currentUser.email)
       .map(a => ({ ...a, ...(sheetMeetingsByKey[a.meeting_key] || {}) }))
+      .filter(a => !hiddenMeetingKeys.has(a.meeting_key))
       .filter(a => {
         if (!a.meeting_calendar) return true;
         const d = parseMeetingDate(a.meeting_calendar);
@@ -428,7 +436,7 @@ function Meetings() {
         if (!db) return -1;
         return da - db;
       });
-  }, [currentUser, isLeaderOrAdmin, meetingAssignments, sheetMeetingsByKey, today, maxDateUser]);
+  }, [currentUser, isLeaderOrAdmin, meetingAssignments, sheetMeetingsByKey, today, maxDateUser, hiddenMeetingKeys]);
 
   // Handlowcy do przypisania: filtruj wg grupy dla liderów
   const salespeople = useMemo(() => {

@@ -46,6 +46,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
   const [postponeFor, setPostponeFor] = useState(null);
   const [newDate, setNewDate] = useState("");
   const [expandedId, setExpandedId] = useState(null);
+  const [sheetEdit, setSheetEdit] = useState(null); // {id, status, date} — edycja spotkania z arkusza (admin)
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.CalendarEvent.update(id, { status }),
@@ -161,6 +162,48 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
       toast.success("Wydarzenie zostało przepisane");
     },
     onError: () => toast.error("Nie udało się przepisać spotkania"),
+  });
+
+  // Edycja spotkania z arkusza (admin): oznacz jako odbyte / odwołane i zmień datę
+  // na rzeczywisty dzień. Tworzy wydarzenie kalendarza na nowej dacie z wybranym
+  // statusem i ukrywa oryginalne spotkanie z arkusza (HiddenMeeting), dzięki czemu
+  // nie pokazuje się już na liście spotkań u handlowca.
+  const editSheetMeetingMutation = useMutation({
+    mutationFn: async ({ ev, status, newDate: nd }) => {
+      const key = ev.meeting_assignment_id || "";
+      await base44.entities.CalendarEvent.create({
+        title: ev.client_name ? `Spotkanie: ${ev.client_name}` : "Spotkanie",
+        description: ev.description || "",
+        event_date: nd,
+        event_time: ev.event_time || null,
+        event_type: "meeting",
+        status,
+        client_name: ev.client_name || "",
+        client_phone: ev.client_phone || "",
+        location: ev.location || "",
+        owner_email: ev.owner_email || "",
+        owner_name: ev.owner_name || "",
+        source: "meeting_assignment",
+        meeting_assignment_id: key,
+      });
+      if (key) {
+        try {
+          await base44.entities.HiddenMeeting.create({
+            meeting_key: key,
+            hidden_by: currentUser?.email || "",
+            reason: `${status === "completed" ? "Odbyte" : status === "cancelled" ? "Odwołane" : "Zaktualizowane"}: ${nd}`,
+          });
+        } catch (_) {}
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["calendarEvents"]);
+      queryClient.invalidateQueries(["hiddenMeetings"]);
+      queryClient.invalidateQueries(["meetingAssignments"]);
+      toast.success("Spotkanie zapisane i ukryte u handlowca");
+      setSheetEdit(null);
+    },
+    onError: () => toast.error("Nie udało się zapisać spotkania"),
   });
 
   return (
@@ -311,6 +354,31 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
                               )}
                             </div>
                           )}
+                          {ev.is_sheet_meeting && currentUser?.role === "admin" && (() => {
+                            const edit = sheetEdit?.id === ev.id
+                              ? sheetEdit
+                              : { id: ev.id, status: "completed", date: ev.event_date || format(day, "yyyy-MM-dd") };
+                            return (
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+                                <div className="text-xs font-medium text-amber-800">Oznacz jako odbyte i zmień datę</div>
+                                <div className="flex gap-2 items-center flex-wrap">
+                                  <Select value={edit.status} onValueChange={(v) => setSheetEdit({ id: ev.id, status: v, date: edit.date })}>
+                                    <SelectTrigger className="h-8 text-xs bg-white w-36"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="completed">Odbyte</SelectItem>
+                                      <SelectItem value="cancelled">Odwołane</SelectItem>
+                                      <SelectItem value="planned">Zaplanowane</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Input type="date" value={edit.date} onChange={(e) => setSheetEdit({ id: ev.id, status: edit.status, date: e.target.value })} className="h-8 text-xs w-auto" />
+                                  <Button size="sm" className="h-8 text-xs bg-amber-600 hover:bg-amber-700" disabled={editSheetMeetingMutation.isPending || !edit.date} onClick={() => editSheetMeetingMutation.mutate({ ev, status: edit.status, newDate: edit.date })}>
+                                    Zapisz
+                                  </Button>
+                                </div>
+                                <p className="text-[10px] text-amber-700">Spotkanie zostanie przeniesione na wybraną datę z wybranym statusem i ukryte u handlowca (zniknie z jego listy spotkań).</p>
+                              </div>
+                            );
+                          })()}
                           {(ev.sheet || ev.agent || ev.status_label) && (
                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1 text-xs text-slate-600">
                               {ev.sheet && <div><span className="font-semibold text-slate-800">Arkusz:</span> {ev.sheet}</div>}
