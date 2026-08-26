@@ -105,6 +105,10 @@ function PhoneContacts() {
       ? base44.entities.PhoneContact.list()
       : base44.entities.PhoneContact.filter({ assigned_user_email: currentUser.email }),
     enabled: accessChecked && !!currentUser,
+    // Dla doradcy realtime bywa zawodny — odświeżaj co 30s + przy powrocie do okna,
+    // żeby przypisane kontakty pojawiały się bez ręcznego reloadu.
+    refetchInterval: !isLeaderOrAdmin ? 30000 : false,
+    refetchOnWindowFocus: true,
   });
 
   // Raporty z kontaktów telefonicznych — status per kontakt
