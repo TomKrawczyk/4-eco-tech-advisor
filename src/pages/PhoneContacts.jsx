@@ -105,9 +105,9 @@ function PhoneContacts() {
       ? base44.entities.PhoneContact.list()
       : base44.entities.PhoneContact.filter({ assigned_user_email: currentUser.email }),
     enabled: accessChecked && !!currentUser,
-    // Dla doradcy realtime bywa zawodny — odświeżaj co 30s + przy powrocie do okna,
-    // żeby przypisane kontakty pojawiały się bez ręcznego reloadu.
-    refetchInterval: !isLeaderOrAdmin ? 30000 : false,
+    // Doradca: realtime (natychmiast) + odświeżanie co 8 s jako backup,
+    // żeby przypisane kontakty pojawiały się dynamicznie bez ręcznego reloadu.
+    refetchInterval: !isLeaderOrAdmin ? 8000 : false,
     refetchOnWindowFocus: true,
   });
 
