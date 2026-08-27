@@ -164,47 +164,96 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
     onError: () => toast.error("Nie udało się przepisać spotkania"),
   });
 
-  // Edycja spotkania z arkusza (admin): oznacz jako odbyte / odwołane i zmień datę
-  // na rzeczywisty dzień. Tworzy wydarzenie kalendarza na nowej dacie z wybranym
-  // statusem i ukrywa oryginalne spotkanie z arkusza (HiddenMeeting), dzięki czemu
-  // nie pokazuje się już na liście spotkań u handlowca.
+  // Ujednolicone przenoszenie / oznaczanie spotkania z arkusza (admin):
+  // - aktualizuje przypisanie (MeetingAssignment) na nową datę, więc zakładka
+  //   "Spotkania" u handlowca pokazuje nowy termin;
+  // - usuwa stare wydarzenia kalendarza dla tego klucza i tworzy jedno nowe na
+  //   nowej dacie z wybranym statusem;
+  // - dla statusu odbyte/odwołane ukrywa oryginalny wpis arkusza (HiddenMeeting),
+  //   żeby spotkanie zniknęło z listy u handlowca i z kalendarza na starej dacie.
   const editSheetMeetingMutation = useMutation({
     mutationFn: async ({ ev, status, newDate: nd }) => {
       const key = ev.meeting_assignment_id || "";
-      await base44.entities.CalendarEvent.create({
-        title: ev.client_name ? `Spotkanie: ${ev.client_name}` : "Spotkanie",
-        description: ev.description || "",
-        event_date: nd,
-        event_time: ev.event_time || null,
-        event_type: "meeting",
-        status,
-        client_name: ev.client_name || "",
-        client_phone: ev.client_phone || "",
-        location: ev.location || "",
-        owner_email: ev.owner_email || "",
-        owner_name: ev.owner_name || "",
-        source: "meeting_assignment",
-        meeting_assignment_id: key,
-      });
+      const time = ev.event_time || (ev.meeting_calendar && (`${ev.meeting_calendar}`.match(/(\d{1,2}:\d{2})/)?.[1] || "")) || "";
+      const isTerminal = status === "completed" || status === "cancelled";
+
       if (key) {
-        try {
-          await base44.entities.HiddenMeeting.create({
-            meeting_key: key,
-            hidden_by: currentUser?.email || "",
-            reason: `${status === "completed" ? "Odbyte" : status === "cancelled" ? "Odwołane" : "Zaktualizowane"}: ${nd}`,
+        // 1. Zaktualizuj przypisanie — źródło prawdy dla zakładki Spotkania
+        const assignments = await base44.entities.MeetingAssignment.filter({ meeting_key: key });
+        const assignment = assignments?.[0];
+        if (assignment) {
+          await base44.entities.MeetingAssignment.update(assignment.id, {
+            meeting_date: nd,
+            meeting_calendar: time ? `${nd} ${time}` : nd,
           });
-        } catch (_) {}
+        }
+        // 2. Usuń stare wydarzenia kalendarza dla tego klucza (inne daty)
+        const oldEvents = (await base44.entities.CalendarEvent.filter({ meeting_assignment_id: key })) || [];
+        for (const oe of oldEvents) {
+          if (oe.id && oe.event_date !== nd) {
+            try { await base44.entities.CalendarEvent.delete(oe.id); } catch (_) {}
+          }
+        }
+        // 3. Dla statusu terminalnego ukryj oryginalne spotkanie z arkusza
+        if (isTerminal) {
+          try {
+            const existing = await base44.entities.HiddenMeeting.filter({ meeting_key: key });
+            if (!existing || existing.length === 0) {
+              await base44.entities.HiddenMeeting.create({
+                meeting_key: key,
+                hidden_by: currentUser?.email || "",
+                reason: `${status === "completed" ? "Odbyte" : "Odwołane"}: ${nd}`,
+              });
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 4. Jedno wydarzenie kalendarza na nowej dacie (utwórz lub zaktualizuj)
+      const existingNew = key
+        ? (await base44.entities.CalendarEvent.filter({ meeting_assignment_id: key, event_date: nd })) || []
+        : [];
+      if (existingNew.length > 0) {
+        await base44.entities.CalendarEvent.update(existingNew[0].id, {
+          status,
+          event_date: nd,
+          event_time: time || null,
+        });
+      } else {
+        await base44.entities.CalendarEvent.create({
+          title: ev.client_name ? `Spotkanie: ${ev.client_name}` : (ev.title || "Spotkanie"),
+          description: ev.description || "",
+          event_date: nd,
+          event_time: time || null,
+          event_type: "meeting",
+          status,
+          client_name: ev.client_name || "",
+          client_phone: ev.client_phone || "",
+          location: ev.location || "",
+          owner_email: ev.owner_email || "",
+          owner_name: ev.owner_name || "",
+          source: "meeting_assignment",
+          meeting_assignment_id: key,
+        });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["calendarEvents"]);
       queryClient.invalidateQueries(["hiddenMeetings"]);
       queryClient.invalidateQueries(["meetingAssignments"]);
-      toast.success("Spotkanie zapisane i ukryte u handlowca");
+      queryClient.invalidateQueries(["sheetMeetings"]);
+      toast.success(statusLabelForSheetToast());
       setSheetEdit(null);
     },
     onError: () => toast.error("Nie udało się zapisać spotkania"),
   });
+
+  function statusLabelForSheetToast() {
+    const st = sheetEdit?.status;
+    if (st === "completed") return "Spotkanie oznaczone jako odbyte i ukryte u handlowca";
+    if (st === "cancelled") return "Spotkanie odwołane i ukryte u handlowca";
+    return "Spotkanie przeniesione i zsynchronizowane w zakładce Spotkania";
+  }
 
   return (
     <Dialog open onOpenChange={onClose}>

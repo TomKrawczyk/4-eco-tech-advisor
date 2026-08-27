@@ -280,11 +280,17 @@ export default function Calendar() {
     enabled: !!currentUser,
   });
 
-  // Admin widzi ukryte spotkania — filtr dotyczy tylko nie-adminów
+  // Admin widzi ukryte spotkania w widoku grup (do zarządzania/odkrywania) —
+  // ale w głównym kalendarzu ukryte spotkania znikają dla wszystkich.
   const hiddenMeetingKeys = useMemo(() => {
     if (currentUser?.role === "admin") return new Set();
     return new Set(hiddenMeetings.map(h => h.meeting_key));
   }, [hiddenMeetings, currentUser]);
+
+  const hiddenMeetingKeysStrict = useMemo(
+    () => new Set(hiddenMeetings.map(h => h.meeting_key)),
+    [hiddenMeetings]
+  );
 
   const hideMeetingMutation = useMutation({
     mutationFn: (meeting_key) => base44.entities.HiddenMeeting.create({ meeting_key, hidden_by: currentUser?.email }),
@@ -364,12 +370,15 @@ export default function Calendar() {
         if (!d) return false;
         if (d < calStart || d > calEnd) return false;
         const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
-        if (hiddenMeetingKeys.has(key)) return false;
+        if (hiddenMeetingKeysStrict.has(key)) return false;
         const assignment = meetingAssignments.find(a => a.meeting_key === key);
+        const eventDateStr = d ? format(d, "yyyy-MM-dd") : "";
+        // Spotkanie przeniesione na inny termin — przypisanie ma nową datę,
+        // więc oryginalny wpis z arkusza (stara data) znika z kalendarza.
+        if (assignment?.meeting_date && assignment.meeting_date !== eventDateStr) return false;
         // Ukrywaj spotkanie z arkusza tylko, gdy istnieje wydarzenie kalendarza
         // dla TEGO SAMEGO dnia — inaczej spotkanie znikałoby z dnia, gdy raport
         // /przeniesienie utworzyło wydarzenie na innej dacie.
-        const eventDateStr = d ? format(d, "yyyy-MM-dd") : "";
         const hasCalendarEvent = events.some(e => e.meeting_assignment_id === key && e.event_date === eventDateStr);
         if (hasCalendarEvent) return false;
         if (currentUser.role === "admin") return true;
@@ -423,7 +432,7 @@ export default function Calendar() {
           status_label: m.status || "",
         };
       });
-  }, [allSheetMeetings, currentUser, isLeaderOrAdmin, meetingAssignments, events, sheetMappings, teamMemberEmails]);
+  }, [allSheetMeetings, currentUser, isLeaderOrAdmin, meetingAssignments, events, sheetMappings, teamMemberEmails, hiddenMeetingKeysStrict]);
 
   const visibleEvents = useMemo(() => {
     if (!currentUser) return [];

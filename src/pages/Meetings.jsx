@@ -419,7 +419,17 @@ function Meetings() {
     if (!currentUser || isLeaderOrAdmin) return [];
     return meetingAssignments
       .filter(a => a.assigned_user_email === currentUser.email)
-      .map(a => ({ ...a, ...(sheetMeetingsByKey[a.meeting_key] || {}) }))
+      .map(a => {
+        const sheet = sheetMeetingsByKey[a.meeting_key] || {};
+        const merged = { ...a, ...sheet };
+        // Przeniesione spotkanie: przypisanie ma inną datę niż arkusz — użyj daty
+        // z przypisania, żeby zakładka Spotkania pokazywała nowy termin.
+        if (a.meeting_calendar && a.meeting_calendar !== (sheet.meeting_calendar || "")) {
+          merged.meeting_calendar = a.meeting_calendar;
+          merged.meeting_date = a.meeting_date || merged.meeting_date;
+        }
+        return merged;
+      })
       .filter(a => !hiddenMeetingKeys.has(a.meeting_key))
       .filter(a => {
         if (!a.meeting_calendar) return true;
@@ -454,21 +464,31 @@ function Meetings() {
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
   }, [allAllowedUsers, currentUser, currentUserGroupId]);
 
-  // Filtruj: tylko z datą + w oknie 14 dni
+  // Filtruj: tylko z datą + w oknie 14 dni. Uwzględnij przeniesione spotkania —
+  // jeśli przypisanie ma nową datę (inną niż arkusz), spotkanie pokazuje się
+  // na nowym terminie, a oryginalny klucz służy do powiązań/ukrycia.
   const meetingsWithDate = useMemo(() => {
     return allMeetings
+      .map(m => {
+        const origKey = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+        const assignment = meetingAssignmentsByKey[origKey];
+        let calendar = m.meeting_calendar;
+        if (assignment?.meeting_calendar && assignment.meeting_calendar !== m.meeting_calendar) {
+          const nd = parseMeetingDate(assignment.meeting_calendar);
+          if (nd) calendar = assignment.meeting_calendar;
+        }
+        const d = parseMeetingDate(calendar);
+        if (!d) return null;
+        return { ...m, meeting_key: origKey, meeting_calendar: calendar, meeting_date: format(startOfDay(d), "yyyy-MM-dd") };
+      })
+      .filter(Boolean)
       .filter(m => {
-        if (!m.meeting_calendar) return false;
         const d = parseMeetingDate(m.meeting_calendar);
         if (!d) return false;
         const day = startOfDay(d);
         return day >= today && day <= maxDate;
-      })
-      .map(m => ({
-        ...m,
-        meeting_date: format(startOfDay(parseMeetingDate(m.meeting_calendar)), "yyyy-MM-dd"),
-      }));
-  }, [allMeetings, today, maxDate]);
+      });
+  }, [allMeetings, today, maxDate, meetingAssignmentsByKey]);
 
   // Filtr wyszukiwania + grupy + arkusz + rola
   const filtered = useMemo(() => {
@@ -483,10 +503,14 @@ function Meetings() {
       }
       const matchSheet = sheetFilter === "all" || m.sheet === sheetFilter;
 
+      // Ukryte (odbyte/odwołane/przeniesione-na-stare) spotkania znikają z listy
+      const key = m.meeting_key || `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
+      if (hiddenMeetingKeys.has(key)) return false;
+
       // Filtr wg roli
       let matchRole = true;
       if (currentUser?.role === "admin") {
-        // Admin widzi WSZYSTKO
+        // Admin widzi WSZYSTKO (poza ukrytymi powyżej)
         matchRole = true;
       } else if (currentUser?.role === "group_leader") {
         // Group leader widzi spotkania z arkuszy przypisanych do jego grupy
@@ -494,7 +518,6 @@ function Meetings() {
           const sheetMapping = findSheetMapping(sheetMappings, m.sheet);
           const isSheetInMyGroup = (sheetMapping?.group_id || sheetMapping?.data?.group_id) === currentUserGroupId;
           // Lub spotkania przypisane do jego grupy (przez MeetingAssignment)
-          const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
           const assignment = meetingAssignmentsByKey[key];
           const isAssignedToMyGroup = assignment?.assigned_group_id === currentUserGroupId;
           matchRole = isSheetInMyGroup || isAssignedToMyGroup;
@@ -502,7 +525,6 @@ function Meetings() {
         // Brak grupy = lider widzi wszystko (np. po świeżym awansie)
       } else if (currentUser?.role === "team_leader") {
         // Team leader widzi spotkania przypisane bezpośrednio do niego lub do członków jego zespołu
-        const key = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
         const assignment = meetingAssignmentsByKey[key];
         if (assignment) {
           const isAssignedToMe = assignment.assigned_user_email === currentUser.email;
@@ -522,7 +544,7 @@ function Meetings() {
 
       return matchSearch && matchGroup && matchSheet && matchRole;
     });
-  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings, currentUser, currentUserGroupId, meetingAssignmentsByKey, teamMemberEmails]);
+  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings, currentUser, currentUserGroupId, meetingAssignmentsByKey, teamMemberEmails, hiddenMeetingKeys]);
 
   // Grupuj po zakładce, potem po dacie
   const sheetGroups = useMemo(() => {
