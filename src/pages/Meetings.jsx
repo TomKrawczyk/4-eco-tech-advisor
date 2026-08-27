@@ -335,6 +335,36 @@ function Meetings() {
 
   const meetingReportsIndex = useMemo(() => buildMeetingReportsIndex([...meetingReports, ...visitReports]), [meetingReports, visitReports]);
 
+  // Lustrzane odbicie kalendarza: wydarzenie kalendarza (CalendarEvent) jest
+  // źródłem prawdy dla daty/godziny spotkania — każda zmiana w kalendarzu ma się
+  // odzwierciedlać również w zakładce "Spotkania".
+  const { data: calendarEventsForMeetings = [] } = useQuery({
+    queryKey: ["calendarEventsForMeetings"],
+    queryFn: () => base44.entities.CalendarEvent.list("-updated_date", 2000),
+    enabled: accessChecked,
+    staleTime: 30 * 1000,
+    refetchInterval: 30 * 1000,
+  });
+  const calendarEventByMaId = useMemo(() => {
+    const map = {};
+    calendarEventsForMeetings.forEach(ev => {
+      const k = ev.meeting_assignment_id;
+      if (!k) return;
+      if (!map[k] || new Date(ev.updated_date || 0) > new Date(map[k].updated_date || 0)) {
+        map[k] = ev;
+      }
+    });
+    return map;
+  }, [calendarEventsForMeetings]);
+  const calendarForMeetingKey = (key, fallback) => {
+    const ev = calendarEventByMaId[key];
+    if (ev && ev.event_date) {
+      const time = ev.event_time || "";
+      return time ? `${ev.event_date} ${time}` : ev.event_date;
+    }
+    return fallback;
+  };
+
   const { data: meetingsCacheRecord = null, isLoading, refetch: refetchMeetingsCache, isFetching } = useQuery({
     queryKey: ["meetingsCache"],
     queryFn: async () => {
@@ -422,9 +452,14 @@ function Meetings() {
       .map(a => {
         const sheet = sheetMeetingsByKey[a.meeting_key] || {};
         const merged = { ...a, ...sheet };
-        // Przeniesione spotkanie: przypisanie ma inną datę niż arkusz — użyj daty
-        // z przypisania, żeby zakładka Spotkania pokazywała nowy termin.
-        if (a.meeting_calendar && a.meeting_calendar !== (sheet.meeting_calendar || "")) {
+        // 1) Źródło prawdy: wydarzenie kalendarza (mirror Calendar tab)
+        // 2) Fallback: przypisanie (MeetingAssignment.meeting_calendar)
+        const fromCal = calendarForMeetingKey(a.meeting_key, null);
+        if (fromCal) {
+          merged.meeting_calendar = fromCal;
+          const d = parseMeetingDate(fromCal);
+          if (d) merged.meeting_date = format(startOfDay(d), "yyyy-MM-dd");
+        } else if (a.meeting_calendar && a.meeting_calendar !== (sheet.meeting_calendar || "")) {
           merged.meeting_calendar = a.meeting_calendar;
           merged.meeting_date = a.meeting_date || merged.meeting_date;
         }
@@ -472,11 +507,16 @@ function Meetings() {
       .map(m => {
         const origKey = `${m.sheet}__${m.client_name}__${m.meeting_calendar}`;
         const assignment = meetingAssignmentsByKey[origKey];
-        let calendar = m.meeting_calendar;
-        if (assignment?.meeting_calendar && assignment.meeting_calendar !== m.meeting_calendar) {
+        // 1) Źródło prawdy: wydarzenie kalendarza (mirror Calendar tab)
+        // 2) Fallback: przypisanie (MeetingAssignment.meeting_calendar)
+        // 3) Fallback: arkusz (sheet cache)
+        let calendar = calendarForMeetingKey(origKey, null);
+        if (!calendar && assignment?.meeting_calendar && assignment.meeting_calendar !== m.meeting_calendar) {
           const nd = parseMeetingDate(assignment.meeting_calendar);
           if (nd) calendar = assignment.meeting_calendar;
         }
+        if (!calendar) calendar = m.meeting_calendar;
+        if (!calendar) return null;
         const d = parseMeetingDate(calendar);
         if (!d) return null;
         return { ...m, meeting_key: origKey, meeting_calendar: calendar, meeting_date: format(startOfDay(d), "yyyy-MM-dd") };
