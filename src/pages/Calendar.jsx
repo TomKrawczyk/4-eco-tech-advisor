@@ -456,6 +456,9 @@ export default function Calendar() {
     const enrichedCalEvents = calEvents
       .filter((event) => {
         if (!event.event_date) return false;
+        // Ukryj stare "Przełożone" (legacy) — spotkanie już przeniesione na nową
+        // datę (postponed_to); na starej dacie zostaje tylko pozostałość do usunięcia.
+        if (event.status === "postponed" && event.postponed_to) return false;
         const eventDate = parseISO(event.event_date);
         if (!isValid(eventDate)) return false;
         // Wydarzenia starsze niż 30 dni widzi tylko administrator

@@ -57,32 +57,37 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
     onError: () => toast.error("Błąd aktualizacji statusu"),
   });
 
+  // Przeniesienie spotkania na inny termin: aktualizujemy TO samo wydarzenie
+  // (event_date + status=planned) i przypisanie (MeetingAssignment), żeby spotkanie
+  // zniknęło ze starej daty i pojawiło się na nowej — w kalendarzu i w zakładce
+  // "Spotkania". Nie tworzymy duplikatu ani nie zostawiamy "Przełożone" na starej dacie.
   const postponeMutation = useMutation({
     mutationFn: async ({ event, newDate }) => {
+      const time = event.event_time || "";
       await base44.entities.CalendarEvent.update(event.id, {
-        status: "postponed",
-        postponed_to: newDate,
-      });
-      await base44.entities.CalendarEvent.create({
-        title: event.title,
-        description: event.description,
         event_date: newDate,
-        event_time: event.event_time,
-        end_time: event.end_time,
-        event_type: event.event_type,
+        event_time: time,
         status: "planned",
-        client_name: event.client_name,
-        client_phone: event.client_phone,
-        location: event.location,
-        owner_email: event.owner_email,
-        owner_name: event.owner_name,
-        source: event.source || "manual",
-        meeting_assignment_id: event.meeting_assignment_id || "",
+        postponed_to: null,
       });
+      if (event.meeting_assignment_id) {
+        try {
+          const assignments = await base44.entities.MeetingAssignment.filter({ meeting_key: event.meeting_assignment_id });
+          const assignment = assignments?.[0];
+          if (assignment) {
+            await base44.entities.MeetingAssignment.update(assignment.id, {
+              meeting_date: newDate,
+              meeting_calendar: time ? `${newDate} ${time}` : newDate,
+            });
+          }
+        } catch (_) {}
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["calendarEvents"]);
-      toast.success("Spotkanie przełożone — nowe wydarzenie zostało dodane");
+      queryClient.invalidateQueries(["meetingAssignments"]);
+      queryClient.invalidateQueries(["sheetMeetings"]);
+      toast.success("Spotkanie przeniesione na nowy termin");
       setPostponeFor(null);
       setNewDate("");
     },
@@ -493,7 +498,7 @@ export default function CalendarDayModal({ day, events, currentUser, viewMode, r
                             Anuluj
                           </Button>
                         </div>
-                        <p className="text-[10px] text-orange-600">Spotkanie zostanie oznaczone jako przełożone, a raport będzie wymagany po nowej dacie; po przeniesieniu możesz też przepisać je na inną osobę.</p>
+                        <p className="text-[10px] text-orange-600">Spotkanie zostanie przeniesione na nowy termin — zniknie ze starej daty w kalendarzu i w zakładce „Spotkania".</p>
                       </div>
                     )}
                   </div>
