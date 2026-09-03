@@ -57,6 +57,23 @@ function PhoneContacts() {
   const [reportContact, setReportContact] = useState(null);
   const [notifySending, setNotifySending] = useState(false);
   const [archiveTab, setArchiveTab] = useState("active");
+  const [reportStatusFilter, setReportStatusFilter] = useState("all");
+
+  const reportStatusOptions = [
+    { value: "no_report", label: "Brak raportu" },
+    { value: "interested", label: "Zainteresowany" },
+    { value: "not_interested", label: "Niezainteresowany" },
+    { value: "no_answer", label: "Brak odpowiedzi" },
+    { value: "callback", label: "Do oddzwonienia" },
+    { value: "meeting_scheduled", label: "Spotkanie umówione" },
+    { value: "other", label: "Raport złożony (inny)" },
+  ];
+
+  const matchReportStatus = (contact) => {
+    if (reportStatusFilter === "all") return true;
+    const result = reportByKey[contact.contact_key]?.result || null;
+    return reportStatusFilter === "no_report" ? !result : result === reportStatusFilter;
+  };
 
   const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "hr_admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
   const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "hr_admin" || currentUser?.role === "group_leader";
@@ -456,9 +473,10 @@ function PhoneContacts() {
       const isSavedAssigned = !!c.assigned_user_email;
       const matchStatus = isManual || isSavedAssigned || c.status === "Kontakt do doradcy" || c.status === "DWS";
       const matchArchive = archiveTab === "archived" ? c.is_archived === true : c.is_archived !== true;
-      return matchSearch && matchSheet && matchUser && matchStatus && matchArchive;
+      const matchReport = matchReportStatus(c);
+      return matchSearch && matchSheet && matchUser && matchStatus && matchArchive && matchReport;
     });
-  }, [visibleContacts, search, sheetFilter, selectedUserEmail, archiveTab]);
+  }, [visibleContacts, search, sheetFilter, selectedUserEmail, archiveTab, reportByKey, reportStatusFilter]);
 
   const archiveCounts = useMemo(() => ({
     active: visibleContacts.filter(c => c.is_archived !== true).length,
@@ -521,7 +539,18 @@ function PhoneContacts() {
       active: myAllContacts.filter(c => c.is_archived !== true).length,
       archived: myAllContacts.filter(c => c.is_archived === true).length,
     };
-    const myContacts = myAllContacts.filter(c => archiveTab === "archived" ? c.is_archived === true : c.is_archived !== true);
+    const myStatusCounts = reportStatusOptions.reduce((acc, opt) => {
+      acc[opt.value] = myAllContacts.filter(c =>
+        opt.value === "no_report"
+          ? !reportByKey[c.contact_key]?.result
+          : reportByKey[c.contact_key]?.result === opt.value
+      ).length;
+      return acc;
+    }, {});
+    const myContacts = myAllContacts.filter(c =>
+      (archiveTab === "archived" ? c.is_archived === true : c.is_archived !== true) &&
+      matchReportStatus(c)
+    );
     return (
       <div className="space-y-6">
         <PageHeader title="Moje kontakty telefoniczne" subtitle="Kontakty przypisane do Ciebie" />
@@ -543,6 +572,20 @@ function PhoneContacts() {
             Zarchiwizowane ({myArchiveCounts.archived})
           </Button>
         </div>
+
+        <Select value={reportStatusFilter} onValueChange={setReportStatusFilter}>
+          <SelectTrigger className="w-56 h-11">
+            <SelectValue placeholder="Status raportu" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Wszystkie statusy ({myAllContacts.length})</SelectItem>
+            {reportStatusOptions.map(opt => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label} ({myStatusCounts[opt.value] || 0})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {myContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -687,6 +730,22 @@ function PhoneContacts() {
             <SelectItem value="unassigned">Nieprzypisane</SelectItem>
             {availableContactUsers.map(user => (
               <SelectItem key={user.email} value={user.email}>{user.name} ({user.email})</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={reportStatusFilter} onValueChange={setReportStatusFilter}>
+          <SelectTrigger className="w-56 h-11">
+            <SelectValue placeholder="Status raportu" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Wszystkie statusy ({visibleContacts.length})</SelectItem>
+            {reportStatusOptions.map(opt => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label} ({opt.value === "no_report"
+                  ? visibleContacts.filter(c => !reportByKey[c.contact_key]?.result).length
+                  : visibleContacts.filter(c => reportByKey[c.contact_key]?.result === opt.value).length})
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
