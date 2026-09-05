@@ -25,6 +25,7 @@ export default function Gielda() {
   const [flyTo, setFlyTo] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
   const [missingCount, setMissingCount] = useState(0);
+  const [skippedNoCode, setSkippedNoCode] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(null);
 
   const isAdmin = currentUser?.role === "admin";
@@ -34,7 +35,8 @@ export default function Gielda() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const freshPins = await fetchGieldaPins(currentUser.email);
+      const { pins: freshPins, skippedNoCode } = await fetchGieldaPins(currentUser.email);
+      setSkippedNoCode(skippedNoCode);
       // Zachowaj geokodowane kody z poprzedniego cyklu
       setGeoByCode((prev) => {
         const next = { ...prev };
@@ -200,9 +202,10 @@ export default function Gielda() {
         </div>
       </div>
 
-      {missingCount > 0 && (
+      {(missingCount > 0 || skippedNoCode > 0) && (
         <p className="text-[11px] text-gray-400">
-          {missingCount} rekordów pominięto brak kodu pocztowego lub lokalizacji.
+          {skippedNoCode > 0 && `${skippedNoCode} spotkań bez kodu pocztowego. `}
+          {missingCount > 0 && `${missingCount} kodów nie udało się zgeokodować.`}
         </p>
       )}
     </div>

@@ -1,10 +1,14 @@
 import React from "react";
-import { Phone, CalendarPlus, User, MapPin, FileText, Building2, Clock } from "lucide-react";
-import { maskName, maskPhone, formatPhone, extractCity, isSlaBreached, isFresh } from "@/lib/gieldaData";
+import { Phone, CalendarPlus, User, MapPin, FileText, Building2, Clock, MapPinned } from "lucide-react";
+import {
+  maskName, maskPhone, formatPhone, extractCity,
+  isSlaBreached, isFresh, isMeetingNear, buildGoogleCalendarUrl,
+} from "@/lib/gieldaData";
 
 export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed, busy }) {
   if (!pin) return null;
 
+  const isMeeting = pin.type === "spotkanie";
   const city = extractCity(pin.client_address, geo?.city);
   const sourceLabel =
     pin.source === "ContactLead" ? "Paczka kontaktów" :
@@ -17,6 +21,8 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
 
   const sla = isSlaBreached(pin);
   const fresh = isFresh(pin);
+  const near = isMeeting && !claimed && isMeetingNear(pin);
+  const showFull = claimed || pin.assigned_user_email === currentUser?.email;
 
   return (
     <div className={`rounded-xl border p-3 space-y-2 transition-all ${
@@ -25,9 +31,9 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className={`inline-block w-2.5 h-2.5 rounded-full ${pin.type === "spotkanie" ? "bg-blue-500 rotate-45" : claimed ? "bg-green-500" : sla ? "bg-red-500" : "bg-yellow-500"}`} />
+            <span className={`inline-block w-2.5 h-2.5 ${isMeeting ? "bg-blue-500 rotate-45" : claimed ? "bg-green-500" : sla ? "bg-red-500" : "bg-yellow-500"}`} />
             <span className="font-semibold text-sm text-gray-900 truncate">
-              {claimed || pin.assigned_user_email === currentUser?.email ? pin.client_name || "Klient" : maskName(pin.client_name)}
+              {showFull ? pin.client_name || "Klient" : maskName(pin.client_name)}
             </span>
           </div>
           <div className="flex items-center gap-1 text-[11px] text-gray-500 mt-0.5">
@@ -35,12 +41,15 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
             {sourceLabel}
           </div>
         </div>
-        {fresh && !claimed && (
+        {fresh && !claimed && !isMeeting && (
           <span className="text-[10px] font-medium text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> nowe
           </span>
         )}
-        {sla && !claimed && (
+        {near && (
+          <span className="text-[10px] font-medium text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full shrink-0 animate-pulse">≤48h</span>
+        )}
+        {sla && !claimed && !isMeeting && (
           <span className="text-[10px] font-medium text-red-700 bg-red-100 px-1.5 py-0.5 rounded-full shrink-0">SLA</span>
         )}
       </div>
@@ -50,20 +59,31 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
           <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
           <span>{city || "—"}{pin.postal_code ? `, ${pin.postal_code}` : ""}</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-          <span>Typ instalacji: {installType}</span>
-        </div>
-        {pin.type === "spotkanie" && pin.meeting_calendar && (
+        {isMeeting ? (
+          <>
+            {pin.sheet && (
+              <div className="flex items-center gap-1.5">
+                <MapPinned className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <span>Region: {pin.sheet}</span>
+              </div>
+            )}
+            {pin.meeting_calendar && (
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <span>Termin: {pin.meeting_calendar}</span>
+              </div>
+            )}
+          </>
+        ) : (
           <div className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            <span>Termin: {pin.meeting_calendar}</span>
+            <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+            <span>Typ instalacji: {installType}</span>
           </div>
         )}
         <div className="flex items-center gap-1.5">
           <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
           <span className="font-mono">
-            {claimed || pin.assigned_user_email === currentUser?.email ? formatPhone(pin.client_phone) : maskPhone(pin.client_phone)}
+            {showFull ? formatPhone(pin.client_phone) : maskPhone(pin.client_phone)}
           </span>
         </div>
       </div>
@@ -77,7 +97,7 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
           )}
           {pin.notes && (
             <div className="text-xs text-gray-700">
-              <span className="text-gray-400">Notatki: </span>{pin.notes}
+              <span className="text-gray-400">{isMeeting ? "Uwagi: " : "Notatki: "}</span>{pin.notes}
             </div>
           )}
           <div className="flex gap-2 pt-1">
@@ -89,13 +109,25 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
                 <Phone className="w-3.5 h-3.5" /> Zadzwoń
               </a>
             )}
-            <a
-              href={`https://4-ecodoradca.base44.app/Calendar`}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-navy-700 hover:bg-navy-800 text-white text-xs font-medium py-2 rounded-lg transition-colors"
-              style={{ backgroundColor: "#0B1437" }}
-            >
-              <CalendarPlus className="w-3.5 h-3.5" /> Umów spotkanie
-            </a>
+            {isMeeting ? (
+              <a
+                href={buildGoogleCalendarUrl(pin)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 text-white text-xs font-medium py-2 rounded-lg transition-colors"
+                style={{ backgroundColor: "#0B1437" }}
+              >
+                <CalendarPlus className="w-3.5 h-3.5" /> Dodaj do kalendarza
+              </a>
+            ) : (
+              <a
+                href="/Calendar"
+                className="flex-1 flex items-center justify-center gap-1.5 text-white text-xs font-medium py-2 rounded-lg transition-colors"
+                style={{ backgroundColor: "#0B1437" }}
+              >
+                <CalendarPlus className="w-3.5 h-3.5" /> Umów spotkanie
+              </a>
+            )}
           </div>
         </div>
       )}

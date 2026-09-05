@@ -94,12 +94,38 @@ function buildContactLeadPins(records) {
   return pins;
 }
 
-function buildMeetingAssignmentPins(records) {
+function getMeetingDate(r) {
+  if (r.meeting_date && /^\d{4}-\d{2}-\d{2}$/.test(r.meeting_date)) return r.meeting_date;
+  if (r.meeting_calendar) {
+    const m = String(r.meeting_calendar).match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  }
+  return "";
+}
+
+function buildMeetingAssignmentPins(records, currentUserEmail) {
   const pins = [];
+  let skippedNoCode = 0;
+  const today = new Date().toISOString().split("T")[0];
   for (const r of records) {
-    const code = extractPostalCode(r.client_address, r.comments, r.notes);
-    if (!code) continue;
     const isAssigned = !!(r.assigned_user_email && r.assigned_user_email.trim());
+    const assignedToMe = isAssigned && currentUserEmail && r.assigned_user_email === currentUserEmail;
+    // Pokazuj tylko: nieprzypisane LUB przypisane do mnie (do "Dodaj do kalendarza")
+    if (isAssigned && !assignedToMe) continue;
+
+    const meetingDate = getMeetingDate(r);
+    // Wyklucz błędne daty (rok < 2026) oraz spotkania z przeszłości
+    if (meetingDate) {
+      const year = parseInt(meetingDate.slice(0, 4), 10);
+      if (year < 2026 || meetingDate < today) continue;
+    } else {
+      // Brak daty spotkania → pomiń
+      continue;
+    }
+
+    const code = extractPostalCode(r.client_address, r.comments, r.notes);
+    if (!code) { skippedNoCode += 1; continue; }
+
     pins.push({
       id: `ma_${r.id}`,
       pinId: r.id,
@@ -117,11 +143,12 @@ function buildMeetingAssignmentPins(records) {
       assigned_user_name: r.assigned_user_name || "",
       assigned_at: null,
       meeting_calendar: r.meeting_calendar || "",
+      meeting_date: meetingDate,
       sheet: r.sheet || "",
       isAssigned,
     });
   }
-  return pins;
+  return { pins, skippedNoCode };
 }
 
 function buildPhoneContactPins(records) {
@@ -164,16 +191,19 @@ export async function fetchGieldaPins(currentUserEmail) {
   const activeLeads = contactLeads.filter((r) => !r.is_archived && !r.is_duplicate);
   const activePhone = phoneContacts.filter((r) => !r.is_archived);
 
+  const meetingResult = buildMeetingAssignmentPins(meetingAssignments, currentUserEmail);
+
   const pins = [
     ...buildContactLeadPins(activeLeads),
-    ...buildMeetingAssignmentPins(meetingAssignments),
+    ...meetingResult.pins,
     ...buildPhoneContactPins(activePhone),
   ];
 
   // Pokazuj: nieprzypisane OR przypisane do zalogowanego (do widoku "Moje")
-  return pins.filter(
+  const filtered = pins.filter(
     (p) => !p.isAssigned || (currentUserEmail && p.assigned_user_email === currentUserEmail)
   );
+  return { pins: filtered, skippedNoCode: meetingResult.skippedNoCode };
 }
 
 // Geokodowanie zbiorcze przez backend function; zwraca mapę code -> {lat,lon,city}
@@ -214,6 +244,35 @@ export function isSlaBreached(pin) {
 
 export function isFresh(pin) {
   return pinAgeMs(pin) < 5 * 60 * 1000;
+}
+
+// Spotkanie bliskie (<48h) — pulsująca obwódka
+export function isMeetingNear(pin) {
+  if (pin.type !== "spotkanie" || !pin.meeting_date) return false;
+  const target = new Date(`${pin.meeting_date}T23:59:59`).getTime();
+  if (Number.isNaN(target)) return false;
+  const diff = target - Date.now();
+  return diff >= 0 && diff <= 48 * 60 * 60 * 1000;
+}
+
+// Link "Dodaj do kalendarza" (Google Calendar) z danych spotkania
+export function buildGoogleCalendarUrl(pin) {
+  const date = pin.meeting_date;
+  if (!date) return "";
+  let time = "09:00";
+  const tm = String(pin.meeting_calendar || "").match(/(\d{1,2}):(\d{2})/);
+  if (tm) time = `${tm[1].padStart(2, "0")}:${tm[2]}`;
+  const [y, mo, d] = date.split("-");
+  const [h, mi] = time.split(":");
+  const start = `${y}${mo}${d}T${h}${mi}00`;
+  const endDt = new Date(`${date}T${time}:00`);
+  endDt.setHours(endDt.getHours() + 1);
+  const pad = (n) => String(n).padStart(2, "0");
+  const end = `${endDt.getFullYear()}${pad(endDt.getMonth() + 1)}${pad(endDt.getDate())}T${pad(endDt.getHours())}${pad(endDt.getMinutes())}00`;
+  const text = encodeURIComponent(`Spotkanie — ${pin.client_name || "Klient"}`);
+  const details = encodeURIComponent(`Adres: ${pin.client_address || ""}${pin.notes ? `\nUwagi: ${pin.notes}` : ""}`);
+  const loc = encodeURIComponent(pin.client_address || "");
+  return `https://www.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}&location=${loc}`;
 }
 
 export function isClaimedToday(pin) {

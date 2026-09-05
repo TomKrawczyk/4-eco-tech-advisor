@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { isMeetingNear } from "@/lib/gieldaData";
 import GieldaPinCard from "./GieldaPinCard";
 
 const POLAND_CENTER = [52.1, 19.3];
@@ -9,11 +10,13 @@ const POLAND_MAX_BOUNDS = L.latLngBounds([48.8, 14.0], [55.0, 24.5]);
 
 function pinIcon(pin) {
   const claimed = pin.isAssigned;
-  const sla = !claimed && (Date.now() - new Date(pin.assigned_at || pin.updated_date || pin.created_date || Date.now()).getTime() > 24 * 60 * 60 * 1000);
-  const fresh = !claimed && (Date.now() - new Date(pin.updated_date || pin.created_date || Date.now()).getTime() < 5 * 60 * 1000);
+  const isMeeting = pin.type === "spotkanie";
+  const sla = !claimed && !isMeeting && (Date.now() - new Date(pin.assigned_at || pin.updated_date || pin.created_date || Date.now()).getTime() > 24 * 60 * 60 * 1000);
+  const fresh = !claimed && !isMeeting && (Date.now() - new Date(pin.updated_date || pin.created_date || Date.now()).getTime() < 5 * 60 * 1000);
+  const near = !claimed && isMeetingNear(pin);
 
   let bg, shape;
-  if (pin.type === "spotkanie" && !claimed) {
+  if (isMeeting && !claimed) {
     bg = "#3b82f6"; // niebieski romb
     shape = "rotate-45";
   } else if (claimed) {
@@ -27,7 +30,7 @@ function pinIcon(pin) {
     shape = "";
   }
 
-  const pulse = fresh ? "gielda-pulse" : "";
+  const pulse = (isMeeting ? near : fresh) ? "gielda-pulse" : "";
   const diamond = shape === "rotate-45" ? "rotate(45deg)" : "rotate(0deg)";
   const size = shape === "rotate-45" ? 18 : 16;
 
@@ -105,7 +108,7 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
         <FitBounds pins={validPins} geoByCode={geoByCode} selectedId={selectedId} />
         {flyTo && <Recenter center={flyTo} zoom={13} />}
         {validPins.map((pin) => {
-          const g = geoByCode[p.postal_code];
+          const g = geoByCode[pin.postal_code];
           const isSel = selectedId === pin.id;
           return (
             <Marker

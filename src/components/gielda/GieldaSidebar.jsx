@@ -30,7 +30,14 @@ export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, s
         );
       });
     }
-    return list;
+    // Sortuj: spotkania najbliższe chronologicznie u góry, potem kontakty (najnowsze)
+    return [...list].sort((a, b) => {
+      const aM = a.type === "spotkanie" ? 0 : 1;
+      const bM = b.type === "spotkanie" ? 0 : 1;
+      if (aM !== bM) return aM - bM;
+      if (aM === 0) return (a.meeting_date || "").localeCompare(b.meeting_date || "");
+      return new Date(b.created_date || 0) - new Date(a.created_date || 0);
+    });
   }, [pins, filter, query, geoByCode, currentUser]);
 
   return (
