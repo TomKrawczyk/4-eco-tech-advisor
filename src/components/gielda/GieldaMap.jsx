@@ -61,13 +61,10 @@ function Recenter({ center, zoom }) {
   return null;
 }
 
-// Re-fit przy zmianie zakładki (resetKey) — mapa pozostaje zamontowana
-function FitBounds({ points, resetKey }) {
+// Fit bounds tylko raz (pierwsze non-empty) — przy zmianie zakładki NIE re-fit, mapa zostaje na aktualnym widoku
+function FitBounds({ points }) {
   const map = useMap();
   const didFit = useRef(false);
-  useEffect(() => {
-    didFit.current = false;
-  }, [resetKey]);
   useEffect(() => {
     if (didFit.current) return;
     if (points.length > 0) {
@@ -83,6 +80,8 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
     const valid = [];
     const pts = [];
     for (const p of pins) {
+      // Kontakty przypisane nie pokazujemy na mapie (są w "Moje" w sidebarze)
+      if (p.type === "kontakt" && p.isAssigned) continue;
       const g = geoByCode[p.postal_code];
       if (g && typeof g.lat === "number" && typeof g.lon === "number") {
         valid.push(p);
@@ -162,7 +161,7 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
         style={{ background: "#aadaff" }}
       >
         <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
-        <FitBounds points={fitPoints} resetKey={tab} />
+        <FitBounds points={fitPoints} />
         {flyTo && <Recenter center={flyTo} zoom={13} />}
         {validPins.map(renderPin)}
       </MapContainer>

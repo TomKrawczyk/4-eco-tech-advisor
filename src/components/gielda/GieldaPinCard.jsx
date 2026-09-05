@@ -94,8 +94,8 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
         </div>
       </div>
 
-      {claimed && (
-        <div className="space-y-1.5 pt-1 border-t border-green-200">
+      {showFull && (
+        <div className="space-y-1.5 pt-1 border-t border-gray-200">
           {pin.client_address && (
             <div className="text-xs text-gray-700">
               <span className="text-gray-500">Adres: </span>{pin.client_address}
@@ -105,6 +105,14 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
             <div className="text-xs text-gray-700">
               <span className="text-gray-500">{isMeeting ? "Uwagi: " : "Notatki: "}</span>{pin.notes}
             </div>
+          )}
+          {pin.assigned_at && (
+            <div className="text-[11px] text-gray-500 flex items-center gap-1">
+              <Clock className="w-3 h-3" /> Przejęto: {new Date(pin.assigned_at).toLocaleString()}
+            </div>
+          )}
+          {pin.phone_status && (
+            <div className="text-[11px] text-gray-500">Status: {pin.phone_status}</div>
           )}
           <div className="flex gap-2.5 pt-1">
             {pin.client_phone && (

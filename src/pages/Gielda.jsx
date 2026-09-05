@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { toast } from "sonner";
 import { Loader2, RefreshCw, ShieldAlert, Layers, PanelRightClose, PanelRight, Phone, CalendarClock } from "lucide-react";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import {
@@ -68,6 +69,7 @@ export default function Gielda() {
       const res = await claimPinFn(pin, currentUser);
       if (res.ok) {
         setClaimedIds((prev) => new Set(prev).add(pin.id));
+        toast.success(`Przejęto: ${pin.client_name || "Klient"}`);
         // natychmiast odśwież piny
         load(true);
       } else {

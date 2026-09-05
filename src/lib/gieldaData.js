@@ -161,17 +161,21 @@ function buildMeetingAssignmentPins(records, currentUserEmail) {
   return { pins, skippedNoCode };
 }
 
-function buildPhoneContactPins(records) {
+function buildPhoneContactPins(records, currentUserEmail) {
   const pins = [];
   for (const r of records) {
-    // Filtr "Giełda": tylko wolne kontakty ze statusem "do doradcy" / "do ponownego"
     if (r.is_archived) continue;
-    if (r.assigned_user_email && String(r.assigned_user_email).trim()) continue;
-    const st = String(r.status || "").trim();
-    if (st !== "Kontakt do doradcy" && st !== "Do ponownego kontaktu") continue;
+    const isAssigned = !!(r.assigned_user_email && String(r.assigned_user_email).trim());
+    const assignedToMe = isAssigned && currentUserEmail && r.assigned_user_email === currentUserEmail;
+    // Giełda: wolne (status do doradcy/ponowne) LUB przypisane do mnie (do "Moje")
+    if (isAssigned && !assignedToMe) continue;
+    if (!isAssigned) {
+      const st = String(r.status || "").trim();
+      if (st !== "Kontakt do doradcy" && st !== "Do ponownego kontaktu") continue;
+    }
     const code = extractPostalCode(r.address, r.client_address, r.comments);
     if (!code) continue;
-    const isAssigned = false;
+    const st = String(r.status || "").trim();
     pins.push({
       id: `pc_${r.id}`,
       pinId: r.id,
@@ -188,7 +192,7 @@ function buildPhoneContactPins(records) {
       updated_date: r.updated_date,
       assigned_user_email: r.assigned_user_email || "",
       assigned_user_name: r.assigned_user_name || "",
-      assigned_at: null,
+      assigned_at: r.assigned_at || null,
       isAssigned,
     });
   }
@@ -199,8 +203,7 @@ function buildPhoneContactPins(records) {
 // Piny bez zcache'owanych współrzędnych są pomijane — dorenderuje je najbliższy polling,
 // gdy warmupGieldaCache zgeokoduje ich kod w tle.
 export async function fetchGieldaPins(currentUserEmail) {
-  const [contactLeads, meetingAssignments, phoneContacts, cacheRows] = await Promise.all([
-    fetchAllEntityRecords(base44.entities.ContactLead),
+  const [meetingAssignments, phoneContacts, cacheRows] = await Promise.all([
     fetchAllEntityRecords(base44.entities.MeetingAssignment),
     fetchAllEntityRecords(base44.entities.PhoneContact),
     fetchAllEntityRecords(base44.entities.PostalCodeCache),
@@ -217,15 +220,14 @@ export async function fetchGieldaPins(currentUserEmail) {
     }
   }
 
-  const activeLeads = contactLeads.filter((r) => !r.is_archived && !r.is_duplicate);
   const activePhone = phoneContacts.filter((r) => !r.is_archived);
   const meetingResult = buildMeetingAssignmentPins(meetingAssignments, currentUserEmail);
 
+  // Buildery zwracają: nieprzypisane (do giełdy) + przypisane do mnie (do "Moje")
   const rawPins = [
-    ...buildContactLeadPins(activeLeads),
     ...meetingResult.pins,
-    ...buildPhoneContactPins(activePhone),
-  ].filter((p) => !p.isAssigned || (currentUserEmail && p.assigned_user_email === currentUserEmail));
+    ...buildPhoneContactPins(activePhone, currentUserEmail),
+  ];
 
   // Dołącz współrzędne z cache; pomiń piny bez zcache'owanego kodu
   const pins = [];
@@ -354,29 +356,24 @@ export function isClaimedToday(pin) {
   );
 }
 
-// Atomic claim: sprawdza czy nadal nieprzypisany, potem aktualizuje
+// Atomic claim: warunkowy updateMany {id, assigned_user_email: null} po stronie serwera.
+// Dwa równoległe przejęcia → modified_count 1 i 0; tylko zwycięzca dostaje ok=true.
 export async function claimPin(pin, currentUser) {
-  const entityName = pin.source;
-  const entity = base44.entities[entityName];
-
-  // Pobierz świeży rekord i potwierdź brak przypisania
-  const fresh = await entity.get(pin.pinId);
-  const stillFree = !(fresh.assigned_user_email && String(fresh.assigned_user_email).trim());
-
-  if (!stillFree) {
-    return { ok: false, reason: "Ktoś już podjął ten rekord." };
-  }
-
-  const updates = {
-    assigned_user_email: currentUser.email,
-    assigned_user_name: currentUser.displayName || currentUser.full_name || "",
-  };
-
+  const extra = {};
   if (pin.source === "ContactLead") {
-    updates.assigned_at = new Date().toISOString();
-    updates.status = "assigned";
+    extra.assigned_at = new Date().toISOString();
+    extra.status = "assigned";
   }
-
-  await entity.update(pin.pinId, updates);
-  return { ok: true };
+  try {
+    const res = await base44.functions.invoke("claimGieldaItem", {
+      pin_id: pin.pinId,
+      entity_name: pin.source,
+      extra_updates: extra,
+    });
+    const data = res?.data || res;
+    if (data?.ok) return { ok: true };
+    return { ok: false, reason: data?.reason || "Ktoś już podjął ten rekord." };
+  } catch (_e) {
+    return { ok: false, reason: "Wystąpił błąd. Spróbuj ponownie." };
+  }
 }

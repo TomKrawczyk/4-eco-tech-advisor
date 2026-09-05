@@ -4,9 +4,8 @@ import GieldaPinCard from "./GieldaPinCard";
 
 const CONTACT_FILTERS = [
   { value: "all", label: "Wszystkie" },
-  { value: "hot", label: "Gorące" },
+  { value: "hot", label: "Nowe leady" },
   { value: "callback", label: "Do ponownego" },
-  { value: "new", label: "Nowe leady" },
   { value: "mine", label: "Moje" },
 ];
 
@@ -29,6 +28,10 @@ export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, s
   const [query, setQuery] = useState("");
 
   const filters = tab === "meeting" ? MEETING_FILTERS : CONTACT_FILTERS;
+  const mineCount = useMemo(
+    () => pins.filter((p) => p.isAssigned && p.assigned_user_email === currentUser?.email).length,
+    [pins, currentUser]
+  );
 
   const filtered = useMemo(() => {
     let list = pins;
@@ -37,12 +40,12 @@ export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, s
       const tomorrow = tomorrowISO();
       if (filter === "today") list = list.filter((p) => p.meeting_date === today);
       else if (filter === "tomorrow") list = list.filter((p) => p.meeting_date === tomorrow);
-      else if (filter === "mine") list = list.filter((p) => p.assigned_user_email === currentUser?.email);
+      else if (filter === "mine") list = list.filter((p) => p.isAssigned && p.assigned_user_email === currentUser?.email);
     } else {
-      if (filter === "hot") list = list.filter((p) => p.source === "PhoneContact" && p.phone_status === "Kontakt do doradcy");
-      else if (filter === "callback") list = list.filter((p) => p.source === "PhoneContact" && p.phone_status === "Do ponownego kontaktu");
-      else if (filter === "new") list = list.filter((p) => p.source === "ContactLead");
-      else if (filter === "mine") list = list.filter((p) => p.assigned_user_email === currentUser?.email);
+      if (filter === "all") list = list.filter((p) => !p.isAssigned);
+      else if (filter === "hot") list = list.filter((p) => !p.isAssigned && p.source === "PhoneContact" && p.phone_status === "Kontakt do doradcy");
+      else if (filter === "callback") list = list.filter((p) => !p.isAssigned && p.source === "PhoneContact" && p.phone_status === "Do ponownego kontaktu");
+      else if (filter === "mine") list = list.filter((p) => p.isAssigned && p.assigned_user_email === currentUser?.email);
     }
 
     if (query.trim()) {
@@ -88,17 +91,27 @@ export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, s
           )}
         </div>
         <div className="flex flex-wrap gap-1">
-          {filters.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
-                filter === f.value ? "bg-green-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+          {filters.map((f) => {
+            const isMine = f.value === "mine";
+            return (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+                  filter === f.value ? "bg-green-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {f.label}
+                {isMine && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    filter === "mine" ? "bg-white/25 text-white" : "bg-gray-200 text-gray-600"
+                  }`}>
+                    {mineCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
