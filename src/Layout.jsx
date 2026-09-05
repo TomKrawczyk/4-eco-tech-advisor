@@ -103,6 +103,7 @@ const navStructure = [
   },
   { name: "Education", label: "Szkolenia" },
   { name: "ContactPackages", label: "Paczki kontaktów", roles: ["admin", "group_leader", "team_leader", "advisor"] },
+  { name: "Gielda", label: "Giełda", path: "/gielda", roles: ["admin"] },
   { name: "TodayTasks", label: "Dziś do zrobienia" },
   { name: "Documentation", label: "Dokumentacja", adminOnly: true },
   { name: "MagazynyPrezentacja", label: "Prezentacja magazynów" },

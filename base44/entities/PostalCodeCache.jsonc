@@ -1,0 +1,39 @@
+{
+  "name": "PostalCodeCache",
+  "type": "object",
+  "properties": {
+    "postal_code": {
+      "type": "string",
+      "description": "Kod pocztowy (format XX-XXX)"
+    },
+    "lat": {
+      "type": "number",
+      "description": "Szeroko\u015b\u0107 geograficzna"
+    },
+    "lon": {
+      "type": "number",
+      "description": "D\u0142ugo\u015b\u0107 geograficzna"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Pe\u0142na nazwa lokalizacji z Nominatim"
+    },
+    "city": {
+      "type": "string",
+      "description": "Pobrane miasto (pierwszy cz\u0142on display_name)"
+    },
+    "cached_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kiedy zgeokodowano"
+    },
+    "not_found": {
+      "type": "boolean",
+      "default": false,
+      "description": "Czy Nominatim nie znalaz\u0142 kodu (zapobiega ponownym zapytaniom)"
+    }
+  },
+  "required": [
+    "postal_code"
+  ]
+}

@@ -24,6 +24,7 @@ import ScreenshotAttempts from '@/pages/ScreenshotAttempts';
 import HiddenLeads from '@/pages/HiddenLeads';
 import HiddenDataArchive from '@/pages/HiddenDataArchive';
 import TodayTasks from '@/pages/TodayTasks';
+import Gielda from '@/pages/Gielda';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -193,6 +194,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="ScreenshotAttempts">
             <ScreenshotAttempts />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/gielda"
+        element={
+          <LayoutWrapper currentPageName="Gielda">
+            <Gielda />
           </LayoutWrapper>
         }
       />
