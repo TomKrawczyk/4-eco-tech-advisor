@@ -3,7 +3,7 @@ import { Loader2, RefreshCw, ShieldAlert, Layers, PanelRightClose, PanelRight } 
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import {
   fetchGieldaPins,
-  geocodePostalCodes,
+  geocodeInBatches,
   claimPin as claimPinFn,
 } from "@/lib/gieldaData";
 import GieldaStats from "@/components/gielda/GieldaStats";
@@ -44,7 +44,7 @@ export default function Gielda() {
           .map((p) => p.postal_code)
           .filter((c) => !next[c]);
         if (newCodes.length > 0) {
-          geocodePostalCodes(newCodes).then(({ geo, missing }) => {
+          geocodeInBatches(newCodes, (geo, missing) => {
             setGeoByCode((cur) => ({ ...cur, ...geo }));
             setMissingCount((m) => m + missing.length);
           });

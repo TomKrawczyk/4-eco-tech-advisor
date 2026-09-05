@@ -68,9 +68,15 @@ export function formatPhone(phone) {
 function buildContactLeadPins(records) {
   const pins = [];
   for (const r of records) {
+    // Filtr "Giełda": tylko wolne, niekontaktowane leads bez paczki
+    if (r.is_archived) continue;
+    if (r.package_id && String(r.package_id).trim()) continue;
+    if (r.assigned_user_email && String(r.assigned_user_email).trim()) continue;
+    if (r.contacted_at) continue;
+    if ((r.status || "unassigned") !== "unassigned") continue;
     const code = extractPostalCode(r.postal_code, r.client_address, r.notes);
     if (!code) continue;
-    const isAssigned = !!(r.assigned_user_email && r.assigned_user_email.trim());
+    const isAssigned = false;
     pins.push({
       id: `cl_${r.id}`,
       pinId: r.id,
@@ -154,9 +160,14 @@ function buildMeetingAssignmentPins(records, currentUserEmail) {
 function buildPhoneContactPins(records) {
   const pins = [];
   for (const r of records) {
+    // Filtr "Giełda": tylko wolne kontakty ze statusem "do doradcy" / "do ponownego"
+    if (r.is_archived) continue;
+    if (r.assigned_user_email && String(r.assigned_user_email).trim()) continue;
+    const st = String(r.status || "").trim();
+    if (st !== "Kontakt do doradcy" && st !== "Do ponownego kontaktu") continue;
     const code = extractPostalCode(r.address, r.client_address, r.comments);
     if (!code) continue;
-    const isAssigned = !!(r.assigned_user_email && r.assigned_user_email.trim());
+    const isAssigned = false;
     pins.push({
       id: `pc_${r.id}`,
       pinId: r.id,
@@ -227,6 +238,38 @@ export async function geocodePostalCodes(postalCodes) {
   } catch (_e) {
     return { geo: {}, missing: unique };
   }
+}
+
+// Geokodowanie w małych paczkach — backend throttluje Nominatim (1.1s/kod),
+// więc pojedyncze wywołanie ze wszystkimi kodami przekracza timeout i nic nie wraca.
+// Paczkowanie pozwala każdemu wywołaniu skończyć się w czasie i aktualizować mapę przyrostowo.
+export async function geocodeInBatches(postalCodes, onBatch, batchSize = 6) {
+  const unique = Array.from(new Set(postalCodes.filter(Boolean)));
+  const allGeo = {};
+  const allMissing = [];
+  for (let i = 0; i < unique.length; i += batchSize) {
+    const chunk = unique.slice(i, i + batchSize);
+    try {
+      const res = await base44.functions.invoke("geocodePostalCode", { postal_codes: chunk });
+      const data = res?.data || res;
+      const geo = {};
+      const missing = [];
+      for (const code of chunk) {
+        const g = data?.results?.[code];
+        if (g && typeof g.lat === "number" && typeof g.lon === "number") {
+          geo[code] = g;
+          allGeo[code] = g;
+        } else {
+          missing.push(code);
+          allMissing.push(code);
+        }
+      }
+      if (onBatch) onBatch(geo, missing);
+    } catch (_e) {
+      // błąd paczki — próbujemy dalej z następną
+    }
+  }
+  return { geo: allGeo, missing: allMissing };
 }
 
 // Wiek pina w ms
