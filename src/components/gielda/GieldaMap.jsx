@@ -1,45 +1,51 @@
-import React, { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import React, { useEffect, useRef, useMemo } from "react";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { isMeetingNear } from "@/lib/gieldaData";
+import { isSlaBreached, isFresh, isMeetingNear } from "@/lib/gieldaData";
 import GieldaPinCard from "./GieldaPinCard";
 
 const POLAND_CENTER = [52.1, 19.3];
 const POLAND_MAX_BOUNDS = L.latLngBounds([48.8, 14.0], [55.0, 24.5]);
+const MAX_MARKERS = 300;
 
-function pinIcon(pin) {
+// Style pinu (vector circleMarker — renderowane na canvas, nie DOM)
+function pinStyle(pin) {
   const claimed = pin.isAssigned;
   const isMeeting = pin.type === "spotkanie";
-  const sla = !claimed && !isMeeting && (Date.now() - new Date(pin.assigned_at || pin.updated_date || pin.created_date || Date.now()).getTime() > 24 * 60 * 60 * 1000);
-  const fresh = !claimed && !isMeeting && (Date.now() - new Date(pin.updated_date || pin.created_date || Date.now()).getTime() < 5 * 60 * 1000);
-  const near = !claimed && isMeetingNear(pin);
+  const sla = !claimed && !isMeeting && isSlaBreached(pin);
+  const fresh = !claimed && !isMeeting && isFresh(pin);
+  const near = !claimed && isMeeting && isMeetingNear(pin);
 
-  let bg, shape;
-  if (isMeeting && !claimed) {
-    bg = "#3b82f6"; // niebieski romb
-    shape = "rotate-45";
-  } else if (claimed) {
-    bg = "#22c55e"; // zielony
-    shape = "";
-  } else if (sla) {
-    bg = "#ef4444"; // czerwony
-    shape = "";
-  } else {
-    bg = "#eab308"; // żółty
-    shape = "";
-  }
+  let fillColor;
+  if (isMeeting && !claimed) fillColor = "#3b82f6"; // niebieski — spotkanie
+  else if (claimed) fillColor = "#22c55e"; // zielony — moje
+  else if (sla) fillColor = "#ef4444"; // czerwony — SLA
+  else if (fresh) fillColor = "#eab308"; // żółty — nowe
+  else fillColor = "#f59e0b"; // amber — reszta
 
-  const pulse = (isMeeting ? near : fresh) ? "gielda-pulse" : "";
-  const diamond = shape === "rotate-45" ? "rotate(45deg)" : "rotate(0deg)";
-  const size = shape === "rotate-45" ? 18 : 16;
+  const radius = near ? 9 : isMeeting ? 7 : sla ? 6 : 5;
+  const weight = near ? 3 : 2;
 
-  return L.divIcon({
-    className: "gielda-pin-icon",
-    html: `<div class="${pulse}" style="width:${size}px;height:${size}px;border-radius:${shape === "rotate-45" ? "3px" : "50%"};background:${bg};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.4);transform:${diamond};"></div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  });
+  return {
+    color: "#ffffff",
+    weight,
+    fillColor,
+    fillOpacity: 0.9,
+    radius,
+  };
+}
+
+// Sortowanie "najgorętsze pierwsze" do kapowania markera (max MAX_MARKERS)
+function hotSort(a, b) {
+  const aM = a.type === "spotkanie" ? 0 : 1;
+  const bM = b.type === "spotkanie" ? 0 : 1;
+  if (aM !== bM) return aM - bM;
+  if (aM === 0) return (a.meeting_date || "").localeCompare(b.meeting_date || "");
+  const aSla = isSlaBreached(a) ? 0 : 1;
+  const bSla = isSlaBreached(b) ? 0 : 1;
+  if (aSla !== bSla) return aSla - bSla;
+  return new Date(b.created_date || 0) - new Date(a.created_date || 0);
 }
 
 function Recenter({ center, zoom }) {
@@ -50,43 +56,39 @@ function Recenter({ center, zoom }) {
   return null;
 }
 
-function FitBounds({ pins, selectedId, geoByCode }) {
+function FitBounds({ points }) {
   const map = useMap();
   const didFit = useRef(false);
   useEffect(() => {
     if (didFit.current) return;
-    const pts = pins
-      .map((p) => geoByCode[p.postal_code])
-      .filter(Boolean)
-      .map((g) => [g.lat, g.lon]);
-    if (pts.length > 0) {
-      map.fitBounds(L.latLngBounds(pts).pad(0.2), { animate: true });
+    if (points.length > 0) {
+      map.fitBounds(L.latLngBounds(points).pad(0.2), { animate: true });
       didFit.current = true;
     }
-  }, [pins, geoByCode, map]);
+  }, [points, map]);
   return null;
 }
 
 export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claimedIds, busyId, selectedId, onSelect, flyTo }) {
-  const validPins = pins.filter((p) => {
-    const g = geoByCode[p.postal_code];
-    return g && typeof g.lat === "number" && typeof g.lon === "number";
-  });
+  const { validPins, fitPoints } = useMemo(() => {
+    const valid = [];
+    const pts = [];
+    for (const p of pins) {
+      const g = geoByCode[p.postal_code];
+      if (g && typeof g.lat === "number" && typeof g.lon === "number") {
+        valid.push(p);
+        pts.push([g.lat, g.lon]);
+      }
+    }
+    valid.sort(hotSort);
+    return { validPins: valid.slice(0, MAX_MARKERS), fitPoints: pts };
+  }, [pins, geoByCode]);
+
+  const capped = validPins.length === MAX_MARKERS;
 
   return (
     <div className="relative w-full h-full">
       <style>{`
-        .gielda-pin-icon { background: transparent; border: none; }
-        .gielda-pulse { animation: gielda-pulse-anim 1.5s ease-in-out infinite; }
-        @keyframes gielda-pulse-anim {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.4); opacity: 0.7; }
-        }
-        .gielda-pulse[style*="rotate(45deg)"] { animation: gielda-pulse-rot 1.5s ease-in-out infinite; }
-        @keyframes gielda-pulse-rot {
-          0%, 100% { transform: rotate(45deg) scale(1); opacity: 1; }
-          50% { transform: rotate(45deg) scale(1.4); opacity: 0.7; }
-        }
         .leaflet-container { font-family: inherit; }
         .leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; overflow: hidden; }
         .leaflet-popup-content { margin: 0; width: 240px !important; }
@@ -98,6 +100,7 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
         maxZoom={18}
         maxBounds={POLAND_MAX_BOUNDS}
         maxBoundsViscosity={0.8}
+        preferCanvas={true}
         className="w-full h-full z-0"
         style={{ background: "#aadaff" }}
       >
@@ -105,16 +108,22 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; OpenStreetMap'
         />
-        <FitBounds pins={validPins} geoByCode={geoByCode} selectedId={selectedId} />
+        <FitBounds points={fitPoints} />
         {flyTo && <Recenter center={flyTo} zoom={13} />}
         {validPins.map((pin) => {
           const g = geoByCode[pin.postal_code];
           const isSel = selectedId === pin.id;
+          const style = pinStyle(pin);
+          if (isSel) {
+            style.weight = 4;
+            style.radius = style.radius + 2;
+          }
           return (
-            <Marker
+            <CircleMarker
               key={pin.id}
-              position={[g.lat, g.lon]}
-              icon={pinIcon(pin)}
+              center={[g.lat, g.lon]}
+              pathOptions={style}
+              radius={style.radius}
               eventHandlers={{ click: () => onSelect(pin) }}
               zIndexOffset={isSel ? 1000 : 0}
             >
@@ -130,10 +139,15 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
                   />
                 </div>
               </Popup>
-            </Marker>
+            </CircleMarker>
           );
         })}
       </MapContainer>
+      {capped && (
+        <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur px-2.5 py-1 rounded-md shadow text-[11px] text-gray-600 z-[500]">
+          Pokazano {MAX_MARKERS} najgorętszych pinów (przybliż, by zobaczyć więcej)
+        </div>
+      )}
     </div>
   );
 }

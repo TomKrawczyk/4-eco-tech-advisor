@@ -182,22 +182,22 @@ export default function Gielda() {
           </div>
         )}
         <div className="relative rounded-xl border border-gray-200 overflow-hidden lg:order-2 order-1 min-h-[300px]">
-          {loading ? (
-            <div className="flex items-center justify-center h-full bg-blue-50">
-              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+          <GieldaMap
+            pins={pins}
+            geoByCode={geoByCode}
+            currentUser={currentUser}
+            onClaim={handleClaim}
+            claimedIds={claimedIds}
+            busyId={busyId}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            flyTo={flyTo}
+          />
+          {loading && (
+            <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-white/90 backdrop-blur px-2.5 py-1.5 rounded-lg shadow text-xs text-gray-600 z-[500]">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-green-600" />
+              Ładowanie pinów…
             </div>
-          ) : (
-            <GieldaMap
-              pins={pins}
-              geoByCode={geoByCode}
-              currentUser={currentUser}
-              onClaim={handleClaim}
-              claimedIds={claimedIds}
-              busyId={busyId}
-              selectedId={selectedId}
-              onSelect={handleSelect}
-              flyTo={flyTo}
-            />
           )}
         </div>
       </div>
