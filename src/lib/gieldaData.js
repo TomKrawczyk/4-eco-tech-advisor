@@ -109,6 +109,12 @@ function getMeetingDate(r) {
   return "";
 }
 
+function addDaysISO(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
 function buildMeetingAssignmentPins(records, currentUserEmail) {
   const pins = [];
   let skippedNoCode = 0;
@@ -120,13 +126,11 @@ function buildMeetingAssignmentPins(records, currentUserEmail) {
     if (isAssigned && !assignedToMe) continue;
 
     const meetingDate = getMeetingDate(r);
-    // Wyklucz błędne daty (rok < 2026) oraz spotkania z przeszłości
-    if (meetingDate) {
-      const year = parseInt(meetingDate.slice(0, 4), 10);
-      if (year < 2026 || meetingDate < today) continue;
-    } else {
-      // Brak daty spotkania → pomiń
-      continue;
+    if (!meetingDate) continue;
+    // Okno: dziś + 3 dni do przodu, nic starszego, nic dalszego
+    {
+      const maxDate = addDaysISO(today, 3);
+      if (meetingDate < today || meetingDate > maxDate) continue;
     }
 
     const code = extractPostalCode(r.client_address, r.comments, r.notes);
