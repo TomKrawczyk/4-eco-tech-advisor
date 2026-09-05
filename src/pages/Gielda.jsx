@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Loader2, RefreshCw, ShieldAlert, Layers, PanelRightClose, PanelRight } from "lucide-react";
+import { Loader2, RefreshCw, ShieldAlert, Layers, PanelRightClose, PanelRight, Phone, CalendarClock } from "lucide-react";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import {
   fetchGieldaPins,
@@ -27,6 +27,13 @@ export default function Gielda() {
   const [missingCount, setMissingCount] = useState(0);
   const [skippedNoCode, setSkippedNoCode] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [tab, setTab] = useState(() => {
+    try { return localStorage.getItem("gielda_tab") === "meeting" ? "meeting" : "contact"; } catch (_) { return "contact"; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem("gielda_tab", tab); } catch (_) {}
+  }, [tab]);
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -101,6 +108,13 @@ export default function Gielda() {
 
   const selectedPin = useMemo(() => pins.find((p) => p.id === selectedId) || null, [pins, selectedId]);
 
+  const contactCount = useMemo(() => pins.filter((p) => p.type === "kontakt").length, [pins]);
+  const meetingCount = useMemo(() => pins.filter((p) => p.type === "spotkanie").length, [pins]);
+  const tabPins = useMemo(
+    () => (tab === "meeting" ? pins.filter((p) => p.type === "spotkanie") : pins.filter((p) => p.type === "kontakt")),
+    [pins, tab]
+  );
+
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -163,14 +177,42 @@ export default function Gielda() {
         </div>
       )}
 
-      <GieldaStats pins={pins} currentUserEmail={currentUser.email} />
+      {/* Segmented control — podział na zakładki */}
+      <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
+        <button
+          onClick={() => setTab("contact")}
+          className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            tab === "contact" ? "bg-white shadow text-green-700 font-semibold" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <Phone className="w-4 h-4" />
+          Kontakt telefoniczny
+          <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === "contact" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+            {contactCount}
+          </span>
+        </button>
+        <button
+          onClick={() => setTab("meeting")}
+          className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            tab === "meeting" ? "bg-white shadow text-blue-700 font-semibold" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <CalendarClock className="w-4 h-4" />
+          Spotkanie
+          <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === "meeting" ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-500"}`}>
+            {meetingCount}
+          </span>
+        </button>
+      </div>
+
+      <GieldaStats pins={tabPins} currentUserEmail={currentUser.email} tab={tab} />
 
       {/* Mapa + sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-3 h-[calc(100vh-320px)] min-h-[420px]">
         {showSidebar && (
           <div className="lg:h-full h-64 lg:h-auto overflow-hidden rounded-xl border border-gray-200 lg:order-1 order-2">
             <GieldaSidebar
-              pins={pins}
+              pins={tabPins}
               geoByCode={geoByCode}
               currentUser={currentUser}
               onClaim={handleClaim}
@@ -178,12 +220,13 @@ export default function Gielda() {
               onSelect={handleSelect}
               claimedIds={claimedIds}
               busyId={busyId}
+              tab={tab}
             />
           </div>
         )}
         <div className="relative rounded-xl border border-gray-200 overflow-hidden lg:order-2 order-1 min-h-[300px]">
           <GieldaMap
-            pins={pins}
+            pins={tabPins}
             geoByCode={geoByCode}
             currentUser={currentUser}
             onClaim={handleClaim}
@@ -192,6 +235,7 @@ export default function Gielda() {
             selectedId={selectedId}
             onSelect={handleSelect}
             flyTo={flyTo}
+            tab={tab}
           />
           {loading && (
             <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-white/90 backdrop-blur px-2.5 py-1.5 rounded-lg shadow text-xs text-gray-600 z-[500]">

@@ -1,23 +1,49 @@
 import React, { useState, useMemo } from "react";
-import { Search, Filter, X } from "lucide-react";
+import { Search, X, Filter } from "lucide-react";
 import GieldaPinCard from "./GieldaPinCard";
 
-const FILTERS = [
+const CONTACT_FILTERS = [
   { value: "all", label: "Wszystkie" },
-  { value: "unassigned", label: "Niepodjęte" },
-  { value: "meetings", label: "Spotkania" },
+  { value: "hot", label: "Gorące" },
+  { value: "callback", label: "Do ponownego" },
+  { value: "new", label: "Nowe leady" },
   { value: "mine", label: "Moje" },
 ];
 
-export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, selectedId, onSelect, claimedIds, busyId }) {
+const MEETING_FILTERS = [
+  { value: "all", label: "Wszystkie" },
+  { value: "today", label: "Dziś" },
+  { value: "tomorrow", label: "Jutro" },
+  { value: "mine", label: "Moje" },
+];
+
+function todayISO() { return new Date().toISOString().split("T")[0]; }
+function tomorrowISO() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
+}
+
+export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, selectedId, onSelect, claimedIds, busyId, tab }) {
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
 
+  const filters = tab === "meeting" ? MEETING_FILTERS : CONTACT_FILTERS;
+
   const filtered = useMemo(() => {
     let list = pins;
-    if (filter === "unassigned") list = list.filter((p) => !p.isAssigned);
-    else if (filter === "meetings") list = list.filter((p) => p.type === "spotkanie" && !p.isAssigned);
-    else if (filter === "mine") list = list.filter((p) => p.assigned_user_email === currentUser?.email);
+    if (tab === "meeting") {
+      const today = todayISO();
+      const tomorrow = tomorrowISO();
+      if (filter === "today") list = list.filter((p) => p.meeting_date === today);
+      else if (filter === "tomorrow") list = list.filter((p) => p.meeting_date === tomorrow);
+      else if (filter === "mine") list = list.filter((p) => p.assigned_user_email === currentUser?.email);
+    } else {
+      if (filter === "hot") list = list.filter((p) => p.source === "PhoneContact" && p.phone_status === "Kontakt do doradcy");
+      else if (filter === "callback") list = list.filter((p) => p.source === "PhoneContact" && p.phone_status === "Do ponownego kontaktu");
+      else if (filter === "new") list = list.filter((p) => p.source === "ContactLead");
+      else if (filter === "mine") list = list.filter((p) => p.assigned_user_email === currentUser?.email);
+    }
 
     if (query.trim()) {
       const q = query.trim().toLowerCase();
@@ -30,19 +56,22 @@ export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, s
         );
       });
     }
-    // Sortuj: spotkania najbliższe chronologicznie u góry, potem kontakty (najnowsze)
+
     return [...list].sort((a, b) => {
-      const aM = a.type === "spotkanie" ? 0 : 1;
-      const bM = b.type === "spotkanie" ? 0 : 1;
-      if (aM !== bM) return aM - bM;
-      if (aM === 0) return (a.meeting_date || "").localeCompare(b.meeting_date || "");
+      if (tab === "meeting") {
+        // Chronologicznie — najbliższe u góry, po dacie a potem po terminie z arkusza
+        const da = a.meeting_date || "9999";
+        const db = b.meeting_date || "9999";
+        if (da !== db) return da.localeCompare(db);
+        return (a.meeting_calendar || "").localeCompare(b.meeting_calendar || "");
+      }
+      // Kontakty — najnowsze u góry
       return new Date(b.created_date || 0) - new Date(a.created_date || 0);
     });
-  }, [pins, filter, query, geoByCode, currentUser]);
+  }, [pins, filter, query, geoByCode, currentUser, tab]);
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
-      {/* Wyszukiwarka */}
       <div className="p-3 border-b border-gray-100 space-y-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -59,7 +88,7 @@ export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, s
           )}
         </div>
         <div className="flex flex-wrap gap-1">
-          {FILTERS.map((f) => (
+          {filters.map((f) => (
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
@@ -73,10 +102,9 @@ export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, s
         </div>
       </div>
 
-      {/* Lista */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {filtered.length === 0 ? (
-          <div className="text-center text-xs text-gray-400 py-8">Brak pinów do wyświetlenia</div>
+          <div className="text-center text-xs text-gray-400 py-8">Brak pozycji do wyświetlenia</div>
         ) : (
           filtered.map((pin) => (
             <div
@@ -99,7 +127,7 @@ export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, s
 
       <div className="px-3 py-2 border-t border-gray-100 text-[11px] text-gray-400 flex items-center gap-1">
         <Filter className="w-3 h-3" />
-        {filtered.length} z {pins.length} pinów
+        {filtered.length} z {pins.length} pozycji
       </div>
     </div>
   );

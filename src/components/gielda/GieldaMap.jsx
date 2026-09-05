@@ -1,47 +1,52 @@
 import React, { useEffect, useRef, useMemo } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { isSlaBreached, isFresh, isMeetingNear } from "@/lib/gieldaData";
+import { isSlaBreached } from "@/lib/gieldaData";
 import GieldaPinCard from "./GieldaPinCard";
 
 const POLAND_CENTER = [52.1, 19.3];
 const POLAND_MAX_BOUNDS = L.latLngBounds([48.8, 14.0], [55.0, 24.5]);
 const MAX_MARKERS = 300;
 
-// Style pinu (vector circleMarker — renderowane na canvas, nie DOM)
-function pinStyle(pin) {
-  const claimed = pin.isAssigned;
-  const isMeeting = pin.type === "spotkanie";
-  const sla = !claimed && !isMeeting && isSlaBreached(pin);
-  const fresh = !claimed && !isMeeting && isFresh(pin);
-  const near = !claimed && isMeeting && isMeetingNear(pin);
+// Romb (diamond) dla spotkań — DOM marker (spotkań jest mało dzięki oknu dziś+3)
+function diamondIcon(color, selected) {
+  const size = selected ? 18 : 14;
+  return L.divIcon({
+    className: "gielda-diamond",
+    html: `<div style="width:${size}px;height:${size}px;background:${color};border:2px solid #fff;transform:rotate(45deg);box-shadow:0 1px 3px rgba(0,0,0,0.4);${selected ? "outline:2px solid #1d4ed8;outline-offset:1px;" : ""}"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
 
-  let fillColor;
-  if (isMeeting && !claimed) fillColor = "#3b82f6"; // niebieski — spotkanie
-  else if (claimed) fillColor = "#22c55e"; // zielony — moje
-  else if (sla) fillColor = "#ef4444"; // czerwony — SLA
-  else if (fresh) fillColor = "#eab308"; // żółty — nowe
-  else fillColor = "#f59e0b"; // amber — reszta
+// Kolor kontaktu wg statusu
+function contactColor(pin) {
+  if (pin.isAssigned) return "#22c55e";
+  if (pin.source === "PhoneContact" && pin.phone_status === "Kontakt do doradcy") return "#ef4444"; // czerwone
+  if (pin.source === "PhoneContact" && pin.phone_status === "Do ponownego kontaktu") return "#f97316"; // pomarańczowe
+  return "#eab308"; // ContactLead — żółte
+}
 
-  const radius = near ? 9 : isMeeting ? 7 : sla ? 6 : 5;
-  const weight = near ? 3 : 2;
-
+function contactStyle(pin, selected) {
+  const sla = !pin.isAssigned && isSlaBreached(pin);
   return {
-    color: "#ffffff",
-    weight,
-    fillColor,
-    fillOpacity: 0.9,
-    radius,
+    color: "#fff",
+    weight: sla ? 4 : selected ? 3 : 2,
+    fillColor: contactColor(pin),
+    fillOpacity: 0.95,
+    radius: sla ? 7 : selected ? 8 : 6,
   };
 }
 
-// Sortowanie "najgorętsze pierwsze" do kapowania markera (max MAX_MARKERS)
-function hotSort(a, b) {
-  const aM = a.type === "spotkanie" ? 0 : 1;
-  const bM = b.type === "spotkanie" ? 0 : 1;
-  if (aM !== bM) return aM - bM;
-  if (aM === 0) return (a.meeting_date || "").localeCompare(b.meeting_date || "");
+// Sortowanie "najgorętsze pierwsze" do kapowania
+function hotSort(a, b, tab) {
+  if (tab === "meeting") {
+    const da = a.meeting_date || "9999";
+    const db = b.meeting_date || "9999";
+    if (da !== db) return da.localeCompare(db);
+    return (a.meeting_calendar || "").localeCompare(b.meeting_calendar || "");
+  }
   const aSla = isSlaBreached(a) ? 0 : 1;
   const bSla = isSlaBreached(b) ? 0 : 1;
   if (aSla !== bSla) return aSla - bSla;
@@ -56,9 +61,13 @@ function Recenter({ center, zoom }) {
   return null;
 }
 
-function FitBounds({ points }) {
+// Re-fit przy zmianie zakładki (resetKey) — mapa pozostaje zamontowana
+function FitBounds({ points, resetKey }) {
   const map = useMap();
   const didFit = useRef(false);
+  useEffect(() => {
+    didFit.current = false;
+  }, [resetKey]);
   useEffect(() => {
     if (didFit.current) return;
     if (points.length > 0) {
@@ -69,7 +78,7 @@ function FitBounds({ points }) {
   return null;
 }
 
-export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claimedIds, busyId, selectedId, onSelect, flyTo }) {
+export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claimedIds, busyId, selectedId, onSelect, flyTo, tab }) {
   const { validPins, fitPoints } = useMemo(() => {
     const valid = [];
     const pts = [];
@@ -80,11 +89,58 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
         pts.push([g.lat, g.lon]);
       }
     }
-    valid.sort(hotSort);
+    valid.sort((a, b) => hotSort(a, b, tab));
     return { validPins: valid.slice(0, MAX_MARKERS), fitPoints: pts };
-  }, [pins, geoByCode]);
+  }, [pins, geoByCode, tab]);
 
   const capped = validPins.length === MAX_MARKERS;
+
+  const renderPin = (pin) => {
+    const g = geoByCode[pin.postal_code];
+    const isSel = selectedId === pin.id;
+    const card = (
+      <Popup>
+        <div className="p-2">
+          <GieldaPinCard
+            pin={pin}
+            geo={g}
+            currentUser={currentUser}
+            onClaim={onClaim}
+            claimed={claimedIds.has(pin.id)}
+            busy={busyId === pin.id}
+          />
+        </div>
+      </Popup>
+    );
+
+    if (pin.type === "spotkanie") {
+      const color = pin.isAssigned ? "#22c55e" : "#3b82f6";
+      return (
+        <Marker
+          key={pin.id}
+          position={[g.lat, g.lon]}
+          icon={diamondIcon(color, isSel)}
+          eventHandlers={{ click: () => onSelect(pin) }}
+          zIndexOffset={isSel ? 1000 : 0}
+        >
+          {card}
+        </Marker>
+      );
+    }
+    const style = contactStyle(pin, isSel);
+    return (
+      <CircleMarker
+        key={pin.id}
+        center={[g.lat, g.lon]}
+        pathOptions={style}
+        radius={style.radius}
+        eventHandlers={{ click: () => onSelect(pin) }}
+        zIndexOffset={isSel ? 1000 : 0}
+      >
+        {card}
+      </CircleMarker>
+    );
+  };
 
   return (
     <div className="relative w-full h-full">
@@ -92,6 +148,7 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
         .leaflet-container { font-family: inherit; }
         .leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; overflow: hidden; }
         .leaflet-popup-content { margin: 0; width: 240px !important; }
+        .gielda-diamond { background: transparent; border: none; }
       `}</style>
       <MapContainer
         center={POLAND_CENTER}
@@ -104,44 +161,10 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
         className="w-full h-full z-0"
         style={{ background: "#aadaff" }}
       >
-        <TileLayer
-          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; OpenStreetMap'
-        />
-        <FitBounds points={fitPoints} />
+        <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
+        <FitBounds points={fitPoints} resetKey={tab} />
         {flyTo && <Recenter center={flyTo} zoom={13} />}
-        {validPins.map((pin) => {
-          const g = geoByCode[pin.postal_code];
-          const isSel = selectedId === pin.id;
-          const style = pinStyle(pin);
-          if (isSel) {
-            style.weight = 4;
-            style.radius = style.radius + 2;
-          }
-          return (
-            <CircleMarker
-              key={pin.id}
-              center={[g.lat, g.lon]}
-              pathOptions={style}
-              radius={style.radius}
-              eventHandlers={{ click: () => onSelect(pin) }}
-              zIndexOffset={isSel ? 1000 : 0}
-            >
-              <Popup>
-                <div className="p-2">
-                  <GieldaPinCard
-                    pin={pin}
-                    geo={g}
-                    currentUser={currentUser}
-                    onClaim={onClaim}
-                    claimed={claimedIds.has(pin.id)}
-                    busy={busyId === pin.id}
-                  />
-                </div>
-              </Popup>
-            </CircleMarker>
-          );
-        })}
+        {validPins.map(renderPin)}
       </MapContainer>
       {capped && (
         <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur px-2.5 py-1 rounded-md shadow text-[11px] text-gray-600 z-[500]">

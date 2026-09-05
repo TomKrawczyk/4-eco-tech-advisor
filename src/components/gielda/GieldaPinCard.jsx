@@ -28,10 +28,16 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
     <div className={`rounded-xl border p-3 space-y-2 transition-all ${
       claimed ? "border-green-300 bg-green-50" : sla ? "border-red-200 bg-red-50/40" : "border-gray-200 bg-white"
     }`}>
+      {isMeeting && pin.meeting_calendar && (
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
+          <Clock className="w-3.5 h-3.5 shrink-0" />
+          {pin.meeting_calendar}
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className={`inline-block w-2.5 h-2.5 ${isMeeting ? "bg-blue-500 rotate-45" : claimed ? "bg-green-500" : sla ? "bg-red-500" : "bg-yellow-500"}`} />
+            <span className={`inline-block w-2.5 h-2.5 ${isMeeting ? "bg-blue-500 rotate-45" : claimed ? "bg-green-500" : pin.source === "PhoneContact" && pin.phone_status === "Kontakt do doradcy" ? "bg-red-500" : pin.source === "PhoneContact" && pin.phone_status === "Do ponownego kontaktu" ? "bg-orange-500" : "bg-yellow-500"}`} />
             <span className="font-semibold text-sm text-gray-900 truncate">
               {showFull ? pin.client_name || "Klient" : maskName(pin.client_name)}
             </span>

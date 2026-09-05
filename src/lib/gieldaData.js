@@ -177,6 +177,7 @@ function buildPhoneContactPins(records) {
       pinId: r.id,
       type: "kontakt",
       source: "PhoneContact",
+      phone_status: st,
       client_name: r.client_name || "",
       client_phone: r.phone || r.client_phone || "",
       client_address: r.address || r.client_address || "",
