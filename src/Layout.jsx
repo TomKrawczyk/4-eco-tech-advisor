@@ -226,6 +226,16 @@ export default function Layout({ children, currentPageName }) {
     };
   }, []);
 
+  // Fire-and-forget: rozgrzewanie cache geokodowania Giełdy w tle (tylko admin).
+  // Lock w backendzie (2 min) blokuje równoległe odpalenia przy wielu userach.
+  React.useEffect(() => {
+    if (currentUser?.role !== "admin") return;
+    const fire = () => base44.functions.invoke("warmupGieldaCache", {}).catch(() => {});
+    fire();
+    const id = setInterval(fire, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [currentUser?.role]);
+
   const isItemVisible = (item) => {
     if (item.adminOnly && currentUser?.role !== "admin" && currentUser?.role !== "hr_admin") return false;
     if (item.roles && currentUser?.role && !item.roles.includes(currentUser?.role)) return false;

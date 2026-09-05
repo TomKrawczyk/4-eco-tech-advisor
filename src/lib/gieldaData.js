@@ -195,31 +195,49 @@ function buildPhoneContactPins(records) {
   return pins;
 }
 
-// Pobiera wszystkie piny z 3 encji (tylko niearchiwizowane, nieprzypisane lub przypisane do mnie)
+// Pobiera piny gotowe do renderu: czyta 3 encje + PostalCodeCache (cache only, ZERO Nominatim).
+// Piny bez zcache'owanych współrzędnych są pomijane — dorenderuje je najbliższy polling,
+// gdy warmupGieldaCache zgeokoduje ich kod w tle.
 export async function fetchGieldaPins(currentUserEmail) {
-  const [contactLeads, meetingAssignments, phoneContacts] = await Promise.all([
+  const [contactLeads, meetingAssignments, phoneContacts, cacheRows] = await Promise.all([
     fetchAllEntityRecords(base44.entities.ContactLead),
     fetchAllEntityRecords(base44.entities.MeetingAssignment),
     fetchAllEntityRecords(base44.entities.PhoneContact),
+    fetchAllEntityRecords(base44.entities.PostalCodeCache),
   ]);
 
-  // Filtr archiwizacji
+  // Geo z cache (cache only — brak Nominatim w ścieżce renderowania)
+  const geoByCode = {};
+  for (const r of cacheRows) {
+    const code = String(r.postal_code || "").trim();
+    if (!code) continue;
+    if (r.not_found === true) continue;
+    if (typeof r.lat === "number" && typeof r.lon === "number") {
+      geoByCode[code] = { lat: r.lat, lon: r.lon, city: r.city || "" };
+    }
+  }
+
   const activeLeads = contactLeads.filter((r) => !r.is_archived && !r.is_duplicate);
   const activePhone = phoneContacts.filter((r) => !r.is_archived);
-
   const meetingResult = buildMeetingAssignmentPins(meetingAssignments, currentUserEmail);
 
-  const pins = [
+  const rawPins = [
     ...buildContactLeadPins(activeLeads),
     ...meetingResult.pins,
     ...buildPhoneContactPins(activePhone),
-  ];
+  ].filter((p) => !p.isAssigned || (currentUserEmail && p.assigned_user_email === currentUserEmail));
 
-  // Pokazuj: nieprzypisane OR przypisane do zalogowanego (do widoku "Moje")
-  const filtered = pins.filter(
-    (p) => !p.isAssigned || (currentUserEmail && p.assigned_user_email === currentUserEmail)
-  );
-  return { pins: filtered, skippedNoCode: meetingResult.skippedNoCode };
+  // Dołącz współrzędne z cache; pomiń piny bez zcache'owanego kodu
+  const pins = [];
+  for (const p of rawPins) {
+    const g = geoByCode[p.postal_code];
+    if (!g) continue;
+    p.lat = g.lat;
+    p.lon = g.lon;
+    pins.push(p);
+  }
+
+  return { pins, geoByCode, skippedNoCode: meetingResult.skippedNoCode };
 }
 
 // Geokodowanie zbiorcze przez backend function; zwraca mapę code -> {lat,lon,city}

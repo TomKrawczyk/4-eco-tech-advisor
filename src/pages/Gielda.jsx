@@ -3,7 +3,6 @@ import { Loader2, RefreshCw, ShieldAlert, Layers, PanelRightClose, PanelRight, P
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import {
   fetchGieldaPins,
-  geocodeInBatches,
   claimPin as claimPinFn,
 } from "@/lib/gieldaData";
 import GieldaStats from "@/components/gielda/GieldaStats";
@@ -24,7 +23,6 @@ export default function Gielda() {
   const [claimError, setClaimError] = useState("");
   const [flyTo, setFlyTo] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [missingCount, setMissingCount] = useState(0);
   const [skippedNoCode, setSkippedNoCode] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [tab, setTab] = useState(() => {
@@ -42,28 +40,10 @@ export default function Gielda() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const { pins: freshPins, skippedNoCode } = await fetchGieldaPins(currentUser.email);
-      setSkippedNoCode(skippedNoCode);
-      // Zachowaj geokodowane kody z poprzedniego cyklu
-      setGeoByCode((prev) => {
-        const next = { ...prev };
-        const newCodes = freshPins
-          .map((p) => p.postal_code)
-          .filter((c) => !next[c]);
-        if (newCodes.length > 0) {
-          geocodeInBatches(newCodes, (geo, missing) => {
-            setGeoByCode((cur) => ({ ...cur, ...geo }));
-            setMissingCount((m) => m + missing.length);
-          });
-        }
-        // czyścimy kody których już nie ma
-        const keep = {};
-        for (const c of Object.keys(next)) {
-          if (freshPins.some((p) => p.postal_code === c)) keep[c] = next[c];
-        }
-        return keep;
-      });
+      const { pins: freshPins, geoByCode: freshGeo, skippedNoCode } = await fetchGieldaPins(currentUser.email);
       setPins(freshPins);
+      setGeoByCode(freshGeo);
+      setSkippedNoCode(skippedNoCode);
       setLastRefresh(new Date());
     } catch (_e) {
       // błąd pobierania — zostaw stare dane
@@ -246,10 +226,9 @@ export default function Gielda() {
         </div>
       </div>
 
-      {(missingCount > 0 || skippedNoCode > 0) && (
+      {skippedNoCode > 0 && (
         <p className="text-[11px] text-gray-400">
-          {skippedNoCode > 0 && `${skippedNoCode} spotkań bez kodu pocztowego. `}
-          {missingCount > 0 && `${missingCount} kodów nie udało się zgeokodować.`}
+          {skippedNoCode} spotkań bez kodu pocztowego.
         </p>
       )}
     </div>
