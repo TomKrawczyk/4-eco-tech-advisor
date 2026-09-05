@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, ShieldAlert, Layers, PanelRightClose, PanelRight, Phone, CalendarClock } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import {
   fetchGieldaPins,
@@ -87,6 +88,33 @@ export default function Gielda() {
     const g = geoByCode[pin.postal_code];
     if (g) setFlyTo([g.lat, g.lon]);
   }, [geoByCode]);
+
+  const handleResign = useCallback(async (pin, reason) => {
+    setClaimError("");
+    setBusyId(pin.id);
+    try {
+      const res = await base44.functions.invoke("resignGieldaItem", {
+        pin_id: pin.pinId,
+        entity_name: pin.source,
+        reason,
+        client_name: pin.client_name,
+        client_phone: pin.client_phone,
+        client_address: pin.client_address,
+        meeting_date: pin.meeting_date,
+      });
+      const data = res?.data || res;
+      if (data?.ok) {
+        toast.success(`Zarchiwizowano: ${pin.client_name || "Klient"}`);
+        load(true);
+      } else {
+        setClaimError(data?.reason || "Nie udało się zarchiwizować.");
+      }
+    } catch (_e) {
+      setClaimError("Wystąpił błąd. Spróbuj ponownie.");
+    } finally {
+      setBusyId(null);
+    }
+  }, [load]);
 
   const selectedPin = useMemo(() => pins.find((p) => p.id === selectedId) || null, [pins, selectedId]);
 
@@ -198,6 +226,7 @@ export default function Gielda() {
               geoByCode={geoByCode}
               currentUser={currentUser}
               onClaim={handleClaim}
+              onResign={handleResign}
               selectedId={selectedId}
               onSelect={handleSelect}
               claimedIds={claimedIds}
@@ -212,6 +241,7 @@ export default function Gielda() {
             geoByCode={geoByCode}
             currentUser={currentUser}
             onClaim={handleClaim}
+            onResign={handleResign}
             claimedIds={claimedIds}
             busyId={busyId}
             selectedId={selectedId}

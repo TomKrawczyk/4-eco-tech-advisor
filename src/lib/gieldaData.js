@@ -120,6 +120,7 @@ function buildMeetingAssignmentPins(records, currentUserEmail) {
   let skippedNoCode = 0;
   const today = new Date().toISOString().split("T")[0];
   for (const r of records) {
+    if (r.is_archived) continue;
     const isAssigned = !!(r.assigned_user_email && r.assigned_user_email.trim());
     const assignedToMe = isAssigned && currentUserEmail && r.assigned_user_email === currentUserEmail;
     // Pokazuj tylko: nieprzypisane LUB przypisane do mnie (do "Dodaj do kalendarza")

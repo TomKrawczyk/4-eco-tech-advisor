@@ -75,13 +75,11 @@ function FitBounds({ points }) {
   return null;
 }
 
-export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claimedIds, busyId, selectedId, onSelect, flyTo, tab }) {
+export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, onResign, claimedIds, busyId, selectedId, onSelect, flyTo, tab }) {
   const { validPins, fitPoints } = useMemo(() => {
     const valid = [];
     const pts = [];
     for (const p of pins) {
-      // Kontakty przypisane nie pokazujemy na mapie (są w "Moje" w sidebarze)
-      if (p.type === "kontakt" && p.isAssigned) continue;
       const g = geoByCode[p.postal_code];
       if (g && typeof g.lat === "number" && typeof g.lon === "number") {
         valid.push(p);
@@ -94,6 +92,13 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
 
   const capped = validPins.length === MAX_MARKERS;
 
+  const markerRefs = useRef({});
+  useEffect(() => {
+    if (selectedId && markerRefs.current[selectedId]) {
+      try { markerRefs.current[selectedId].openPopup(); } catch (_) {}
+    }
+  }, [selectedId]);
+
   const renderPin = (pin) => {
     const g = geoByCode[pin.postal_code];
     const isSel = selectedId === pin.id;
@@ -105,6 +110,7 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
             geo={g}
             currentUser={currentUser}
             onClaim={onClaim}
+            onResign={onResign}
             claimed={claimedIds.has(pin.id)}
             busy={busyId === pin.id}
           />
@@ -121,6 +127,7 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
           icon={diamondIcon(color, isSel)}
           eventHandlers={{ click: () => onSelect(pin) }}
           zIndexOffset={isSel ? 1000 : 0}
+          ref={(m) => { if (m) markerRefs.current[pin.id] = m; }}
         >
           {card}
         </Marker>
@@ -135,6 +142,7 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, claim
         radius={style.radius}
         eventHandlers={{ click: () => onSelect(pin) }}
         zIndexOffset={isSel ? 1000 : 0}
+        ref={(m) => { if (m) markerRefs.current[pin.id] = m; }}
       >
         {card}
       </CircleMarker>

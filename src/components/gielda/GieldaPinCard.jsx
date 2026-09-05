@@ -1,11 +1,13 @@
-import React from "react";
-import { Phone, CalendarPlus, User, MapPin, FileText, Building2, Clock, MapPinned } from "lucide-react";
+import React, { useState } from "react";
+import { Phone, CalendarPlus, User, MapPin, FileText, Building2, Clock, MapPinned, AlertCircle } from "lucide-react";
 import {
   maskName, maskPhone, formatPhone, extractCity,
   isSlaBreached, isFresh, isMeetingNear, buildGoogleCalendarUrl,
 } from "@/lib/gieldaData";
+import ResignModal from "./ResignModal";
 
-export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed, busy }) {
+export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed, busy, onResign }) {
+  const [showResign, setShowResign] = useState(false);
   if (!pin) return null;
 
   const isMeeting = pin.type === "spotkanie";
@@ -23,6 +25,7 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
   const fresh = isFresh(pin);
   const near = isMeeting && !claimed && isMeetingNear(pin);
   const showFull = claimed || pin.assigned_user_email === currentUser?.email;
+  const isMine = pin.isAssigned && pin.assigned_user_email === currentUser?.email;
 
   return (
     <div className={`rounded-xl border p-3 space-y-2 transition-all ${
@@ -141,8 +144,23 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
               </a>
             )}
           </div>
+          {isMine && (
+            <button
+              onClick={() => setShowResign(true)}
+              className="w-full flex items-center justify-center gap-1.5 text-red-600 hover:bg-red-50 border border-red-200 text-xs font-medium py-2 rounded-lg transition-colors mt-1"
+            >
+              <AlertCircle className="w-3.5 h-3.5" /> Rezygnuję
+            </button>
+          )}
         </div>
       )}
+
+      <ResignModal
+        open={showResign}
+        onClose={() => setShowResign(false)}
+        onConfirm={(reason) => { setShowResign(false); onResign?.(pin, reason); }}
+        isMeeting={isMeeting}
+      />
 
       {!claimed && !pin.assigned_user_email && (
         <button

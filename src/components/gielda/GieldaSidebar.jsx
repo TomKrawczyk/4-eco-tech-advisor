@@ -23,7 +23,7 @@ function tomorrowISO() {
   return d.toISOString().split("T")[0];
 }
 
-export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, selectedId, onSelect, claimedIds, busyId, tab }) {
+export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, onResign, selectedId, onSelect, claimedIds, busyId, tab }) {
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
 
@@ -130,6 +130,7 @@ export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, s
                 geo={geoByCode[pin.postal_code]}
                 currentUser={currentUser}
                 onClaim={onClaim}
+                onResign={onResign}
                 claimed={claimedIds.has(pin.id)}
                 busy={busyId === pin.id}
               />
