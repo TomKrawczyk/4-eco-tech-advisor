@@ -1,5 +1,5 @@
 import React from "react";
-import { Clock, AlertTriangle, CalendarClock, CalendarDays, CheckCircle2, PhoneCall, RotateCcw } from "lucide-react";
+import { Clock, AlertTriangle, CalendarClock, CalendarDays, CheckCircle2, PhoneCall } from "lucide-react";
 
 const todayStr = () => new Date().toISOString().split("T")[0];
 const addDays = (d, n) => {
@@ -52,16 +52,14 @@ export default function GieldaStats({ pins, currentUserEmail, tab }) {
     );
   }
 
-  // Zakładka "Kontakt telefoniczny"
+  // Zakładka "Kontakt telefoniczny" — tylko "Kontakt do doradcy" (nowe leady z obdzwonki)
   const noweLidy = pins.filter((p) => !p.isAssigned && p.source === "PhoneContact" && p.phone_status === "Kontakt do doradcy").length;
-  const ponowne = pins.filter((p) => !p.isAssigned && p.source === "PhoneContact" && p.phone_status === "Do ponownego kontaktu").length;
   const moje = pins.filter((p) => p.isAssigned && p.assigned_user_email === currentUserEmail).length;
   const sla = pins.filter((p) => !p.isAssigned && isSla(p)).length;
   return (
     <StatsGrid
       tiles={[
         { label: "Nowe leady", value: noweLidy, icon: PhoneCall, color: "text-red-600 bg-red-50 border-red-200" },
-        { label: "Do ponownego kontaktu", value: ponowne, icon: RotateCcw, color: "text-orange-600 bg-orange-50 border-orange-200" },
         { label: "Moje", value: moje, icon: CheckCircle2, color: "text-green-600 bg-green-50 border-green-200" },
         { label: "Przekroczone SLA", value: sla, icon: AlertTriangle, color: "text-red-600 bg-red-50 border-red-200" },
       ]}

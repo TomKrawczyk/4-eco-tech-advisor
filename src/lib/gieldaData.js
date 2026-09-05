@@ -176,7 +176,7 @@ function buildPhoneContactPins(records, currentUserEmail) {
     if (isAssigned && !assignedToMe) continue;
     if (!isAssigned) {
       const st = String(r.status || "").trim();
-      if (st !== "Kontakt do doradcy" && st !== "Do ponownego kontaktu") continue;
+      if (st !== "Kontakt do doradcy") continue;
     }
     const code = extractPostalCode(r.address, r.client_address, r.comments);
     if (!code) continue;

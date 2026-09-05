@@ -5,7 +5,6 @@ import GieldaPinCard from "./GieldaPinCard";
 const CONTACT_FILTERS = [
   { value: "all", label: "Wszystkie" },
   { value: "hot", label: "Nowe leady" },
-  { value: "callback", label: "Do ponownego" },
   { value: "mine", label: "Moje" },
 ];
 
@@ -44,7 +43,6 @@ export default function GieldaSidebar({ pins, geoByCode, currentUser, onClaim, o
     } else {
       if (filter === "all") list = list.filter((p) => !p.isAssigned);
       else if (filter === "hot") list = list.filter((p) => !p.isAssigned && p.source === "PhoneContact" && p.phone_status === "Kontakt do doradcy");
-      else if (filter === "callback") list = list.filter((p) => !p.isAssigned && p.source === "PhoneContact" && p.phone_status === "Do ponownego kontaktu");
       else if (filter === "mine") list = list.filter((p) => p.isAssigned && p.assigned_user_email === currentUser?.email);
     }
 
