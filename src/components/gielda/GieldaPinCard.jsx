@@ -1,13 +1,15 @@
 import React, { useState } from "react";
-import { Phone, CalendarPlus, User, MapPin, FileText, Building2, Clock, MapPinned, AlertCircle } from "lucide-react";
+import { Phone, CalendarPlus, User, MapPin, FileText, Building2, Clock, MapPinned, AlertCircle, Undo2 } from "lucide-react";
 import {
   maskName, maskPhone, formatPhone, extractCity,
   isSlaBreached, isFresh, isMeetingNear, buildGoogleCalendarUrl,
 } from "@/lib/gieldaData";
 import ResignModal from "./ResignModal";
+import ReleaseModal from "./ReleaseModal";
 
-export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed, busy, onResign }) {
+export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed, busy, onResign, onRelease }) {
   const [showResign, setShowResign] = useState(false);
+  const [showRelease, setShowRelease] = useState(false);
   if (!pin) return null;
 
   const isMeeting = pin.type === "spotkanie";
@@ -145,12 +147,22 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
             )}
           </div>
           {isMine && (
-            <button
-              onClick={() => setShowResign(true)}
-              className="w-full flex items-center justify-center gap-1.5 text-red-600 hover:bg-red-50 border border-red-200 text-xs font-medium py-2 rounded-lg transition-colors mt-1"
-            >
-              <AlertCircle className="w-3.5 h-3.5" /> Rezygnuję
-            </button>
+            <div className="flex gap-2 mt-1">
+              <button
+                onClick={() => setShowRelease(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 text-amber-700 hover:bg-amber-50 border border-amber-300 text-xs font-medium py-2 rounded-lg transition-colors"
+                title="Oddaj na Giełdę dla innych handlowców"
+              >
+                <Undo2 className="w-3.5 h-3.5" /> Nie podejmuję
+              </button>
+              <button
+                onClick={() => setShowResign(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 text-red-600 hover:bg-red-50 border border-red-200 text-xs font-medium py-2 rounded-lg transition-colors"
+                title="Zamknij kontakt i wygeneruj raport"
+              >
+                <AlertCircle className="w-3.5 h-3.5" /> Rezygnuję
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -160,6 +172,12 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
         onClose={() => setShowResign(false)}
         onConfirm={(reason) => { setShowResign(false); onResign?.(pin, reason); }}
         isMeeting={isMeeting}
+      />
+
+      <ReleaseModal
+        open={showRelease}
+        onClose={() => setShowRelease(false)}
+        onConfirm={(reason) => { setShowRelease(false); onRelease?.(pin, reason); }}
       />
 
       {!claimed && !pin.assigned_user_email && (

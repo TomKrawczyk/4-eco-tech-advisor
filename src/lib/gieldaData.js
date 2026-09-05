@@ -121,6 +121,8 @@ function buildMeetingAssignmentPins(records, currentUserEmail) {
   const today = new Date().toISOString().split("T")[0];
   for (const r of records) {
     if (r.is_archived) continue;
+    // "Nie podejmuj\u0119" \u2014 rekord oddany przez tego usera nie pokazuje mu si\u0119 ju\u017c nigdy
+    if (Array.isArray(r.released_by) && currentUserEmail && r.released_by.includes(currentUserEmail)) continue;
     const isAssigned = !!(r.assigned_user_email && r.assigned_user_email.trim());
     const assignedToMe = isAssigned && currentUserEmail && r.assigned_user_email === currentUserEmail;
     // Pokazuj tylko: nieprzypisane LUB przypisane do mnie (do "Dodaj do kalendarza")
@@ -166,6 +168,8 @@ function buildPhoneContactPins(records, currentUserEmail) {
   const pins = [];
   for (const r of records) {
     if (r.is_archived) continue;
+    // "Nie podejmuj\u0119" \u2014 rekord oddany przez tego usera nie pokazuje mu si\u0119 ju\u017c nigdy
+    if (Array.isArray(r.released_by) && currentUserEmail && r.released_by.includes(currentUserEmail)) continue;
     const isAssigned = !!(r.assigned_user_email && String(r.assigned_user_email).trim());
     const assignedToMe = isAssigned && currentUserEmail && r.assigned_user_email === currentUserEmail;
     // Giełda: wolne (status do doradcy/ponowne) LUB przypisane do mnie (do "Moje")
@@ -355,6 +359,23 @@ export function isClaimedToday(pin) {
     d.getMonth() === today.getMonth() &&
     d.getDate() === today.getDate()
   );
+}
+
+// "Nie podejmuj\u0119" \u2014 atomiczne oddanie rekordu na Gie\u0142d\u0119.
+// Backend updateMany {id, assigned_user_email: <user>} \u2014 tylko w\u0142a\u015bciciel mo\u017ce odda\u0107.
+export async function releasePin(pin, reason) {
+  try {
+    const res = await base44.functions.invoke("releaseGieldaItem", {
+      pin_id: pin.pinId,
+      entity_name: pin.source,
+      reason: reason || "",
+    });
+    const data = res?.data || res;
+    if (data?.ok) return { ok: true };
+    return { ok: false, reason: data?.reason || "Nie uda\u0142o si\u0119 zwolni\u0107." };
+  } catch (_e) {
+    return { ok: false, reason: "Wyst\u0105pi\u0142 b\u0142\u0105d. Spr\u00f3buj ponownie." };
+  }
 }
 
 // Atomic claim: warunkowy updateMany {id, assigned_user_email: null} po stronie serwera.

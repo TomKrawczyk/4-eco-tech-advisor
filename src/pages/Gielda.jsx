@@ -6,6 +6,7 @@ import useCurrentUser from "@/components/shared/useCurrentUser";
 import {
   fetchGieldaPins,
   claimPin as claimPinFn,
+  releasePin as releasePinFn,
 } from "@/lib/gieldaData";
 import GieldaStats from "@/components/gielda/GieldaStats";
 import GieldaSidebar from "@/components/gielda/GieldaSidebar";
@@ -88,6 +89,24 @@ export default function Gielda() {
     const g = geoByCode[pin.postal_code];
     if (g) setFlyTo([g.lat, g.lon]);
   }, [geoByCode]);
+
+  const handleRelease = useCallback(async (pin, reason) => {
+    setClaimError("");
+    setBusyId(pin.id);
+    try {
+      const res = await releasePinFn(pin, reason);
+      if (res.ok) {
+        toast.success(`Oddano na Giełdę: ${pin.client_name || "Klient"}`);
+        load(true);
+      } else {
+        setClaimError(res.reason || "Nie udało się zwolnić.");
+      }
+    } catch (_e) {
+      setClaimError("Wystąpił błąd. Spróbuj ponownie.");
+    } finally {
+      setBusyId(null);
+    }
+  }, [load]);
 
   const handleResign = useCallback(async (pin, reason) => {
     setClaimError("");
@@ -227,6 +246,7 @@ export default function Gielda() {
               currentUser={currentUser}
               onClaim={handleClaim}
               onResign={handleResign}
+              onRelease={handleRelease}
               selectedId={selectedId}
               onSelect={handleSelect}
               claimedIds={claimedIds}
@@ -242,6 +262,7 @@ export default function Gielda() {
             currentUser={currentUser}
             onClaim={handleClaim}
             onResign={handleResign}
+            onRelease={handleRelease}
             claimedIds={claimedIds}
             busyId={busyId}
             selectedId={selectedId}

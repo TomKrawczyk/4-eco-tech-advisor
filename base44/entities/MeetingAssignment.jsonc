@@ -88,6 +88,22 @@
       "type": "string",
       "format": "date-time",
       "description": "Kiedy zarezygnowano ze spotkania"
+    },
+    "released_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista emaili handlowc\u00f3w, kt\u00f3rzy oddali to spotkanie na gie\u0142d\u0119 (Nie podejmuj\u0119)"
+    },
+    "released_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Kiedy spotkanie zosta\u0142o ostatnio oddane na gie\u0142d\u0119"
+    },
+    "released_reason": {
+      "type": "string",
+      "description": "Pow\u00f3d oddania spotkania na gie\u0142d\u0119 (informacyjny)"
     }
   },
   "required": [

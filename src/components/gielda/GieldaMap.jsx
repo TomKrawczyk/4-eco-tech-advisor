@@ -75,7 +75,7 @@ function FitBounds({ points }) {
   return null;
 }
 
-export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, onResign, claimedIds, busyId, selectedId, onSelect, flyTo, tab }) {
+export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, onResign, onRelease, claimedIds, busyId, selectedId, onSelect, flyTo, tab }) {
   const { validPins, fitPoints } = useMemo(() => {
     const valid = [];
     const pts = [];
@@ -111,6 +111,7 @@ export default function GieldaMap({ pins, geoByCode, currentUser, onClaim, onRes
             currentUser={currentUser}
             onClaim={onClaim}
             onResign={onResign}
+            onRelease={onRelease}
             claimed={claimedIds.has(pin.id)}
             busy={busyId === pin.id}
           />
