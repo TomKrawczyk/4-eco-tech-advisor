@@ -11,6 +11,7 @@ import {
 import GieldaStats from "@/components/gielda/GieldaStats";
 import GieldaSidebar from "@/components/gielda/GieldaSidebar";
 import GieldaMap from "@/components/gielda/GieldaMap";
+import SheetGroupMappingModal from "@/components/gielda/SheetGroupMappingModal";
 
 const POLL_MS = 15 * 1000;
 
@@ -26,6 +27,7 @@ export default function Gielda() {
   const [claimError, setClaimError] = useState("");
   const [flyTo, setFlyTo] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [showMapping, setShowMapping] = useState(false);
   const [skippedNoCode, setSkippedNoCode] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [tab, setTab] = useState(() => {
@@ -43,7 +45,7 @@ export default function Gielda() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const { pins: freshPins, geoByCode: freshGeo, skippedNoCode } = await fetchGieldaPins(currentUser.email);
+      const { pins: freshPins, geoByCode: freshGeo, skippedNoCode } = await fetchGieldaPins(currentUser);
       setPins(freshPins);
       setGeoByCode(freshGeo);
       setSkippedNoCode(skippedNoCode);
@@ -182,6 +184,15 @@ export default function Gielda() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => setShowMapping(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-purple-200 text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Mapowanie arkuszy
+            </button>
+          )}
           <button
             onClick={() => load(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -284,6 +295,8 @@ export default function Gielda() {
           {skippedNoCode} spotkań bez kodu pocztowego.
         </p>
       )}
+
+      <SheetGroupMappingModal open={showMapping} onClose={() => setShowMapping(false)} onSaved={() => load(true)} />
     </div>
   );
 }

@@ -198,21 +198,48 @@ function buildPhoneContactPins(records, currentUserEmail) {
       assigned_user_email: r.assigned_user_email || "",
       assigned_user_name: r.assigned_user_name || "",
       assigned_at: r.assigned_at || null,
+      sheet: r.sheet || "",
       isAssigned,
     });
   }
   return pins;
 }
 
+// Filtr widoczności arkuszy: arkusz z mapowaniem → tylko jego grupa (admin widzi wszystko).
+// Arkusz bez mapowania → widoczny dla wszystkich. Pin bez sheet → widoczny (np. ContactLead).
+function passesSheetGroupFilter(pin, sheetGroupMap, userGroupId, isAdmin) {
+  if (!pin.sheet) return true;
+  const mappedGroupId = sheetGroupMap[pin.sheet];
+  if (!mappedGroupId) return true;
+  if (isAdmin) return true;
+  return !!(userGroupId && mappedGroupId === userGroupId);
+}
+
 // Pobiera piny gotowe do renderu: czyta 3 encje + PostalCodeCache (cache only, ZERO Nominatim).
 // Piny bez zcache'owanych współrzędnych są pomijane — dorenderuje je najbliższy polling,
 // gdy warmupGieldaCache zgeokoduje ich kod w tle.
-export async function fetchGieldaPins(currentUserEmail) {
-  const [meetingAssignments, phoneContacts, cacheRows] = await Promise.all([
+// `currentUser` — pełny obiekt usera (email, group_id, role); arkusze z mapowaniem widzi tylko grupa.
+export async function fetchGieldaPins(currentUser) {
+  const currentUserEmail = typeof currentUser === "string" ? currentUser : (currentUser?.email || "");
+  const userGroupId = typeof currentUser === "object" ? (currentUser?.group_id || "") : "";
+  const isAdmin = typeof currentUser === "object" ? currentUser?.role === "admin" : false;
+
+  const [meetingAssignments, phoneContacts, cacheRows, sheetAssignments] = await Promise.all([
     fetchAllEntityRecords(base44.entities.MeetingAssignment),
     fetchAllEntityRecords(base44.entities.PhoneContact),
     fetchAllEntityRecords(base44.entities.PostalCodeCache),
+    fetchAllEntityRecords(base44.entities.SheetGroupAssignment),
   ]);
+
+  // Mapa arkusz → grupa (id + nazwa, dla badge'a admina)
+  const sheetGroupMap = {};
+  const sheetGroupNameMap = {};
+  for (const a of sheetAssignments) {
+    const sn = String(a.sheet_name || "").trim();
+    if (!sn) continue;
+    sheetGroupMap[sn] = a.group_id || "";
+    sheetGroupNameMap[sn] = a.group_name || "";
+  }
 
   // Geo z cache (cache only — brak Nominatim w ścieżce renderowania)
   const geoByCode = {};
@@ -234,13 +261,15 @@ export async function fetchGieldaPins(currentUserEmail) {
     ...buildPhoneContactPins(activePhone, currentUserEmail),
   ];
 
-  // Dołącz współrzędne z cache; pomiń piny bez zcache'owanego kodu
+  // Dołącz współrzędne z cache; pomiń piny bez zcache'owanego kodu + filtr mapowania arkuszy
   const pins = [];
   for (const p of rawPins) {
+    if (!passesSheetGroupFilter(p, sheetGroupMap, userGroupId, isAdmin)) continue;
     const g = geoByCode[p.postal_code];
     if (!g) continue;
     p.lat = g.lat;
     p.lon = g.lon;
+    if (isAdmin && p.sheet && sheetGroupNameMap[p.sheet]) p.group_name = sheetGroupNameMap[p.sheet];
     pins.push(p);
   }
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Phone, CalendarPlus, User, MapPin, FileText, Building2, Clock, MapPinned, AlertCircle, Undo2 } from "lucide-react";
+import { Phone, CalendarPlus, User, MapPin, FileText, Building2, Clock, MapPinned, AlertCircle, Undo2, Users } from "lucide-react";
 import {
   maskName, maskPhone, formatPhone, extractCity,
   isSlaBreached, isFresh, isMeetingNear, buildGoogleCalendarUrl,
@@ -47,9 +47,19 @@ export default function GieldaPinCard({ pin, geo, currentUser, onClaim, claimed,
               {showFull ? pin.client_name || "Klient" : maskName(pin.client_name)}
             </span>
           </div>
-          <div className="flex items-center gap-1 text-[11px] text-gray-500 mt-0.5">
+          <div className="flex items-center gap-1 text-[11px] text-gray-500 mt-0.5 flex-wrap">
             <Building2 className="w-3 h-3" />
             {sourceLabel}
+            {pin.sheet && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+                <MapPinned className="w-2.5 h-2.5" />{pin.sheet}
+              </span>
+            )}
+            {pin.group_name && currentUser?.role === "admin" && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
+                <Users className="w-2.5 h-2.5" />{pin.group_name}
+              </span>
+            )}
           </div>
         </div>
         {fresh && !claimed && !isMeeting && (

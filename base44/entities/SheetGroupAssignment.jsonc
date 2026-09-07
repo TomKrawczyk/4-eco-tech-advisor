@@ -1,0 +1,22 @@
+{
+  "name": "SheetGroupAssignment",
+  "type": "object",
+  "properties": {
+    "sheet_name": {
+      "type": "string",
+      "description": "Nazwa arkusza/zak\u0142adki (pole sheet z PhoneContact lub MeetingAssignment)"
+    },
+    "group_id": {
+      "type": "string",
+      "description": "ID grupy, kt\u00f3rej przypisano arkusz"
+    },
+    "group_name": {
+      "type": "string",
+      "description": "Nazwa grupy (cache)"
+    }
+  },
+  "required": [
+    "sheet_name",
+    "group_id"
+  ]
+}
