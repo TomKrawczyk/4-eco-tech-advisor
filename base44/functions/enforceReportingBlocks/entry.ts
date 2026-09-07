@@ -278,6 +278,7 @@ Deno.serve(async (req) => {
 
     const latestMeetingByUserClient = new Map();
     for (const assignment of meetingAssignments) {
+      if (assignment.is_archived) continue;
       const email = normalizeEmail(assignment.assigned_user_email);
       const meetingDate = getMeetingDate(assignment);
       const phoneKey = last9(assignment.client_phone || assignment.phone);
@@ -326,6 +327,7 @@ Deno.serve(async (req) => {
     }
 
     for (const contact of phoneContacts) {
+      if (contact.is_archived) continue;
       const email = normalizeEmail(contact.assigned_user_email);
       const contactDate = getContactDate(contact);
       if (!monitoredEmails.has(email) || !contactDate || contactDate < effectiveStartYmd) continue;

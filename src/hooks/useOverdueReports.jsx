@@ -104,6 +104,7 @@ export default function useOverdueReports(currentUser) {
 
         const deduped = new Map();
         for (const a of assignments) {
+          if (a.is_archived) continue;
           const cached = cachedByKey.get(a.meeting_key) || {};
           const merged = {
             ...cached,
@@ -148,6 +149,7 @@ export default function useOverdueReports(currentUser) {
           if (nameKey) clientToPhoneDates.set(nameKey, localYMD(r.contact_date));
         }
         const missingPhones = phoneContacts.filter((c) => {
+          if (c.is_archived) return false;
           const dateStr =
             c.contact_date ||
             (c.contact_calendar ? localYMD(c.contact_calendar) : "") ||
