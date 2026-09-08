@@ -333,6 +333,38 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     deleteLeadMutation.mutate(lead.id);
   };
 
+  // Trwałe usunięcie zaznaczonej partii kontaktów — tylko główny admin
+  const deleteBatchMutation = useMutation({
+    mutationFn: async (leadIds) => {
+      for (const id of leadIds) {
+        await base44.entities.ContactLead.delete(id);
+      }
+      await recalcAssignedCount();
+    },
+    onSuccess: async () => {
+      setSelected(new Set());
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ["leads", pkg.id] }),
+        qc.refetchQueries({ queryKey: ["contact-packages"] }),
+      ]);
+    },
+    onError: (err) => {
+      const msg = err?.response?.data?.error || err?.message || "Nieznany błąd";
+      alert("Nie udało się usunąć kontaktów: " + msg);
+    },
+  });
+
+  const handleDeleteSelected = () => {
+    if (!isMainAdmin) return;
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    const ok = window.confirm(
+      `Czy na pewno chcesz TRWALE usunąć ${ids.length} zaznaczonych kontaktów?\nTa operacja jest nieodwracalna.`
+    );
+    if (!ok) return;
+    deleteBatchMutation.mutate(ids);
+  };
+
   // Liczba kontaktów przypisanych do każdego handlowca (aktywne, bez duplikatów)
   const advisorCounts = useMemo(() => {
     const map = {};
@@ -734,6 +766,18 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
               >
                 <ArchiveRestore className="w-4 h-4" />
                 Przywróć
+              </Button>
+            )}
+            {isMainAdmin && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDeleteSelected}
+                disabled={deleteBatchMutation.isPending}
+                className="gap-1 text-red-600 border-red-200 bg-red-50 hover:bg-red-100"
+              >
+                <Trash2 className="w-4 h-4" />
+                {deleteBatchMutation.isPending ? "Usuwanie…" : "Usuń zaznaczone"}
               </Button>
             )}
           </div>
