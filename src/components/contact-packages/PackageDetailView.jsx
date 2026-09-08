@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Search, UserCheck, CheckSquare, Square,
-  RotateCcw, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload, Archive, ArchiveRestore, Copy, Download
+  RotateCcw, Pencil, Check, X, MessageSquare, Calendar, Clock, Upload, Archive, ArchiveRestore, Copy, Download, Trash2
 } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 import exportPackageToExcel from "@/components/contact-packages/exportPackageToExcel";
@@ -300,6 +300,39 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     },
   });
 
+  // Trwałe usunięcie pojedynczego kontaktu — tylko główny admin
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (leadId) => {
+      await base44.entities.ContactLead.delete(leadId);
+      await recalcAssignedCount();
+    },
+    onSuccess: async () => {
+      setExpandedLeadId(null);
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ["leads", pkg.id] }),
+        qc.refetchQueries({ queryKey: ["contact-packages"] }),
+      ]);
+    },
+    onError: (err) => {
+      const msg = err?.response?.data?.error || err?.message || "Nieznany błąd";
+      alert("Nie udało się usunąć kontaktu: " + msg);
+    },
+  });
+
+  const handleDeleteLead = (lead) => {
+    if (!isMainAdmin) return;
+    const ok = window.confirm(
+      `Czy na pewno chcesz TRWALE usunąć kontakt „${lead.client_name || "Klient"}"?\nTa operacja jest nieodwracalna.`
+    );
+    if (!ok) return;
+    setSelected(prev => {
+      const n = new Set(prev);
+      n.delete(lead.id);
+      return n;
+    });
+    deleteLeadMutation.mutate(lead.id);
+  };
+
   // Liczba kontaktów przypisanych do każdego handlowca (aktywne, bez duplikatów)
   const advisorCounts = useMemo(() => {
     const map = {};
@@ -350,6 +383,14 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     } else {
       setSelected(new Set(filtered.map(l => l.id)));
     }
+  };
+
+  // Szybkie zaznaczanie partii nieprzypisanych kontaktów (5/10/15/20/25)
+  const selectBatch = (n) => {
+    const candidates = filtered.filter(l => !l.assigned_user_email && !selected.has(l.id));
+    const ids = candidates.slice(0, n).map(l => l.id);
+    if (ids.length === 0) return;
+    setSelected(prev => new Set([...prev, ...ids]));
   };
 
   const stats = useMemo(() => {
@@ -586,6 +627,30 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
           <option value="name">Sortuj po nazwisku</option>
         </select>
       </div>
+
+      {/* Szybkie zaznaczanie partii nieprzypisanych kontaktów */}
+      {archiveTab === "active" && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Zaznacz partię:</span>
+          {[5, 10, 15, 20, 25].map(n => (
+            <button
+              key={n}
+              onClick={() => selectBatch(n)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+            >
+              {n}
+            </button>
+          ))}
+          {selected.size > 0 && (
+            <button
+              onClick={() => setSelected(new Set())}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+            >
+              Wyczyść ({selected.size})
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
@@ -852,6 +917,18 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                           </div>
                         )}
                         <LeadExtraData lead={lead} className="sm:col-span-2" />
+                        {isMainAdmin && (
+                          <div className="sm:col-span-2 flex justify-end pt-2 border-t border-gray-100">
+                            <button
+                              onClick={() => handleDeleteLead(lead)}
+                              disabled={deleteLeadMutation.isPending}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              {deleteLeadMutation.isPending ? "Usuwanie…" : "Usuń kontakt"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
