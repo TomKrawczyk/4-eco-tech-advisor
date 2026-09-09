@@ -1,0 +1,38 @@
+{
+  "name": "Synchronizacja AllowedUser z Base44",
+  "description": "Automatycznie zaprasza u\u017cytkownika gdy dodany do AllowedUser i usuwa powi\u0105zane kontakty gdy usuni\u0119ty",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create",
+        "delete"
+      ],
+      "entity_name": "AllowedUser"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "synchronizacja_alloweduser_z_base44",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "syncAllowedUserWithBase44",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "syncAllowedUserWithBase44"
+  }
+}

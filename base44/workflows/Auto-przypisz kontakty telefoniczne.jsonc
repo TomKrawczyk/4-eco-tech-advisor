@@ -1,0 +1,44 @@
+{
+  "name": "Auto-przypisz kontakty telefoniczne",
+  "description": "Co 10 minut pobiera kontakty telefoniczne z aktywnych arkuszy Google Sheets i rozdziela je (round-robin) na doradc\u00f3w w grupach wed\u0142ug SheetGroupMapping. Pomi\u0144 mappingi bez group_id i kontakty r\u0119cznie przypisane.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "interval",
+      "cron_expression": null,
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": 10,
+      "interval_unit": "minutes",
+      "interval_anchor": "2026-08-25T10:10:23.555000",
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "auto_przypisz_kontakty_telefoniczne",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "autoAssignPhoneContacts",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "autoAssignPhoneContacts"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "Przelicz blokady po raporcie spotkania",
+  "description": "Automatycznie przelicza blokady po utworzeniu, edycji lub usuni\u0119ciu raportu po spotkaniu.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create",
+        "update",
+        "delete"
+      ],
+      "entity_name": "MeetingReport"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "przelicz_blokady_po_raporcie_spotkania",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "enforceReportingBlocks",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "enforceReportingBlocks"
+  }
+}
