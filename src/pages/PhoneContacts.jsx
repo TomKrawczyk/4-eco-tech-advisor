@@ -545,7 +545,7 @@ function PhoneContacts() {
   if (!isLeaderOrAdmin) {
     const myAllContacts = phoneContactsFromDB.filter(c =>
       c.assigned_user_email === currentUser?.email &&
-      !isOlderThanDays(parseDateStr(c.contact_date || c.date) || c.created_date)
+      (!isOlderThanDays(parseDateStr(c.contact_date || c.date) || c.created_date) || !isOlderThanDays(c.updated_date))
     );
     const myArchiveCounts = {
       active: myAllContacts.filter(c => c.is_archived !== true).length,
