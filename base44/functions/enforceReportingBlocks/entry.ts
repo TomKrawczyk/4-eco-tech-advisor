@@ -176,7 +176,10 @@ function hasSeparatePhoneReport(record, reportsIndex) {
 }
 
 function hasReportForMeeting(record, reportsIndex) {
-  return hasSeparateMeetingReport(record, reportsIndex);
+  // Inline dowody (wypełniony wywiad / komentarze w samym przypisaniu) liczą się jako raport —
+  // analogicznie do kontaktów telefonicznych. Zapobiega fałszywym blokadom, gdy handlowiec
+  // wypełnił wywiad na spotkaniu, ale nie założył osobnego MeetingReport.
+  return hasInlineMeetingReportEvidence(record) || hasSeparateMeetingReport(record, reportsIndex);
 }
 
 function hasReportForPhoneContact(record, reportsIndex) {

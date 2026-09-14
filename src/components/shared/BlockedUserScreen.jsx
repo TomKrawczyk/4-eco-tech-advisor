@@ -116,7 +116,11 @@ export default function BlockedUserScreen({ currentUser }) {
                         Raporty po kontaktach telefonicznych ({overduePhones.length})
                       </div>
                       <div className="space-y-2">
-                        {overduePhones.map((c, i) => (
+                        {overduePhones.map((c, i) => {
+                          const params = new URLSearchParams({
+                            prefill_contact_key: c.contact_key || "",
+                          }).toString();
+                          return (
                           <div key={i} className="bg-white border border-gray-200 rounded-xl p-3 flex items-start gap-3">
                             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
                               <Phone className="w-4 h-4 text-blue-700" />
@@ -129,12 +133,13 @@ export default function BlockedUserScreen({ currentUser }) {
                               </div>
                             </div>
                             <Button asChild size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50 shrink-0">
-                              <Link to={`${createPageUrl("PhoneContacts")}`}>
+                              <Link to={`${createPageUrl("PhoneContacts")}${params ? `?${params}` : ""}`}>
                                 <Phone className="w-3.5 h-3.5 mr-1" /> Uzupełnij
                               </Link>
                             </Button>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}

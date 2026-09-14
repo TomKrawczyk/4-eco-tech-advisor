@@ -521,6 +521,18 @@ function PhoneContacts() {
     }
   }, [sheetGroups.length]);
 
+  // Prefill z URL — auto-otwórz modal raportu dla konkretnego kontaktu (np. z ekranu blokady).
+  // HashRouter: query po #/path?...
+  useEffect(() => {
+    if (isLeaderOrAdmin || !accessChecked || !currentUser) return;
+    const hashPart = window.location.hash;
+    const urlParams = new URLSearchParams(hashPart.includes('?') ? hashPart.split('?')[1] : window.location.search);
+    const prefillKey = urlParams.get("prefill_contact_key");
+    if (!prefillKey || reportContact) return;
+    const match = phoneContactsFromDB.find(c => c.contact_key === prefillKey);
+    if (match) setReportContact(match);
+  }, [isLeaderOrAdmin, accessChecked, currentUser, phoneContactsFromDB, reportContact]);
+
   if (!accessChecked) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">

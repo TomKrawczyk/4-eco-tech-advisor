@@ -130,7 +130,9 @@ export function hasSeparatePhoneReport(record, reportsIndex = []) {
 }
 
 export function hasReportForMeeting(record, reportsIndex = []) {
-  return hasSeparateMeetingReport(record, reportsIndex);
+  // Inline dowody (wypełniony wywiad / komentarze w samym przypisaniu) liczą się jako raport —
+  // spójnie z backendem (enforceReportingBlocks) i z logiką kontaktów telefonicznych.
+  return hasInlineMeetingReportEvidence(record) || hasSeparateMeetingReport(record, reportsIndex);
 }
 
 export function hasReportForPhoneContact(record, reportsIndex = []) {
