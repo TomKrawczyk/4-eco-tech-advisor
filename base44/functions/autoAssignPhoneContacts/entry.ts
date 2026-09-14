@@ -136,9 +136,22 @@ export default async function(req: Request): Promise<Response> {
       groupNameCache[m.group_id] = groupNameCache[m.group_id] || m.group_name || '';
     }
 
-    // 3) Istniejące rekordy PhoneContact (najnowsze) — pomijanie ręcznie przypisanych
-    // i liczenie obciążenia doradców (round-robin z wyważaniem).
-    const existingRecords = await base44.asServiceRole.entities.PhoneContact.list('-created_date', 2000);
+    // 3) Wszystkie istniejące rekordy PhoneContact — paginacja, żeby nie tworzyć
+    // duplikatów dla starszych kontaktów (poprzednio ładowano tylko 2000 najnowszych).
+    // Pomijamy ręcznie przypisane i liczymy obciążenie doradców (round-robin z wyważaniem).
+    const existingRecords = [];
+    {
+      let skip = 0;
+      const pageSize = 500;
+      while (true) {
+        const batch = await base44.asServiceRole.entities.PhoneContact.list('-created_date', pageSize, skip);
+        if (!batch || batch.length === 0) break;
+        existingRecords.push(...batch);
+        if (batch.length < pageSize) break;
+        skip += pageSize;
+        if (skip > 60000) break;
+      }
+    }
     const existingByKey = new Map();
     const advisorLoad = {};
     for (const rec of existingRecords) {
