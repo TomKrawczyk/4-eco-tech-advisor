@@ -28,6 +28,8 @@ function ReportForm({ contact, initialData, currentUser, onSave, onCancel, savin
     description: "",
     next_steps: "",
     callback_date: "",
+    meeting_date: "",
+    meeting_time: "",
   });
 
   return (
@@ -60,6 +62,26 @@ function ReportForm({ contact, initialData, currentUser, onSave, onCancel, savin
           ))}
         </div>
       </div>
+
+      {form.result === "meeting_scheduled" && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-700">
+            <Calendar className="w-3.5 h-3.5" />
+            Umówione spotkanie — dodaj do kalendarza
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Data spotkania *</Label>
+              <Input type="date" value={form.meeting_date || ""} onChange={e => setForm({ ...form, meeting_date: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Godzina spotkania</Label>
+              <Input type="time" value={form.meeting_time || ""} onChange={e => setForm({ ...form, meeting_time: e.target.value })} />
+            </div>
+          </div>
+          <p className="text-[11px] text-blue-600">Spotkanie pojawi się w Twoim kalendarzu, żebyś o nim nie zapomniał.</p>
+        </div>
+      )}
 
       <div>
         <Label>Notatki z rozmowy</Label>
@@ -104,22 +126,55 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
     enabled: !!contact?.contact_key && open,
   });
 
+  // Powiązane wydarzenia kalendarza (spotkania umówione z tego kontaktu) — do edycji daty/godziny
+  const { data: linkedEvents = [] } = useQuery({
+    queryKey: ["phoneReportCalendarEvents", currentUser?.email],
+    queryFn: () => base44.entities.CalendarEvent.filter({ owner_email: currentUser?.email || "" }),
+    enabled: !!currentUser?.email && open,
+  });
+
+  const getLinkedEventForReport = (reportId) =>
+    linkedEvents.find(e => (e.description || "").includes(`[link:phone_report:${reportId}]`));
+
   const sortedReports = useMemo(() => {
     return [...reports].sort((a, b) => (b.contact_date || "").localeCompare(a.contact_date || ""));
   }, [reports]);
 
+  const buildMeetingEventPayload = (meetingDate, meetingTime, reportId) => ({
+    title: `📞🤝 ${contact.client_name}`,
+    description: `Spotkanie umówione z kontaktu telefonicznego.\n[link:phone_report:${reportId}]`,
+    event_date: meetingDate,
+    event_time: meetingTime || "",
+    event_type: "meeting",
+    status: "planned",
+    client_name: contact.client_name,
+    client_phone: contact.phone || contact.client_phone || "",
+    location: contact.address || contact.client_address || "",
+    owner_email: currentUser?.email || "",
+    owner_name: currentUser?.displayName || currentUser?.full_name || "",
+    source: "manual",
+  });
+
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.PhoneContactReport.create({
-      ...data,
-      contact_key: contact.contact_key,
-      client_name: contact.client_name,
-      client_phone: contact.phone || contact.client_phone || "",
-      client_address: contact.address || contact.client_address || "",
-      author_name: currentUser?.displayName || currentUser?.full_name || "",
-      author_email: currentUser?.email || "",
-    }),
+    mutationFn: async (data) => {
+      const { meeting_date, meeting_time, ...reportData } = data;
+      const report = await base44.entities.PhoneContactReport.create({
+        ...reportData,
+        contact_key: contact.contact_key,
+        client_name: contact.client_name,
+        client_phone: contact.phone || contact.client_phone || "",
+        client_address: contact.address || contact.client_address || "",
+        author_name: currentUser?.displayName || currentUser?.full_name || "",
+        author_email: currentUser?.email || "",
+      });
+      if (reportData.result === "meeting_scheduled" && meeting_date) {
+        await base44.entities.CalendarEvent.create(buildMeetingEventPayload(meeting_date, meeting_time, report.id));
+      }
+      return report;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["phoneContactReports", contact.contact_key] });
+      queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
       toast.success("Raport zapisany");
       setReportSaved(true);
       setView("list");
@@ -131,9 +186,27 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.PhoneContactReport.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const { meeting_date, meeting_time, ...reportData } = data;
+      const report = await base44.entities.PhoneContactReport.update(id, reportData);
+      const marker = `[link:phone_report:${id}]`;
+      const existingEvents = await base44.entities.CalendarEvent.filter({ owner_email: currentUser?.email || "" });
+      const linkedEvent = existingEvents.find(e => (e.description || "").includes(marker));
+      if (reportData.result === "meeting_scheduled" && meeting_date) {
+        const payload = buildMeetingEventPayload(meeting_date, meeting_time, id);
+        if (linkedEvent) {
+          await base44.entities.CalendarEvent.update(linkedEvent.id, payload);
+        } else {
+          await base44.entities.CalendarEvent.create(payload);
+        }
+      } else if (linkedEvent) {
+        await base44.entities.CalendarEvent.delete(linkedEvent.id);
+      }
+      return report;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["phoneContactReports", contact.contact_key] });
+      queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
       toast.success("Raport zaktualizowany");
       setReportSaved(true);
       setView("list");
@@ -243,7 +316,11 @@ export default function PhoneContactReportModal({ contact, currentUser, open, on
             <ReportForm
               contact={contact}
               currentUser={currentUser}
-              initialData={editingReport}
+              initialData={{
+                ...editingReport,
+                meeting_date: getLinkedEventForReport(editingReport.id)?.event_date || "",
+                meeting_time: getLinkedEventForReport(editingReport.id)?.event_time || "",
+              }}
               onSave={(data) => updateMutation.mutate({ id: editingReport.id, data })}
               onCancel={() => { setView("list"); setEditingReport(null); }}
               saving={updateMutation.isPending}
