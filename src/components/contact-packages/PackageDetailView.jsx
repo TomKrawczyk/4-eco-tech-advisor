@@ -59,9 +59,11 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [assignedFilter, setAssignedFilter] = useState("all");
   const [leadDrafts, setLeadDrafts] = useState({});
   const [meetingLead, setMeetingLead] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const isAdmin = currentUser?.role === "admin";
   const { isMainAdmin } = useIsMainAdmin();
+  const canExport = isAdmin || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
 
   // Synchronizuj newGroupId gdy pkg się zmieni (po zapisie przez rodzica)
   useEffect(() => {
@@ -84,6 +86,21 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     queryKey: ["groups-all"],
     queryFn: () => base44.entities.Group.list(),
   });
+
+  // Eksport paczki z raportami — pobiera raporty dopasowane do leadów (po telefonie/nazwie).
+  const handleExport = async () => {
+    if (exporting || leads.length === 0) return;
+    setExporting(true);
+    try {
+      const [phoneReports, meetingReports] = await Promise.all([
+        base44.entities.PhoneContactReport.list("-created_date", 10000).catch(() => []),
+        base44.entities.MeetingReport.list("-created_date", 10000).catch(() => []),
+      ]);
+      exportPackageToExcel(pkg, leads, { phoneReports, meetingReports });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const updateGroupMutation = useMutation({
     mutationFn: (groupId) => {
@@ -531,16 +548,16 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
             </div>
           )}
         </div>
-        {isMainAdmin && (
+        {canExport && (
           <Button
             size="sm"
             variant="outline"
-            disabled={leads.length === 0}
-            onClick={() => exportPackageToExcel(pkg, leads)}
+            disabled={leads.length === 0 || exporting}
+            onClick={handleExport}
             className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
           >
             <Download className="w-4 h-4" />
-            Eksport do Excela
+            {exporting ? "Eksportowanie..." : "Eksport do Excela"}
           </Button>
         )}
         <Button
