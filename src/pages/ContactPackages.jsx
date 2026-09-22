@@ -418,6 +418,23 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
     const now = Date.now();
     return allLeads.filter(l => !isHiddenFromAdvisor(l, now));
   }, [allLeads]);
+
+  // Mapowanie package_id -> nazwa paczki (baza/źródło kontaktu) do wyświetlenia handlowcowi
+  const packageIds = useMemo(
+    () => [...new Set(allLeads.map(l => l.package_id).filter(Boolean))],
+    [allLeads]
+  );
+  const { data: myPackages = [] } = useQuery({
+    queryKey: ["my-packages", packageIds.join("|")],
+    queryFn: () => base44.entities.ContactPackage.filter({ id: { $in: packageIds } }),
+    enabled: packageIds.length > 0,
+  });
+  const packageMap = useMemo(() => {
+    const m = {};
+    myPackages.forEach(p => { m[p.id] = p.name; });
+    return m;
+  }, [myPackages]);
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [archiveTab, setArchiveTab] = useState("active");
@@ -553,6 +570,7 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
             <LeadRow
               key={lead.id}
               lead={lead}
+              packageName={packageMap[lead.package_id]}
               statusLabels={statusLabels}
               statusColors={statusColors}
               currentUser={currentUser}
@@ -568,7 +586,7 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
   );
 }
 
-function LeadRow({ lead, statusLabels, statusColors, currentUser, onUpdateStatus, onMeetingScheduled, onArchive, archiveTab }) {
+function LeadRow({ lead, packageName, statusLabels, statusColors, currentUser, onUpdateStatus, onMeetingScheduled, onArchive, archiveTab }) {
   const [expanded, setExpanded] = useState(false);
   const [notes, setNotes] = useState(lead.contact_notes || "");
   const [status, setStatus] = useState(lead.status);
@@ -598,7 +616,12 @@ function LeadRow({ lead, statusLabels, statusColors, currentUser, onUpdateStatus
         >
           <div className="flex-1 min-w-0">
             <div className="font-medium text-gray-900">{lead.client_name}</div>
-            <div className="text-sm text-gray-500">{lead.client_phone} {lead.postal_code && `· ${lead.postal_code}`} {lead.client_address && `· ${lead.client_address}`}</div>
+            <div className="text-sm text-gray-500 truncate">{lead.client_phone} {lead.postal_code && `· ${lead.postal_code}`} {lead.client_address && `· ${lead.client_address}`}</div>
+            {packageName && (
+              <div className="text-xs text-blue-600 truncate mt-0.5">
+                <span className="inline-block bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 font-medium">Baza: {packageName}</span>
+              </div>
+            )}
           </div>
           <span className={`text-xs px-2 py-1 rounded-full font-medium shrink-0 ${statusColors[lead.status] || "bg-gray-50 text-gray-600"}`}>
             {statusLabels[lead.status] || lead.status}
