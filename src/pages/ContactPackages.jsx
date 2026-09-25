@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import useCurrentUser from "@/components/shared/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -23,10 +24,35 @@ export default function ContactPackages() {
   const [deletingPackage, setDeletingPackage] = useState(null);
 
   const updatePackageMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ContactPackage.update(id, data),
-    onSuccess: () => {
+    mutationFn: async ({ id, data, prevGroupId }) => {
+      const groupChanged = prevGroupId !== undefined && data.group_id !== undefined && prevGroupId !== data.group_id;
+      if (groupChanged) {
+        // Zmiana grupy paczki: usuń przypisania do handlowców, ale zachowaj ich notatki/komentarze
+        await base44.entities.ContactLead.updateMany(
+          { package_id: id },
+          { $set: {
+            group_id: data.group_id || "",
+            assigned_user_email: "",
+            assigned_user_name: "",
+            assigned_at: "",
+            status: "unassigned",
+          }}
+        );
+      }
+      return base44.entities.ContactPackage.update(id, {
+        ...data,
+        ...(groupChanged ? { assigned_count: 0 } : {}),
+      });
+    },
+    onSuccess: (_res, variables) => {
       qc.invalidateQueries({ queryKey: ["contact-packages"] });
+      qc.invalidateQueries({ queryKey: ["contact-package-leads"] });
+      qc.invalidateQueries({ queryKey: ["my-leads"] });
       setEditingPackage(null);
+      const groupChanged = variables.prevGroupId !== undefined && variables.data.group_id !== undefined && variables.prevGroupId !== variables.data.group_id;
+      if (groupChanged) {
+        toast.success("Grupa paczki zmieniona. Przypisania do handlowców usunięte — notatki zachowane.");
+      }
     },
   });
 
@@ -250,7 +276,7 @@ export default function ContactPackages() {
           pkg={editingPackage}
           allGroups={allGroups}
           onClose={() => setEditingPackage(null)}
-          onSave={(data) => updatePackageMutation.mutate({ id: editingPackage.id, data })}
+          onSave={(data) => updatePackageMutation.mutate({ id: editingPackage.id, data, prevGroupId: editingPackage.group_id })}
           saving={updatePackageMutation.isPending}
         />
       )}
