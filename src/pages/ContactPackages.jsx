@@ -27,7 +27,7 @@ export default function ContactPackages() {
     mutationFn: async ({ id, data, prevGroupId }) => {
       const groupChanged = prevGroupId !== undefined && data.group_id !== undefined && prevGroupId !== data.group_id;
       if (groupChanged) {
-        // Zmiana grupy paczki: usuń przypisania do handlowców, ale zachowaj ich notatki/komentarze
+        // Zmiana grupy paczki: usuń tylko przypisania do handlowców — zachowaj statusy i notatki/komentarze
         await base44.entities.ContactLead.updateMany(
           { package_id: id },
           { $set: {
@@ -35,7 +35,6 @@ export default function ContactPackages() {
             assigned_user_email: "",
             assigned_user_name: "",
             assigned_at: "",
-            status: "unassigned",
           }}
         );
       }
@@ -51,7 +50,7 @@ export default function ContactPackages() {
       setEditingPackage(null);
       const groupChanged = variables.prevGroupId !== undefined && variables.data.group_id !== undefined && variables.prevGroupId !== variables.data.group_id;
       if (groupChanged) {
-        toast.success("Grupa paczki zmieniona. Przypisania do handlowców usunięte — notatki zachowane.");
+        toast.success("Grupa paczki zmieniona. Usunięto tylko przypisania do handlowców — statusy i notatki zachowane.");
       }
     },
   });
