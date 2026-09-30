@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
 import { ShieldAlert, User, LogOut, Shield, Menu, X, ChevronDown } from "lucide-react";
 import NotificationPanel from "@/components/notifications/NotificationPanel";
 import RequiredTrainingGate from "@/components/training/RequiredTrainingGate";
@@ -225,6 +226,20 @@ export default function Layout({ children, currentPageName }) {
       clearInterval(activityInterval);
     };
   }, []);
+
+  // Unieważnij cache useCurrentUser przy zmianie impersonacji — Layout jest zawsze
+  // zamontowany (nawet na stronach nie używających useCurrentUser, np. Użytkownicy),
+  // więc zdarzenie startu/zakończenia podglądu nigdy nie jest gubione.
+  const qc = useQueryClient();
+  useEffect(() => {
+    const handler = () => qc.invalidateQueries({ queryKey: ["currentUser"] });
+    window.addEventListener("impersonation-changed", handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener("impersonation-changed", handler);
+      window.removeEventListener("storage", handler);
+    };
+  }, [qc]);
 
   // Fire-and-forget: rozgrzewanie cache geokodowania Giełdy w tle (tylko admin).
   // Lock w backendzie (2 min) blokuje równoległe odpalenia przy wielu userach.
