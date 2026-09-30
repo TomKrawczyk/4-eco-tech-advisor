@@ -10,6 +10,7 @@ import { pl } from "date-fns/locale";
 import CalendarEventModal from "@/components/calendar/CalendarEventModal.jsx";
 import CalendarDayModal from "@/components/calendar/CalendarDayModal.jsx";
 import { isOlderThanDays } from "@/lib/oldRecordVisibility";
+import { getImpersonation } from "@/lib/impersonation";
 
 // Parsuje daty w formacie "DD.MM.YYYY HH:MM" lub "DD.MM.YYYY"
 function parseMeetingDate(str) {
@@ -226,6 +227,17 @@ export default function Calendar() {
         }
         user.groupId = groupId;
         user.allowedUserRecord = ua;
+      }
+      // Impersonacja (admin "Zaloguj jako") — pokaż kalendarz podglądanego użytkownika
+      const imp = getImpersonation();
+      if (imp && user.role === "admin") {
+        user.real_email = user.email;
+        user.real_role = "admin";
+        user.email = imp.targetEmail;
+        user.full_name = imp.targetName;
+        user.displayName = imp.targetName;
+        user.role = imp.targetRole;
+        user.groupId = imp.targetGroupId || null;
       }
       setCurrentUser(user);
     };
