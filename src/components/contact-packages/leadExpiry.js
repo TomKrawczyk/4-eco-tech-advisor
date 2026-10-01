@@ -1,10 +1,10 @@
-// Reguły automatycznego ukrywania kontaktów handlowcom po zmianie statusu.
-// Niezainteresowany / błędny numer: po 48 godzinach.
-// Brak odpowiedzi: po 5 dniach.
+// Reguły automatycznego ukrywania kontaktów po zmianie statusu.
+// Niezainteresowany / brak odpowiedzi: po 3 dniach (72h).
+// Błędny numer: po 48 godzinach.
 const EXPIRY_HOURS = {
-  not_interested: 48,
+  not_interested: 24 * 3,
   wrong_number: 48,
-  no_answer: 24 * 5,
+  no_answer: 24 * 3,
 };
 
 export function getLeadStatusDate(lead) {

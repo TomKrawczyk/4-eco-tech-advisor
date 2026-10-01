@@ -14,6 +14,7 @@ import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingM
 import LeadExtraData from "@/components/contact-packages/LeadExtraData";
 import PrivateAssigneesEditor from "@/components/contact-packages/PrivateAssigneesEditor";
 import useIsMainAdmin from "@/components/shared/useIsMainAdmin";
+import { isHiddenFromAdvisor } from "@/components/contact-packages/leadExpiry";
 
 const STATUS_LABELS = {
   unassigned: "Nieprzypisany",
@@ -55,6 +56,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [newGroupId, setNewGroupId] = useState(pkg.group_id || "");
   const [showAppendImport, setShowAppendImport] = useState(false);
   const [archiveTab, setArchiveTab] = useState("active");
+  const [showExpired, setShowExpired] = useState(false);
   const [sortMode, setSortMode] = useState("created");
   const [assignedFilter, setAssignedFilter] = useState("all");
   const [leadDrafts, setLeadDrafts] = useState({});
@@ -410,7 +412,9 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       const matchAssigned =
         assignedFilter === "all" ||
         (assignedFilter === "__none__" ? !l.assigned_user_email : l.assigned_user_email === assignedFilter);
-      return matchSearch && matchStatus && matchArchive && matchAssigned;
+      // W zakładce "Aktywne" ukrywaj kontakty wygasłe (niezainteresowany/brak odpowiedzi po 3 dniach)
+      const matchExpired = archiveTab !== "active" || showExpired || !isHiddenFromAdvisor(l);
+      return matchSearch && matchStatus && matchArchive && matchAssigned && matchExpired;
     }).sort((a, b) => {
       if (sortMode === "postal_code") return (a.postal_code || "999999").localeCompare(b.postal_code || "999999", "pl");
       if (sortMode === "name") return (a.client_name || "").localeCompare(b.client_name || "", "pl");
@@ -614,6 +618,17 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
           <Copy className="w-3.5 h-3.5" />
           Duplikaty ({stats.duplicates})
         </Button>
+        {archiveTab === "active" && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowExpired(v => !v)}
+            className={showExpired ? "text-amber-700 border-amber-300 bg-amber-50" : "text-gray-500"}
+            title="Niezainteresowani i brak odpowiedzi po 3 dniach od statusu"
+          >
+            {showExpired ? "Ukryj wygasłe" : "Pokaż wygasłe"}
+          </Button>
+        )}
       </div>
 
       {/* Liczniki przypisań handlowców */}
