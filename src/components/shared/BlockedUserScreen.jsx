@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, FileText, Phone, Calendar, MapPin, Loader2, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, FileText, Phone, Calendar, MapPin, Loader2, CheckCircle2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createPageUrl } from "@/utils";
 import useOverdueReports from "@/hooks/useOverdueReports";
+import PhoneContactReportModal from "@/components/phone-contacts/PhoneContactReportModal";
+import MeetingReportQuickModal from "@/components/shared/MeetingReportQuickModal";
 
 export default function BlockedUserScreen({ currentUser }) {
   const blockedUntil = currentUser?.blocked_until || "";
@@ -11,6 +13,20 @@ export default function BlockedUserScreen({ currentUser }) {
   const { overdueMeetings, overduePhones, loading } = useOverdueReports(currentUser);
 
   const totalOverdue = overdueMeetings.length + overduePhones.length;
+
+  // Modale do uzupełniania raportów bezpośrednio z ekranu blokady
+  const [phoneModalContact, setPhoneModalContact] = useState(null);
+  const [meetingModalData, setMeetingModalData] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Po zapisie raportu w modalu — pokaż stan "przeliczam", listy odświeżą się same
+  // przez zdarzenie user-access-updated (z refreshReportingBlock).
+  const handleReportSaved = () => {
+    setRefreshing(true);
+    // enforceReportingBlocks + Layout re-check zajmie chwilę; po 4s ukryj spinner,
+    // bo do tego czasu listy zdążą się odświeżyć i blokada zostanie zdjęta.
+    setTimeout(() => setRefreshing(false), 4000);
+  };
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4 py-8">
@@ -50,8 +66,16 @@ export default function BlockedUserScreen({ currentUser }) {
             <>
               <p className="text-sm text-gray-600 leading-6">
                 Złóż wszystkie zaległe raporty poniżej — konto odblokuje się automatycznie po ich uzupełnieniu.
-                Do tego czasu dostęp do pozostałych funkcji pozostaje zablokowany.
+                Kliknij <span className="font-medium text-green-700">„Uzupełnij"</span>, wypełnij raport w oknie
+                i zapisz — lista odświeży się sama, a blokada zniknie.
               </p>
+
+              {refreshing && (
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-sm text-blue-700">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Przeliczam blokadę — aplikacja odblokuje się automatycznie...
+                </div>
+              )}
 
               {loading ? (
                 <div className="flex items-center justify-center py-8 text-gray-500">
@@ -71,41 +95,33 @@ export default function BlockedUserScreen({ currentUser }) {
                         Raporty po spotkaniach ({overdueMeetings.length})
                       </div>
                       <div className="space-y-2">
-                        {overdueMeetings.map((m, i) => {
-                          const params = new URLSearchParams({
-                            from_meeting: "1",
-                            prefill_client_name: m.client_name || "",
-                            prefill_client_phone: m.client_phone || "",
-                            prefill_client_address: m.client_address || m.address || "",
-                            prefill_meeting_date: m.meeting_date || "",
-                            prefill_meeting_time: (m.meeting_calendar || "").match(/(\d{1,2}:\d{2})/)?.[1] || "",
-                          }).toString();
-                          return (
-                            <div key={i} className="bg-white border border-gray-200 rounded-xl p-3 flex items-start gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
-                                <Calendar className="w-4 h-4 text-green-700" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-gray-900 text-sm truncate">{m.client_name || "Klient"}</div>
-                                <div className="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                                  {m.meeting_date && <span>{m.meeting_date}</span>}
-                                  {m.meeting_calendar && <span>{m.meeting_calendar}</span>}
-                                  {(m.client_phone || m.phone) && <span>📞 {m.client_phone || m.phone}</span>}
-                                </div>
-                                {(m.client_address || m.address) && (
-                                  <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 truncate">
-                                    <MapPin className="w-3 h-3 shrink-0" /> {m.client_address || m.address}
-                                  </div>
-                                )}
-                              </div>
-                              <Button asChild size="sm" className="bg-green-600 hover:bg-green-700 shrink-0">
-                                <Link to={`${createPageUrl("MeetingReports")}?${params}`}>
-                                  <FileText className="w-3.5 h-3.5 mr-1" /> Uzupełnij
-                                </Link>
-                              </Button>
+                        {overdueMeetings.map((m, i) => (
+                          <div key={i} className="bg-white border border-gray-200 rounded-xl p-3 flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                              <Calendar className="w-4 h-4 text-green-700" />
                             </div>
-                          );
-                        })}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-gray-900 text-sm truncate">{m.client_name || "Klient"}</div>
+                              <div className="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                                {m.meeting_date && <span>{m.meeting_date}</span>}
+                                {m.meeting_calendar && <span>{m.meeting_calendar}</span>}
+                                {(m.client_phone || m.phone) && <span>📞 {m.client_phone || m.phone}</span>}
+                              </div>
+                              {(m.client_address || m.address) && (
+                                <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 truncate">
+                                  <MapPin className="w-3 h-3 shrink-0" /> {m.client_address || m.address}
+                                </div>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => setMeetingModalData(m)}
+                              className="bg-green-600 hover:bg-green-700 shrink-0 gap-1"
+                            >
+                              <FileText className="w-3.5 h-3.5" /> Uzupełnij
+                            </Button>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -116,11 +132,7 @@ export default function BlockedUserScreen({ currentUser }) {
                         Raporty po kontaktach telefonicznych ({overduePhones.length})
                       </div>
                       <div className="space-y-2">
-                        {overduePhones.map((c, i) => {
-                          const params = new URLSearchParams({
-                            prefill_contact_key: c.contact_key || "",
-                          }).toString();
-                          return (
+                        {overduePhones.map((c, i) => (
                           <div key={i} className="bg-white border border-gray-200 rounded-xl p-3 flex items-start gap-3">
                             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
                               <Phone className="w-4 h-4 text-blue-700" />
@@ -132,14 +144,16 @@ export default function BlockedUserScreen({ currentUser }) {
                                 {(c.phone || c.client_phone) && <span>📞 {c.phone || c.client_phone}</span>}
                               </div>
                             </div>
-                            <Button asChild size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50 shrink-0">
-                              <Link to={`${createPageUrl("PhoneContacts")}${params ? `?${params}` : ""}`}>
-                                <Phone className="w-3.5 h-3.5 mr-1" /> Uzupełnij
-                              </Link>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setPhoneModalContact(c)}
+                              className="border-blue-300 text-blue-700 hover:bg-blue-50 shrink-0 gap-1"
+                            >
+                              <Phone className="w-3.5 h-3.5" /> Uzupełnij
                             </Button>
                           </div>
-                          );
-                        })}
+                        ))}
                       </div>
                     </div>
                   )}
@@ -162,6 +176,31 @@ export default function BlockedUserScreen({ currentUser }) {
           )}
         </div>
       </div>
+
+      {/* Modal: szybki raport po spotkaniu — bezpośrednio z blokady */}
+      <MeetingReportQuickModal
+        meeting={meetingModalData}
+        currentUser={currentUser}
+        open={!!meetingModalData}
+        onClose={(saved) => {
+          setMeetingModalData(null);
+          if (saved) handleReportSaved();
+        }}
+      />
+
+      {/* Modal: raport po kontakcie telefonicznym — bezpośrednio z blokady */}
+      {phoneModalContact && (
+        <PhoneContactReportModal
+          contact={phoneModalContact}
+          currentUser={currentUser}
+          open={true}
+          startInCreate={true}
+          onClose={(saved) => {
+            setPhoneModalContact(null);
+            if (saved) handleReportSaved();
+          }}
+        />
+      )}
     </div>
   );
 }
