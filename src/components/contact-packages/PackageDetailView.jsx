@@ -384,9 +384,15 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     deleteBatchMutation.mutate(ids);
   };
 
-  // Liczba kontaktów przypisanych do każdego handlowca (aktywne, bez duplikatów)
+  // Liczba kontaktów przypisanych do każdego handlowca (aktywne, bez duplikatów).
+  // Uwzględniamy wszystkich przypisywalnych handlowców z grupy paczki (count 0, gdy
+  // nie mają jeszcze przypisanych leadów) — dzięki temu widać ich w filtrze i
+  // licznikach od razu, a nie dopiero gdy otrzymają pierwszy kontakt.
   const advisorCounts = useMemo(() => {
     const map = {};
+    assignableUsers.forEach(u => {
+      if (!map[u.email]) map[u.email] = { name: u.name || u.email, count: 0 };
+    });
     leads.forEach(l => {
       if (l.is_archived === true || l.is_duplicate === true) return;
       if (!l.assigned_user_email) return;
@@ -394,7 +400,8 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       map[l.assigned_user_email].count += 1;
     });
     return map;
-  }, [leads]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads, assignableUsers]);
 
   const filtered = useMemo(() => {
     return leads.filter(l => {
