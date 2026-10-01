@@ -56,7 +56,6 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [newGroupId, setNewGroupId] = useState(pkg.group_id || "");
   const [showAppendImport, setShowAppendImport] = useState(false);
   const [archiveTab, setArchiveTab] = useState("active");
-  const [showExpired, setShowExpired] = useState(false);
   const [sortMode, setSortMode] = useState("created");
   const [assignedFilter, setAssignedFilter] = useState("all");
   const [leadDrafts, setLeadDrafts] = useState({});
@@ -99,6 +98,21 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
         base44.entities.MeetingReport.list("-created_date", 10000).catch(() => []),
       ]);
       exportPackageToExcel(pkg, leads, { phoneReports, meetingReports });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Eksport tylko wygasłych kontaktów (niezainteresowany / brak odpowiedzi / błędny numer)
+  const handleExportExpired = async () => {
+    if (exporting || filtered.length === 0) return;
+    setExporting(true);
+    try {
+      const [phoneReports, meetingReports] = await Promise.all([
+        base44.entities.PhoneContactReport.list("-created_date", 10000).catch(() => []),
+        base44.entities.MeetingReport.list("-created_date", 10000).catch(() => []),
+      ]);
+      exportPackageToExcel({ ...pkg, name: `${pkg.name} — wygasłe` }, filtered, { phoneReports, meetingReports });
     } finally {
       setExporting(false);
     }
@@ -415,13 +429,12 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       const matchArchive =
         archiveTab === "archived" ? l.is_archived === true :
         archiveTab === "duplicates" ? l.is_duplicate === true && l.is_archived !== true :
-        l.is_archived !== true && l.is_duplicate !== true;
+        archiveTab === "expired" ? l.is_archived !== true && l.is_duplicate !== true && isHiddenFromAdvisor(l) :
+        l.is_archived !== true && l.is_duplicate !== true && !isHiddenFromAdvisor(l);
       const matchAssigned =
         assignedFilter === "all" ||
         (assignedFilter === "__none__" ? !l.assigned_user_email : l.assigned_user_email === assignedFilter);
-      // W zakładce "Aktywne" ukrywaj kontakty wygasłe (niezainteresowany/brak odpowiedzi po 3 dniach)
-      const matchExpired = archiveTab !== "active" || showExpired || !isHiddenFromAdvisor(l);
-      return matchSearch && matchStatus && matchArchive && matchAssigned && matchExpired;
+      return matchSearch && matchStatus && matchArchive && matchAssigned;
     }).sort((a, b) => {
       if (sortMode === "postal_code") return (a.postal_code || "999999").localeCompare(b.postal_code || "999999", "pl");
       if (sortMode === "name") return (a.client_name || "").localeCompare(b.client_name || "", "pl");
@@ -457,11 +470,13 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     const activeLeads = leads.filter(l => l.is_archived !== true && l.is_duplicate !== true);
     const archived = leads.filter(l => l.is_archived === true).length;
     const duplicates = leads.filter(l => l.is_duplicate === true && l.is_archived !== true).length;
-    const total = activeLeads.length;
-    const assigned = activeLeads.filter(l => l.assigned_user_email).length;
+    // Wygasłe: niezainteresowany / brak odpowiedzi / błędny numer po terminie
+    const expired = activeLeads.filter(l => isHiddenFromAdvisor(l)).length;
+    const total = activeLeads.length - expired;
+    const assigned = activeLeads.filter(l => l.assigned_user_email && !isHiddenFromAdvisor(l)).length;
     const unassigned = total - assigned;
-    const interested = activeLeads.filter(l => l.status === "interested" || l.status === "meeting_scheduled").length;
-    return { total, assigned, unassigned, interested, archived, duplicates };
+    const interested = activeLeads.filter(l => (l.status === "interested" || l.status === "meeting_scheduled") && !isHiddenFromAdvisor(l)).length;
+    return { total, assigned, unassigned, interested, archived, duplicates, expired };
   }, [leads]);
 
   const getLeadDraft = (lead) => leadDrafts[lead.id] || {
@@ -625,15 +640,16 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
           <Copy className="w-3.5 h-3.5" />
           Duplikaty ({stats.duplicates})
         </Button>
-        {archiveTab === "active" && (
+        {isAdmin && (
           <Button
             size="sm"
-            variant="outline"
-            onClick={() => setShowExpired(v => !v)}
-            className={showExpired ? "text-amber-700 border-amber-300 bg-amber-50" : "text-gray-500"}
-            title="Niezainteresowani i brak odpowiedzi po 3 dniach od statusu"
+            variant={archiveTab === "expired" ? "default" : "outline"}
+            onClick={() => { setArchiveTab("expired"); setSelected(new Set()); }}
+            className={archiveTab === "expired" ? "bg-amber-600 hover:bg-amber-700 text-white gap-1" : "gap-1 text-amber-600 border-amber-200 hover:bg-amber-50"}
+            title="Niezainteresowani, brak odpowiedzi i błędny numer — ukryte z widoków handlowców"
           >
-            {showExpired ? "Ukryj wygasłe" : "Pokaż wygasłe"}
+            <Archive className="w-3.5 h-3.5" />
+            Wygasłe ({stats.expired})
           </Button>
         )}
       </div>
@@ -720,6 +736,24 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
               Wyczyść ({selected.size})
             </button>
           )}
+        </div>
+      )}
+
+      {/* Eksport wygasłych kontaktów — tylko admin */}
+      {archiveTab === "expired" && isAdmin && (
+        <div className="flex items-center gap-3 flex-wrap bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <div className="text-sm text-amber-800">
+            <span className="font-semibold">{filtered.length}</span> wygasłych kontaktów — niezainteresowani, brak odpowiedzi i błędny numer. Te kontakty są ukryte z widoków handlowców, liderów grup i team liderów.
+          </div>
+          <Button
+            size="sm"
+            onClick={handleExportExpired}
+            disabled={exporting || filtered.length === 0}
+            className="ml-auto bg-amber-600 hover:bg-amber-700 text-white gap-1"
+          >
+            <Download className="w-4 h-4" />
+            {exporting ? "Eksport..." : "Pobierz do Excel"}
+          </Button>
         </div>
       )}
 
