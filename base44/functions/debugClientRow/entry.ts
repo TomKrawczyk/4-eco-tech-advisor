@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
   const { accessToken } = await base44.asServiceRole.connectors.getConnection('googlesheets');
 
-  const range = `'${sheetTitle}'!A1:Z3000`;
+  const range = `'${sheetTitle}'!A1:Z10000`;
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`,
     { headers: { Authorization: `Bearer ${accessToken}` } }

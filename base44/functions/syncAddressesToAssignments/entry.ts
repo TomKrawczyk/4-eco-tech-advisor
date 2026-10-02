@@ -3,7 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 const SPREADSHEET_ID = '19aramNGcpY7ssEcpX34KPI5qmQUWQWVgAF-XC0WiKH8';
 
 async function fetchAddressMapFromSheet(accessToken, sheetTitle) {
-  const range = `'${sheetTitle}'!A1:Z3000`;
+  const range = `'${sheetTitle}'!A1:Z10000`;
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
