@@ -3,7 +3,7 @@
 // Zgodnie z wymogiem platformy logika współdzielona między funkcjami żyje w base44/shared,
 // a nie w kopiach wewnątrz każdej funkcji.
 
-export const RANGE_SUFFIX = 'A1:Z10000';
+export const RANGE_SUFFIX = 'A1:Z999999';
 export const MAX_BATCH_RANGES = 20;
 
 export function extractSpreadsheetId(value) {

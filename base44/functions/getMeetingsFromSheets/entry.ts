@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const RANGE_SUFFIX = 'A1:Z10000';
+const RANGE_SUFFIX = 'A1:Z999999';
 const MAX_BATCH_RANGES = 20;
 
 function extractSpreadsheetId(value) {
