@@ -58,6 +58,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [archiveTab, setArchiveTab] = useState("active");
   const [sortMode, setSortMode] = useState("created");
   const [assignedFilter, setAssignedFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState("all");
   const [leadDrafts, setLeadDrafts] = useState({});
   const [meetingLead, setMeetingLead] = useState(null);
   const [exporting, setExporting] = useState(false);
@@ -417,6 +418,33 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leads, assignableUsers]);
 
+  // Dostępne lata z dat widocznych w szczegółach leadu (utworzenie, kontakt,
+  // przypisanie, umówione spotkanie).
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    const add = (val) => {
+      if (!val) return;
+      const y = new Date(val).getFullYear();
+      if (!isNaN(y)) years.add(y);
+    };
+    leads.forEach(l => {
+      add(l.created_date);
+      add(l.contacted_at);
+      add(l.assigned_at);
+      add(l.scheduled_meeting_date);
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [leads]);
+
+  const leadHasYear = (l, year) => {
+    const matches = (val) => {
+      if (!val) return false;
+      const y = new Date(val).getFullYear();
+      return !isNaN(y) && y === year;
+    };
+    return matches(l.created_date) || matches(l.contacted_at) || matches(l.assigned_at) || matches(l.scheduled_meeting_date);
+  };
+
   const filtered = useMemo(() => {
     return leads.filter(l => {
       const matchSearch =
@@ -434,13 +462,14 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       const matchAssigned =
         assignedFilter === "all" ||
         (assignedFilter === "__none__" ? !l.assigned_user_email : l.assigned_user_email === assignedFilter);
-      return matchSearch && matchStatus && matchArchive && matchAssigned;
+      const matchYear = yearFilter === "all" || leadHasYear(l, Number(yearFilter));
+      return matchSearch && matchStatus && matchArchive && matchAssigned && matchYear;
     }).sort((a, b) => {
       if (sortMode === "postal_code") return (a.postal_code || "999999").localeCompare(b.postal_code || "999999", "pl");
       if (sortMode === "name") return (a.client_name || "").localeCompare(b.client_name || "", "pl");
       return 0;
     });
-  }, [leads, search, statusFilter, archiveTab, sortMode, assignedFilter]);
+  }, [leads, search, statusFilter, archiveTab, sortMode, assignedFilter, yearFilter]);
 
   const toggleSelect = (id) => {
     setSelected(prev => {
@@ -702,6 +731,16 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
           <option value="__none__">Nieprzypisane</option>
           {Object.entries(advisorCounts).map(([email, c]) => (
             <option key={email} value={email}>{c.name} — {email} ({c.count})</option>
+          ))}
+        </select>
+        <select
+          value={yearFilter}
+          onChange={e => setYearFilter(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="all">Wszystkie lata</option>
+          {availableYears.map(y => (
+            <option key={y} value={y}>{y}</option>
           ))}
         </select>
         <select
