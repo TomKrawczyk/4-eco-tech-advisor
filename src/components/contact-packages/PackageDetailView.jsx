@@ -418,32 +418,37 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leads, assignableUsers]);
 
-  // Dostępne lata z dat widocznych w szczegółach leadu (utworzenie, kontakt,
-  // przypisanie, umówione spotkanie).
+  // Rok wyciągany z numeru umowy zapisanego w extra_data (np. "111/KS/001/01/2022" → 2022).
+  // Szukamy wartości w extra_data kończących się na /YYYY (4-cyfrowy rok po ostatnim ukośniku).
+  const extractYearFromLead = (l) => {
+    const m = (v) => {
+      if (!v) return null;
+      const s = String(v).trim();
+      const match = s.match(/\/(\d{4})\s*$/);
+      return match ? Number(match[1]) : null;
+    };
+    const candidates = [
+      ...Object.values(l.extra_data || {}),
+      l.notes,
+      l.contact_notes,
+    ];
+    for (const c of candidates) {
+      const y = m(c);
+      if (y) return y;
+    }
+    return null;
+  };
+
   const availableYears = useMemo(() => {
     const years = new Set();
-    const add = (val) => {
-      if (!val) return;
-      const y = new Date(val).getFullYear();
-      if (!isNaN(y)) years.add(y);
-    };
     leads.forEach(l => {
-      add(l.created_date);
-      add(l.contacted_at);
-      add(l.assigned_at);
-      add(l.scheduled_meeting_date);
+      const y = extractYearFromLead(l);
+      if (y) years.add(y);
     });
     return Array.from(years).sort((a, b) => b - a);
   }, [leads]);
 
-  const leadHasYear = (l, year) => {
-    const matches = (val) => {
-      if (!val) return false;
-      const y = new Date(val).getFullYear();
-      return !isNaN(y) && y === year;
-    };
-    return matches(l.created_date) || matches(l.contacted_at) || matches(l.assigned_at) || matches(l.scheduled_meeting_date);
-  };
+  const leadHasYear = (l, year) => extractYearFromLead(l) === year;
 
   const filtered = useMemo(() => {
     return leads.filter(l => {
