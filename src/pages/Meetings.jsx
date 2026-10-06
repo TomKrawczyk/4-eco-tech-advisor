@@ -85,12 +85,6 @@ function UserMeetingsView({ myAssignedMeetings, selectedDetails, setSelectedDeta
         title="Moje spotkania"
         subtitle="Spotkania przypisane do Ciebie – najbliższe 14 dni"
       />
-      <MeetingsCacheStatusBar
-        refreshedAt={refreshedAt}
-        status={cacheStatus}
-        onRefresh={onRefreshNow}
-        isRefreshing={isRefreshingCache}
-      />
       {myAssignedMeetings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
