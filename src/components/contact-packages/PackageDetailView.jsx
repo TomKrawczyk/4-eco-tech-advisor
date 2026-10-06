@@ -28,6 +28,8 @@ const STATUS_LABELS = {
   meeting_scheduled: "Spotkanie umówione",
   offer_submitted: "Złożona oferta",
   contract_signed: "Umowa podpisana",
+  withdrawn: "Odstąpienie",
+  no_pv_install: "Brak instalacji PV",
 };
 
 const STATUS_COLORS = {
@@ -42,6 +44,8 @@ const STATUS_COLORS = {
   meeting_scheduled: "bg-blue-50 text-blue-700",
   offer_submitted: "bg-orange-50 text-orange-700",
   contract_signed: "bg-emerald-200 text-emerald-900",
+  withdrawn: "bg-stone-100 text-stone-700",
+  no_pv_install: "bg-slate-200 text-slate-800",
 };
 
 export default function PackageDetailView({ pkg, currentUser, onBack, onPackageUpdated }) {

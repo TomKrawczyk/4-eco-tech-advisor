@@ -499,6 +499,8 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
     callback: "Do ponownego kontaktu",
     meeting_scheduled: "Spotkanie umówione",
     contract_signed: "Umowa podpisana",
+    withdrawn: "Odstąpienie",
+    no_pv_install: "Brak instalacji PV",
   };
 
   const statusColors = {
@@ -511,6 +513,8 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
     callback: "bg-purple-50 text-purple-700",
     meeting_scheduled: "bg-purple-50 text-purple-700",
     contract_signed: "bg-emerald-100 text-emerald-800",
+    withdrawn: "bg-stone-100 text-stone-700",
+    no_pv_install: "bg-slate-200 text-slate-800",
   };
 
   const filtered = leads.filter(l => {

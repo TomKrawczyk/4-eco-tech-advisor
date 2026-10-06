@@ -12,6 +12,8 @@ const STATUS_LABELS = {
   meeting_scheduled: "Spotkanie umówione",
   offer_submitted: "Złożona oferta",
   contract_signed: "Umowa podpisana",
+  withdrawn: "Odstąpienie",
+  no_pv_install: "Brak instalacji PV",
 };
 
 const PHONE_RESULT_LABELS = {

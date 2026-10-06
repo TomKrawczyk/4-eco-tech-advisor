@@ -60,7 +60,9 @@
         "callback",
         "meeting_scheduled",
         "offer_submitted",
-        "contract_signed"
+        "contract_signed",
+        "withdrawn",
+        "no_pv_install"
       ],
       "default": "unassigned",
       "description": "Status kontaktu"
