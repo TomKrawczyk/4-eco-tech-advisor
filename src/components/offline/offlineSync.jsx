@@ -1,6 +1,8 @@
 const CACHE_PREFIX = "4eco_cache_";
 const QUEUE_KEY = "4eco_offline_queue";
+const DEAD_LETTER_KEY = "4eco_offline_dead";
 const CURRENT_USER_CACHE_KEY = "4eco_cached_current_user";
+const MAX_SYNC_ATTEMPTS = 3;
 const QUEUE_EVENT_NAME = "4eco_offline_queue_changed";
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 const OFFLINE_EXCLUDED_ENTITIES = new Set([
@@ -200,6 +202,15 @@ export function getQueue() {
   return Array.isArray(queue) ? queue : [];
 }
 
+export function getDeadLetter() {
+  const dead = safeParse(localStorage.getItem(DEAD_LETTER_KEY) || "[]", []);
+  return Array.isArray(dead) ? dead : [];
+}
+
+export function clearDeadLetter() {
+  localStorage.removeItem(DEAD_LETTER_KEY);
+}
+
 export function enqueue(operation) {
   const queueItem = {
     ...operation,
@@ -239,16 +250,40 @@ export function getCachedCurrentUser() {
   return cacheGet(CURRENT_USER_CACHE_KEY);
 }
 
+function moveToDeadLetter(op, reason) {
+  const dead = getDeadLetter();
+  dead.push({ ...op, deadAt: new Date().toISOString(), deadReason: reason });
+  try {
+    localStorage.setItem(DEAD_LETTER_KEY, JSON.stringify(dead));
+  } catch (error) {
+    console.warn("Dead-letter write failed:", error);
+  }
+  console.warn("Operation moved to dead letter:", op, reason);
+}
+
+function isOrphanOfflineOp(op, queue) {
+  // update/delete referencujące tymczasowe id bez pasującego create w tej samej kolejce
+  if (op.type !== "update" && op.type !== "delete") return false;
+  if (!String(op.recordId || "").startsWith("offline_")) return false;
+  return !queue.some((o) => o.type === "create" && o.tempId === op.recordId);
+}
+
 export async function syncQueue(source) {
   const queue = getQueue().filter((op) => !isOfflineExcludedEntity(op.entity));
   if (queue.length === 0) return { synced: 0, failed: 0 };
+
+  // Odrzuć od razu osierocone operacje offline (update/delete bez pasującego create)
+  const orphaned = queue.filter((op) => isOrphanOfflineOp(op, queue));
+  orphaned.forEach((op) => removeFromCacheList(op.entity, op.recordId));
+  orphaned.forEach((op) => moveToDeadLetter(op, "orphan_offline_id"));
+  const liveQueue = queue.filter((op) => !isOrphanOfflineOp(op, queue));
 
   const tempIdMap = {};
   const remaining = [];
   let synced = 0;
   let failed = 0;
 
-  for (const op of queue) {
+  for (const op of liveQueue) {
     const entity = source?.entities?.[op.entity] || source?.[op.entity];
     if (!entity) {
       remaining.push(op);
@@ -270,7 +305,7 @@ export async function syncQueue(source) {
 
       const resolvedId = tempIdMap[op.recordId] || op.recordId;
       if (!resolvedId) {
-        remaining.push(op);
+        moveToDeadLetter(op, "unresolved_id");
         continue;
       }
 
@@ -287,8 +322,16 @@ export async function syncQueue(source) {
       synced++;
     } catch (error) {
       console.error("Sync failed for op:", op, error);
+      const failCount = (op.failCount || 0) + 1;
+      // 404/400 = rekord nie istnieje lub dane niepoprawne — nie próbuj w nieskończoność
+      const status = error?.status || error?.response?.status;
+      const permanent = status === 400 || status === 404;
+      if (permanent || failCount >= MAX_SYNC_ATTEMPTS) {
+        moveToDeadLetter(op, permanent ? `http_${status}` : "max_attempts");
+      } else {
+        remaining.push({ ...op, failCount });
+      }
       failed++;
-      remaining.push(op);
     }
   }
 
