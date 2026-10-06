@@ -6,8 +6,9 @@ import useCurrentUser from "@/components/shared/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ShieldAlert, Package, Plus, Users, Upload, ChevronRight, Search, X, Pencil, Trash2 } from "lucide-react";
+import { ShieldAlert, Package, Plus, Users, Upload, ChevronRight, Search, X, Pencil, Trash2, GitMerge } from "lucide-react";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
+import MergePackagesModal from "@/components/contact-packages/MergePackagesModal";
 import PackageDetailView from "@/components/contact-packages/PackageDetailView";
 import AdvisorSummary from "@/components/contact-packages/AdvisorSummary";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
@@ -22,6 +23,7 @@ export default function ContactPackages() {
   const [selectedPackageId, setSelectedPackageId] = useState(null);
   const [editingPackage, setEditingPackage] = useState(null);
   const [deletingPackage, setDeletingPackage] = useState(null);
+  const [showMerge, setShowMerge] = useState(false);
 
   const updatePackageMutation = useMutation({
     mutationFn: async ({ id, data, prevGroupId }) => {
@@ -205,15 +207,27 @@ export default function ContactPackages() {
           <h1 className="text-2xl font-bold text-gray-900">Paczki kontaktów</h1>
           <p className="text-sm text-gray-500 mt-0.5">Importuj kontakty z Excela i przydzielaj handlowcom</p>
         </div>
-        {canManage && (
-          <Button
-            onClick={() => setShowImport(true)}
-            className="bg-green-600 hover:bg-green-700 text-white gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            Importuj paczkę
-          </Button>
-        )}
+        <div className="flex gap-2 flex-wrap">
+          {canManage && (
+            <Button
+              onClick={() => setShowImport(true)}
+              className="bg-green-600 hover:bg-green-700 text-white gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Importuj paczkę
+            </Button>
+          )}
+          {canManage && packages.length >= 2 && (
+            <Button
+              variant="outline"
+              onClick={() => setShowMerge(true)}
+              className="gap-2"
+            >
+              <GitMerge className="w-4 h-4" />
+              Scal paczki
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Podsumowanie przypisań handlowców */}
@@ -266,6 +280,15 @@ export default function ContactPackages() {
             setShowImport(false);
             qc.invalidateQueries({ queryKey: ["contact-packages"] });
           }}
+        />
+      )}
+
+      {showMerge && (
+        <MergePackagesModal
+          packages={packages}
+          stats={packageStats}
+          currentUser={currentUser}
+          onClose={() => setShowMerge(false)}
         />
       )}
 
