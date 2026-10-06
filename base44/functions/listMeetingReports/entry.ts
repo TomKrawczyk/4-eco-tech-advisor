@@ -1,111 +1,41 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-
-function findManagedUser(allowedUsers, identifier) {
-  return allowedUsers.find((u) => u.id === identifier || (u.data?.email || u.email) === identifier);
-}
-
-function resolveGroupId(currentUserData, groups) {
-  const directGroupId = currentUserData.data?.group_id || currentUserData.group_id;
-  if (directGroupId) return directGroupId;
-
-  const currentUserId = currentUserData.id;
-  const currentUserEmail = currentUserData.data?.email || currentUserData.email;
-  const group = groups.find((g) => {
-    const leaderIds = g.data?.group_leader_ids || g.group_leader_ids || [];
-    const legacyLeaderId = g.data?.group_leader_id || g.group_leader_id;
-    return leaderIds.includes(currentUserId) || leaderIds.includes(currentUserEmail) || legacyLeaderId === currentUserId || legacyLeaderId === currentUserEmail;
-  });
-
-  return group?.id || null;
-}
-
-async function listAll(entity, sort = '-created_date', pageSize = 1000) {
-  const results = [];
-  let skip = 0;
-
-  while (true) {
-    const batch = await entity.list(sort, pageSize, skip);
-    if (!batch?.length) break;
-    results.push(...batch);
-    if (batch.length < pageSize) break;
-    skip += pageSize;
-  }
-
-  return results;
-}
+import {
+  resolveAccessContext,
+  listAll,
+  denyAndLog,
+} from '../../shared/accessControl.ts';
 
 Deno.serve(async (req) => {
   try {
     const payload = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const ctx = await resolveAccessContext(base44);
 
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!ctx.authenticated) {
+      return denyAndLog(base44, 'no_session');
     }
-
-    const [allowedUsers, groups] = await Promise.all([
-      listAll(base44.asServiceRole.entities.AllowedUser),
-      listAll(base44.asServiceRole.entities.Group),
-    ]);
-
-    const currentUserData = allowedUsers.find((u) => (u.data?.email || u.email) === user.email);
-
-    if (!currentUserData) {
+    if (!ctx.allowed) {
+      // Nie ma wpisu w AllowedUser — brak dostępu do danych klientów
       return Response.json({ reports: [] });
     }
 
-    const role = currentUserData.data?.role || currentUserData.role || 'user';
-
-    if (role === 'admin') {
+    // Admin widzi wszystko
+    if (ctx.isAdmin) {
       const reports = await listAll(base44.asServiceRole.entities.MeetingReport);
       if (payload.count_only) {
-        return Response.json({ total: reports.length, role });
+        return Response.json({ total: reports.length, role: ctx.role });
       }
-      return Response.json({ reports, total: reports.length, role });
+      return Response.json({ reports, total: reports.length, role: ctx.role });
     }
 
-    let userEmails = [user.email];
-
-    if (role === 'group_leader') {
-      const groupId = resolveGroupId(currentUserData, groups);
-
-      if (groupId) {
-        allowedUsers.forEach((u) => {
-          const uGroupId = u.data?.group_id || u.group_id;
-          if (uGroupId === groupId) {
-            userEmails.push(u.data?.email || u.email);
-          }
-        });
-      }
-
-      const managedUsers = currentUserData.data?.managed_users || currentUserData.managed_users || [];
-      managedUsers.forEach((identifier) => {
-        const managedUser = findManagedUser(allowedUsers, identifier);
-        if (managedUser) {
-          userEmails.push(managedUser.data?.email || managedUser.email);
-          const managedRole = managedUser.data?.role || managedUser.role;
-          if (managedRole === 'team_leader') {
-            const teamUsers = managedUser.data?.managed_users || managedUser.managed_users || [];
-            teamUsers.forEach((teamIdentifier) => {
-              const teamUser = findManagedUser(allowedUsers, teamIdentifier);
-              if (teamUser) userEmails.push(teamUser.data?.email || teamUser.email);
-            });
-          }
-        }
-      });
-    } else if (role === 'team_leader') {
-      const managedUsers = currentUserData.data?.managed_users || currentUserData.managed_users || [];
-      managedUsers.forEach((identifier) => {
-        const managedUser = findManagedUser(allowedUsers, identifier);
-        if (managedUser) userEmails.push(managedUser.data?.email || managedUser.email);
-      });
-    }
-
-    const emails = [...new Set(userEmails)];
+    // Pozostałe role: tylko rekordy widocznych emaili (hierarchia)
     const [byAuthor, byCreator] = await Promise.all([
-      base44.asServiceRole.entities.MeetingReport.filter({ author_email: { $in: emails } }, '-created_date', 1000),
-      base44.asServiceRole.entities.MeetingReport.filter({ created_by: { $in: emails } }, '-created_date', 1000),
+      base44.asServiceRole.entities.MeetingReport.filter(
+        { author_email: { $in: ctx.visibleEmails } }, '-created_date', 1000,
+      ),
+      base44.asServiceRole.entities.MeetingReport.filter(
+        { created_by: { $in: ctx.visibleEmails } }, '-created_date', 1000,
+      ),
     ]);
     const seen = new Set();
     const visibleReports = [...byAuthor, ...byCreator].filter((report) => {
@@ -115,11 +45,13 @@ Deno.serve(async (req) => {
     });
 
     if (payload.count_only) {
-      return Response.json({ total: visibleReports.length, role });
+      return Response.json({ total: visibleReports.length, role: ctx.role });
     }
 
-    console.log(`listMeetingReports OK: ${user.email} (${role}) -> ${visibleReports.length} reports`);
-    return Response.json({ reports: visibleReports, total: visibleReports.length, role });
+    console.log(
+      `listMeetingReports OK: ${ctx.email} (${ctx.role}) -> ${visibleReports.length} reports`,
+    );
+    return Response.json({ reports: visibleReports, total: visibleReports.length, role: ctx.role });
   } catch (error) {
     console.error('listMeetingReports FAILED:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
