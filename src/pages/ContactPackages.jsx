@@ -501,6 +501,7 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
     contract_signed: "Umowa podpisana",
     withdrawn: "Odstąpienie",
     no_pv_install: "Brak instalacji PV",
+    other_ph_contact: "Kontakt z innym PH",
   };
 
   const statusColors = {
@@ -515,6 +516,7 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
     contract_signed: "bg-emerald-100 text-emerald-800",
     withdrawn: "bg-stone-100 text-stone-700",
     no_pv_install: "bg-slate-200 text-slate-800",
+    other_ph_contact: "bg-cyan-50 text-cyan-700",
   };
 
   const filtered = leads.filter(l => {

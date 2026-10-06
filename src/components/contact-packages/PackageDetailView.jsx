@@ -30,6 +30,7 @@ const STATUS_LABELS = {
   contract_signed: "Umowa podpisana",
   withdrawn: "Odstąpienie",
   no_pv_install: "Brak instalacji PV",
+  other_ph_contact: "Kontakt z innym PH",
 };
 
 const STATUS_COLORS = {
@@ -46,6 +47,7 @@ const STATUS_COLORS = {
   contract_signed: "bg-emerald-200 text-emerald-900",
   withdrawn: "bg-stone-100 text-stone-700",
   no_pv_install: "bg-slate-200 text-slate-800",
+  other_ph_contact: "bg-cyan-50 text-cyan-700",
 };
 
 export default function PackageDetailView({ pkg, currentUser, onBack, onPackageUpdated }) {

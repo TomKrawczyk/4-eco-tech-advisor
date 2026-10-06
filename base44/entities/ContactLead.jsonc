@@ -62,7 +62,8 @@
         "offer_submitted",
         "contract_signed",
         "withdrawn",
-        "no_pv_install"
+        "no_pv_install",
+        "other_ph_contact"
       ],
       "default": "unassigned",
       "description": "Status kontaktu"
