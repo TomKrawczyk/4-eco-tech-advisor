@@ -510,8 +510,18 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     const assigned = activeLeads.filter(l => l.assigned_user_email && !isHiddenFromAdvisor(l)).length;
     const unassigned = total - assigned;
     const interested = activeLeads.filter(l => (l.status === "interested" || l.status === "meeting_scheduled") && !isHiddenFromAdvisor(l)).length;
-    return { total, assigned, unassigned, interested, archived, duplicates, expired };
+    // Rozbicie po statusach (dla admina i lidera grupy) — liczy aktywne, niewygasłe leady
+    const statusCounts = {};
+    Object.keys(STATUS_LABELS).forEach(s => { statusCounts[s] = 0; });
+    activeLeads.forEach(l => {
+      if (isHiddenFromAdvisor(l)) return;
+      const s = l.status || "unassigned";
+      if (statusCounts[s] !== undefined) statusCounts[s]++;
+    });
+    return { total, assigned, unassigned, interested, archived, duplicates, expired, statusCounts };
   }, [leads]);
+
+  const canSeeStatusBreakdown = isAdmin || currentUser?.role === "group_leader";
 
   const getLeadDraft = (lead) => leadDrafts[lead.id] || {
     status: lead.status,
@@ -647,6 +657,29 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
           </div>
         ))}
       </div>
+
+      {/* Rozbicie po statusach — tylko admin i lider grupy */}
+      {canSeeStatusBreakdown && (
+        <div className="bg-white border border-gray-200 rounded-xl p-3">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Liczba kontaktów wg statusu</div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(STATUS_LABELS).map(([key, label]) => {
+              const count = stats.statusCounts[key] || 0;
+              const color = STATUS_COLORS[key] || "bg-gray-100 text-gray-600";
+              return (
+                <span
+                  key={key}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${color}`}
+                  title={`${label}: ${count}`}
+                >
+                  {label}
+                  <span className="font-bold">{count}</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 flex-wrap">
         <Button
