@@ -14,7 +14,7 @@ const STATUS_LABELS = {
   contract_signed: "Umowa podpisana",
   withdrawn: "Odstąpienie",
   no_pv_install: "Brak instalacji PV",
-  other_ph_contact: "Kontakt z innym PH",
+  other_ph_contact: "Kontakt z inną strukturą",
 };
 
 const PHONE_RESULT_LABELS = {

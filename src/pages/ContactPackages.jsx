@@ -501,7 +501,7 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
     contract_signed: "Umowa podpisana",
     withdrawn: "Odstąpienie",
     no_pv_install: "Brak instalacji PV",
-    other_ph_contact: "Kontakt z innym PH",
+    other_ph_contact: "Kontakt z inną strukturą",
   };
 
   const statusColors = {
