@@ -173,6 +173,7 @@ export default function UserProfilesPreview({ allowedUsers, groups }) {
             <SelectItem value="user">Handlowiec</SelectItem>
             <SelectItem value="team_leader">Team Leader</SelectItem>
             <SelectItem value="group_leader">Group Leader</SelectItem>
+            <SelectItem value="structure_director">Dyrektor struktury</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
             <SelectItem value="serviceman">Serwisant</SelectItem>
             <SelectItem value="auditor">Audytor</SelectItem>
