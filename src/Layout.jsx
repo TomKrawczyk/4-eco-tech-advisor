@@ -303,7 +303,7 @@ export default function Layout({ children, currentPageName }) {
       <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 z-50 shadow-sm">
         <div className="h-full flex items-center justify-between px-3 md:px-4">
           {/* Logo */}
-          <Link to={createPageUrl("Dashboard")} className="shrink-0">
+          <Link to={createPageUrl(currentUser?.role === "structure_director" ? "StructureDirectorDashboard" : "Dashboard")} className="shrink-0">
             <img
               src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6985025012ef2a10cfdedf68/cfe2d3285_4-eco-logo.png"
               alt="4-ECO Green Energy"
@@ -326,11 +326,13 @@ export default function Layout({ children, currentPageName }) {
                   />
                 );
               }
-              const isActive = currentPageName === entry.name;
+              const isStart = entry.name === "Dashboard";
+              const startTarget = isStart && currentUser?.role === "structure_director" ? "StructureDirectorDashboard" : entry.name;
+              const isActive = currentPageName === startTarget;
               return (
                 <Link
                   key={entry.name}
-                  to={createPageUrl(entry.name)}
+                  to={createPageUrl(startTarget)}
                   className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 ${
                     isActive
                       ? "bg-green-50 text-green-700 border border-green-200"
@@ -480,11 +482,13 @@ export default function Layout({ children, currentPageName }) {
                       </div>
                     );
                   }
-                  const isActive = currentPageName === entry.name;
+                  const isStart = entry.name === "Dashboard";
+                  const startTarget = isStart && currentUser?.role === "structure_director" ? "StructureDirectorDashboard" : entry.name;
+                  const isActive = currentPageName === startTarget;
                   return (
                     <Link
                       key={entry.name}
-                      to={createPageUrl(entry.name)}
+                      to={createPageUrl(startTarget)}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium mb-0.5 transition-all ${
                         isActive

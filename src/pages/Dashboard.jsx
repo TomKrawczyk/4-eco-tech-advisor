@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import useCurrentUser from "@/components/shared/useCurrentUser";
@@ -17,7 +18,7 @@ import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const { currentUser, accessChecked } = useCurrentUser();
-  
+
   useEffect(() => {
     if (currentUser) {
       logActivity({ action_type: 'page_view', page_name: 'Dashboard' });
@@ -57,6 +58,11 @@ export default function Dashboard() {
   });
 
   const isAdmin = currentUser?.role === "admin";
+
+  // Dyrektor struktury ma własny, dedykowany pulpit (po wszystkich hookach)
+  if (accessChecked && currentUser?.role === "structure_director") {
+    return <Navigate to="/StructureDirectorDashboard" replace />;
+  }
 
   const quickActions = [
     {

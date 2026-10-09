@@ -25,6 +25,7 @@ import HiddenLeads from '@/pages/HiddenLeads';
 import HiddenDataArchive from '@/pages/HiddenDataArchive';
 import TodayTasks from '@/pages/TodayTasks';
 import Gielda from '@/pages/Gielda';
+import StructureDirectorDashboard from '@/pages/StructureDirectorDashboard';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -202,6 +203,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="Gielda">
             <Gielda />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/StructureDirectorDashboard"
+        element={
+          <LayoutWrapper currentPageName="StructureDirectorDashboard">
+            <StructureDirectorDashboard />
           </LayoutWrapper>
         }
       />
