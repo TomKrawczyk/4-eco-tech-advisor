@@ -515,7 +515,7 @@ export default function UserManagement() {
             <Label className="text-sm">Rola</Label>
             <Select value={role} onValueChange={(val) => {
               setRole(val);
-              if (val === "admin" || val === "group_leader") setAssignedTo("");
+              if (val === "admin" || val === "group_leader" || val === "structure_director") setAssignedTo("");
             }}>
               <SelectTrigger className="h-11">
                 <SelectValue />
@@ -524,6 +524,7 @@ export default function UserManagement() {
                 <SelectItem value="advisor">Doradca</SelectItem>
                 <SelectItem value="team_leader">Team Leader</SelectItem>
                 <SelectItem value="group_leader">Group Leader</SelectItem>
+                <SelectItem value="structure_director">Dyrektor struktury</SelectItem>
                 <SelectItem value="admin">Administrator</SelectItem>
                 <SelectItem value="hr_admin">Administrator HR</SelectItem>
                 <SelectItem value="test_user">Użytkownik testowy</SelectItem>
