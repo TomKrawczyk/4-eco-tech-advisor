@@ -17,6 +17,7 @@
         "advisor",
         "team_leader",
         "group_leader",
+        "structure_director",
         "admin",
         "test_user",
         "hr_admin",
@@ -44,6 +45,13 @@
         "type": "string"
       },
       "description": "Lista ID u\u017cytkownik\u00f3w zarz\u0105dzanych przez team/group leadera"
+    },
+    "managed_group_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista ID grup zarz\u0105dzanych przez dyrektora struktury"
     },
     "last_activity": {
       "type": "string",

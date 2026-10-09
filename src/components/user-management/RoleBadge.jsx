@@ -17,6 +17,11 @@ const roleStyles = {
     color: "bg-purple-100 text-purple-700 border-purple-200",
     icon: Shield,
   },
+  structure_director: {
+    label: "Dyrektor struktury",
+    color: "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
+    icon: Crown,
+  },
   group_leader: {
     label: "Lider grupy",
     color: "bg-blue-100 text-blue-700 border-blue-200",

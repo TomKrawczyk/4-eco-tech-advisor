@@ -38,6 +38,7 @@ export function startImpersonation(adminEmail, adminName, target) {
     targetRole: target.role || "advisor",
     targetGroupId: target.group_id || null,
     targetAllowedUserId: target.allowedUserId || null,
+    targetManagedGroupIds: target.managed_group_ids || [],
     startedAt: new Date().toISOString(),
   };
   try {

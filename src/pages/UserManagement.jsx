@@ -55,6 +55,7 @@ export default function UserManagement() {
         role: t.data?.role || t.role,
         group_id: t.data?.group_id || t.group_id,
         allowedUserId: t.id,
+        managed_group_ids: t.data?.managed_group_ids || t.managed_group_ids || [],
       }
     );
     toast.success(`Tryb podglądu jako ${t.data?.name || t.name}`);

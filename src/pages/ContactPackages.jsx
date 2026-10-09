@@ -71,11 +71,13 @@ export default function ContactPackages() {
   });
 
   // Rola dostępu
-  const isLeader = currentUser?.role === "group_leader" || currentUser?.role === "team_leader" || currentUser?.role === "admin";
+  const isLeader = currentUser?.role === "group_leader" || currentUser?.role === "team_leader" || currentUser?.role === "admin" || currentUser?.role === "structure_director";
   const isAdvisor = currentUser?.role === "advisor";
   const canManage = isLeader || currentUser?.role === "admin";
 
   const isAdmin = currentUser?.role === "admin";
+  const isDirector = currentUser?.role === "structure_director";
+  const canEditPkg = isAdmin || isDirector;
 
   const { data: allGroups = [], isSuccess: groupsLoaded } = useQuery({
     queryKey: ["groups-for-packages"],
@@ -87,6 +89,12 @@ export default function ContactPackages() {
     queryKey: ["contact-packages", currentUser?.email, isAdmin],
     queryFn: async () => {
       if (isAdmin) return base44.entities.ContactPackage.list();
+
+      // Dyrektor struktury widzi tylko paczki, które sam utworzył
+      if (isDirector) {
+        const all = await base44.entities.ContactPackage.list();
+        return all.filter(p => p.created_by_email === currentUser.email);
+      }
 
       // Zbierz wszystkie groupId gdzie user jest liderem (przez group_leader_ids lub group_id w AllowedUser)
       const myGroupIds = new Set();
@@ -262,10 +270,10 @@ export default function ContactPackages() {
               key={pkg.id}
               pkg={pkg}
               stats={packageStats[pkg.id]}
-              isAdmin={isAdmin}
+              isAdmin={canEditPkg}
               onClick={() => setSelectedPackageId(pkg.id)}
-              onEdit={isAdmin ? (e) => { e.stopPropagation(); setEditingPackage(pkg); } : null}
-              onDelete={isAdmin ? (e) => { e.stopPropagation(); setDeletingPackage(pkg); } : null}
+              onEdit={canEditPkg ? (e) => { e.stopPropagation(); setEditingPackage(pkg); } : null}
+              onDelete={canEditPkg ? (e) => { e.stopPropagation(); setDeletingPackage(pkg); } : null}
             />
           ))}
         </div>

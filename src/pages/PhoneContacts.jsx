@@ -75,8 +75,8 @@ function PhoneContacts() {
     return reportStatusFilter === "no_report" ? !result : result === reportStatusFilter;
   };
 
-  const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "hr_admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
-  const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "hr_admin" || currentUser?.role === "group_leader";
+  const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "hr_admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader" || currentUser?.role === "structure_director";
+  const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "hr_admin" || currentUser?.role === "group_leader" || currentUser?.role === "structure_director";
   const canAssign = isLeaderOrAdmin;
   const canManageGroups = isAdminOrGroupLeader;
 
@@ -174,9 +174,19 @@ function PhoneContacts() {
 
   const currentUserGroupId = useMemo(() => {
     if (!currentUser) return null;
-    if (currentUser.role === "admin" || currentUser.role === "hr_admin") return null;
+    if (currentUser.role === "admin" || currentUser.role === "hr_admin" || currentUser.role === "structure_director") return null;
     return currentUser.groupId || null;
   }, [currentUser]);
+
+  const currentUserManagedGroupIds = useMemo(() => {
+    if (!currentUser || currentUser.role !== "structure_director") return [];
+    return currentUser.managedGroupIds || [];
+  }, [currentUser]);
+
+  const groupsForRow = useMemo(() => {
+    if (!currentUser || currentUser.role !== "structure_director") return groups;
+    return groups.filter(g => currentUserManagedGroupIds.includes(g.id));
+  }, [currentUser, groups, currentUserManagedGroupIds]);
 
   const teamMemberEmails = useMemo(() => {
     if (!currentUser || currentUser.role !== "team_leader") return [];
@@ -409,6 +419,12 @@ function PhoneContacts() {
         if (currentUser?.role === "admin" || currentUser?.role === "hr_admin") {
           return role === "advisor" || role === "user" || role === "team_leader" || role === "group_leader";
         }
+        if (currentUser?.role === "structure_director") {
+          if (uEmail === currentUser.email) return true;
+          if (role !== "advisor" && role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
+          const uGroupId = u.data?.group_id || u.group_id;
+          return currentUserManagedGroupIds.includes(uGroupId);
+        }
         if (currentUser?.role === "group_leader") {
           if (uEmail === currentUser.email) return true;
           if (role !== "advisor" && role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
@@ -426,7 +442,7 @@ function PhoneContacts() {
         email: u.data?.email || u.email,
         name: u.data?.name || u.name,
       }));
-  }, [allAllowedUsers, currentUser, currentUserGroupId]);
+  }, [allAllowedUsers, currentUser, currentUserGroupId, currentUserManagedGroupIds]);
 
   const allSheetTabs = useMemo(() => [...new Set(contacts.map(c => c.sheet).filter(Boolean))].sort(), [contacts]);
 
@@ -461,8 +477,17 @@ function PhoneContacts() {
         return false;
       });
     }
+    if (currentUser?.role === "structure_director") {
+      return contacts.filter(c => {
+        const sheetMapping = sheetMappings.find(sm => sm.sheet_name === c.sheet);
+        if (sheetMapping && currentUserManagedGroupIds.includes(sheetMapping.group_id)) return true;
+        if (c.assigned_group_id && currentUserManagedGroupIds.includes(c.assigned_group_id)) return true;
+        if (c.assigned_user_email === currentUser.email) return true;
+        return false;
+      });
+    }
     return contacts;
-  }, [contacts, currentUser, currentUserGroupId, sheetMappings, teamMemberEmails]);
+  }, [contacts, currentUser, currentUserGroupId, currentUserManagedGroupIds, sheetMappings, teamMemberEmails]);
 
   const filtered = useMemo(() => {
     return visibleContacts.filter(c => {
@@ -890,7 +915,7 @@ function PhoneContacts() {
                                   canAssign={canAssign}
                                   canManageGroups={canManageGroups}
                                   salespeople={salespeople}
-                                  groups={groups}
+                                  groups={groupsForRow}
                                   currentUser={currentUser}
                                   assignMutation={assignMutation}
                                   assignGroupMutation={assignGroupMutation}
@@ -948,6 +973,10 @@ function PhoneContactsPage() {
 export default PhoneContactsPage;
 
 function ContactRow({ contact, report, canAssign, canManageGroups, salespeople, groups, currentUser, assignMutation, assignGroupMutation, onShowDetails, onShowReport, onArchive, archiveTab }) {
+  // Dyrektor struktury może rozdzielać dalej tylko kontakty przypisane do niego
+  const directorCanReassign = currentUser?.role !== "structure_director" || contact.assigned_user_email === currentUser.email;
+  const effectiveCanAssign = canAssign && directorCanReassign;
+  const effectiveCanManageGroups = canManageGroups && directorCanReassign;
   return (
     <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -1020,7 +1049,7 @@ function ContactRow({ contact, report, canAssign, canManageGroups, salespeople, 
                 <span className="text-xs font-medium text-green-700">{contact.assigned_user_name || contact.assigned_user_email}</span>
                 <span className="text-[10px] text-green-500">{contact.assigned_user_email}</span>
               </div>
-              {canAssign && (
+              {effectiveCanAssign && (
                 <button
                   onClick={() => assignMutation.mutate({ contact, email: "", name: "" })}
                   className="ml-1 text-gray-400 hover:text-red-500 text-xs"
@@ -1028,7 +1057,7 @@ function ContactRow({ contact, report, canAssign, canManageGroups, salespeople, 
               )}
             </div>
           ) : (
-            canAssign && (
+            effectiveCanAssign && (
               <Select onValueChange={(val) => {
                 const sp = salespeople.find(s => s.email === val);
                 if (sp) assignMutation.mutate({ contact, email: sp.email, name: sp.name });
@@ -1051,7 +1080,7 @@ function ContactRow({ contact, report, canAssign, canManageGroups, salespeople, 
           )}
 
           {/* Przypisanie grupy */}
-          {canManageGroups && (
+          {effectiveCanManageGroups && (
             <>
               {contact.assigned_group_id ? (
                 <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1">

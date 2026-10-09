@@ -277,8 +277,8 @@ function Meetings() {
     }
   };
 
-  const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
-  const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader";
+  const isLeaderOrAdmin = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "team_leader" || currentUser?.role === "structure_director";
+  const isAdminOrGroupLeader = currentUser?.role === "admin" || currentUser?.role === "group_leader" || currentUser?.role === "structure_director";
 
   const { data: groups = [] } = useQuery({
     queryKey: ["groups"],
@@ -420,9 +420,20 @@ function Meetings() {
   // Ustal groupId bieżącego użytkownika
   const currentUserGroupId = useMemo(() => {
     if (!currentUser) return null;
-    if (currentUser.role === "admin") return null;
+    if (currentUser.role === "admin" || currentUser.role === "structure_director") return null;
     return currentUser.groupId || null;
   }, [currentUser]);
+
+  // Grupy zarządzane przez dyrektora struktury
+  const currentUserManagedGroupIds = useMemo(() => {
+    if (!currentUser || currentUser.role !== "structure_director") return [];
+    return currentUser.managedGroupIds || [];
+  }, [currentUser]);
+
+  const groupsForCard = useMemo(() => {
+    if (!currentUser || currentUser.role !== "structure_director") return groups;
+    return groups.filter(g => currentUserManagedGroupIds.includes(g.id));
+  }, [currentUser, groups, currentUserManagedGroupIds]);
 
   // Ustal emaile zespołu team_leadera
   const teamMemberEmails = useMemo(() => {
@@ -484,6 +495,12 @@ function Meetings() {
         const role = u.data?.role || u.role;
         const email = u.data?.email || u.email;
         if (currentUser?.role === "admin") return true;
+        if (currentUser?.role === "structure_director") {
+          if (email === currentUser.email) return true;
+          if (role !== "advisor" && role !== "user" && role !== "team_leader" && role !== "group_leader") return false;
+          const uGroupId = u.data?.group_id || u.group_id;
+          return currentUserManagedGroupIds.includes(uGroupId);
+        }
         // Group leader może przypisać siebie
         if (currentUser?.role === "group_leader" && email === currentUser.email) return true;
         if (role !== "advisor" && role !== "user" && role !== "team_leader") return false;
@@ -491,7 +508,7 @@ function Meetings() {
         return uGroupId === currentUserGroupId;
       })
       .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name }));
-  }, [allAllowedUsers, currentUser, currentUserGroupId]);
+  }, [allAllowedUsers, currentUser, currentUserGroupId, currentUserManagedGroupIds]);
 
   // Filtruj: tylko z datą + w oknie 14 dni. Uwzględnij przeniesione spotkania —
   // jeśli przypisanie ma nową datę (inną niż arkusz), spotkanie pokazuje się
@@ -574,11 +591,20 @@ function Meetings() {
             matchRole = false;
           }
         }
+      } else if (currentUser?.role === "structure_director") {
+        // Dyrektor struktury widzi spotkania z arkuszy przypisanych do zarządzanych grup,
+        // spotkania przypisane do tych grup oraz spotkania przypisane bezpośrednio do niego.
+        const sheetMapping = findSheetMapping(sheetMappings, m.sheet);
+        const isSheetInMyGroups = currentUserManagedGroupIds.includes(sheetMapping?.group_id || sheetMapping?.data?.group_id);
+        const assignment = meetingAssignmentsByKey[key];
+        const isAssignedToMyGroups = assignment && currentUserManagedGroupIds.includes(assignment.assigned_group_id);
+        const isAssignedToMe = assignment?.assigned_user_email === currentUser.email;
+        matchRole = isSheetInMyGroups || isAssignedToMyGroups || isAssignedToMe;
       }
 
       return matchSearch && matchGroup && matchSheet && matchRole;
     });
-  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings, currentUser, currentUserGroupId, meetingAssignmentsByKey, teamMemberEmails, hiddenMeetingKeys]);
+  }, [meetingsWithDate, search, groupFilter, sheetFilter, sheetMappings, currentUser, currentUserGroupId, currentUserManagedGroupIds, meetingAssignmentsByKey, teamMemberEmails, hiddenMeetingKeys]);
 
   // Grupuj po zakładce, potem po dacie
   const sheetGroups = useMemo(() => {
@@ -887,15 +913,16 @@ function Meetings() {
                                     )}
                                     <div className="flex-1">
                                       <MeetingCard
-                                       meeting={meeting}
-                                       assignment={assignment}
-                                       salespeople={salespeople}
-                                       assignmentCountsForDate={assignmentCountsByDate[meeting.meeting_date] || {}}
-                                       currentUserRole={currentUser?.role}
-                                       reportsIndex={meetingReportsIndex}
-                                       groups={groups}
-                                       allAllowedUsers={allAllowedUsers}
-                                       />
+                                        meeting={meeting}
+                                        assignment={assignment}
+                                        salespeople={salespeople}
+                                        assignmentCountsForDate={assignmentCountsByDate[meeting.meeting_date] || {}}
+                                        currentUserRole={currentUser?.role}
+                                        currentUserEmail={currentUser?.email}
+                                        reportsIndex={meetingReportsIndex}
+                                        groups={groupsForCard}
+                                        allAllowedUsers={allAllowedUsers}
+                                      />
                                     </div>
                                   </div>
                                 );

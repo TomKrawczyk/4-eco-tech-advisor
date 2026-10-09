@@ -26,7 +26,7 @@ function parseMeetingCalendar(str) {
   return null;
 }
 
-export default function MeetingCard({ meeting, assignment, salespeople, assignmentCountsForDate = {}, currentUserRole, reportsIndex = [], groups = [], allAllowedUsers = [] }) {
+export default function MeetingCard({ meeting, assignment, salespeople, assignmentCountsForDate = {}, currentUserRole, currentUserEmail, reportsIndex = [], groups = [], allAllowedUsers = [] }) {
   const [showDetail, setShowDetail] = useState(false);
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -92,8 +92,12 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
     assigned_user_email: assignment?.assigned_user_email || "",
   }, reportsIndex);
 
-  const canAssign = currentUserRole === "admin" || currentUserRole === "group_leader" || currentUserRole === "team_leader";
-  const canManageGroups = currentUserRole === "admin" || currentUserRole === "group_leader";
+  const canAssign = currentUserRole === "admin" || currentUserRole === "group_leader" || currentUserRole === "team_leader" || currentUserRole === "structure_director";
+  const canManageGroups = currentUserRole === "admin" || currentUserRole === "group_leader" || currentUserRole === "structure_director";
+  // Dyrektor struktury może rozdzielać dalej tylko spotkania przypisane do niego
+  const directorCanReassign = currentUserRole !== "structure_director" || assignment?.assigned_user_email === currentUserEmail;
+  const effectiveCanAssign = canAssign && directorCanReassign;
+  const effectiveCanManageGroups = canManageGroups && directorCanReassign;
 
   const createAssignmentNotifications = async ({ userEmail, userName }) => {
     const assignedAllowedUser = allAllowedUsers.find(u => (u.data?.email || u.email) === userEmail);
@@ -385,7 +389,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
           )}
 
           {/* Przypisanie handlowca */}
-          {canAssign && (
+          {effectiveCanAssign && (
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <UserCheck className="w-4 h-4 text-gray-400 shrink-0" />
               {!assignment?.assigned_user_email && (
@@ -443,7 +447,7 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
             </div>
           )}
 
-          {!canAssign && assignment?.assigned_user_email && (
+          {!effectiveCanAssign && assignment?.assigned_user_email && (
             <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-xs mt-1">
               <UserCheck className="w-3 h-3 mr-1" />
               {assignment.assigned_user_name || assignment.assigned_user_email}
@@ -453,8 +457,8 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
             </Badge>
           )}
 
-          {/* Przypisanie do grupy – admin i group_leader */}
-          {canManageGroups && groups.length > 0 && (
+          {/* Przypisanie do grupy – admin, group_leader, dyrektor */}
+          {effectiveCanManageGroups && groups.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <Users className="w-4 h-4 text-gray-400 shrink-0" />
               {assignment?.assigned_group_id ? (
@@ -491,8 +495,8 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
             </div>
           )}
 
-          {/* Pokaż grupę dla team_leader */}
-          {currentUserRole === "team_leader" && assignment?.assigned_group_id && (
+          {/* Pokaż grupę dla team_leader / dyrektor */}
+          {(currentUserRole === "team_leader" || currentUserRole === "structure_director") && assignment?.assigned_group_id && (
             <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs mt-1">
               <Users className="w-3 h-3 mr-1" />
               {assignment.assigned_group_name}

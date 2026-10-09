@@ -103,7 +103,7 @@ const navStructure = [
     ]
   },
   { name: "Education", label: "Szkolenia" },
-  { name: "ContactPackages", label: "Paczki kontaktów", roles: ["admin", "group_leader", "team_leader", "advisor"] },
+  { name: "ContactPackages", label: "Paczki kontaktów", roles: ["admin", "group_leader", "team_leader", "advisor", "structure_director"] },
   { name: "Gielda", label: "Giełda", path: "/gielda", roles: ["admin"] },
   { name: "TodayTasks", label: "Dziś do zrobienia" },
   { name: "Documentation", label: "Dokumentacja", adminOnly: true },
@@ -355,6 +355,7 @@ export default function Layout({ children, currentPageName }) {
                     <div className="text-[10px] text-gray-400 leading-tight">
                     {currentUser.role === "admin" ? "Administrator" :
                      currentUser.role === "group_leader" ? "Lider grupy" :
+                     currentUser.role === "structure_director" ? "Dyrektor struktury" :
                      currentUser.role === "team_leader" ? "Team Leader" :
                      currentUser.role === "hr_admin" ? "Administrator HR" :
                      currentUser.role === "test_user" ? "Użytkownik testowy" :
@@ -437,6 +438,7 @@ export default function Layout({ children, currentPageName }) {
                         <Shield className="w-3 h-3" />
                         {currentUser.role === "admin" ? "Administrator" :
                          currentUser.role === "group_leader" ? "Lider grupy" :
+                     currentUser.role === "structure_director" ? "Dyrektor struktury" :
                          currentUser.role === "team_leader" ? "Team Leader" :
                          currentUser.role === "hr_admin" ? "Administrator HR" :
                          currentUser.role === "test_user" ? "Użytkownik testowy" :

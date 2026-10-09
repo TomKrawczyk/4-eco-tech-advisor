@@ -27,7 +27,8 @@ export interface AccessContext {
   groupId?: string | null;
   visibleEmails: string[];  // emaile, których dane wolno odczytać
   isAdmin: boolean;         // rola === 'admin' (widzi wszystko)
-  isLeader: boolean;        // admin | group_leader | team_leader
+  isLeader: boolean;        // admin | group_leader | team_leader | structure_director
+  managedGroupIds: string[]; // grupy zarządzane przez dyrektora struktury
 }
 
 export class AccessDeniedError extends Error {
@@ -86,7 +87,7 @@ export async function listAll(entity: any, sort = "-created_date", pageSize = 10
 export async function resolveAccessContext(base44: any): Promise<AccessContext> {
   const user = await base44.auth.me();
   if (!user) {
-    return { authenticated: false, allowed: false, visibleEmails: [], isAdmin: false, isLeader: false };
+    return { authenticated: false, allowed: false, visibleEmails: [], isAdmin: false, isLeader: false, managedGroupIds: [] };
   }
 
   const [allowedUsers, groups] = await Promise.all([
@@ -109,13 +110,15 @@ export async function resolveAccessContext(base44: any): Promise<AccessContext> 
       visibleEmails: [user.email],
       isAdmin: false,
       isLeader: false,
+      managedGroupIds: [],
     };
   }
 
   const role = allowedUser.data?.role || allowedUser.role || "user";
   const groupId = resolveGroupId(allowedUser, groups);
   const isAdmin = role === "admin";
-  const isLeader = isAdmin || role === "group_leader" || role === "team_leader";
+  const isLeader = isAdmin || role === "group_leader" || role === "team_leader" || role === "structure_director";
+  const managedGroupIds: string[] = allowedUser.data?.managed_group_ids || allowedUser.managed_group_ids || [];
 
   let visibleEmails: string[] = [user.email];
 
@@ -152,6 +155,18 @@ export async function resolveAccessContext(base44: any): Promise<AccessContext> 
       const mu = findManagedUser(allowedUsers, identifier);
       if (mu) visibleEmails.push(mu.data?.email || mu.email);
     });
+  } else if (role === "structure_director") {
+    // Dyrektor struktury widzi siebie oraz wszystkich członków (wg group_id)
+    // grup, którymi zarządza (managed_group_ids) — w tym liderów tych grup.
+    visibleEmails = [user.email];
+    if (managedGroupIds.length > 0) {
+      allowedUsers.forEach((u) => {
+        const uGroupId = u.data?.group_id || u.group_id;
+        if (uGroupId && managedGroupIds.includes(uGroupId)) {
+          visibleEmails.push(u.data?.email || u.email);
+        }
+      });
+    }
   }
   // advisor / hr_admin / serviceman / auditor / test_user => tylko własne
 
@@ -168,6 +183,7 @@ export async function resolveAccessContext(base44: any): Promise<AccessContext> 
     visibleEmails,
     isAdmin,
     isLeader,
+    managedGroupIds,
   };
 }
 

@@ -16,7 +16,8 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
     role: "advisor",
     notes: "",
     group_id: "",
-    assigned_to: ""
+    assigned_to: "",
+    managed_group_ids: []
   });
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [showResetReports, setShowResetReports] = useState(false);
@@ -34,7 +35,8 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
         role: user.data?.role || user.role || "advisor",
         notes: user.data?.notes || user.notes || "",
         group_id: user.data?.group_id || user.group_id || "",
-        assigned_to: user.data?.assigned_to || user.assigned_to || ""
+        assigned_to: user.data?.assigned_to || user.assigned_to || "",
+        managed_group_ids: user.data?.managed_group_ids || user.managed_group_ids || []
       });
     }
   }, [user]);
@@ -53,6 +55,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
     if (!updates.assigned_to) delete updates.assigned_to;
     if (!updates.group_id) delete updates.group_id;
     if (!updates.notes) delete updates.notes;
+    if (!updates.managed_group_ids || updates.managed_group_ids.length === 0) delete updates.managed_group_ids;
     onSave(user.id, updates);
   };
 
@@ -217,7 +220,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
               setFormData(prev => ({
                 ...prev,
                 role: val,
-                assigned_to: (val === "admin" || val === "group_leader" || val === "hr_admin") ? "" : prev.assigned_to
+                assigned_to: (val === "admin" || val === "group_leader" || val === "hr_admin" || val === "structure_director") ? "" : prev.assigned_to
               }));
             }}>
               <SelectTrigger>
@@ -227,6 +230,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
                 <SelectItem value="advisor">Doradca</SelectItem>
                 <SelectItem value="team_leader">Team Leader</SelectItem>
                 <SelectItem value="group_leader">Lider grupy</SelectItem>
+                <SelectItem value="structure_director">Dyrektor struktury</SelectItem>
                 <SelectItem value="hr_admin">Administrator HR</SelectItem>
                 <SelectItem value="test_user">Użytkownik testowy</SelectItem>
                 <SelectItem value="serviceman">Serwisant</SelectItem>
@@ -251,6 +255,32 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+          {formData.role === "structure_director" && groups.length > 0 && (
+            <div>
+              <Label>Zarządzane grupy</Label>
+              <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-1">
+                {groups.map(group => {
+                  const checked = (formData.managed_group_ids || []).includes(group.id);
+                  return (
+                    <label key={group.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          managed_group_ids: e.target.checked
+                            ? [...(prev.managed_group_ids || []), group.id]
+                            : (prev.managed_group_ids || []).filter(id => id !== group.id)
+                        }))}
+                      />
+                      {group.name}
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">Dyrektor widzi paczki które sam utworzył oraz spotkania i kontakty z tych grup.</p>
             </div>
           )}
           {(["advisor","team_leader","test_user","serviceman","auditor"].includes(formData.role)) && availableLeaders.length > 0 && (

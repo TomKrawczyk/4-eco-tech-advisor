@@ -38,6 +38,7 @@ async function fetchCurrentUser() {
     }
     user.groupId = groupId;
     user.allowedUserId = ua.id;
+    user.managedGroupIds = ua.data?.managed_group_ids || ua.managed_group_ids || [];
   }
 
   // --- Impersonacja (admin "Zaloguj jako") ---
@@ -58,6 +59,7 @@ async function fetchCurrentUser() {
     user.role = imp.targetRole;
     user.groupId = imp.targetGroupId || null;
     user.allowedUserId = imp.targetAllowedUserId || null;
+    user.managedGroupIds = imp.targetManagedGroupIds || [];
     // W trybie podglądu nieblokujemy ekranem blokady/braków doradcy
     user.account_status = "active";
     user.is_blocked = false;
