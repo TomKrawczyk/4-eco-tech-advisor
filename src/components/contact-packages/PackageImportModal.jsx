@@ -173,7 +173,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   });
   const advisors = allowedUsers
     .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name, role: u.data?.role || u.role }))
-    .filter(u => u.email && (u.role === "advisor" || u.role === "team_leader" || u.role === "group_leader"))
+    .filter(u => u.email && (u.role === "advisor" || u.role === "team_leader" || u.role === "group_leader" || u.role === "structure_director"))
     .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pl"));
   const [file, setFile] = useState(null);
   const [contacts, setContacts] = useState([]);

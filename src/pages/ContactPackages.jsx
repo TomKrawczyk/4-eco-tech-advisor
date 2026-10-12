@@ -90,10 +90,15 @@ export default function ContactPackages() {
     queryFn: async () => {
       if (isAdmin) return base44.entities.ContactPackage.list();
 
-      // Dyrektor struktury widzi tylko paczki, które sam utworzył
+      // Dyrektor struktury widzi paczki, które sam utworzył oraz te przypisane do niego
       if (isDirector) {
         const all = await base44.entities.ContactPackage.list();
-        return all.filter(p => p.created_by_email === currentUser.email);
+        return all.filter(p => {
+          const assignedEmails = p.assigned_user_emails?.length
+            ? p.assigned_user_emails
+            : (p.assigned_user_email ? [p.assigned_user_email] : []);
+          return p.created_by_email === currentUser.email || assignedEmails.includes(currentUser.email);
+        });
       }
 
       // Zbierz wszystkie groupId gdzie user jest liderem (przez group_leader_ids lub group_id w AllowedUser)

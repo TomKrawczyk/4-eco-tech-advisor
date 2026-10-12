@@ -20,6 +20,7 @@ import EditUserDialog from "@/components/user-management/EditUserDialog";
 import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
+import ManagedGroupsPicker from "@/components/user-management/ManagedGroupsPicker";
 import { format } from "date-fns";
 import { fetchAllEntityRecords } from "@/lib/fetchAllEntityRecords";
 
@@ -29,6 +30,7 @@ export default function UserManagement() {
   const [role, setRole] = useState("advisor");
   const [notes, setNotes] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
+  const [managedGroupIds, setManagedGroupIds] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -132,6 +134,7 @@ export default function UserManagement() {
       setRole("advisor");
       setNotes("");
       setAssignedTo("");
+      setManagedGroupIds([]);
       toast.success("Użytkownik dodany pomyślnie");
     },
     onError: (error) => {
@@ -214,12 +217,17 @@ export default function UserManagement() {
       toast.error("Email i imię są wymagane");
       return;
     }
+    if (role === "structure_director" && managedGroupIds.length === 0) {
+      toast.error("Wybierz co najmniej jedną grupę dla dyrektora struktury");
+      return;
+    }
     addUserMutation.mutate({ 
       email, 
       name, 
       role, 
       notes,
-      assigned_to: assignedTo || undefined 
+      assigned_to: assignedTo || undefined,
+      ...(role === "structure_director" ? { managed_group_ids: managedGroupIds } : {})
     });
   };
 
@@ -533,6 +541,9 @@ export default function UserManagement() {
               </SelectContent>
             </Select>
           </div>
+          {role === "structure_director" && (
+            <ManagedGroupsPicker groups={groups} value={managedGroupIds} onChange={setManagedGroupIds} />
+          )}
           {(role === "advisor" || role === "team_leader") && availableLeaders.length > 0 && (
             <div>
               <Label className="text-sm">
@@ -615,6 +626,7 @@ export default function UserManagement() {
               <SelectItem value="advisor">Doradca</SelectItem>
               <SelectItem value="team_leader">Team Leader</SelectItem>
               <SelectItem value="group_leader">Group Leader</SelectItem>
+              <SelectItem value="structure_director">Dyrektor struktury</SelectItem>
               <SelectItem value="admin">Administrator</SelectItem>
               <SelectItem value="hr_admin">Administrator HR</SelectItem>
               <SelectItem value="test_user">Użytkownik testowy</SelectItem>

@@ -26,7 +26,7 @@ export default async function(req) {
     const currentRole = currentAccess?.role || currentAccess?.data?.role || user.role;
     const currentGroupId = currentAccess?.group_id || currentAccess?.data?.group_id || '';
 
-    const canAssign = ['admin', 'group_leader', 'team_leader'].includes(currentRole);
+    const canAssign = ['admin', 'group_leader', 'team_leader', 'structure_director'].includes(currentRole);
     if (!canAssign) {
       return Response.json({ error: 'Brak uprawnień do przypisywania kontaktów' }, { status: 403 });
     }
@@ -37,7 +37,46 @@ export default async function(req) {
     }
 
     const packageGroupId = pkg.group_id || pkg.data?.group_id || '';
-    if (currentRole !== 'admin') {
+    if (currentRole === 'structure_director') {
+      // Dyrektor: tylko paczki, które utworzył lub które są do niego przypisane,
+      // i tylko handlowcy z grup, którymi zarządza.
+      const managedIds = currentAccess?.managed_group_ids || currentAccess?.data?.managed_group_ids || [];
+      const pkgAssignedEmails = pkg.assigned_user_emails?.length
+        ? pkg.assigned_user_emails
+        : (pkg.assigned_user_email ? [pkg.assigned_user_email] : []);
+      const ownsPackage = pkg.created_by_email === user.email || pkgAssignedEmails.includes(user.email);
+      if (!ownsPackage) {
+        return Response.json({ error: 'Brak dostępu do tej paczki kontaktów' }, { status: 403 });
+      }
+
+      if (userEmail !== user.email) {
+        const [targets, groups] = await Promise.all([
+          svc.AllowedUser.filter({ email: userEmail }),
+          svc.Group.list(),
+        ]);
+        const target = targets[0];
+        const targetGroupId = target?.group_id || target?.data?.group_id || '';
+        const leaderKeys = new Set();
+        groups.filter((g) => managedIds.includes(g.id)).forEach((g) => {
+          const ids = g.group_leader_ids || g.data?.group_leader_ids || [];
+          const legacyId = g.group_leader_id || g.data?.group_leader_id;
+          [legacyId, ...ids].filter(Boolean).forEach((id) => leaderKeys.add(id));
+        });
+        const targetInManagedGroup = !!target && (
+          (targetGroupId && managedIds.includes(targetGroupId)) ||
+          leaderKeys.has(target.id) || leaderKeys.has(userEmail)
+        );
+        if (!targetInManagedGroup) {
+          return Response.json({ error: 'Ten handlowiec nie należy do Twoich grup' }, { status: 403 });
+        }
+      }
+
+      const packageLeads = await svc.ContactLead.filter({ package_id: packageId });
+      const packageLeadIds = new Set(packageLeads.map((l) => l.id));
+      if (!leadIds.every((id) => packageLeadIds.has(id))) {
+        return Response.json({ error: 'Kontakty nie należą do tej paczki' }, { status: 403 });
+      }
+    } else if (currentRole !== 'admin') {
       const groups = await svc.Group.list();
       const managedGroupIds = groups
         .filter((group) => {

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { buildMeetingReportsIndex, hasReportForMeeting, normalizeDate } from "@/lib/reportingStatus";
 import { Key, Loader2, RotateCcw, Lock, LockOpen } from "lucide-react";
+import ManagedGroupsPicker from "@/components/user-management/ManagedGroupsPicker";
 import { toast } from "sonner";
 
 export default function EditUserDialog({ user, open, onClose, onSave, onRefresh, allUsers, groups }) {
@@ -257,31 +258,12 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
               </Select>
             </div>
           )}
-          {formData.role === "structure_director" && groups.length > 0 && (
-            <div>
-              <Label>Zarządzane grupy</Label>
-              <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-1">
-                {groups.map(group => {
-                  const checked = (formData.managed_group_ids || []).includes(group.id);
-                  return (
-                    <label key={group.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          managed_group_ids: e.target.checked
-                            ? [...(prev.managed_group_ids || []), group.id]
-                            : (prev.managed_group_ids || []).filter(id => id !== group.id)
-                        }))}
-                      />
-                      {group.name}
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1">Dyrektor widzi paczki które sam utworzył oraz spotkania i kontakty z tych grup.</p>
-            </div>
+          {formData.role === "structure_director" && (
+            <ManagedGroupsPicker
+              groups={groups}
+              value={formData.managed_group_ids || []}
+              onChange={(ids) => setFormData(prev => ({ ...prev, managed_group_ids: ids }))}
+            />
           )}
           {(["advisor","team_leader","test_user","serviceman","auditor"].includes(formData.role)) && availableLeaders.length > 0 && (
             <div>

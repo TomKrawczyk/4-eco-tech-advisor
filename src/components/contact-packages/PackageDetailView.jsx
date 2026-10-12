@@ -15,6 +15,7 @@ import LeadExtraData from "@/components/contact-packages/LeadExtraData";
 import PrivateAssigneesEditor from "@/components/contact-packages/PrivateAssigneesEditor";
 import useIsMainAdmin from "@/components/shared/useIsMainAdmin";
 import { isHiddenFromAdvisor } from "@/components/contact-packages/leadExpiry";
+import { getDirectorAssignableUsers } from "@/components/contact-packages/directorAssignable";
 
 const STATUS_LABELS = {
   unassigned: "Nieprzypisany",
@@ -70,6 +71,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
   const [exporting, setExporting] = useState(false);
 
   const isAdmin = currentUser?.role === "admin";
+  const isDirector = currentUser?.role === "structure_director";
   const { isMainAdmin } = useIsMainAdmin();
   const canExport = isAdmin || currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
 
@@ -151,13 +153,14 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       role: u.role || u.data?.role,
       group_id: u.group_id || u.data?.group_id,
     }))
-    .filter(u => u.email && ["advisor", "team_leader", "group_leader"].includes(u.role));
+    .filter(u => u.email && ["advisor", "team_leader", "group_leader", "structure_director"].includes(u.role));
 
   const pkgAssignedEmails = pkg.assigned_user_emails?.length
     ? pkg.assigned_user_emails
     : (pkg.assigned_user_email ? [pkg.assigned_user_email] : []);
 
-  const assignableUsers = salesUsers.filter(u => {
+  // Dyrektor struktury: w swojej paczce przydziela kontakty każdemu z zarządzanych grup
+  const assignableUsers = isDirector ? getDirectorAssignableUsers(salesUsers, allGroups, currentUser?.managedGroupIds || []) : salesUsers.filter(u => {
     if (pkg.is_private) {
       // Paczka prywatna: admin może przypisać do dowolnego handlowca,
       // pozostali — do handlowców przypisanych do paczki
@@ -500,7 +503,10 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
 
   // Szybkie zaznaczanie partii nieprzypisanych kontaktów (5/10/15/20/25)
   const selectBatch = (n) => {
-    const candidates = filtered.filter(l => !l.assigned_user_email && !selected.has(l.id));
+    // Dyrektor może dalej rozdzielać kontakty przypisane do niego samego
+    const candidates = filtered.filter(l =>
+      (!l.assigned_user_email || (isDirector && l.assigned_user_email === currentUser.email)) && !selected.has(l.id)
+    );
     const ids = candidates.slice(0, n).map(l => l.id);
     if (ids.length === 0) return;
     setSelected(prev => new Set([...prev, ...ids]));
@@ -856,7 +862,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                 <option value="">Wybierz osobę…</option>
                 {advisors.map(u => (
                   <option key={u.id} value={u.email}>
-                    {u.name} — {u.email} ({u.role === "group_leader" ? "lider grupy" : u.role === "team_leader" ? "team leader" : "handlowiec"})
+                    {u.name} — {u.email} ({u.role === "group_leader" ? "lider grupy" : u.role === "team_leader" ? "team leader" : u.role === "structure_director" ? "dyrektor struktury" : "handlowiec"})
                   </option>
                 ))}
               </select>
