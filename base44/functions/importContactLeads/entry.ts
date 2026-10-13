@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
       group_id: isPrivate ? "" : packageMeta.group_id,
       group_name: isPrivate ? "" : (packageMeta.group_name || ""),
       is_private: isPrivate,
+      assigned_to_director: isPrivate && packageMeta?.assign_to_director === true,
       assigned_user_email: assignedUsers[0]?.email || "",
       assigned_user_name: assignedUsers.map(u => u.name || u.email).join(", "),
       assigned_user_emails: assignedUsers.map(u => u.email),
@@ -56,7 +57,8 @@ Deno.serve(async (req) => {
   // Bulk insert partiami po 100 — przy 2 handlowcach kontakty dzielone naprzemiennie
   const BATCH = 100;
   let created = 0;
-  const isPrivatePkg = pkg.is_private && assignedUsers.length > 0;
+  // Paczka przypisana do dyrektora struktury: kontakty zostają nieprzypisane — dyrektor rozdzieli je sam
+  const isPrivatePkg = pkg.is_private && assignedUsers.length > 0 && !packageMeta?.assign_to_director && !pkg.assigned_to_director;
   const nowIso = new Date().toISOString();
   for (let i = 0; i < contacts.length; i += BATCH) {
     const batch = contacts.slice(i, i + BATCH).map((c, j) => {

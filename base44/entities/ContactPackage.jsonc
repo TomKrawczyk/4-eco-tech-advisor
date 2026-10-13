@@ -23,6 +23,11 @@
       "default": false,
       "description": "Paczka prywatna \u2014 przypisana bezpo\u015brednio do handlowca, niewidoczna dla lider\u00f3w grup"
     },
+    "assigned_to_director": {
+      "type": "boolean",
+      "default": false,
+      "description": "Paczka przypisana do dyrektora struktury \u2014 kontakty nieprzypisane, dyrektor rozdziela je w swoich grupach"
+    },
     "assigned_user_email": {
       "type": "string",
       "description": "Email pierwszego handlowca do kt\u00f3rego przypisana jest paczka prywatna"

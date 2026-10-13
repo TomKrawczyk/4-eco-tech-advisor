@@ -162,7 +162,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   const [description, setDescription] = useState(existingPackage?.description || "");
   const [selectedGroupId, setSelectedGroupId] = useState(existingPackage?.group_id || currentUser?.groupId || "");
   const [selectedGroupName, setSelectedGroupName] = useState(existingPackage?.group_name || currentUser?.groupName || "");
-  const [assignMode, setAssignMode] = useState("group"); // "group" | "user" (paczka prywatna)
+  const [assignMode, setAssignMode] = useState("group"); // "group" | "user" (paczka prywatna) | "director"
   const [selectedUserEmail, setSelectedUserEmail] = useState("");
   const [selectedUserEmail2, setSelectedUserEmail2] = useState("");
 
@@ -210,12 +210,13 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   const handleImport = async () => {
     if ((!isAppendMode && !name.trim()) || contacts.length === 0) return;
     setImporting(true);
-    const isPrivate = isAppendMode ? existingPackage.is_private === true : (isAdmin && assignMode === "user");
+    const isDirectorMode = !isAppendMode && isAdmin && assignMode === "director";
+    const isPrivate = isAppendMode ? existingPackage.is_private === true : (isAdmin && (assignMode === "user" || isDirectorMode));
     const effectiveGroupId = isAppendMode ? existingPackage.group_id : (isAdmin ? selectedGroupId : (currentUser.groupId || ""));
     const effectiveGroupName = isAppendMode ? existingPackage.group_name : (isAdmin ? selectedGroupName : (currentUser.groupName || ""));
 
     if (isPrivate && !isAppendMode && !selectedUserEmail) {
-      setParseError("Wybierz handlowca przed importem.");
+      setParseError(isDirectorMode ? "Wybierz dyrektora struktury przed importem." : "Wybierz handlowca przed importem.");
       setImporting(false);
       return;
     }
@@ -232,8 +233,9 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
           description: description.trim(),
           group_id: isPrivate ? "" : effectiveGroupId,
           group_name: isPrivate ? "" : effectiveGroupName,
+          assign_to_director: isDirectorMode,
           assigned_users: isPrivate
-            ? [selectedUserEmail, selectedUserEmail2]
+            ? [selectedUserEmail, isDirectorMode ? "" : selectedUserEmail2]
                 .filter(Boolean)
                 .map(email => ({ email, name: advisors.find(a => a.email === email)?.name || "" }))
             : [],
@@ -315,9 +317,35 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                       >
                         Do konkretnego handlowca (prywatna)
                       </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={assignMode === "director" ? "default" : "outline"}
+                        onClick={() => { setAssignMode("director"); setSelectedUserEmail(""); setSelectedUserEmail2(""); }}
+                        className={assignMode === "director" ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}
+                      >
+                        Do dyrektora struktury
+                      </Button>
                     </div>
                   </div>
-                  {assignMode === "group" ? (
+                  {assignMode === "director" ? (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-600 block mb-1">Dyrektor struktury *</label>
+                      <select
+                        value={selectedUserEmail}
+                        onChange={e => setSelectedUserEmail(e.target.value)}
+                        className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      >
+                        <option value="">— wybierz dyrektora —</option>
+                        {advisors.filter(a => a.role === "structure_director").map(a => (
+                          <option key={a.email} value={a.email}>{a.name} ({a.email})</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-blue-600">
+                        Kontakty zostaną nieprzypisane. Dyrektor rozdzieli je między doradców, team leaderów i liderów ze swoich grup.
+                      </p>
+                    </div>
+                  ) : assignMode === "group" ? (
                     <div>
                       <select
                         value={selectedGroupId}
