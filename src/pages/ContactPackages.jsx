@@ -170,6 +170,8 @@ export default function ContactPackages() {
     queryKey: ["my-leads", currentUser?.email],
     queryFn: () => base44.entities.ContactLead.filter({ assigned_user_email: currentUser.email }),
     enabled: !!currentUser?.email && (isAdvisor || isLeader),
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const [showMine, setShowMine] = useState(false);
@@ -236,13 +238,13 @@ export default function ContactPackages() {
 
   return (
     <div className="space-y-6">
-      {myActiveLeads.length > 0 && (
+      {currentUser?.role !== "admin" && (
         <button
           onClick={() => setShowMine(true)}
-          className="w-full text-left bg-green-50 border border-green-200 rounded-xl px-4 py-3 hover:bg-green-100 transition-colors"
+          className="w-full text-left bg-green-600 text-white rounded-xl px-4 py-3 hover:bg-green-700 transition-colors shadow-sm"
         >
-          <span className="font-semibold text-green-800">Moje kontakty ({myActiveLeads.length})</span>
-          <span className="block text-xs text-green-700">Kontakty przypisane do Ciebie — kliknij, aby je obdzwonić</span>
+          <span className="font-semibold">Moje kontakty ({myActiveLeads.length})</span>
+          <span className="block text-xs text-green-100">Kontakty przypisane do Ciebie — kliknij, aby je obdzwonić</span>
         </button>
       )}
       {/* Header */}
