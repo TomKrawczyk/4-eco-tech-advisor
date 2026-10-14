@@ -44,7 +44,8 @@ export default async function(req) {
       const pkgAssignedEmails = pkg.assigned_user_emails?.length
         ? pkg.assigned_user_emails
         : (pkg.assigned_user_email ? [pkg.assigned_user_email] : []);
-      const ownsPackage = pkg.created_by_email === user.email || pkgAssignedEmails.includes(user.email);
+      const ownsPackage = pkg.created_by_email === user.email || pkgAssignedEmails.includes(user.email)
+        || (!!packageGroupId && managedIds.includes(packageGroupId));
       if (!ownsPackage) {
         return Response.json({ error: 'Brak dostępu do tej paczki kontaktów' }, { status: 403 });
       }
@@ -86,9 +87,25 @@ export default async function(req) {
         })
         .map((group) => group.id);
 
-      const hasAccessToPackageGroup = !packageGroupId || packageGroupId === currentGroupId || managedGroupIds.includes(packageGroupId);
+      const pkgAssignedEmails = pkg.assigned_user_emails?.length
+        ? pkg.assigned_user_emails
+        : (pkg.assigned_user_email ? [pkg.assigned_user_email] : []);
+      const hasAccessToPackageGroup = (!packageGroupId && !pkg.is_private) || packageGroupId === currentGroupId
+        || managedGroupIds.includes(packageGroupId) || pkgAssignedEmails.includes(user.email);
       if (!hasAccessToPackageGroup) {
         return Response.json({ error: 'Brak dostępu do tej paczki kontaktów' }, { status: 403 });
+      }
+
+      // Cel przypisania: ten sam zespół lub dyrektor zarządzający grupą lidera
+      const [targets] = await Promise.all([svc.AllowedUser.filter({ email: userEmail })]);
+      const target = targets[0];
+      const targetRole = target?.role || target?.data?.role;
+      if (target && targetRole === 'structure_director') {
+        const tManaged = target.managed_group_ids || target.data?.managed_group_ids || [];
+        const myGroups = new Set([currentGroupId, ...managedGroupIds].filter(Boolean));
+        if (!tManaged.some((gid) => myGroups.has(gid))) {
+          return Response.json({ error: 'Ten dyrektor nie zarządza Twoją grupą' }, { status: 403 });
+        }
       }
     }
 

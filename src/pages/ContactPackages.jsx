@@ -90,14 +90,18 @@ export default function ContactPackages() {
     queryFn: async () => {
       if (isAdmin) return base44.entities.ContactPackage.list();
 
-      // Dyrektor struktury widzi paczki, które sam utworzył oraz te przypisane do niego
+      // Dyrektor struktury widzi paczki, które sam utworzył, te przypisane do niego
+      // oraz wszystkie paczki grup, którymi zarządza
       if (isDirector) {
         const all = await base44.entities.ContactPackage.list();
+        const managed = new Set(currentUser.managedGroupIds || []);
         return all.filter(p => {
           const assignedEmails = p.assigned_user_emails?.length
             ? p.assigned_user_emails
             : (p.assigned_user_email ? [p.assigned_user_email] : []);
-          return p.created_by_email === currentUser.email || assignedEmails.includes(currentUser.email);
+          return p.created_by_email === currentUser.email
+            || assignedEmails.includes(currentUser.email)
+            || (p.group_id && managed.has(p.group_id));
         });
       }
 
@@ -121,10 +125,15 @@ export default function ContactPackages() {
         }
       }
 
-      if (myGroupIds.size === 0) return [];
-
       const allPkgs = await base44.entities.ContactPackage.list();
-      return allPkgs.filter(p => myGroupIds.has(p.group_id));
+      return allPkgs.filter(p => {
+        if (myGroupIds.has(p.group_id)) return true;
+        // Paczka prywatna, do której lider został przypisany bezpośrednio
+        const assignedEmails = p.assigned_user_emails?.length
+          ? p.assigned_user_emails
+          : (p.assigned_user_email ? [p.assigned_user_email] : []);
+        return assignedEmails.includes(currentUser.email);
+      });
     },
     enabled: !!currentUser && (isAdmin || (groupsLoaded && allGroups.length >= 0)),
   });
@@ -160,8 +169,11 @@ export default function ContactPackages() {
   const { data: myLeads = [] } = useQuery({
     queryKey: ["my-leads", currentUser?.email],
     queryFn: () => base44.entities.ContactLead.filter({ assigned_user_email: currentUser.email }),
-    enabled: !!currentUser?.email && isAdvisor,
+    enabled: !!currentUser?.email && (isAdvisor || isLeader),
   });
+
+  const [showMine, setShowMine] = useState(false);
+  const myActiveLeads = useMemo(() => myLeads.filter(l => !isHiddenFromAdvisor(l) && l.is_archived !== true), [myLeads]);
 
   if (!accessChecked) {
     return (
@@ -212,8 +224,27 @@ export default function ContactPackages() {
     p.name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Lider / team lider / dyrektor, któremu przypisano kontakty, widzi je jak doradca
+  if (showMine) {
+    return (
+      <div className="space-y-4">
+        <Button variant="outline" size="sm" onClick={() => setShowMine(false)}>← Wróć do paczek</Button>
+        <AdvisorView leads={myLeads} currentUser={currentUser} qc={qc} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {myActiveLeads.length > 0 && (
+        <button
+          onClick={() => setShowMine(true)}
+          className="w-full text-left bg-green-50 border border-green-200 rounded-xl px-4 py-3 hover:bg-green-100 transition-colors"
+        >
+          <span className="font-semibold text-green-800">Moje kontakty ({myActiveLeads.length})</span>
+          <span className="block text-xs text-green-700">Kontakty przypisane do Ciebie — kliknij, aby je obdzwonić</span>
+        </button>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>

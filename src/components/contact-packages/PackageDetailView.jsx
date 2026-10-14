@@ -152,15 +152,29 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
       name: u.name || u.data?.name || u.email || u.data?.email,
       role: u.role || u.data?.role,
       group_id: u.group_id || u.data?.group_id,
+      managed_group_ids: u.managed_group_ids || u.data?.managed_group_ids || [],
     }))
     .filter(u => u.email && ["advisor", "team_leader", "group_leader", "structure_director"].includes(u.role));
+
+  // Grupy bieżącego lidera (własna grupa + grupy, których jest liderem)
+  const myLeaderGroupIds = new Set([currentUser?.groupId].filter(Boolean));
+  allGroups.forEach(g => {
+    const ids = g.group_leader_ids || g.data?.group_leader_ids || [];
+    const legacy = g.group_leader_id || g.data?.group_leader_id;
+    if ([legacy, ...ids].some(id => id && (id === currentUser?.allowedUserId || id === currentUser?.email))) myLeaderGroupIds.add(g.id);
+  });
+  // Dyrektorzy struktury zarządzający którąś z grup bieżącego lidera
+  const directorsOfMyGroups = salesUsers.filter(u =>
+    u.role === "structure_director" && u.managed_group_ids.some(gid => myLeaderGroupIds.has(gid))
+  );
 
   const pkgAssignedEmails = pkg.assigned_user_emails?.length
     ? pkg.assigned_user_emails
     : (pkg.assigned_user_email ? [pkg.assigned_user_email] : []);
 
   // Dyrektor struktury: w swojej paczce przydziela kontakty każdemu z zarządzanych grup
-  const assignableUsers = isDirector ? getDirectorAssignableUsers(salesUsers, allGroups, currentUser?.managedGroupIds || []) : salesUsers.filter(u => {
+  const isGroupOrTeamLeader = currentUser?.role === "group_leader" || currentUser?.role === "team_leader";
+  const baseAssignable = isDirector ? getDirectorAssignableUsers(salesUsers, allGroups, currentUser?.managedGroupIds || []) : salesUsers.filter(u => {
     if (pkg.is_private) {
       // Paczka prywatna: admin może przypisać do dowolnego handlowca,
       // pozostali — do handlowców przypisanych do paczki
@@ -170,6 +184,10 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
     if (u.role === "group_leader") return u.group_id === pkg.group_id || allowedGroupLeaderIds.has(u.id);
     return false;
   });
+  // Lider grupy / team lider może przypisać kontakt także dyrektorowi swojej grupy
+  const assignableUsers = isGroupOrTeamLeader
+    ? [...baseAssignable, ...directorsOfMyGroups.filter(d => !baseAssignable.some(u => u.email === d.email))]
+    : baseAssignable;
 
   const canAssignToSelf = currentUser?.role === "team_leader" || currentUser?.role === "group_leader";
   const advisors = canAssignToSelf && currentUser?.email && !assignableUsers.some(u => u.email === currentUser.email)
@@ -584,6 +602,17 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
               <PrivateAssigneesEditor
                 pkg={pkg}
                 salesUsers={salesUsers}
+                onSaved={onPackageUpdated}
+              />
+            </div>
+          )}
+          {/* Lider grupy: przekazanie całej paczki grupy dyrektorowi struktury */}
+          {!isAdmin && currentUser?.role === "group_leader" && !pkg.is_private && directorsOfMyGroups.length > 0 && (
+            <div className="mt-1">
+              <PrivateAssigneesEditor
+                pkg={{ ...pkg, assigned_to_director: true }}
+                salesUsers={directorsOfMyGroups}
+                directorMode
                 onSaved={onPackageUpdated}
               />
             </div>

@@ -3,8 +3,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Pencil, Check, X } from "lucide-react";
 
-// Edycja handlowców przypisanych do paczki prywatnej (max 2) — tylko admin
-export default function PrivateAssigneesEditor({ pkg, salesUsers, onSaved }) {
+// Edycja handlowców przypisanych do paczki prywatnej (max 2) — admin.
+// W trybie directorMode lider grupy wskazuje dyrektora struktury dla paczki swojej grupy
+// (paczka zachowuje grupę, a dyrektor dostaje do niej dostęp).
+export default function PrivateAssigneesEditor({ pkg, salesUsers, onSaved, directorMode = false }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const currentEmails = pkg.assigned_user_emails?.length
@@ -21,6 +23,7 @@ export default function PrivateAssigneesEditor({ pkg, salesUsers, onSaved }) {
         assigned_user_emails: emails,
         assigned_user_email: emails[0] || "",
         assigned_user_name: names.join(", "),
+        ...(directorMode ? { assigned_to_director: emails.length > 0 } : {}),
       });
     },
     onSuccess: async () => {
@@ -31,6 +34,9 @@ export default function PrivateAssigneesEditor({ pkg, salesUsers, onSaved }) {
     onError: (err) => alert("Nie udało się zapisać handlowców: " + (err?.message || "Nieznany błąd")),
   });
 
+  const emptyLabel = directorMode ? "Brak dyrektora — kliknij aby przekazać paczkę" : "Brak handlowców — kliknij aby przypisać";
+  const namesLabel = directorMode ? "Dyrektor" : "Handlowcy";
+
   if (!editing) {
     return (
       <button
@@ -38,7 +44,7 @@ export default function PrivateAssigneesEditor({ pkg, salesUsers, onSaved }) {
         className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 transition-colors"
       >
         <Pencil className="w-3 h-3" />
-        {pkg.assigned_user_name ? `Handlowcy: ${pkg.assigned_user_name}` : "Brak handlowców — kliknij aby przypisać"}
+        {pkg.assigned_user_name ? `${namesLabel}: ${pkg.assigned_user_name}` : emptyLabel}
       </button>
     );
   }
@@ -58,8 +64,8 @@ export default function PrivateAssigneesEditor({ pkg, salesUsers, onSaved }) {
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {renderSelect(email1, setEmail1, "— handlowiec 1 —")}
-      {renderSelect(email2, setEmail2, "— handlowiec 2 (opcjonalnie) —")}
+      {renderSelect(email1, setEmail1, directorMode ? "— dyrektor struktury —" : "— handlowiec 1 —")}
+      {!directorMode && renderSelect(email2, setEmail2, "— handlowiec 2 (opcjonalnie) —")}
       <button
         onClick={() => saveMutation.mutate()}
         disabled={saveMutation.isPending}
