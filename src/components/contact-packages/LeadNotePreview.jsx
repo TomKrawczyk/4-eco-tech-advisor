@@ -22,15 +22,15 @@ export default function LeadNotePreview({ leadId, className = "" }) {
   if (notes.length === 0) return null;
 
   return (
-    <div className={`flex flex-col gap-1 max-w-full ${className}`}>
+    <div className={`flex flex-row flex-wrap items-start gap-1 max-w-full ${className}`}>
       {notes.map((n) => (
         <div
           key={n.id}
-          className="rounded px-1.5 py-0.5 text-[11px] leading-tight text-gray-800"
+          className="rounded px-1 py-0.5 text-[10px] leading-tight text-gray-800 max-w-[220px]"
           style={{ backgroundColor: "#FEFFB3" }}
         >
-          <div className="flex items-center gap-1 text-yellow-900/80">
-            <StickyNote className="w-2.5 h-2.5 shrink-0" />
+          <div className="flex items-center gap-0.5 text-yellow-900/80">
+            <StickyNote className="w-2 h-2 shrink-0" />
             <span className="font-medium truncate">{n.author_name || n.author_email}</span>
           </div>
           <div className="mt-0.5 line-clamp-2">{n.content}</div>
