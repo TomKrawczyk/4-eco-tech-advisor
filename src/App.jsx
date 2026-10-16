@@ -20,6 +20,7 @@ import Finansowanie from '@/pages/Finansowanie';
 import RaportTygodniowyPH from '@/pages/RaportTygodniowyPH';
 import KontaktyTelefoniczne from '@/pages/KontaktyTelefoniczne';
 import PackageAssignmentReport from '@/pages/PackageAssignmentReport';
+import PackageQuarterlyReport from '@/pages/PackageQuarterlyReport';
 import ScreenshotAttempts from '@/pages/ScreenshotAttempts';
 import HiddenLeads from '@/pages/HiddenLeads';
 import HiddenDataArchive from '@/pages/HiddenDataArchive';
@@ -155,6 +156,14 @@ const AuthenticatedApp = () => {
         element={
           <LayoutWrapper currentPageName="PackageAssignmentReport">
             <PackageAssignmentReport />
+          </LayoutWrapper>
+        }
+      />
+      <Route
+        path="/PackageQuarterlyReport"
+        element={
+          <LayoutWrapper currentPageName="PackageQuarterlyReport">
+            <PackageQuarterlyReport />
           </LayoutWrapper>
         }
       />

@@ -87,6 +87,7 @@ const navStructure = [
       { name: "RaportTygodniowyPH", label: "Raport tygodniowy PH", path: "/raport-tygodniowy", roles: ["admin", "owner"] },
       { name: "KontaktyTelefoniczne", label: "Kontakty telefoniczne", path: "/kontakty-telefoniczne", roles: ["admin", "owner"] },
       { name: "PackageAssignmentReport", label: "Raport paczek kontaktów", roles: ["admin", "hr_admin", "group_leader"] },
+      { name: "PackageQuarterlyReport", label: "Raport kwartalny paczek", roles: ["admin", "hr_admin", "group_leader"] },
       { name: "AllReports", label: "Wszystkie raporty", adminOnly: true },
       { name: "HiddenDataArchive", label: "Ukryte dane (eksport)", roles: ["admin"] },
       { name: "ScreenshotAttempts", label: "Próby zrzutów ekranu", roles: ["admin"] },
