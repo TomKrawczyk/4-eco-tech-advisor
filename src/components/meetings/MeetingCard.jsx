@@ -94,8 +94,9 @@ export default function MeetingCard({ meeting, assignment, salespeople, assignme
 
   const canAssign = currentUserRole === "admin" || currentUserRole === "group_leader" || currentUserRole === "team_leader" || currentUserRole === "structure_director";
   const canManageGroups = currentUserRole === "admin" || currentUserRole === "group_leader" || currentUserRole === "structure_director";
-  // Dyrektor struktury może rozdzielać dalej tylko spotkania przypisane do niego
-  const directorCanReassign = currentUserRole !== "structure_director" || assignment?.assigned_user_email === currentUserEmail;
+  // Dyrektor struktury może rozdzielać nieprzypisane spotkania z zarządzanych grup
+  // oraz przekazywać dalej spotkania przypisane do niego.
+  const directorCanReassign = currentUserRole !== "structure_director" || !assignment?.assigned_user_email || assignment?.assigned_user_email === currentUserEmail;
   const effectiveCanAssign = canAssign && directorCanReassign;
   const effectiveCanManageGroups = canManageGroups && directorCanReassign;
 

@@ -973,8 +973,9 @@ function PhoneContactsPage() {
 export default PhoneContactsPage;
 
 function ContactRow({ contact, report, canAssign, canManageGroups, salespeople, groups, currentUser, assignMutation, assignGroupMutation, onShowDetails, onShowReport, onArchive, archiveTab }) {
-  // Dyrektor struktury może rozdzielać dalej tylko kontakty przypisane do niego
-  const directorCanReassign = currentUser?.role !== "structure_director" || contact.assigned_user_email === currentUser.email;
+  // Dyrektor struktury może rozdzielać nieprzypisane kontakty z zarządzanych grup
+  // oraz przekazywać dalej kontakty przypisane do niego.
+  const directorCanReassign = currentUser?.role !== "structure_director" || !contact.assigned_user_email || contact.assigned_user_email === currentUser.email;
   const effectiveCanAssign = canAssign && directorCanReassign;
   const effectiveCanManageGroups = canManageGroups && directorCanReassign;
   return (
