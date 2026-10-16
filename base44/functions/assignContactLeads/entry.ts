@@ -122,6 +122,16 @@ export default async function(req) {
       await svc.ContactLead.bulkUpdate(updates.slice(i, i + 500));
     }
 
+    // Przekaż historię notatek nowemu handlowcowi, aby widział notatki poprzednika.
+    try {
+      await svc.ContactNote.updateMany(
+        { lead_id: { $in: leadIds } },
+        { $set: { assigned_user_email: userEmail } }
+      );
+    } catch (_) {
+      // Encja ContactNote może być niedostępna — ignorujemy błąd aktualizacji notatek.
+    }
+
     const fresh = await svc.ContactLead.filter({ package_id: packageId });
     await svc.ContactPackage.update(packageId, {
       total_count: fresh.length,

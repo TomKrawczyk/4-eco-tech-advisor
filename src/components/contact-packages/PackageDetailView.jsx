@@ -12,6 +12,7 @@ import PackageImportModal from "@/components/contact-packages/PackageImportModal
 import exportPackageToExcel from "@/components/contact-packages/exportPackageToExcel";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
 import LeadExtraData from "@/components/contact-packages/LeadExtraData";
+import LeadNotesTimeline from "@/components/contact-packages/LeadNotesTimeline";
 import PrivateAssigneesEditor from "@/components/contact-packages/PrivateAssigneesEditor";
 import useIsMainAdmin from "@/components/shared/useIsMainAdmin";
 import { isHiddenFromAdvisor } from "@/components/contact-packages/leadExpiry";
@@ -1152,6 +1153,9 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                           </div>
                         )}
                         <LeadExtraData lead={lead} className="sm:col-span-2" />
+                        <div className="sm:col-span-2 bg-yellow-50/40 rounded-lg p-3 border border-yellow-100">
+                          <LeadNotesTimeline lead={lead} currentUser={currentUser} />
+                        </div>
                         {isMainAdmin && (
                           <div className="sm:col-span-2 flex justify-end pt-2 border-t border-gray-100">
                             <button

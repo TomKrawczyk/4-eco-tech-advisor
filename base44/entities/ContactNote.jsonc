@@ -1,0 +1,129 @@
+{
+  "name": "ContactNote",
+  "type": "object",
+  "properties": {
+    "lead_id": {
+      "type": "string",
+      "description": "ID kontaktu (ContactLead), kt\u00f3rego dotyczy notatka"
+    },
+    "package_id": {
+      "type": "string",
+      "description": "ID paczki kontakt\u00f3w (cache do filtrowania)"
+    },
+    "group_id": {
+      "type": "string",
+      "description": "ID grupy (cache)"
+    },
+    "assigned_user_email": {
+      "type": "string",
+      "description": "Email handlowca przypisanego do kontaktu w momencie notatki (cache dla RLS)"
+    },
+    "author_email": {
+      "type": "string",
+      "description": "Email autora notatki"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Imi\u0119 i nazwisko autora (cache)"
+    },
+    "content": {
+      "type": "string",
+      "description": "Tre\u015b\u0107 notatki"
+    }
+  },
+  "required": [
+    "lead_id",
+    "author_email",
+    "content"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.assigned_user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "group_leader"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "structure_director"
+          }
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "data.assigned_user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "group_leader"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "structure_director"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.author_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "group_leader"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "structure_director"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.author_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "group_leader"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "structure_director"
+          }
+        }
+      ]
+    }
+  }
+}
