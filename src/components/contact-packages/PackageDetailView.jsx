@@ -13,6 +13,7 @@ import exportPackageToExcel from "@/components/contact-packages/exportPackageToE
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
 import LeadExtraData from "@/components/contact-packages/LeadExtraData";
 import LeadNotesTimeline from "@/components/contact-packages/LeadNotesTimeline";
+import LeadNotePreview from "@/components/contact-packages/LeadNotePreview";
 import PrivateAssigneesEditor from "@/components/contact-packages/PrivateAssigneesEditor";
 import useIsMainAdmin from "@/components/shared/useIsMainAdmin";
 import { isHiddenFromAdvisor } from "@/components/contact-packages/leadExpiry";
@@ -1073,6 +1074,9 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                             <span className="line-clamp-2">{advisorNote}</span>
                           </div>
                         )}
+                        <div className="mt-1">
+                          <LeadNotePreview leadId={lead.id} />
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <span className={`block text-xs px-2 py-1 rounded-full font-medium text-center ${STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-600"}`}>

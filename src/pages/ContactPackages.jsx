@@ -14,6 +14,7 @@ import AdvisorSummary from "@/components/contact-packages/AdvisorSummary";
 import ScheduleMeetingModal from "@/components/contact-packages/ScheduleMeetingModal";
 import LeadExtraData from "@/components/contact-packages/LeadExtraData";
 import LeadNotesTimeline from "@/components/contact-packages/LeadNotesTimeline";
+import LeadNotePreview from "@/components/contact-packages/LeadNotePreview";
 import { isHiddenFromAdvisor } from "@/components/contact-packages/leadExpiry";
 
 export default function ContactPackages() {
@@ -723,6 +724,9 @@ function LeadRow({ lead, packageName, statusLabels, statusColors, currentUser, o
                 <span className="inline-block bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 font-medium">Baza: {packageName}</span>
               </div>
             )}
+          </div>
+          <div className="hidden md:block min-w-0 max-w-[42%]">
+            <LeadNotePreview leadId={lead.id} />
           </div>
           <span className={`text-xs px-2 py-1 rounded-full font-medium shrink-0 ${statusColors[lead.status] || "bg-gray-50 text-gray-600"}`}>
             {statusLabels[lead.status] || lead.status}

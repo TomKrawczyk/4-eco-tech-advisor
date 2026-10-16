@@ -60,13 +60,17 @@ export default function LeadNotesTimeline({ lead, currentUser }) {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lead-notes", leadId] });
+      qc.invalidateQueries({ queryKey: ["latest-note", leadId] });
       setText("");
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.ContactNote.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["lead-notes", leadId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lead-notes", leadId] });
+      qc.invalidateQueries({ queryKey: ["latest-note", leadId] });
+    },
   });
 
   const handleAdd = () => {
