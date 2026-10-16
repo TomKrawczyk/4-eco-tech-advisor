@@ -725,14 +725,16 @@ function LeadRow({ lead, packageName, statusLabels, statusColors, currentUser, o
               </div>
             )}
           </div>
-          <div className="hidden md:block min-w-0 max-w-[42%]">
-            <LeadNotePreview leadId={lead.id} />
-          </div>
           <span className={`text-xs px-2 py-1 rounded-full font-medium shrink-0 ${statusColors[lead.status] || "bg-gray-50 text-gray-600"}`}>
             {statusLabels[lead.status] || lead.status}
           </span>
           <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${expanded ? "rotate-90" : ""}`} />
         </button>
+        {!expanded && (
+          <div className="px-4 pb-2.5">
+            <LeadNotePreview leadId={lead.id} />
+          </div>
+        )}
         {expanded && (
           <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
             {lead.notes && <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-2">{lead.notes}</p>}

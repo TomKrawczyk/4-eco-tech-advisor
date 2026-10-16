@@ -1074,9 +1074,6 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                             <span className="line-clamp-2">{advisorNote}</span>
                           </div>
                         )}
-                        <div className="mt-1">
-                          <LeadNotePreview leadId={lead.id} />
-                        </div>
                       </div>
                       <div className="space-y-1">
                         <span className={`block text-xs px-2 py-1 rounded-full font-medium text-center ${STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-600"}`}>
@@ -1089,9 +1086,15 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
                           </div>
                         )}
                       </div>
-                    </div>
+                      </div>
 
-                    {isExpanded && (
+                      {!isExpanded && (
+                      <div className="px-4 pb-2.5 ml-8">
+                       <LeadNotePreview leadId={lead.id} />
+                      </div>
+                      )}
+
+                      {isExpanded && (
                       <div className="px-4 pb-4 ml-8 grid gap-3 sm:grid-cols-2 text-sm">
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="text-xs font-semibold text-gray-400 uppercase mb-1">Dane kontaktu</div>

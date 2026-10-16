@@ -1,9 +1,9 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { MessageSquare } from "lucide-react";
+import { StickyNote } from "lucide-react";
 
-// Podgląd najnowszej notatki z osi czasu w zwiniętym wierszu kontaktu.
+// Mała żółta karteczka z najnowszą notatką — widoczna pod zwiniętym kontaktem.
 export default function LeadNotePreview({ leadId, className = "" }) {
   const { data } = useQuery({
     queryKey: ["latest-note", leadId],
@@ -21,9 +21,16 @@ export default function LeadNotePreview({ leadId, className = "" }) {
   if (!data) return null;
 
   return (
-    <div className={`flex items-center gap-1 min-w-0 ${className}`} title={data.content}>
-      <MessageSquare className="w-3.5 h-3.5 text-green-600 shrink-0" />
-      <span className="text-xs text-gray-500 truncate">{data.content}</span>
+    <div
+      className={`flex items-start gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-gray-800 leading-snug shadow-sm ${className}`}
+      style={{ backgroundColor: "#FEFFB3" }}
+      title={data.content}
+    >
+      <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0 text-yellow-700" />
+      <div className="min-w-0">
+        <span className="font-medium text-yellow-900">{data.author_name || data.author_email}:</span>{" "}
+        <span className="line-clamp-2">{data.content}</span>
+      </div>
     </div>
   );
 }
