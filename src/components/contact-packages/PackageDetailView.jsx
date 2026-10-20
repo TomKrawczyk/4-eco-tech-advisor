@@ -750,7 +750,7 @@ export default function PackageDetailView({ pkg, currentUser, onBack, onPackageU
           <Copy className="w-3.5 h-3.5" />
           Duplikaty ({stats.duplicates})
         </Button>
-        {isAdmin && (
+        {(isAdmin || isGroupOrTeamLeader || isDirector) && (
           <Button
             size="sm"
             variant={archiveTab === "expired" ? "default" : "outline"}
