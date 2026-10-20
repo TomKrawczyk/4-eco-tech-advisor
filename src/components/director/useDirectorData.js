@@ -100,7 +100,7 @@ export function useDirectorData(currentUser, accessReady) {
     return map;
   }, [meetingAssignments]);
 
-  // Nadchodzące spotkania podlegające pod strukturę dyrektora
+  // Wszystkie spotkania przypisane do zarządzanych grup dyrektora (nadchodzące i minione)
   const meetings = useMemo(() => {
     if (!isDirector) return [];
     const res = [];
@@ -111,7 +111,7 @@ export function useDirectorData(currentUser, accessReady) {
       const calendar = m.meeting_calendar;
       if (!calendar) return;
       const d = parseMeetingDate(calendar);
-      if (!d || !isUpcoming(d)) return;
+      if (!d) return;
 
       const sheetGroupId = sheetGroupIdOf(sheetMappings, m.sheet);
       const inMyGroups =
@@ -126,12 +126,13 @@ export function useDirectorData(currentUser, accessReady) {
         meeting_key: origKey,
         meeting_date: format(startOfDay(d), "yyyy-MM-dd"),
         time: extractTime(calendar),
+        isUpcoming: isUpcoming(d),
         groupId,
         assignedEmail: assignment?.assigned_user_email || "",
         assignedName: assignment?.assigned_user_name || "",
       });
     });
-    res.sort((a, b) => (a.meeting_date < b.meeting_date ? -1 : a.meeting_date > b.meeting_date ? 1 : 0));
+    res.sort((a, b) => (a.meeting_date < b.meeting_date ? 1 : a.meeting_date > b.meeting_date ? -1 : 0));
     return res;
   }, [allMeetings, assignmentByKey, sheetMappings, managedGroupIds, hiddenMeetingKeys, isDirector, currentUser?.email]);
 

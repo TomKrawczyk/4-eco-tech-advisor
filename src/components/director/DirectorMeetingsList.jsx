@@ -4,6 +4,7 @@ import { Search, Calendar, User, MapPin, Phone, Clock, FileText } from "lucide-r
 export default function DirectorMeetingsList({ meetings, groupNameById, loading }) {
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
+  const [scope, setScope] = useState("all");
   const [limit, setLimit] = useState(30);
 
   const groupIds = useMemo(
@@ -14,12 +15,13 @@ export default function DirectorMeetingsList({ meetings, groupNameById, loading 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return meetings.filter((m) => {
+      if (scope === "upcoming" && !m.isUpcoming) return false;
       if (groupFilter !== "all" && m.groupId !== groupFilter) return false;
       if (!q) return true;
       return [m.client_name, m.sheet, m.assignedName, m.assignedEmail, m.client_phone, m.client_address]
         .some((v) => String(v || "").toLowerCase().includes(q));
     });
-  }, [meetings, search, groupFilter]);
+  }, [meetings, search, groupFilter, scope]);
 
   if (loading) {
     return <div className="text-sm text-gray-400 py-6 text-center">Ładowanie spotkań…</div>;
@@ -47,6 +49,20 @@ export default function DirectorMeetingsList({ meetings, groupNameById, loading 
             <option key={gid} value={gid}>{groupNameById[gid] || gid}</option>
           ))}
         </select>
+        <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden">
+          <button
+            onClick={() => setScope("all")}
+            className={`px-2.5 py-1.5 text-xs ${scope === "all" ? "bg-green-500 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+          >
+            Wszystkie
+          </button>
+          <button
+            onClick={() => setScope("upcoming")}
+            className={`px-2.5 py-1.5 text-xs ${scope === "upcoming" ? "bg-green-500 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+          >
+            Nadchodzące
+          </button>
+        </div>
         <span className="text-xs text-gray-400">{filtered.length} spotkań</span>
       </div>
 
@@ -68,8 +84,8 @@ export default function DirectorMeetingsList({ meetings, groupNameById, loading 
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-xs font-medium text-gray-700 flex items-center gap-1 justify-end">
-                      <Calendar className="w-3 h-3 text-green-600" />
+                    <div className={`text-xs font-medium flex items-center gap-1 justify-end ${m.isUpcoming ? "text-gray-700" : "text-gray-400"}`}>
+                      <Calendar className={`w-3 h-3 ${m.isUpcoming ? "text-green-600" : "text-gray-300"}`} />
                       {m.meeting_date}
                     </div>
                     {m.time && (
