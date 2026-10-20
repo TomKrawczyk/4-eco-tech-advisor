@@ -100,6 +100,24 @@ export function useDirectorData(currentUser, accessReady) {
     return map;
   }, [meetingAssignments]);
 
+  // Handlowcy dostępni do przypisania: członkowie zarządzanych grup (doradcy/team leaderzy/liderzy grup)
+  const salespeople = useMemo(() => {
+    if (!isDirector) return [];
+    const res = [];
+    const seen = new Set();
+    Object.values(membersByGroup).flat().forEach((m) => {
+      if (!m.email || seen.has(m.email)) return;
+      if (m.role === "advisor" || m.role === "user" || m.role === "team_leader" || m.role === "group_leader") {
+        seen.add(m.email);
+        res.push({ email: m.email, name: m.name || m.email });
+      }
+    });
+    if (currentUser?.email && !seen.has(currentUser.email)) {
+      res.push({ email: currentUser.email, name: currentUser.displayName || currentUser.email });
+    }
+    return res;
+  }, [isDirector, membersByGroup, currentUser?.email, currentUser?.displayName]);
+
   // Wszystkie spotkania przypisane do zarządzanych grup dyrektora (nadchodzące i minione)
   const meetings = useMemo(() => {
     if (!isDirector) return [];
@@ -220,6 +238,7 @@ export function useDirectorData(currentUser, accessReady) {
   return {
     managedGroups, groupNameById, membersByGroup,
     meetings, contacts, reports, statsPerGroup, totals, loading,
+    assignmentByKey, salespeople, allAllowedUsers,
     cacheRefreshedAt: cacheQ.data?.last_refreshed,
   };
 }

@@ -64,7 +64,16 @@ export default function StructureDirectorDashboard() {
           </button>
         </div>
         {tab === "meetings" ? (
-          <DirectorMeetingsList meetings={data.meetings} groupNameById={data.groupNameById} loading={data.loading} />
+          <DirectorMeetingsList
+            meetings={data.meetings}
+            groupNameById={data.groupNameById}
+            loading={data.loading}
+            assignmentByKey={data.assignmentByKey}
+            salespeople={data.salespeople}
+            managedGroups={data.managedGroups}
+            allAllowedUsers={data.allAllowedUsers}
+            currentUser={currentUser}
+          />
         ) : (
           <DirectorContactsList contacts={data.contacts} groupNameById={data.groupNameById} loading={data.loading} />
         )}

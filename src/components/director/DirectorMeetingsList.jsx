@@ -1,7 +1,17 @@
 import React, { useMemo, useState } from "react";
-import { Search, Calendar, User, MapPin, Phone, Clock, FileText } from "lucide-react";
+import { Search } from "lucide-react";
+import MeetingCard from "@/components/meetings/MeetingCard";
 
-export default function DirectorMeetingsList({ meetings, groupNameById, loading }) {
+export default function DirectorMeetingsList({
+  meetings,
+  groupNameById,
+  loading,
+  assignmentByKey,
+  salespeople,
+  managedGroups,
+  allAllowedUsers,
+  currentUser,
+}) {
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
   const [scope, setScope] = useState("all");
@@ -67,46 +77,21 @@ export default function DirectorMeetingsList({ meetings, groupNameById, loading 
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-10 text-sm text-gray-500">Brak nadchodzących spotkań w Twojej strukturze.</div>
+        <div className="text-center py-10 text-sm text-gray-500">Brak spotkań w Twojej strukturze.</div>
       ) : (
         <>
           <div className="space-y-2">
             {filtered.slice(0, limit).map((m, i) => (
-              <div key={m.meeting_key || i} className="bg-white rounded-xl border border-gray-200 p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="font-semibold text-gray-900 text-sm truncate">{m.client_name || "—"}</div>
-                    <div className="text-[11px] text-gray-500 mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
-                      {m.sheet && <span className="inline-flex items-center gap-1"><FileText className="w-3 h-3" />{m.sheet}</span>}
-                      {m.groupId && groupNameById[m.groupId] && (
-                        <span className="inline-flex items-center gap-1 text-emerald-700">{groupNameById[m.groupId]}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className={`text-xs font-medium flex items-center gap-1 justify-end ${m.isUpcoming ? "text-gray-700" : "text-gray-400"}`}>
-                      <Calendar className={`w-3 h-3 ${m.isUpcoming ? "text-green-600" : "text-gray-300"}`} />
-                      {m.meeting_date}
-                    </div>
-                    {m.time && (
-                      <div className="text-[11px] text-gray-400 flex items-center gap-1 justify-end">
-                        <Clock className="w-3 h-3" />{m.time}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
-                  <div className="flex items-center gap-1 text-gray-500 min-w-0 truncate">
-                    <User className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{m.assignedName || (m.assignedEmail ? m.assignedEmail : "Nieprzypisane")}</span>
-                  </div>
-                  {(m.client_phone || m.phone) && (
-                    <span className="inline-flex items-center gap-1 text-gray-400">
-                      <Phone className="w-3 h-3" />{m.client_phone || m.phone}
-                    </span>
-                  )}
-                </div>
-              </div>
+              <MeetingCard
+                key={m.meeting_key || i}
+                meeting={m}
+                assignment={assignmentByKey?.[m.meeting_key] || null}
+                salespeople={salespeople || []}
+                currentUserRole={currentUser?.role}
+                currentUserEmail={currentUser?.email}
+                groups={managedGroups || []}
+                allAllowedUsers={allAllowedUsers || []}
+              />
             ))}
           </div>
           {filtered.length > limit && (
