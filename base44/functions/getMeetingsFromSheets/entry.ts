@@ -266,7 +266,7 @@ Deno.serve(async (req) => {
     const ua = allowedUsers.find((item) => (item.email || item.data?.email) === user.email);
     const role = ua?.role || ua?.data?.role;
 
-    const isLeaderOrAdmin = role === 'admin' || role === 'group_leader' || role === 'team_leader';
+    const isLeaderOrAdmin = role === 'admin' || role === 'hr_admin' || role === 'group_leader' || role === 'team_leader' || role === 'structure_director';
     const isAdvisor = role === 'advisor' || role === 'user';
     if (!isLeaderOrAdmin && !isAdvisor) {
       return Response.json({ error: 'Forbidden – brak uprawnień' }, { status: 403 });
