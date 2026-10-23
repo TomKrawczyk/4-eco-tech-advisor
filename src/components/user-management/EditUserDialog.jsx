@@ -102,6 +102,12 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
         })
       ));
 
+      await base44.entities.AllowedUser.update(user.id, {
+        is_blocked: false,
+        blocked_reason: "",
+        missing_reports_count: 0,
+        reports_acknowledged_until: todayYmd,
+      });
       await base44.functions.invoke("enforceReportingBlocks", {});
       sessionStorage.removeItem("layout_user_cache");
       window.dispatchEvent(new Event("user-access-updated"));
@@ -123,10 +129,12 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
   const handleAutoUnblock = async () => {
     setSavingBlock(true);
     try {
+      const todayYmd = new Date().toISOString().split("T")[0];
       await base44.entities.AllowedUser.update(user.id, {
         is_blocked: false,
         blocked_reason: "",
         missing_reports_count: 0,
+        reports_acknowledged_until: todayYmd,
       });
       sessionStorage.removeItem('layout_user_cache');
       window.dispatchEvent(new Event('user-access-updated'));

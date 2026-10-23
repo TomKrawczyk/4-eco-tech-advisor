@@ -219,10 +219,13 @@ Deno.serve(async (req) => {
     ]);
 
     const allowedByEmail = new Map();
+    const acknowledgeByEmail = new Map();
     for (const record of allowedUsers) {
       const email = normalizeEmail(record.email || record.data?.email);
       if (!email) continue;
       allowedByEmail.set(email, record);
+      const ack = record.reports_acknowledged_until || record.data?.reports_acknowledged_until || '';
+      if (ack) acknowledgeByEmail.set(email, ack);
     }
 
     const trackedUsers = users
@@ -299,6 +302,9 @@ Deno.serve(async (req) => {
       const email = normalizeEmail(assignment.assigned_user_email);
       if (!monitoredEmails.has(email) || meetingDate < effectiveStartYmd) continue;
       if (postponedMeetingKeys.has(`${email}|${clientKey}`)) continue;
+      // Admin ręcznie wyzerował zaległe raporty — pomiń spotkania z dnia <= daty acknowledge.
+      const ackUntil = acknowledgeByEmail.get(email) || '';
+      if (ackUntil && meetingDate <= ackUntil) continue;
 
       const cachedMeeting = cachedMeetingsByKey.get(assignment.meeting_key) || {};
       const mergedMeeting = {
@@ -334,6 +340,8 @@ Deno.serve(async (req) => {
       const email = normalizeEmail(contact.assigned_user_email);
       const contactDate = getContactDate(contact);
       if (!monitoredEmails.has(email) || !contactDate || contactDate < effectiveStartYmd) continue;
+      const ackUntil = acknowledgeByEmail.get(email) || '';
+      if (ackUntil && contactDate <= ackUntil) continue;
       const phoneKey = last9(contact.client_phone || contact.phone);
       const nameKey = normalizeName(contact.client_name);
       const clientKey = phoneKey || nameKey;

@@ -81,6 +81,11 @@
       "type": "boolean",
       "default": false,
       "description": "Czy u\u017cytkownik jest zwolniony z obowi\u0105zku raportowania (system pomija braki)"
+    },
+    "reports_acknowledged_until": {
+      "type": "string",
+      "format": "date",
+      "description": "Data r\u0119cznego wyzerowania zaleg\u0142ych raport\u00f3w przez admina (YYYY-MM-DD). Automat (enforceReportingBlocks) pomija zaleg\u0142e spotkania i kontakty z dnia <= tej daty; nowe braki nadal blokuj\u0105."
     }
   },
   "required": [
