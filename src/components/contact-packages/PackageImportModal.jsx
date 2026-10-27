@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
+import { getDirectorAssignableUsers } from "@/components/contact-packages/directorAssignable";
 
 // ─── Inteligentne dopasowanie kolumn ───────────────────────────────────────────
 // Zwraca index kolumny lub -1
@@ -157,6 +158,9 @@ function parseExcel(file) {
 
 export default function PackageImportModal({ currentUser, allGroups = [], existingPackage = null, onClose, onSuccess }) {
   const isAdmin = currentUser?.role === "admin";
+  const isDirector = currentUser?.role === "structure_director";
+  const canAssign = isAdmin || isDirector;
+  const managedGroupIds = currentUser?.managedGroupIds || [];
   const isAppendMode = !!existingPackage;
   const [name, setName] = useState(existingPackage?.name || "");
   const [description, setDescription] = useState(existingPackage?.description || "");
@@ -169,12 +173,16 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
   const { data: allowedUsers = [] } = useQuery({
     queryKey: ["allowed-users-for-import"],
     queryFn: () => base44.entities.AllowedUser.list(),
-    enabled: isAdmin && !isAppendMode,
+    enabled: canAssign && !isAppendMode,
   });
-  const advisors = allowedUsers
-    .map(u => ({ email: u.data?.email || u.email, name: u.data?.name || u.name, role: u.data?.role || u.role }))
-    .filter(u => u.email && (u.role === "advisor" || u.role === "team_leader" || u.role === "group_leader" || u.role === "structure_director"))
-    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pl"));
+  const allSalesUsers = allowedUsers
+    .map(u => ({ id: u.id, email: u.data?.email || u.email, name: u.data?.name || u.name, role: u.data?.role || u.role, group_id: u.data?.group_id || u.group_id || "" }))
+    .filter(u => u.email && ["advisor", "team_leader", "group_leader", "structure_director"].includes(u.role));
+  const advisors = (isDirector
+    ? getDirectorAssignableUsers(allSalesUsers, allGroups, managedGroupIds)
+    : allSalesUsers
+  ).sort((a, b) => (a.name || "").localeCompare(b.name || "", "pl"));
+  const managedGroups = allGroups.filter(g => managedGroupIds.includes(g.id));
   const [file, setFile] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [mapping, setMapping] = useState(null);
@@ -211,9 +219,9 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
     if ((!isAppendMode && !name.trim()) || contacts.length === 0) return;
     setImporting(true);
     const isDirectorMode = !isAppendMode && isAdmin && assignMode === "director";
-    const isPrivate = isAppendMode ? existingPackage.is_private === true : (isAdmin && (assignMode === "user" || isDirectorMode));
-    const effectiveGroupId = isAppendMode ? existingPackage.group_id : (isAdmin ? selectedGroupId : (currentUser.groupId || ""));
-    const effectiveGroupName = isAppendMode ? existingPackage.group_name : (isAdmin ? selectedGroupName : (currentUser.groupName || ""));
+    const isPrivate = isAppendMode ? existingPackage.is_private === true : (canAssign && (assignMode === "user" || isDirectorMode));
+    const effectiveGroupId = isAppendMode ? existingPackage.group_id : (canAssign ? selectedGroupId : (currentUser.groupId || ""));
+    const effectiveGroupName = isAppendMode ? existingPackage.group_name : (canAssign ? selectedGroupName : (currentUser.groupName || ""));
 
     if (isPrivate && !isAppendMode && !selectedUserEmail) {
       setParseError(isDirectorMode ? "Wybierz dyrektora struktury przed importem." : "Wybierz handlowca przed importem.");
@@ -221,7 +229,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
       return;
     }
     if (!isPrivate && !effectiveGroupId) {
-      setParseError(isAdmin ? "Wybierz grupę przed importem." : "Twoje konto nie ma przypisanej grupy. Skontaktuj się z administratorem.");
+      setParseError(canAssign ? "Wybierz grupę przed importem." : "Twoje konto nie ma przypisanej grupy. Skontaktuj się z administratorem.");
       setImporting(false);
       return;
     }
@@ -294,7 +302,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                 </>
               )}
 
-              {isAdmin && !isAppendMode && (
+              {canAssign && !isAppendMode && (
                 <div className="space-y-3">
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1.5">Przypisanie paczki *</label>
@@ -317,6 +325,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                       >
                         Do konkretnego handlowca (prywatna)
                       </Button>
+                      {isAdmin && (
                       <Button
                         type="button"
                         size="sm"
@@ -326,6 +335,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                       >
                         Do dyrektora struktury
                       </Button>
+                      )}
                     </div>
                   </div>
                   {assignMode === "director" ? (
@@ -350,19 +360,19 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                       <select
                         value={selectedGroupId}
                         onChange={e => {
-                          const g = allGroups.find(g => g.id === e.target.value);
+                          const g = (isDirector ? managedGroups : allGroups).find(g => g.id === e.target.value);
                           setSelectedGroupId(e.target.value);
                           setSelectedGroupName(g?.name || "");
                         }}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
                       >
                         <option value="">— wybierz grupę —</option>
-                        {allGroups.map(g => (
+                        {(isDirector ? managedGroups : allGroups).map(g => (
                           <option key={g.id} value={g.id}>{g.name}</option>
                         ))}
                       </select>
-                      {allGroups.length === 0 && (
-                        <p className="text-xs text-gray-400 mt-1">Ładowanie grup…</p>
+                      {(isDirector ? managedGroups : allGroups).length === 0 && (
+                        <p className="text-xs text-gray-400 mt-1">{isDirector ? "Nie zarządzasz żadną grupą." : "Ładowanie grup…"}</p>
                       )}
                     </div>
                   ) : (
@@ -380,6 +390,7 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                           ))}
                         </select>
                       </div>
+                      {isAdmin && (
                       <div>
                         <label className="text-xs font-medium text-gray-600 block mb-1">Handlowiec 2 (opcjonalnie)</label>
                         <select
@@ -393,8 +404,11 @@ export default function PackageImportModal({ currentUser, allGroups = [], existi
                           ))}
                         </select>
                       </div>
+                      )}
                       <p className="text-xs text-purple-600 mt-1.5">
-                        🔒 Kontakty trafią bezpośrednio do wybranych handlowców. Przy dwóch handlowcach baza zostanie podzielona po równo (naprzemiennie). Paczki nie zobaczy lider grupy — tylko handlowcy i administratorzy.
+                        {isAdmin
+                          ? "🔒 Kontakty trafią bezpośrednio do wybranych handlowców. Przy dwóch handlowcach baza zostanie podzielona po równo (naprzemiennie). Paczki nie zobaczy lider grupy — tylko handlowcy i administratorzy."
+                          : "🔒 Kontakty trafią bezpośrednio do wybranego handlowca. Paczki nie zobaczy lider grupy — tylko handlowca i administratorzy."}
                       </p>
                     </div>
                   )}
