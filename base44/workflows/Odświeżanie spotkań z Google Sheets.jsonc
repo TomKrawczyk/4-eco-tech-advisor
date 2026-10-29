@@ -1,23 +1,4 @@
 {
-  "name": "Od\u015bwie\u017canie spotka\u0144 z Google Sheets",
-  "description": "",
-  "trigger": {
-    "condition": null,
-    "config": {
-      "trigger_type": "scheduled",
-      "events": [],
-      "schedule_mode": "interval",
-      "cron_expression": null,
-      "one_time_date": null,
-      "timezone": "UTC",
-      "interval_value": 5,
-      "interval_unit": "minutes",
-      "interval_anchor": "2026-03-02T11:04:15.062000",
-      "ends_type": "never",
-      "ends_on_date": null,
-      "ends_after_count": null
-    }
-  },
   "definition": {
     "document": {
       "dsl": "1.0.0",
@@ -33,11 +14,33 @@
             "function_name": "refreshMeetingsCache",
             "args": {}
           },
-          "then": "end"
+          "then": "end",
+          "x-base44": {
+            "title": "Od\u015bwie\u017c spotkania z arkuszy"
+          }
         }
       }
     ]
   },
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 7,10,13,16,19 * * *",
+      "one_time_date": null,
+      "timezone": "Europe/Warsaw",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Od\u015bwie\u017ca spotkania i kontakty z Google Sheets 5 razy dziennie (7:00, 10:00, 13:00, 16:00, 19:00).",
+  "name": "Od\u015bwie\u017canie spotka\u0144 z Google Sheets",
   "x-base44-migrated-from-automation": {
     "legacy_payload_function": "refreshMeetingsCache"
   }
