@@ -6,7 +6,8 @@ import useCurrentUser from "@/components/shared/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ShieldAlert, Package, Plus, Users, Upload, ChevronRight, Search, X, Pencil, Trash2, GitMerge } from "lucide-react";
+import { ShieldAlert, Package, Plus, Users, Upload, ChevronRight, Search, X, Pencil, Trash2, GitMerge, ArrowLeft } from "lucide-react";
+import AdvisorPackageCard from "@/components/contact-packages/AdvisorPackageCard";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 import MergePackagesModal from "@/components/contact-packages/MergePackagesModal";
 import PackageDetailView from "@/components/contact-packages/PackageDetailView";
@@ -535,6 +536,8 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [archiveTab, setArchiveTab] = useState("active");
   const [sortBy, setSortBy] = useState("default");
+  // null = lista paczek, "all" = wszystkie kontakty, id = konkretna paczka
+  const [pkgId, setPkgId] = useState(null);
 
   const statusLabels = {
     unassigned: "Nieprzypisany",
@@ -567,7 +570,12 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
     other_ph_contact: "bg-cyan-50 text-cyan-700",
   };
 
-  const filtered = leads.filter(l => {
+  const scopedLeads = useMemo(
+    () => (!pkgId || pkgId === "all") ? leads : leads.filter(l => l.package_id === pkgId),
+    [leads, pkgId]
+  );
+
+  const filtered = scopedLeads.filter(l => {
     const matchSearch = l.client_name?.toLowerCase().includes(search.toLowerCase()) ||
       l.client_phone?.includes(search);
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
@@ -580,9 +588,9 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
   });
 
   const archiveCounts = useMemo(() => ({
-    active: leads.filter(l => l.is_archived !== true).length,
-    archived: leads.filter(l => l.is_archived === true).length,
-  }), [leads]);
+    active: scopedLeads.filter(l => l.is_archived !== true).length,
+    archived: scopedLeads.filter(l => l.is_archived === true).length,
+  }), [scopedLeads]);
 
   const archiveLead = useMutation({
     mutationFn: ({ lead, archived }) => base44.entities.ContactLead.update(lead.id, archived ? {
@@ -609,11 +617,76 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["my-leads"] }),
   });
 
+  const activeLeadCount = leads.filter(l => l.is_archived !== true).length;
+
+  // Paczki, z których handlowiec ma przypisane kontakty
+  const packageCards = useMemo(() => {
+    const groups = new Map();
+    leads.forEach(l => {
+      if (!l.package_id || l.is_archived === true) return;
+      const entry = groups.get(l.package_id) || { total: 0, handled: 0 };
+      entry.total += 1;
+      if (l.status && l.status !== "assigned" && l.status !== "unassigned") entry.handled += 1;
+      groups.set(l.package_id, entry);
+    });
+    return [...groups.entries()]
+      .map(([id, stats]) => ({
+        pkg: myPackages.find(p => p.id === id) || { id, name: "Paczka kontaktów" },
+        total: stats.total,
+        handled: stats.handled,
+      }))
+      .sort((a, b) => (b.pkg.created_date || "").localeCompare(a.pkg.created_date || ""));
+  }, [leads, myPackages]);
+
+  if (!pkgId) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Moje paczki</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Wybierz paczkę, aby pobrać z niej kontakty</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setPkgId("all")}>
+            Wszystkie kontakty ({activeLeadCount})
+          </Button>
+        </div>
+
+        {packageCards.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            <Users className="w-12 h-12 mx-auto mb-3 text-gray-200" />
+            <p>Brak przydzielonych kontaktów</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {packageCards.map(({ pkg, total, handled }) => (
+              <AdvisorPackageCard
+                key={pkg.id}
+                pkg={pkg}
+                total={total}
+                handled={handled}
+                onClick={() => setPkgId(pkg.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const activePackage = pkgId === "all" ? null : myPackages.find(p => p.id === pkgId);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Moje kontakty</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Przydzielone do Ciebie kontakty do obdzwonienia</p>
+      <div className="space-y-2">
+        <Button variant="outline" size="sm" onClick={() => setPkgId(null)} className="gap-1">
+          <ArrowLeft className="w-4 h-4" /> Paczki
+        </Button>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {pkgId === "all" ? "Wszystkie kontakty" : (activePackage?.name || "Paczka kontaktów")}
+        </h1>
+        <p className="text-sm text-gray-500">
+          {pkgId === "all" ? "Wszystkie przypisane do Ciebie kontakty" : "Przypisane do Ciebie kontakty z tej paczki"}
+        </p>
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -672,7 +745,7 @@ function AdvisorView({ leads: allLeads, currentUser, qc }) {
             <LeadRow
               key={lead.id}
               lead={lead}
-              packageName={packageMap[lead.package_id]}
+              packageName={pkgId === "all" ? packageMap[lead.package_id] : undefined}
               statusLabels={statusLabels}
               statusColors={statusColors}
               currentUser={currentUser}
