@@ -240,6 +240,8 @@ export default function ContactPackages() {
         currentUser={currentUser}
         onBack={() => setSelectedPackageId(null)}
         onPackageUpdated={() => qc.invalidateQueries({ queryKey: ["contact-packages"] })}
+        onExportAll={canManage ? handleExportReport : null}
+        exportingAll={exportingReport}
       />
     );
   }
