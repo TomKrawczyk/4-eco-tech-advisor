@@ -6,8 +6,10 @@ import useCurrentUser from "@/components/shared/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ShieldAlert, Package, Plus, Users, Upload, ChevronRight, Search, X, Pencil, Trash2, GitMerge, ArrowLeft } from "lucide-react";
+import { ShieldAlert, Package, Plus, Users, Upload, ChevronRight, Search, X, Pencil, Trash2, GitMerge, ArrowLeft, FileDown } from "lucide-react";
 import AdvisorPackageCard from "@/components/contact-packages/AdvisorPackageCard";
+import exportPackagesReport from "@/components/contact-packages/exportPackagesReport";
+import { fetchAllEntityRecords } from "@/lib/fetchAllEntityRecords";
 import PackageImportModal from "@/components/contact-packages/PackageImportModal";
 import MergePackagesModal from "@/components/contact-packages/MergePackagesModal";
 import PackageDetailView from "@/components/contact-packages/PackageDetailView";
@@ -72,6 +74,23 @@ export default function ContactPackages() {
       setDeletingPackage(null);
     },
   });
+
+  // Eksport raportu z paczek (przydziały, statusy, daty zmian)
+  const [exportingReport, setExportingReport] = useState(false);
+  const handleExportReport = async () => {
+    if (!packages.length) return;
+    setExportingReport(true);
+    try {
+      const allLeads = await fetchAllEntityRecords(base44.entities.ContactLead);
+      const ids = new Set(packages.map(p => p.id));
+      exportPackagesReport(packages, allLeads.filter(l => ids.has(l.package_id)));
+      toast.success("Raport paczek wyeksportowany");
+    } catch {
+      toast.error("Nie udało się wygenerować raportu");
+    } finally {
+      setExportingReport(false);
+    }
+  };
 
   // Rola dostępu
   const isLeader = currentUser?.role === "group_leader" || currentUser?.role === "team_leader" || currentUser?.role === "admin" || currentUser?.role === "structure_director";
@@ -264,6 +283,17 @@ export default function ContactPackages() {
             >
               <Upload className="w-4 h-4" />
               Importuj paczkę
+            </Button>
+          )}
+          {canManage && packages.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleExportReport}
+              disabled={exportingReport}
+              className="gap-2"
+            >
+              <FileDown className="w-4 h-4" />
+              {exportingReport ? "Generowanie..." : "Eksport raportu"}
             </Button>
           )}
           {canManage && packages.length >= 2 && (
