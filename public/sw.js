@@ -1,5 +1,5 @@
-const STATIC_CACHE = "4eco-static-v4";
-const RUNTIME_CACHE = "4eco-runtime-v4";
+const STATIC_CACHE = "4eco-static-v5";
+const RUNTIME_CACHE = "4eco-runtime-v5";
 const CORE_ASSETS = ["/", "/index.html"];
 
 self.addEventListener("install", (event) => {
@@ -60,16 +60,20 @@ async function networkFirstNavigation(request) {
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(RUNTIME_CACHE);
   const cached = await cache.match(request);
-  const networkPromise = fetch(request)
-    .then((response) => {
-      if (isCacheableResponse(response)) {
-        cache.put(request, response.clone());
-      }
-      return response;
-    })
-    .catch(() => cached);
 
-  return cached || networkPromise;
+  // Kod aplikacji (JS/CSS) zawsze najpierw z sieci — inaczej użytkownik
+  // może zobaczyć starą wersję interfejsu mimo nowego wdrożenia.
+  try {
+    const response = await fetch(request);
+    if (isCacheableResponse(response)) {
+      cache.put(request, response.clone());
+      return response;
+    }
+    return cached || response;
+  } catch (error) {
+    if (cached) return cached;
+    throw error;
+  }
 }
 
 async function cacheFirst(request) {
