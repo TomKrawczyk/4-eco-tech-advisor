@@ -231,16 +231,16 @@ export default function ExportReports() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600 mb-4">
-              Generuje plik Excel z czterema arkuszami:
-              <span className="flex flex-wrap gap-1 mt-2">
+            <div className="text-sm text-gray-600 mb-4">
+              <span>Generuje plik Excel z czterema arkuszami:</span>
+              <div className="flex flex-wrap gap-1 mt-2">
                 <Badge variant="outline">Raporty po spotkaniu</Badge>
                 <Badge variant="outline">Raporty wizytowe</Badge>
                 <Badge variant="outline">Raporty serwisowe</Badge>
                 <Badge variant="outline">Kontakty telefoniczne</Badge>
-              </span>
+              </div>
               <span className="block mt-2 text-gray-500">Zawiera wszystkie dane + kolumny z URL-ami zdjęć.</span>
-            </p>
+            </div>
             <Button
               onClick={handleExcelExport}
               disabled={excelLoading}

@@ -505,11 +505,13 @@ export default function Layout({ children, currentPageName }) {
 
               {/* Footer actions */}
               <div className="px-3 py-3 border-t border-gray-100 space-y-1">
-                <Link to={createPageUrl("UserProfile")} onClick={() => setMobileMenuOpen(false)}>
-                  <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                    <User className="w-4 h-4" />
-                    Mój profil
-                  </button>
+                <Link
+                  to={createPageUrl("UserProfile")}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <User className="w-4 h-4" />
+                  Mój profil
                 </Link>
                 <button
                   onClick={() => { clearImpersonation(); sessionStorage.removeItem('layout_user_cache'); base44.auth.logout(); }}

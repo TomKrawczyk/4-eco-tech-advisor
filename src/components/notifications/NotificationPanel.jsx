@@ -182,11 +182,11 @@ export default function NotificationPanel({ currentUser }) {
         </ScrollArea>
 
         <div className="p-3 border-t bg-gray-50">
-          <Link to={createPageUrl("NotificationSettings")} onClick={() => setOpen(false)}>
-            <Button variant="ghost" size="sm" className="w-full text-xs">
+          <Button asChild variant="ghost" size="sm" className="w-full text-xs">
+            <Link to={createPageUrl("NotificationSettings")} onClick={() => setOpen(false)}>
               Ustawienia powiadomień
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

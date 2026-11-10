@@ -143,6 +143,7 @@ export default function GroupManagement({ allowedUsers }) {
                   return (
                     <Badge key={id} variant="secondary" className="gap-1 pr-1">
                       {l.data?.name || l.name}
+                      <span className="text-gray-500">({l.data?.email || l.email})</span>
                       <button onClick={() => setGroupLeaderIds(prev => prev.filter(x => x !== id))} className="ml-1 hover:text-red-500">
                         <X className="w-3 h-3" />
                       </button>
@@ -290,6 +291,7 @@ export default function GroupManagement({ allowedUsers }) {
                   return (
                     <Badge key={id} variant="secondary" className="gap-1 pr-1">
                       {l.data?.name || l.name}
+                      <span className="text-gray-500">({l.data?.email || l.email})</span>
                       <button onClick={() => setEditFormData(prev => ({ ...prev, group_leader_ids: prev.group_leader_ids.filter(x => x !== id) }))} className="ml-1 hover:text-red-500">
                         <X className="w-3 h-3" />
                       </button>

@@ -244,11 +244,11 @@ export default function Dashboard() {
               <FileText className="w-5 h-5 text-green-600" />
               <h2 className="text-lg font-bold text-gray-900">Ostatnie raporty</h2>
             </div>
-            <Link to={createPageUrl("VisitReports")}>
-              <Button variant="ghost" size="sm" className="text-green-700 hover:bg-green-50">
+            <Button asChild variant="ghost" size="sm" className="text-green-700 hover:bg-green-50">
+              <Link to={createPageUrl("VisitReports")}>
                 Wszystkie <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
           <div className="space-y-3">
             {recentReports.map((report, index) => (
@@ -292,12 +292,12 @@ export default function Dashboard() {
 
       {isAdmin && (
         <div className="mt-8">
-          <Link to={createPageUrl("UserManagement")}>
-            <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium">
+          <Button asChild className="w-full bg-green-600 hover:bg-green-700 text-white font-medium">
+            <Link to={createPageUrl("UserManagement")}>
               <Users className="w-4 h-4 mr-2" />
               Zarządzanie użytkownikami
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       )}
     </div>

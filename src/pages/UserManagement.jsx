@@ -21,6 +21,7 @@ import GroupManagement from "@/components/user-management/GroupManagement";
 import ActivityLogTab from "@/components/user-management/ActivityLogTab";
 import UserProfilesPreview from "@/components/user-management/UserProfilesPreview";
 import ManagedGroupsPicker from "@/components/user-management/ManagedGroupsPicker";
+import { roleLabel } from "@/lib/roleLabels";
 import { format } from "date-fns";
 import { fetchAllEntityRecords } from "@/lib/fetchAllEntityRecords";
 
@@ -233,8 +234,8 @@ export default function UserManagement() {
 
   const availableLeaders = allowedUsers.filter(u => {
     const userRole = u.data?.role || u.role;
-    if (role === "advisor") return userRole === "team_leader" || userRole === "group_leader";
-    if (role === "team_leader") return userRole === "group_leader";
+    if (role === "advisor") return ["team_leader", "group_leader", "structure_director"].includes(userRole);
+    if (role === "team_leader") return ["group_leader", "structure_director"].includes(userRole);
     return false;
   });
 
@@ -547,7 +548,7 @@ export default function UserManagement() {
           {(role === "advisor" || role === "team_leader") && availableLeaders.length > 0 && (
             <div>
               <Label className="text-sm">
-                Przypisz do {role === "advisor" ? "Team/Group Leadera" : "Group Leadera"}
+                Przypisz do {role === "advisor" ? "Team/Group Leadera" : "Group Leadera"} lub Dyrektora struktury
               </Label>
               <Select value={assignedTo} onValueChange={setAssignedTo}>
                 <SelectTrigger className="h-11">
@@ -557,7 +558,10 @@ export default function UserManagement() {
                   <SelectItem value={null}>Brak przypisania</SelectItem>
                   {availableLeaders.map(leader => (
                     <SelectItem key={leader.id} value={leader.id || ""}>
-                      {leader.data?.name || leader.name} ({leader.data?.role || leader.role})
+                      {leader.data?.name || leader.name}
+                      <span className="ml-1 text-gray-400 text-xs">
+                        ({leader.data?.email || leader.email}) · {roleLabel(leader.data?.role || leader.role)}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

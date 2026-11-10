@@ -9,6 +9,7 @@ import { base44 } from "@/api/base44Client";
 import { buildMeetingReportsIndex, hasReportForMeeting, normalizeDate } from "@/lib/reportingStatus";
 import { Key, Loader2, RotateCcw, Lock, LockOpen } from "lucide-react";
 import ManagedGroupsPicker from "@/components/user-management/ManagedGroupsPicker";
+import { roleLabel } from "@/lib/roleLabels";
 import { toast } from "sonner";
 
 export default function EditUserDialog({ user, open, onClose, onSave, onRefresh, allUsers, groups }) {
@@ -46,8 +47,8 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
     if (u.id === user?.id) return false;
     const userRole = u.data?.role || u.role;
     const subordinateRoles = ["advisor", "test_user", "serviceman", "auditor"];
-    if (subordinateRoles.includes(formData.role)) return userRole === "team_leader" || userRole === "group_leader";
-    if (formData.role === "team_leader") return userRole === "group_leader";
+    if (subordinateRoles.includes(formData.role)) return ["team_leader", "group_leader", "structure_director"].includes(userRole);
+    if (formData.role === "team_leader") return ["group_leader", "structure_director"].includes(userRole);
     return false;
   });
 
@@ -275,7 +276,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
           )}
           {(["advisor","team_leader","test_user","serviceman","auditor"].includes(formData.role)) && availableLeaders.length > 0 && (
             <div>
-              <Label>Przypisz do {formData.role === "team_leader" ? "Group Leadera" : "Team/Group Leadera"}</Label>
+              <Label>Przypisz do {formData.role === "team_leader" ? "Group Leadera" : "Team/Group Leadera"} lub Dyrektora struktury</Label>
               <Select value={formData.assigned_to} onValueChange={(val) => setFormData({ ...formData, assigned_to: val })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Wybierz..." />
@@ -284,7 +285,7 @@ export default function EditUserDialog({ user, open, onClose, onSave, onRefresh,
                   <SelectItem value={null}>Brak przypisania</SelectItem>
                   {availableLeaders.map(leader => (
                     <SelectItem key={leader.id} value={leader.id}>
-                      {leader.data?.name || leader.name} — {leader.data?.email || leader.email} ({leader.data?.role || leader.role})
+                      {leader.data?.name || leader.name} — {leader.data?.email || leader.email} ({roleLabel(leader.data?.role || leader.role)})
                     </SelectItem>
                   ))}
                 </SelectContent>

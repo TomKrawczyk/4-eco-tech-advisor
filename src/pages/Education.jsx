@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link, Loader2, Pencil, FileText } from "lucide-react";
+import { Play, CheckCircle2, Clock, Users, Plus, BookOpen, BarChart2, Trash2, Upload, Link as LinkIcon, Loader2, Pencil, FileText } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import TrainingGroupSelect from "@/components/training/TrainingGroupSelect";
 import { Progress } from "@/components/ui/progress";
@@ -419,7 +419,7 @@ export default function Education() {
                       <Label className="mb-2 block">Wideo</Label>
                       <div className="flex gap-2 mb-2">
                         <Button type="button" size="sm" variant={uploadMode === "url" ? "default" : "outline"} onClick={() => setUploadMode("url")} className="gap-1">
-                          <Link className="w-3 h-3" />Link
+                          <LinkIcon className="w-3 h-3" />Link
                         </Button>
                         <Button type="button" size="sm" variant={uploadMode === "file" ? "default" : "outline"} onClick={() => setUploadMode("file")} className="gap-1">
                           <Upload className="w-3 h-3" />Plik wideo
@@ -550,7 +550,7 @@ export default function Education() {
                   <Label className="mb-2 block">Wideo</Label>
                   <div className="flex gap-2 mb-2">
                     <Button type="button" size="sm" variant={uploadMode === "url" ? "default" : "outline"} onClick={() => setUploadMode("url")} className="gap-1">
-                      <Link className="w-3 h-3" />Link
+                      <LinkIcon className="w-3 h-3" />Link
                     </Button>
                     <Button type="button" size="sm" variant={uploadMode === "file" ? "default" : "outline"} onClick={() => setUploadMode("file")} className="gap-1">
                       <Upload className="w-3 h-3" />Nowy plik
